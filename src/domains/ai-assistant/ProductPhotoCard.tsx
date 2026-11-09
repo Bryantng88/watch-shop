@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { ProductCard } from "./simulation";
 
-export default function ProductPhotoCard({ product }: { product: ProductCard }) {
+export default function ProductPhotoCard({ product, compact = false }: { product: ProductCard; compact?: boolean }) {
   const [selectedSrc, setSelectedSrc] = useState<string | null>(null);
   const [failedSources, setFailedSources] = useState<string[]>([]);
   const images = product.images.filter(image => !failedSources.includes(image.src));
@@ -22,15 +22,16 @@ export default function ProductPhotoCard({ product }: { product: ProductCard }) 
       </div>
       <div className="min-w-0 flex-1">
         <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-slate-900">{product.title}</h3>
-        {product.sku && <p className="mt-1 break-all text-xs leading-4 text-slate-500">{product.sku}</p>}
-        {images.length > 1 && <div aria-label={`Chọn ảnh ${product.title}`} className="mt-3 flex flex-wrap gap-1.5">
+        {compact && <p className="mt-1 text-sm font-medium text-slate-700">{product.salePrice ? new Intl.NumberFormat("vi-VN", {style:"currency",currency:"VND"}).format(Number(product.salePrice)) : "Chưa có giá bán"}</p>}
+        {!compact && product.sku && <p className="mt-1 break-all text-xs leading-4 text-slate-500">{product.sku}</p>}
+        {!compact && images.length > 1 && <div aria-label={`Chọn ảnh ${product.title}`} className="mt-3 flex flex-wrap gap-1.5">
           {images.map((image, index) => (
             <button key={image.src} type="button" aria-label={`Ảnh ${index + 1} của ${product.title}`} aria-pressed={active?.src === image.src} onClick={() => setSelectedSrc(image.src)} className={`relative h-10 w-10 overflow-hidden rounded-md border bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 ${active?.src === image.src ? "border-indigo-600 ring-1 ring-indigo-600" : "border-slate-200 hover:border-indigo-300"}`}>
               <Image unoptimized fill sizes="40px" src={image.src} alt="" loading="lazy" onError={() => fail(image.src)} className="object-contain" />
             </button>
           ))}
         </div>}
-        {active && <p className="mt-2 text-[11px] leading-4 text-slate-500">{images.length > 1 ? `${images.findIndex(image => image.src === active.src) + 1}/${images.length} · ` : ""}Bấm ảnh để xem lớn</p>}
+        {!compact && active && <p className="mt-2 text-[11px] leading-4 text-slate-500">{images.length > 1 ? `${images.findIndex(image => image.src === active.src) + 1}/${images.length} · ` : ""}Bấm ảnh để xem lớn</p>}
       </div>
     </section>
   );

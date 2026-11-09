@@ -16,6 +16,7 @@ export const assistantLookupSchema=z.discriminatedUnion("tool",[
  z.object({tool:z.literal("personalWork.categories")}).strict(),
  z.object({tool:z.literal("personalWork.people"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("orders.list"),query:businessDateSchema.nullable().default(null)}).strict(),
+ z.object({tool:z.literal("customerRepairs.search"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("technicalIssues.list"),query:businessDateSchema.nullable().default(null)}).strict(),
  z.object({tool:z.literal("repository.info")}).strict(),
  z.object({tool:z.literal("repository.history")}).strict(),

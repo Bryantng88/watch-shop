@@ -19,6 +19,7 @@
         "media.draft",
         "personalWork.today",
         "orders.list",
+        "customerRepairs.search",
         "technicalIssues.list",
         "repository.info",
         "repository.history",

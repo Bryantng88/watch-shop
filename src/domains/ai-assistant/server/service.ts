@@ -27,6 +27,8 @@ import { ensureTaskItemReferenceBinding } from "@/domains/task/server/business-b
 import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import { assistantLookupSchema, assistantPlanSchema, hasUniqueEvidence, planHasEvidence, type AssistantPlan, type Evidence } from "../live-contract";
 import { newConversation } from "../simulation";
+import { searchPhotoCatalog } from "./photo-catalog-search";
+import { findCustomerRepairs } from "./customer-repairs";
 import { assistantProductCards } from "./product-images";
 import type { CustomerRequest } from "../customer-request";
 import { AssistantError, assistantActor, assistantRecipient } from "./access";
@@ -101,7 +103,7 @@ async function dto(row:CustomerAssistantConversation){
   if(s.customerRequest){if(readableRequest(s.customerRequest,actor))s.customerRequest=await linkedRequest(prisma,s.customerRequest,actor);else delete s.customerRequest;}
   s.approvedRequests=await Promise.all((s.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).map(async r=>({...r,request:await linkedRequest(prisma,r.request,actor)})));
  }
- const cards=hasAssistantPermission(actor,"PRODUCT_VIEW")?await assistantProductCards(prisma,s.messages.flatMap(m=>m.imageProductIds||[])):[];
+ const cards=hasAssistantPermission(actor,"PRODUCT_VIEW")?await assistantProductCards(prisma,s.messages.flatMap(m=>m.imageProductIds||[]),s.messages.flatMap(m=>m.compactProductCards?m.imageProductIds||[]:[])):[];
  delete s.screenHint;
  for(const m of s.messages){delete m.navigation;if(m.role==="assistant"&&m.navigationKey){const target=navigationTarget(m.navigationKey,actor);if(target)m.navigation=target;}delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
@@ -202,6 +204,10 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
        const {screen}=await resolveCurrentScreen(tx,actor,current.screenHint,latest?.id);
        const productId=screen?.entity?.kind==="WATCH"&&screen.path.endsWith("/edit")&&screen.entity.id===current.pinnedProductId?screen.entity.id:null;
        result=productId&&latest?.id===request.query?{productId,sourceMessageId:latest.id,mode:request.tool==="media.inspect"?"inspect":"draft"}:{lookupRejected:true,reason:"Hãy mở Xử lý media của đúng sản phẩm rồi gửi lại yêu cầu."};
+     }else if(request.tool==="watches.search"&&state(row).pendingImage){
+       result=await searchPhotoCatalog(tx,request.query);
+     }else if(request.tool==="customerRepairs.search"){
+       result=await findCustomerRepairs(tx,request.query);
      }else if(request.tool==="orders.list"||request.tool==="technicalIssues.list"){
        result=await dailyBusiness(tx,actor,request.tool,request.query);
      }else if(request.tool==="personalWork.categories"){
@@ -242,10 +248,15 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      const s=withoutImage(state(row));
      delete s.orderDraft;delete s.customerRequest;delete s.permissionRequest;delete s.permissionRequestScope;delete s.codeDraft;delete s.turnReadScope;delete s.turnRepositoryAccess;
      const matches=evidence(row).some(entry=>entry.request.tool==="watches.search"&&Array.isArray(entry.result.matches)&&entry.result.matches.length>0);
-     const next=message(s,!allowed?"Quyền xem sản phẩm đã thay đổi. Ben không thể trả kết quả.":failed?"Ben chưa phân tích được ảnh. Bạn thử gửi lại ảnh rõ hơn nhé.":!matches?"Ben chưa tìm được ứng viên trong kho. Bạn có thể gửi ảnh rõ logo, mặt số hoặc mã ở nắp đáy.":reply,allowed?["PRODUCT_VIEW"]:[]);
+     const evidenceRows=evidence(row);
+     const ids=[...new Set(evidenceRows.flatMap(entry=>entry.request.tool==="watches.images"&&entry.result.productId===entry.request.productId?[entry.request.productId]:[]))].slice(0,3);
+     const next=message(s,!allowed?"Quyền xem sản phẩm đã thay đổi. Ben không thể trả kết quả.":failed?"Ben chưa phân tích được ảnh. Bạn thử gửi lại ảnh rõ hơn nhé.":!matches?"Ben chưa tìm được ứng viên trong kho. Bạn có thể gửi ảnh rõ logo, mặt số hoặc mã ở nắp đáy.":ids.length?"":reply,allowed?["PRODUCT_VIEW"]:[]);
      if(allowed&&!failed&&matches){
-       const ids=evidence(row).flatMap(entry=>entry.request.tool==="watches.images"&&Number(entry.result.imageCount)>0?[entry.request.productId]:[]);
-       if(ids.length)next.messages[next.messages.length-1].imageProductIds=[...new Set(ids)].slice(0,6);
+       if(ids.length){
+         const latest=next.messages[next.messages.length-1];
+         latest.imageProductIds=ids;
+         latest.compactProductCards=true;
+       }
      }
      await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:failed?"FAILED":"NEEDS_INFO",plan:Prisma.DbNull,errorCode:failed?"GENERATION_FAILED":null,leaseToken:null,leaseExpiresAt:null}});
      return {accepted:true};
