@@ -1,4 +1,4 @@
-﻿.toolbar {
+.toolbar {
   display: flex !important;
   flex-wrap: wrap;
   align-items: center;
@@ -19,6 +19,10 @@
 .timeLabel + .timeLabel::before { content: "–"; color: #94a3b8; margin-right: 3px; }
 .timeLabel input { width: 104px; height: 36px; padding-inline: 6px; font-size: 12px; }
 @media (max-width: 640px) {
-  .toolbar > input:not([type="date"]) { flex-basis: 100%; }
   .toolbar > button { flex: 1; }
+  .toolbar > input:not([type="date"]) { flex: 1 1 160px; min-width: 120px; }
+  .toolbar > input[type="date"] { flex: 1 1 130px; }
+  .toolbar > select { flex: 1 1 100px; }
 }
+
+.toolbar > .kind { flex: 0 0 auto; }

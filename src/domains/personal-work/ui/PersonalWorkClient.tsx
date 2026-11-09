@@ -476,10 +476,12 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             );
           }}
         >
-          <PersonalWorkKindField event={isPersonalEvent(workType)} onChange={event=>setWorkType(event?"EVENT":PERSONAL_WORK_TYPES[newDomain][0].key)}/>
           <AdminFlatToolbar
             className={createStyles.toolbar}
           >
+            <div className={createStyles.kind}>
+              <PersonalWorkKindField event={isPersonalEvent(workType)} onChange={event=>setWorkType(event?"EVENT":PERSONAL_WORK_TYPES[newDomain][0].key)}/>
+            </div>
             <input
               required
               value={title}
@@ -520,28 +522,6 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
             <PersonalWorkTimeFields compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
-            <div className="flex min-w-0 gap-2">
-              <select
-                aria-label="Thời lượng dự kiến"
-                value={estimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
-                onChange={(event) => setEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
-                className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm"
-              >
-                <option value="ONE_DAY">Trong ngày</option>
-                <option value="MULTI_DAY">Nhiều ngày</option>
-              </select>
-              {estimatedDays > 1 && (
-                <input
-                  aria-label="Số ngày dự kiến"
-                  type="number"
-                  min={2}
-                  max={365}
-                  value={estimatedDays}
-                  onChange={(event) => setEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
-                  className="h-11 w-20 rounded-lg border border-slate-200 px-3 text-sm"
-                />
-              )}
-            </div>
             <button
               type="submit"
               disabled={pending}
@@ -550,7 +530,38 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               {isPersonalEvent(workType)?"Thêm sự kiện":"Thêm việc"}
             </button>
           </AdminFlatToolbar>
-          <div className="mt-3"><PersonalWorkTagsField allowCodex={!isPersonalEvent(workType)} value={newTags} onChange={setNewTags} configuration={data.codex} /></div>
+          <details className="mt-2 text-xs text-slate-500">
+            <summary className="w-fit cursor-pointer rounded px-1 py-1 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+              Tùy chọn{newTags.trim() || estimatedDays > 1 ? " · đã thiết lập" : ""}
+            </summary>
+            <div className="mt-2 grid max-w-xl gap-3 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+              <div className="grid gap-1.5"><span>Thời lượng</span>
+                <div className="flex min-w-0 gap-2">
+                  <select
+                    aria-label="Thời lượng dự kiến"
+                    value={estimatedDays === 1 ? "ONE_DAY" : "MULTI_DAY"}
+                    onChange={(event) => setEstimatedDays(event.target.value === "ONE_DAY" ? 1 : 2)}
+                    className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    <option value="ONE_DAY">Trong ngày</option>
+                    <option value="MULTI_DAY">Nhiều ngày</option>
+                  </select>
+                  {estimatedDays > 1 && (
+                    <input
+                      aria-label="Số ngày dự kiến"
+                      type="number"
+                      min={2}
+                      max={365}
+                      value={estimatedDays}
+                      onChange={(event) => setEstimatedDays(Math.max(2, Number(event.target.value) || 2))}
+                      className="h-11 w-20 rounded-lg border border-slate-200 px-3 text-sm"
+                    />
+                  )}
+                </div>
+              </div>
+              <PersonalWorkTagsField allowCodex={!isPersonalEvent(workType)} value={newTags} onChange={setNewTags} configuration={data.codex} />
+            </div>
+          </details>
           {!isPersonalEvent(workType) && newDomain !== "GENERAL" && newDomain !== "WORK" && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
