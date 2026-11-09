@@ -9,12 +9,17 @@ import {
   type EditorialImage,
   type HomeContent,
   emptyImage,
+  homePublicationIssues,
 } from "./contract";
 import type { PublicWatchCard } from "../contracts";
 import "./manager.css";
 
 type LibraryImage = { key: string; name: string; url: string };
-type ArticleItem = { id: string; content: ArticleContent; publishedAt: string | null };
+type ArticleItem = {
+  id: string;
+  content: ArticleContent;
+  publishedAt: string | null;
+};
 const names = {
   hero: "Ảnh mở đầu",
   featured: "Đồng hồ nổi bật",
@@ -267,7 +272,13 @@ function ProductPicker({ ids, onChange }: { ids: string[]; onChange: (v: string[
     </div>
   );
 }
-export default function StorefrontManager() {
+export default function StorefrontManager({
+  homeOnly = false,
+  storefrontUrl = "/",
+}: {
+  homeOnly?: boolean;
+  storefrontUrl?: string;
+}) {
   const [record, setRecord] = useState<ContentRecord | null>(null);
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [library, setLibrary] = useState<LibraryImage[]>([]);
@@ -342,7 +353,10 @@ export default function StorefrontManager() {
     try {
       const data = new FormData();
       data.append("file", file);
-      const r = await jsonRequest("/api/admin/storefront/media", { method: "POST", body: data });
+      const r = await jsonRequest("/api/admin/storefront/media", {
+        method: "POST",
+        body: data,
+      });
       setLibrary((v) => [r.item, ...v]);
       return r.item as LibraryImage;
     } catch (e) {
@@ -365,6 +379,7 @@ export default function StorefrontManager() {
           id: record.id,
           revision: record.revision,
           action,
+          ...(homeOnly ? { scope: "home" } : {}),
           content: record.draft,
         }),
       });
@@ -422,34 +437,40 @@ export default function StorefrontManager() {
       <div className="sfc-heading">
         <div>
           <p>VINTIC / STOREFRONT</p>
-          <h1>Quản lý Storefront</h1>
-          <span>Thiết kế cố định. Nội dung do bạn tuyển chọn.</span>
+          <h1>{homeOnly ? "Trang chủ website" : "Quản lý Storefront"}</h1>
+          <span>
+            {homeOnly
+              ? "Quản lý ảnh, nội dung và thứ tự các khối của trang chủ. Lưu nháp chưa thay đổi website."
+              : "Thiết kế cố định. Nội dung do bạn tuyển chọn."}
+          </span>
         </div>
-        <a href="/" target="_blank" rel="noreferrer">
+        <a href={storefrontUrl} target="_blank" rel="noreferrer">
           Mở storefront ↗
         </a>
       </div>
-      <div className="sfc-tabs">
-        <button
-          type="button"
-          className={tab === "home" ? "active" : ""}
-          onClick={() => {
-            if (tab !== "home") {
-              choose("home");
-              setTab("home");
-            }
-          }}
-        >
-          Bố cục & nội dung Home
-        </button>
-        <button
-          type="button"
-          className={tab === "articles" ? "active" : ""}
-          onClick={() => setTab("articles")}
-        >
-          Chuyện đồng hồ ({articles.length})
-        </button>
-      </div>
+      {!homeOnly && (
+        <div className="sfc-tabs">
+          <button
+            type="button"
+            className={tab === "home" ? "active" : ""}
+            onClick={() => {
+              if (tab !== "home") {
+                choose("home");
+                setTab("home");
+              }
+            }}
+          >
+            Bố cục & nội dung Home
+          </button>
+          <button
+            type="button"
+            className={tab === "articles" ? "active" : ""}
+            onClick={() => setTab("articles")}
+          >
+            Chuyện đồng hồ ({articles.length})
+          </button>
+        </div>
+      )}
       {error ? (
         <div className="sfc-error" role="alert">
           {error}
@@ -528,13 +549,13 @@ export default function StorefrontManager() {
               <button
                 type="button"
                 className="primary"
-                disabled={busy || uploading}
+                disabled={busy || uploading || Boolean(home && homePublicationIssues(home).length)}
                 onClick={() => void save("publish")}
               >
                 <Globe size={15} />
                 Xuất bản
               </button>
-              {record.publishedAt ? (
+              {record.publishedAt && !homeOnly ? (
                 <button
                   type="button"
                   disabled={busy || uploading}
@@ -548,6 +569,19 @@ export default function StorefrontManager() {
               ) : null}
             </div>
           </div>
+          {home && homePublicationIssues(home).length > 0 && (
+            <section className="sfc-card sfc-readiness" aria-label="Cần bổ sung trước khi xuất bản">
+              <h2>Ảnh còn thiếu</h2>
+              <ul>
+                {homePublicationIssues(home).map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+              <p className="sfc-help">
+                Bạn vẫn có thể lưu nháp và xem trước. Website chỉ thay đổi khi xuất bản thành công.
+              </p>
+            </section>
+          )}
           <fieldset disabled={busy || uploading} className="sfc-editor">
             {home ? (
               <>
@@ -608,6 +642,28 @@ export default function StorefrontManager() {
                 </section>
                 <details className="sfc-card" open>
                   <summary>Ảnh mở đầu — Hero</summary>
+                  <label className="sfc-field">
+                    <span>Tông màu khối mở đầu</span>
+                    <select
+                      value={home.hero.theme}
+                      onChange={(e) =>
+                        edit({
+                          ...home,
+                          hero: {
+                            ...home.hero,
+                            theme: e.target.value as "light" | "charcoal",
+                          },
+                        })
+                      }
+                    >
+                      <option value="charcoal">Than ấm · chữ trắng ngà, nút kem</option>
+                      <option value="light">Sáng · chữ tối</option>
+                    </select>
+                    <small>
+                      Để giống mẫu tông tối đã duyệt, dùng PNG/WebP đã tách nền. Đổi tông không tự
+                      xóa nền trắng của ảnh.
+                    </small>
+                  </label>
                   <div className="sfc-grid">
                     <Field
                       label="Tiêu đề (xuống dòng để ngắt câu)"
@@ -677,7 +733,10 @@ export default function StorefrontManager() {
                   <ProductPicker
                     ids={home.featured.productIds}
                     onChange={(productIds) =>
-                      edit({ ...home, featured: { ...home.featured, productIds } })
+                      edit({
+                        ...home,
+                        featured: { ...home.featured, productIds },
+                      })
                     }
                   />
                 </details>
@@ -789,7 +848,13 @@ export default function StorefrontManager() {
                     <select
                       value={home.journal.articleId}
                       onChange={(e) =>
-                        edit({ ...home, journal: { ...home.journal, articleId: e.target.value } })
+                        edit({
+                          ...home,
+                          journal: {
+                            ...home.journal,
+                            articleId: e.target.value,
+                          },
+                        })
                       }
                     >
                       <option value="">Không hiển thị bài nổi bật</option>
@@ -819,96 +884,107 @@ export default function StorefrontManager() {
                       key={key}
                       label={label}
                       value={home.closing[key]}
-                      onChange={(v) => edit({ ...home, closing: { ...home.closing, [key]: v } })}
+                      onChange={(v) =>
+                        edit({
+                          ...home,
+                          closing: { ...home.closing, [key]: v },
+                        })
+                      }
                     />
                   ))}
                 </details>
-                <details className="sfc-card">
-                  <summary>Thông tin chung & footer</summary>
-                  <ImageField
-                    {...imageProps}
-                    label="Logo (bỏ trống để dùng chữ Vintic)"
-                    value={home.general.logo}
-                    onChange={(logo) => edit({ ...home, general: { ...home.general, logo } })}
-                  />
-                  <Field
-                    label="Giới thiệu ngắn"
-                    value={home.general.tagline}
-                    onChange={(tagline) => edit({ ...home, general: { ...home.general, tagline } })}
-                  />
-                  <Field
-                    label="Thông tin liên hệ"
-                    multiline
-                    value={home.general.contact}
-                    onChange={(contact) => edit({ ...home, general: { ...home.general, contact } })}
-                  />
-                  {home.general.links.map((link, i) => (
-                    <div key={i} className="sfc-grid">
-                      <Field
-                        label="Tên liên kết (chính sách / mạng xã hội)"
-                        value={link.label}
-                        onChange={(label) =>
-                          edit({
-                            ...home,
-                            general: {
-                              ...home.general,
-                              links: home.general.links.map((l, n) =>
-                                n === i ? { ...l, label } : l,
-                              ),
-                            },
-                          })
-                        }
-                      />
-                      <Field
-                        label="Đường dẫn"
-                        value={link.href}
-                        onChange={(href) =>
-                          edit({
-                            ...home,
-                            general: {
-                              ...home.general,
-                              links: home.general.links.map((l, n) =>
-                                n === i ? { ...l, href } : l,
-                              ),
-                            },
-                          })
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          edit({
-                            ...home,
-                            general: {
-                              ...home.general,
-                              links: home.general.links.filter((_, n) => n !== i),
-                            },
-                          })
-                        }
-                      >
-                        Bỏ liên kết
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    disabled={home.general.links.length >= 12}
-                    onClick={() =>
-                      edit({
-                        ...home,
-                        general: {
-                          ...home.general,
-                          links: [
-                            ...home.general.links,
-                            { label: "Liên kết mới", href: "/products" },
-                          ],
-                        },
-                      })
-                    }
-                  >
-                    + Thêm liên kết
-                  </button>
-                </details>
+                {!homeOnly && (
+                  <details className="sfc-card">
+                    <summary>Thông tin chung & footer</summary>
+                    <ImageField
+                      {...imageProps}
+                      label="Logo (bỏ trống để dùng chữ Vintic)"
+                      value={home.general.logo}
+                      onChange={(logo) => edit({ ...home, general: { ...home.general, logo } })}
+                    />
+                    <Field
+                      label="Giới thiệu ngắn"
+                      value={home.general.tagline}
+                      onChange={(tagline) =>
+                        edit({ ...home, general: { ...home.general, tagline } })
+                      }
+                    />
+                    <Field
+                      label="Thông tin liên hệ"
+                      multiline
+                      value={home.general.contact}
+                      onChange={(contact) =>
+                        edit({ ...home, general: { ...home.general, contact } })
+                      }
+                    />
+                    {home.general.links.map((link, i) => (
+                      <div key={i} className="sfc-grid">
+                        <Field
+                          label="Tên liên kết (chính sách / mạng xã hội)"
+                          value={link.label}
+                          onChange={(label) =>
+                            edit({
+                              ...home,
+                              general: {
+                                ...home.general,
+                                links: home.general.links.map((l, n) =>
+                                  n === i ? { ...l, label } : l,
+                                ),
+                              },
+                            })
+                          }
+                        />
+                        <Field
+                          label="Đường dẫn"
+                          value={link.href}
+                          onChange={(href) =>
+                            edit({
+                              ...home,
+                              general: {
+                                ...home.general,
+                                links: home.general.links.map((l, n) =>
+                                  n === i ? { ...l, href } : l,
+                                ),
+                              },
+                            })
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            edit({
+                              ...home,
+                              general: {
+                                ...home.general,
+                                links: home.general.links.filter((_, n) => n !== i),
+                              },
+                            })
+                          }
+                        >
+                          Bỏ liên kết
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      disabled={home.general.links.length >= 12}
+                      onClick={() =>
+                        edit({
+                          ...home,
+                          general: {
+                            ...home.general,
+                            links: [
+                              ...home.general.links,
+                              { label: "Liên kết mới", href: "/products" },
+                            ],
+                          },
+                        })
+                      }
+                    >
+                      + Thêm liên kết
+                    </button>
+                  </details>
+                )}
               </>
             ) : null}
             {article ? (
@@ -959,7 +1035,10 @@ export default function StorefrontManager() {
                     <button
                       type="button"
                       onClick={() =>
-                        edit({ ...article, images: article.images.filter((_, n) => n !== i) })
+                        edit({
+                          ...article,
+                          images: article.images.filter((_, n) => n !== i),
+                        })
                       }
                     >
                       Bỏ ảnh {i + 1}
@@ -969,7 +1048,12 @@ export default function StorefrontManager() {
                 <button
                   type="button"
                   disabled={article.images.length >= 10}
-                  onClick={() => edit({ ...article, images: [...article.images, emptyImage()] })}
+                  onClick={() =>
+                    edit({
+                      ...article,
+                      images: [...article.images, emptyImage()],
+                    })
+                  }
                 >
                   + Thêm ảnh trong bài
                 </button>

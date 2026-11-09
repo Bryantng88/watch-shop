@@ -404,3 +404,5 @@
 .sfc-preview::backdrop {
   background: #0008;
 }
+.sfc-readiness { border-color: #e8cf9d; background: #fffbf2; }
+.sfc-readiness ul { padding-left: 20px; list-style: disc; font-size: 13px; line-height: 1.8; }

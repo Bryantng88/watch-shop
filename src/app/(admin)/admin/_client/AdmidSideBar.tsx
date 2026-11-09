@@ -20,6 +20,7 @@ import {
     ChartNoAxesCombined,
     CalendarCheck2,
     MessageSquare,
+    Globe,
 } from "lucide-react";
 
 import ActiveLink from "./AdminActiveLink";
@@ -147,6 +148,12 @@ const NAV: NavEntry[] = [
                 permission: PERMISSIONS.REPORT_SALES_VIEW,
             },
         ],
+    },
+    {
+        type: "group",
+        label: "Storefront",
+        defaultOpen: true,
+        children: [{type:"item",href:"/admin/storefront/home",label:"Trang chủ website",icon:Globe,permission:PERMISSIONS.PRODUCT_UPDATE}],
     },
     {
         type: "group",
