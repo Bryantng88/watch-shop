@@ -1,4 +1,5 @@
-﻿import type {
+import {personalEventTiming} from "./personal-event";
+import type {
   PersonalCalendarEvent,
   PersonalWorkItem,
 } from "./personal-work.types";
@@ -29,7 +30,8 @@ export function buildPersonalCalendarEvents(
       .filter((item) => item.dueAt && item.status !== "CANCELLED")
       .map((item) => {
         const original = linked.get(item.id);
-        const allDay = !item.scheduledEndAt;
+        const timing=personalEventTiming(item);
+        const allDay = !timing.timed;
         const startAt = allDay ? calendarDayKey(item.dueAt!) : item.dueAt!;
         const end = new Date(`${calendarDayKey(item.dueAt!)}T00:00:00Z`);
         end.setUTCDate(end.getUTCDate() + Math.max(1, item.estimatedDays));
@@ -38,8 +40,9 @@ export function buildPersonalCalendarEvents(
           title: item.title,
           description: item.note,
           startAt,
-          endAt: item.scheduledEndAt || end.toISOString().slice(0, 10),
+          endAt: item.scheduledEndAt || timing.end?.toISOString() || end.toISOString().slice(0, 10),
           allDay,
+          pointInTime:timing.point,
           htmlLink: item.calendar.htmlLink || original?.htmlLink || null,
           location: original?.location || null,
           linkedTaskItemId: item.id,

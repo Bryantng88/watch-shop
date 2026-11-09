@@ -2,8 +2,8 @@
 
 import styles from "./PersonalWorkCreate.module.css";
 
-export function PersonalWorkTimeFields({ start, end, onChange, disabled = false, compact = false }: {
-  start: string; end: string; onChange: (start: string, end: string) => void; disabled?: boolean; compact?: boolean;
+export function PersonalWorkTimeFields({ start, end, onChange, disabled = false, compact = false, endOptional = false }: {
+  start: string; end: string; onChange: (start: string, end: string) => void; disabled?: boolean; compact?: boolean; endOptional?:boolean;
 }) {
   const allDay = !start && !end;
   return <div className={compact ? styles.times : "space-y-3"}>
@@ -16,7 +16,7 @@ export function PersonalWorkTimeFields({ start, end, onChange, disabled = false,
         <input required={!allDay} type="time" value={start} disabled={disabled || allDay} onChange={event => onChange(event.target.value, end)} className={`${compact ? "h-9 w-28" : "h-11 w-full"} rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400`} />
       </label>
       <label className={compact ? styles.timeLabel : "block space-y-1.5"}><span className={compact ? "sr-only" : "text-xs font-semibold text-slate-600"}>Giờ kết thúc</span>
-        <input required={!allDay} type="time" value={end} disabled={disabled || allDay} onChange={event => onChange(start, event.target.value)} className={`${compact ? "h-9 w-28" : "h-11 w-full"} rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400`} />
+        <input required={!allDay&&!endOptional} type="time" value={end} disabled={disabled || allDay} onChange={event => onChange(start, event.target.value)} className={`${compact ? "h-9 w-28" : "h-11 w-full"} rounded-lg border border-slate-200 px-3 text-sm disabled:bg-slate-50 disabled:text-slate-400`} />
       </label>
     </div>
   </div>;

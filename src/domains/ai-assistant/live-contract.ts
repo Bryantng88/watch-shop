@@ -13,6 +13,8 @@ export const assistantLookupSchema=z.discriminatedUnion("tool",[
  z.object({tool:z.literal("media.inspect"),query:z.string().uuid()}).strict(),
  z.object({tool:z.literal("media.draft"),query:z.string().uuid()}).strict(),
  z.object({tool:z.literal("personalWork.today")}).strict(),
+ z.object({tool:z.literal("personalWork.categories")}).strict(),
+ z.object({tool:z.literal("personalWork.people"),query:z.string().trim().min(2).max(100)}).strict(),
  z.object({tool:z.literal("orders.list"),query:businessDateSchema.nullable().default(null)}).strict(),
  z.object({tool:z.literal("technicalIssues.list"),query:businessDateSchema.nullable().default(null)}).strict(),
  z.object({tool:z.literal("repository.info")}).strict(),

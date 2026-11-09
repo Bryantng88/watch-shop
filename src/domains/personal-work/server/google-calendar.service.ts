@@ -1,3 +1,4 @@
+import {personalEventTiming} from "../shared/personal-event";
 import { googleCalendarReadiness, requireGoogleCalendarRedirectUri } from "./google-calendar-config";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/server/db/client";
@@ -230,13 +231,14 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   const startDate = bangkokDateKey(item.dueAt || new Date());
   const estimatedDays = Math.max(1, Math.min(365, item.estimatedDays || 1));
   const endDate = addCalendarDays(startDate, estimatedDays);
+  const timing=personalEventTiming(item);
   const payload = {
     summary: item.title,
     description: item.note || "Đồng bộ từ Watch Shop Admin",
-    start: item.scheduledEndAt && item.dueAt ? { dateTime: item.dueAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: startDate },
-    end: item.scheduledEndAt ? { dateTime: item.scheduledEndAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: endDate },
+    start: timing.timed && item.dueAt ? { dateTime: item.dueAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: startDate },
+    end: timing.end ? { dateTime: timing.end.toISOString(), timeZone: "Asia/Bangkok" } : { date: endDate },
     status: item.status === "CANCELLED" ? "cancelled" : "confirmed",
-    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", estimatedDays: String(estimatedDays) } },
+    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", pointInTime:timing.point?"1":"0", estimatedDays: String(estimatedDays) } },
   };
   const syncHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   if (existing?.syncHash === syncHash) return existing;
@@ -328,7 +330,7 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
           // Google date is a task edit, not a view operation.
           taskItem: personalWorkEditAccessWhere(userId),
         },
-        select: { eventId: true, taskItemId: true },
+        select: { eventId: true, taskItemId: true,taskItem:{select:{workTypeId:true}} },
       })
     : [];
   const linkMap = new Map(links.map((link) => [link.eventId, link.taskItemId]));
@@ -337,7 +339,8 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
     await prisma.$transaction(linkedEvents.map((event) => {
       const startDate = event.start?.date || bangkokDateKey(new Date(event.start!.dateTime!));
       const dueAt = event.start?.dateTime ? new Date(event.start.dateTime) : calendarDateToStoredDate(startDate);
-      const scheduledEndAt = event.start?.dateTime
+      const point=links.some(l=>l.eventId===event.id&&l.taskItem.workTypeId==="EVENT")&&event.extendedProperties?.private?.pointInTime==="1"&&!!event.start?.dateTime&&!!event.end?.dateTime&&Date.parse(event.end.dateTime)-Date.parse(event.start.dateTime)===60000;
+      const scheduledEndAt = event.start?.dateTime&&!point
         ? new Date(event.end?.dateTime || new Date(dueAt.getTime() + 3600000).toISOString()) : null;
       const estimatedDays = event.start?.date
         ? calendarDayCount(startDate, event.end?.date)

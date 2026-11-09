@@ -1,3 +1,9 @@
+import {preparePersonalWork} from "./personal-work-plan";
+import {createPersonalWorkItem} from "@/domains/personal-work/server/personal-work.service";
+import {listPersonalCategories} from "@/domains/personal-work/server/personal-work-categories.service";
+import {PERSONAL_WORK_TYPES} from "@/domains/personal-work/shared/personal-work.types";
+import {isPersonalEvent,personalEventLabel,personalEventBounds} from "@/domains/personal-work/shared/personal-event";
+import {syncPersonalTaskToGoogle} from "@/domains/personal-work/server/google-calendar.service";
 import {dailyBusiness} from "./daily-business";
 import {codeEnabled,codePlanSchema,publicCodeJob} from "../code-contract";
 import { canReadRepository, BEN_REPOSITORY } from "../repository-access";
@@ -84,6 +90,9 @@ async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
 async function dto(row:CustomerAssistantConversation){
  const actor=await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
  delete s.pendingImage;delete s.turnRepositoryAccess;if(!canReadRepository(actor)){delete s.repositorySnapshot;delete s.codeDraft;delete s.codeJob;s.codeJobHistory=[];}else{if(s.codeJob)s.codeJob=publicCodeJob(s.codeJob);s.codeJobHistory=s.codeJobHistory?.map(publicCodeJob);}
+ if(s.personalWorkDraft&&((s.personalWorkDraft.requiredPermissions||["TASK_VIEW"]).some(p=>!hasAssistantPermission(actor,p))||!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((s.personalWorkDraft.requiredTaskIds||[]).map(id=>visibleTask(prisma,id,actor)))).some(t=>!t)))delete s.personalWorkDraft;
+ if(s.personalWorkDraft?.revision!==row.revision)delete s.personalWorkDraft;
+ if(!hasAssistantPermission(actor,"TASK_VIEW")){delete s.personalWorkDraft;s.createdPersonalWork=[];}
  s.context=null;delete s.pinnedProductId;delete s.turnKeys;delete s.turnTimes;delete s.turnReadScope;delete s.permissionTaskIds;delete s.permissionDenied;if(!await supportScopeVisible(prisma,s,actor))delete s.permissionRequest;delete s.permissionRequestScope;s.messages=await authorizedHistory(prisma,s,actor);
  if(!hasAssistantPermission(actor,"ORDER_VIEW")||!hasAssistantPermission(actor,"PRODUCT_VIEW")){delete s.orderDraft;s.createdOrders=[];}else if(s.orderDraft?.plan.customerId&&!hasAssistantPermission(actor,"CUSTOMER_VIEW"))delete s.orderDraft;
  const canReadWork=hasAssistantPermission(actor,"PRODUCT_VIEW")&&hasAssistantPermission(actor,"TASK_VIEW");
@@ -154,9 +163,9 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const supportScope=pendingPermissionRequest?currentState.permissionRequestScope:undefined;
    const requests=[...(previousRequest?[previousRequest]:[]),...await Promise.all((currentState.approvedRequests||[]).filter(r=>readableRequest(r.request,actor)).slice(-8).map(r=>linkedRequest(tx,r.request,actor)))];
    // A model may repeat any supplied business information without doing a new lookup.
-   const turnReadScope={permissions:[...new Set([...screenPermissions,...(pendingOrder?["ORDER_VIEW","PRODUCT_VIEW",...(pendingOrder.plan.customerId?["CUSTOMER_VIEW"]:[])]:[]),...(createdOrders.length?["ORDER_VIEW"]:[]),...(supportScope?.permissions||[]),...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...(supportScope?.taskIds||[]),...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
+   const turnReadScope={permissions:[...new Set([...(hasAssistantPermission(actor,"TASK_VIEW")&&(currentState.personalWorkDraft||currentState.createdPersonalWork?.length)?["TASK_VIEW"]:[]),...screenPermissions,...(pendingOrder?["ORDER_VIEW","PRODUCT_VIEW",...(pendingOrder.plan.customerId?["CUSTOMER_VIEW"]:[])]:[]),...(createdOrders.length?["ORDER_VIEW"]:[]),...(supportScope?.permissions||[]),...history.slice(-12).flatMap(m=>m.role==="assistant"?m.requiredPermissions||[]:[]),...requests.flatMap(r=>["PRODUCT_VIEW","TASK_VIEW",...(r.customer!=="Chưa gắn hồ sơ khách"?["CUSTOMER_VIEW"]:[]),...(r.conditions.some(c=>c.kind==="TECHNICAL"&&c.linkedRef)?["SERVICE_VIEW"]:[])])])],taskIds:[...new Set([...(supportScope?.taskIds||[]),...history.slice(-12).flatMap(m=>m.requiredTaskIds||[]),...requests.flatMap(r=>r.conditions.filter(c=>c.kind==="TASK"&&c.linkedRef).map(c=>c.linkedRef!))])]};
    const token=randomUUID();await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json({...currentState,turnReadScope,turnRepositoryAccess:history.slice(-12).some(m=>m.repositoryAccess)||(canReadRepository(actor)&&!!(currentState.codeJob||currentState.codeDraft))}),status:"RUNNING",leaseToken:token,leaseExpiresAt:new Date(Date.now()+120000)}});
-   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({interactionContractVersion:2,codeJob:canReadRepository(actor)&&currentState.codeJob?publicCodeJob(currentState.codeJob):null,codeDraft:canReadRepository(actor)?currentState.codeDraft||null:null,currentScreen,...workerHistory({...currentState,messages:history},actor),currentUserMessage:currentState.messages.filter(m=>m.role==="user").at(-1),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingOrder,createdOrders,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{repositoryRead:canReadRepository(actor)?{repository:BEN_REPOSITORY,commitSha:currentState.repositorySnapshot||process.env.BEN_REPOSITORY_COMMIT,readOnly:true}:null,navigationScreens:availableScreens(actor),...requesterIdentity(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),permissionSupportAvailable:!!await permissionContact(tx)&&actor.id!==process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
+   return {run:{id:row.id,leaseToken:token,text:JSON.stringify({interactionContractVersion:2,personalWorkDraft:hasAssistantPermission(actor,"TASK_VIEW")?currentState.personalWorkDraft||null:null,createdPersonalWork:hasAssistantPermission(actor,"TASK_VIEW")?currentState.createdPersonalWork||[]:[],codeJob:canReadRepository(actor)&&currentState.codeJob?publicCodeJob(currentState.codeJob):null,codeDraft:canReadRepository(actor)?currentState.codeDraft||null:null,currentScreen,...workerHistory({...currentState,messages:history},actor),currentUserMessage:currentState.messages.filter(m=>m.role==="user").at(-1),screenProductHint:hasAssistantPermission(actor,"PRODUCT_VIEW")?currentState.pinnedProductId:null,previousRequest:previousRequest?{...previousRequest,original:undefined}:null,approvedRequests,alreadyApproved:!!row.approvedAt,pendingOrder,createdOrders,pendingPermissionRequest,permissionRequests:currentState.permissionRequests||[],requester:{repositoryRead:canReadRepository(actor)?{repository:BEN_REPOSITORY,commitSha:currentState.repositorySnapshot||process.env.BEN_REPOSITORY_COMMIT,readOnly:true}:null,navigationScreens:availableScreens(actor),...requesterIdentity(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),permissionSupportAvailable:!!await permissionContact(tx)&&actor.id!==process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID}}),referenceTime:new Date().toISOString(),timeZone:"Asia/Ho_Chi_Minh"}};
  });
  const id=String(body.id||""),token=String(body.leaseToken||"");
  if(!/^[a-f0-9-]{36}$/.test(id)||!/^[a-f0-9-]{36}$/.test(token))throw new AssistantError("Lượt xử lý không hợp lệ.");
@@ -195,15 +204,19 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
        result=productId&&latest?.id===request.query?{productId,sourceMessageId:latest.id,mode:request.tool==="media.inspect"?"inspect":"draft"}:{lookupRejected:true,reason:"Hãy mở Xử lý media của đúng sản phẩm rồi gửi lại yêu cầu."};
      }else if(request.tool==="orders.list"||request.tool==="technicalIssues.list"){
        result=await dailyBusiness(tx,actor,request.tool,request.query);
+     }else if(request.tool==="personalWork.categories"){
+       result={categories:(await listPersonalCategories(actor.id)).map(c=>({key:c.key,label:c.label,workTypes:c.isDefault?PERSONAL_WORK_TYPES[c.domain]:[]})),googleConnected:!!await tx.googleCalendarConnection.findUnique({where:{userId:actor.id},select:{id:true}})};
+     }else if(request.tool==="personalWork.people"){
+       const matches=await tx.user.findMany({where:{isActive:true,NOT:{id:actor.id},OR:[{id:request.query},{name:{contains:request.query,mode:"insensitive"}}]},select:{id:true,name:true},orderBy:{id:"asc"},take:7});result={matches:matches.slice(0,6),truncated:matches.length>6};
      }else if(request.tool==="personalWork.today"){
        const offset=7*60*60*1000, day=24*60*60*1000;
        const start=Math.floor((Date.now()+offset)/day)*day-offset;
        const items=await tx.taskItem.findMany({
-         where:{...personalWorkViewAccessWhere(actor.id),status:{notIn:["DONE","CANCELLED"]},OR:[{dueAt:null},{dueAt:{lt:new Date(start+day)}}]},
+         where:{...personalWorkViewAccessWhere(actor.id),status:{notIn:["DONE","CANCELLED"]},AND:[{OR:[{workTypeId:null},{workTypeId:{not:"EVENT"}},{dueAt:{gte:new Date(start)}},{scheduledEndAt:{gte:new Date(start)}},{workTypeId:"EVENT",scheduledEndAt:null,estimatedDays:{gt:1},dueAt:{gte:new Date(start-365*day)}}]}],OR:[{dueAt:null},{dueAt:{lt:new Date(start+day)}}]},
          orderBy:[{dueAt:{sort:"asc",nulls:"last"}},{id:"asc"}],
-         take:13,select:{id:true,title:true,status:true,dueAt:true},
+         take:13,select:{id:true,title:true,status:true,dueAt:true,workTypeId:true,scheduledEndAt:true,estimatedDays:true},
        });
-       result={items:items.slice(0,12).map(item=>({...item,dueAt:item.dueAt?.toISOString()??null,title:item.title.slice(0,180)})),truncated:items.length>12,date:new Date(start+offset).toISOString().slice(0,10),timeZone:"Asia/Ho_Chi_Minh"};
+       result={items:items.filter(item=>!isPersonalEvent(item.workTypeId)||!item.dueAt||personalEventBounds(item.dueAt,item.scheduledEndAt,item.estimatedDays).end>start).slice(0,12).map(item=>({...item,dueAt:item.dueAt?.toISOString()??null,title:item.title.slice(0,180),kind:isPersonalEvent(item.workTypeId)?"EVENT":"TASK",eventState:isPersonalEvent(item.workTypeId)?personalEventLabel(item.dueAt,item.scheduledEndAt,new Date(),item.estimatedDays):null})),truncated:items.length>12,date:new Date(start+offset).toISOString().slice(0,10),timeZone:"Asia/Ho_Chi_Minh"};
      }else if(request.tool==="watches.images"){
        const cards=await assistantProductCards(tx,[request.productId]);const card=cards[0];result=card?{productId:card.id,title:card.title,sku:card.sku,imageCount:card.images.length,displayedInChat:true}:{productId:request.productId,imageCount:0,displayedInChat:false};
      }else if(request.tool==="people.search"){
@@ -221,7 +234,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const mediaEntry=evidence(row).find(e=>e.request.tool==="media.draft"||e.request.tool==="media.inspect");
    if(body.failed!==true&&mediaEntry&&(body.plan||body.orderPlan||body.codePlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Media draft must be completed separately.");
    const navigationEntry=[...evidence(row)].reverse().find(e=>e.request.tool==="navigation.open");
-   if(body.failed!==true&&navigationEntry&&(body.plan||body.orderPlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Navigation must be completed separately from business reviews or permission requests.");
+   if(body.failed!==true&&navigationEntry&&(body.personalWorkPlan||body.plan||body.orderPlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Navigation must be completed separately from business reviews or permission requests.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    const actor=await assistantActor(tx,row.ownerId);
    if(state(row).pendingImage){
@@ -242,7 +255,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    if(repositoryEntries.length||(codeScope&&!canReadRepository(actor))){
      const permitted=canReadRepository(actor),s=state(row);delete s.turnRepositoryAccess;delete s.orderDraft;delete s.permissionRequest;delete s.permissionRequestScope;delete s.customerRequest;
      const hasRead=repositoryEntries.some(e=>!e.result.lookupRejected&&!e.result.accessDenied);
-     const mixed=body.plan||body.orderPlan||body.permissionRequest||evidence(row).some(e=>e.request.tool==="navigation.open");
+     const mixed=body.personalWorkPlan||body.plan||body.orderPlan||body.permissionRequest||evidence(row).some(e=>e.request.tool==="navigation.open");
      const next=message(s,!permitted?"Hiện tài khoản hoặc cấu hình chưa cho phép đọc repository. Mình chưa thể trả nội dung repo.":failed?"Lượt đọc repo chưa hoàn tất. Chưa có code nào được sửa.":mixed?"Bước này chỉ đọc và phân tích code. Mình chưa sửa mã, tạo đơn, giao việc hay điều hướng từ phân tích này.":!hasRead?"Mình chưa đọc được mã nguồn nên chưa thể xác nhận nguyên nhân hoặc phạm vi sửa. Cần kiểm tra cấu hình GitHub và đường dẫn được phép.":reply,[]);
      delete next.codeDraft;
      if(body.codePlan&&!failed&&permitted&&!mixed){
@@ -260,6 +273,13 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const scopeRevoked=!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all(scopedTaskIds.map(id=>visibleTask(tx,id,actor)))).some(t=>!t);
    const revoked=scopeRevoked||required.some(p=>!hasAssistantPermission(actor,p));
    if(revoked)reply="Quyền của bạn đã thay đổi trong lúc xử lý. Mình chưa thể trả dữ liệu hoặc thực hiện thao tác đó; bạn có thể tiếp tục trao đổi.";
+   if(body.personalWorkPlan){
+     if(body.plan||body.orderPlan||body.permissionRequest||navigationEntry||mediaEntry)throw new AssistantError("Mỗi lượt chỉ có một bản duyệt.");
+     const next=state(row);delete next.personalWorkDraft;
+     if(!failed&&!revoked&&hasAssistantPermission(actor,"TASK_VIEW"))next.personalWorkDraft={...await preparePersonalWork(tx,actor.id,body.personalWorkPlan,row.revision,evidence(row)),requiredPermissions:required,requiredTaskIds:scopedTaskIds};
+     const result=message(next,next.personalWorkDraft?"Mình đã chuẩn bị lịch bên dưới. Bạn duyệt một lần để tạo nhé.":"Chưa thể tạo bản duyệt vì quyền hoặc lượt xử lý đã thay đổi.",required);
+     await tx.customerAssistantConversation.update({where:{id},data:{state:json(result),status:"NEEDS_INFO",plan:Prisma.DbNull,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
+   }
    let plan:AssistantPlan|undefined,request:CustomerRequest|undefined;let support=body.permissionRequest==null?undefined:permissionSummary.parse(body.permissionRequest);if(body.plan&&support)throw new AssistantError("Không thể gộp hỗ trợ quyền và giao việc nghiệp vụ.");
    if(!failed&&!revoked&&!row.approvedAt&&body.plan){plan=assistantPlanSchema.parse(body.plan);const denied=planDeniedReason(actor,plan);
      if(denied){plan=undefined;reply=denied;support=state(row).messages.filter(m=>m.role==="user").at(-1)?.text.slice(0,1000);}
@@ -268,7 +288,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    }
    if(plan)reply="Mình đề xuất giao các việc bên dưới. Bạn duyệt trước khi thực hiện nhé.";
    if(row.approvedAt&&body.plan)reply="Các việc đã giao không tự sửa qua chat. Bạn mở phiếu/task liên quan để thực hiện thay đổi theo luồng hiện có nhé.";
-   const s=state(row);delete s.turnReadScope;delete s.permissionRequest;delete s.permissionRequestScope;delete s.orderDraft;
+   const s=state(row);delete s.personalWorkDraft;delete s.turnReadScope;delete s.permissionRequest;delete s.permissionRequestScope;delete s.orderDraft;
    let orderDraft:State["orderDraft"];
    const missingPermission=typeof body.missingPermission==="string"&&Object.values(PERMISSIONS).includes(body.missingPermission as typeof PERMISSIONS[keyof typeof PERMISSIONS])&&!hasAssistantPermission(actor,body.missingPermission);
    let verifiedDenial=!!s.permissionDenied||revoked||!!(body.plan&&!plan);
@@ -406,4 +426,31 @@ export async function approvePermissionSupport(userId:string,id:string,revision:
 }
 export async function recordConditionOutcome(userId:string,id:string,conditionId:string,outcome:string,result:string,requestRevision?:number){
  const actor=await assistantActor(prisma,userId);if(!hasAssistantPermission(actor,"TASK_MANAGE"))throw new AssistantError("Bạn chưa có quyền cập nhật kết quả công việc.",403);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);const currentActor=await assistantActor(tx,userId);if(!hasAssistantPermission(currentActor,"TASK_MANAGE"))throw new AssistantError("Bạn chưa có quyền cập nhật kết quả công việc.",403);if(["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Chưa thể cập nhật kết quả lúc này.",409);const s=state(row);const request=requestRevision!==undefined?s.approvedRequests?.find(r=>r.revision===requestRevision)?.request:row.approvedAt?s.customerRequest:undefined;if(!request?.conditions.some(c=>c.id===conditionId))throw new AssistantError("Không tìm thấy điều kiện đã duyệt.");request.conditions=request.conditions.map(c=>c.id===conditionId?{...c,outcome,result}:c);if(row.approvedRevision===requestRevision)s.customerRequest=request;await tx.customerAssistantConversation.update({where:{id},data:{state:json(s)}});return {ok:true};});
+}
+
+export async function approveAssistantPersonalWork(userId:string,id:string,revision:number){
+ const outcome=await transaction(async tx=>{
+  await lock(tx,id);const row=await owned(tx,id,userId),actor=await assistantActor(tx,userId),s=state(row);
+  if(!hasAssistantPermission(actor,"TASK_VIEW"))throw new AssistantError("Không có quyền tạo công việc cá nhân.",403);
+  const existing=s.createdPersonalWork?.find(c=>c.revision===revision);
+  if(existing)return {item:existing,sync:false};
+  const pending=s.personalWorkDraft;
+  if(!pending||pending.revision!==revision||row.revision!==revision||["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem lại.",409);
+  if((pending.requiredPermissions||["TASK_VIEW"]).some(p=>!hasAssistantPermission(actor,p))||!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((pending.requiredTaskIds||[]).map(id=>visibleTask(tx,id,actor)))).some(t=>!t))throw new AssistantError("Quyền đọc dữ liệu của bản đề xuất đã thay đổi. Hãy chuẩn bị lại.",403);
+  const draft=await preparePersonalWork(tx,userId,pending.plan,revision,evidence(row));
+  const p=draft.plan;
+  const item=await createPersonalWorkItem({title:p.title,note:p.note,dueAt:p.dueAt,scheduledEndAt:p.scheduledEndAt,categoryKey:p.categoryKey,workType:p.kind==="EVENT"?"EVENT":p.workType,tags:p.tags,priority:p.priority},actor,tx);
+  if(p.checklist.length){await tx.taskItemChecklist.createMany({data:p.checklist.map((title,i)=>({taskItemId:item.id,title,sortOrder:i+1}))});await tx.taskItem.update({where:{id:item.id},data:{progressMode:"CHECKLIST",progressPercent:0}});}
+  if(draft.shares.length)await tx.personalTaskShare.createMany({data:draft.shares.map(person=>({taskItemId:item.id,userId:person.id,accessLevel:person.accessLevel,sharedByUserId:userId}))});
+  const created={revision,id:item.id,title:item.title,kind:p.kind,calendar:p.syncGoogle?"PENDING" as const:"NONE" as const};
+  s.createdPersonalWork=[...(s.createdPersonalWork||[]),created];delete s.personalWorkDraft;
+  const next=message(s,p.kind==="EVENT"?"Đã tạo sự kiện trong Công việc của tôi. Sự kiện không cần đánh dấu hoàn thành.":"Đã tạo công việc trong Công việc của tôi.",["TASK_VIEW"]);
+  await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:"NEEDS_INFO"}});
+  return {item:created,sync:p.syncGoogle};
+ });
+ if(outcome.sync){
+  let status:"SYNCED"|"FAILED"="SYNCED";try{await syncPersonalTaskToGoogle(userId,outcome.item.id);}catch{status="FAILED";}
+  await transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId),s=state(row);s.createdPersonalWork=s.createdPersonalWork?.map(c=>c.revision===revision?{...c,calendar:status}:c);await tx.customerAssistantConversation.update({where:{id},data:{state:json(s)}});});
+ }
+ return dto(await owned(prisma,id,userId));
 }

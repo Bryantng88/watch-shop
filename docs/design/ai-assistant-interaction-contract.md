@@ -267,3 +267,43 @@ cannot choose environment or confer privileges. Deploy app and updated customer
 worker/protocol/schema together; live natural-language acceptance should cover
 orders today, issues today, combined requests, no results, truncation, date changes,
 and permission loss. Unit/scripted tests do not establish real model acceptance.
+
+## Personal tasks and events
+
+Ben supports a separate personalWorkPlan for the signed-in user's Personal Work.
+It requires TASK_VIEW, not PRODUCT_VIEW/TASK_MANAGE or a customer/watch identity.
+A name in a delivery description is plain text, not an instruction to share the
+item. Resolve explicit share recipients through personalWork.people; duplicate
+names require clarification. Owner always comes from the leased conversation.
+Use current personalWork.categories evidence for actual category keys/subtypes.
+The strict plan contains kind TASK/EVENT, title, note, categoryKey, workType,
+offset-aware dueAt/scheduledEndAt, priority, tags, checklist, shares and syncGoogle.
+Times resolve from current referenceTime in Vietnam; ask only ambiguous/missing
+required facts. Defaults are GENERAL group, MEDIUM priority, no tags/checklist/
+shares/Google sync. Viewer sharing is the default for an explicit share request;
+EDITOR must be expressly requested. Reserved codex execution is not part of this
+personal plan. EVENT requires a date, has no checklist/completion/progress and can
+have a start-only time. All-day uses the existing local end-of-day date encoding.
+
+A complete compact review is corrected in chat and approved once via the dedicated
+button. Approval rechecks current authority/category/recipients and exact revision,
+then atomically creates one canonical owner-scoped TaskItem plus checklist/shares
+and a durable conversation receipt. Concurrent/replayed approvals return that
+receipt, never create duplicates. No order, technical issue, product reservation
+or notification dispatch is inferred from this plan. Business, personal, order,
+permission, code and navigation proposals must not be mixed in a turn.
+
+Google sync is a separately described optional result of that same approval. A
+provider failure never loses the already-created item or repeats creation; show
+saved-but-not-synced and link to the existing Personal Work sync control. Receipt
+and draft history require TASK_VIEW; current revocation redacts both. The server
+keeps private leases out of browser data. Pending drafts are context, never
+consent; old results never authorize another write. No offline/background replay.
+
+Event occurrence is derived from its schedule (upcoming/ongoing/past); internal
+TODO storage is not an instruction to complete it. The personal page excludes
+events from open/overdue counts, completion controls/checklists, and Done view;
+calendar/local/Google surfaces keep their times and allow editing/cancellation.
+A point event uses a technical one-minute Google interval because Google requires
+an end, while the local item and UI retain a start-only schedule. The metadata
+round-trip preserves that distinction. Existing tasks keep their prior semantics.

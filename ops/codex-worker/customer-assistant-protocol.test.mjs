@@ -104,3 +104,14 @@ test('daily business list tools accept only a calendar date or today and never m
   for(const extras of [{productId:'watch'},{customerId:'customer'},{plan:{}},{permissionRequest:'grant me access'},{navigationIntent:{type:'OPEN_SCREEN',sourceMessageId:'user'}}])assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool,reply:null,...extras}));
  }
 });
+
+test('personal work and event proposals are strict drafts, never mixed writes or arbitrary owner IDs',()=>{
+ const personalWorkPlan={kind:'TASK',title:'Mang Tissot cho Nam',note:null,categoryKey:'GENERAL',workType:null,dueAt:'2026-11-10T08:00:00+07:00',scheduledEndAt:'2026-11-10T09:00:00+07:00',tags:[],shares:[],priority:"MEDIUM",checklist:[],syncGoogle:false};
+ assert.equal(validateCustomerTurn({...finish,personalWorkPlan}).personalWorkPlan.title,personalWorkPlan.title);
+ assert.equal(validateCustomerTurn({...finish,personalWorkPlan:{...personalWorkPlan,kind:'EVENT',scheduledEndAt:null}}).personalWorkPlan.kind,'EVENT');
+ for(const extra of [{ownerId:'other'},{kind:'EVENT',dueAt:null},{tags:['codex']},{scheduledEndAt:'2026-11-10T07:00:00+07:00'}])assert.throws(()=>validateCustomerTurn({...finish,personalWorkPlan:{...personalWorkPlan,...extra}}));
+ assert.throws(()=>validateCustomerTurn({...finish,personalWorkPlan,plan:{}}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.today',reply:null,personalWorkPlan}));
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.categories',reply:null}).lookup,{tool:'personalWork.categories'});
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.people',query:'Nam',reply:null}).lookup,{tool:'personalWork.people',query:'Nam'});
+});
