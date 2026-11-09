@@ -118,6 +118,7 @@ test("Media Post effective price prefers sale price then list price", () => {
 test("Media Post gallery-copy event is registered in the business-event catalog", () => {
   const contract = getBusinessEventContract("media.post.watch.gallery.copied");
   assert.equal(contract?.key, "media.post.watch.gallery.copied");
+  assert.deepEqual(contract?.knownConsumers, ["timeline"]);
 });
 
 test("Media Post rollback attempts cleanup for every copied storage object", async () => {
