@@ -1,7 +1,7 @@
 # Personal events and Ben scheduling
 
 Personal Work has a separate Loại mục selector in quick create and calendar
-create: Công việc or Sự kiện. Groups/categories stay independent. EVENT is stored
+create: Công việc or Sự kiện. Events are standalone in the UI: do not show or ask for task groups or priorities. The server uses GENERAL/MEDIUM as compatibility defaults for new Ben events; these are not event choices. EVENT is stored
 in the existing TaskItem.workTypeId string, including custom categories; no schema
 migration or new permission. Existing work subtype strings are unchanged.
 

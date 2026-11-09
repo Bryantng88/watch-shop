@@ -12,7 +12,8 @@ export async function preparePersonalWork(
   revision: number,
   entries: Evidence[],
 ): Promise<PersonalWorkDraft> {
-  const plan = personalWorkPlanSchema.parse(raw);
+  const parsed = personalWorkPlanSchema.parse(raw);
+  const plan = parsed.kind === "EVENT" ? { ...parsed, categoryKey: "GENERAL", workType: null, priority: "MEDIUM" as const } : parsed;
   validatePersonalSchedule(plan.dueAt, plan.scheduledEndAt);
   const category = (await listPersonalCategories(userId)).find((c) => c.key === plan.categoryKey);
   const seen = entries.some(
@@ -21,7 +22,7 @@ export async function preparePersonalWork(
       Array.isArray(e.result.categories) &&
       (e.result.categories as { key: string }[]).some((c) => c.key === plan.categoryKey),
   );
-  if (!category || !seen) throw new AssistantError("Cần tra cứu lại nhóm công việc của bạn.", 409);
+  if (!category || (plan.kind === "TASK" && !seen)) throw new AssistantError("Cần tra cứu lại nhóm công việc của bạn.", 409);
   if (
     plan.kind === "TASK" &&
     plan.workType &&

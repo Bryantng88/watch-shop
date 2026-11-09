@@ -25,12 +25,12 @@ export default function PersonalWorkDraftReview({
         {p.kind === "EVENT" ? "Sự kiện" : "Công việc"} · {p.title}
       </h3>
       <p className="mt-2 text-slate-600">
-        {draft.categoryLabel} · {p.dueAt ? date(p.dueAt) : "Chưa đặt lịch"}
+        {p.kind !== "EVENT" && <>{draft.categoryLabel} · </>}{p.dueAt ? date(p.dueAt) : "Chưa đặt lịch"}
         {p.scheduledEndAt ? " → " + date(p.scheduledEndAt) : ""}
       </p>
-      <p className="mt-2 text-xs text-slate-500">
+      {p.kind !== "EVENT" && <p className="mt-2 text-xs text-slate-500">
         Ưu tiên: {{ LOW: "Thấp", MEDIUM: "Bình thường", HIGH: "Cao", URGENT: "Khẩn" }[p.priority]}
-      </p>
+      </p>}
       {p.checklist.length > 0 && (
         <ul className="mt-2 list-disc pl-5">
           {p.checklist.map((title, i) => (
