@@ -307,3 +307,10 @@ calendar/local/Google surfaces keep their times and allow editing/cancellation.
 A point event uses a technical one-minute Google interval because Google requires
 an end, while the local item and UI retain a start-only schedule. The metadata
 round-trip preserves that distinction. Existing tasks keep their prior semantics.
+
+Customer repair progress uses customerRepairs.search under SERVICE_VIEW. The
+lookup searches active and completed-but-not-delivered CUSTOMER_OWNED tickets
+by watch identifiers without a date constraint or private customer fields.
+Photo inventory search tries exact SKU before matching all identifying terms.
+Image turns show bounded candidate cards using inline photo, title and selling
+price. Ordinary requests for a product gallery still use the gallery card.

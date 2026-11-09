@@ -14,6 +14,7 @@ export const LOOKUP_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   "personalWork.categories": ["TASK_VIEW"],
   "personalWork.people": ["TASK_VIEW"],
   "orders.list": ["ORDER_VIEW"],
+  "customerRepairs.search": ["SERVICE_VIEW"],
   "technicalIssues.list": ["SERVICE_VIEW"],
   "customers.search": ["CUSTOMER_VIEW"],
   "watches.search": ["PRODUCT_VIEW"],
