@@ -30,3 +30,12 @@ test("revocation removes lookup capability; unknown tools fail closed even for a
  assert.equal(lookupAllowed(actor(),"customers.search"),false);
  assert.equal(lookupAllowed({admin:true,permissions:new Set()},"sql"),false);
 });
+
+test('daily order and technical lists are independently scoped read capabilities',()=>{
+ assert.equal(lookupAllowed(actor('ORDER_VIEW'),'orders.list'),true);
+ assert.equal(lookupAllowed(actor('ORDER_VIEW'),'technicalIssues.list'),false);
+ assert.equal(lookupAllowed(actor('SERVICE_VIEW'),'technicalIssues.list'),true);
+ assert.equal(lookupAllowed(actor('SERVICE_VIEW'),'orders.list'),false);
+ assert.equal(lookupAllowed(actor('TASK_VIEW'),'technicalIssues.list'),false);
+ assert.equal(lookupAllowed(actor('ORDER_CREATE'),'orders.list'),true);
+});

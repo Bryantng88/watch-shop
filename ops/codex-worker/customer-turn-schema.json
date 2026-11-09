@@ -18,6 +18,8 @@
         "media.inspect",
         "media.draft",
         "personalWork.today",
+        "orders.list",
+        "technicalIssues.list",
         "repository.info",
         "repository.history",
         "repository.tree",

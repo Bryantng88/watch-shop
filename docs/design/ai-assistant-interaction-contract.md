@@ -238,3 +238,32 @@ existing composer. The impression shapes the angle and does not establish a
 technical fact. The draft opens in the active product's Content tab with
 sources and review notes collapsed. The existing one-click approval still
 fills the form and does not save or publish it.
+
+## Daily order and technical issue reads
+
+`orders.list` requires ORDER_VIEW and returns orders created on a selected date.
+`technicalIssues.list` requires SERVICE_VIEW and returns issues opened on that date.
+Both use query=null for today's Asia/Ho_Chi_Minh business day, or exactly YYYY-MM-DD.
+The date interval is inclusive local midnight to exclusive next local midnight.
+This is the same global view scope as the admin Order list and Technical Issue
+board, not the Personal Work owner/share scope. These tools never write or create
+an approval card and never require a customer, product or recipient selection.
+
+The server derives identity from the owned leased conversation and rechecks read
+permissions before lookup and before reply delivery/history. Return bounded rows,
+exact total, truncation, date criterion and observation timestamp. Include only
+references/statuses/dates, bounded issue summary and authorized admin links; no
+customer contacts, addresses, amounts, vendor notes or resolution notes. Say
+“đơn được tạo” or “phiếu được mở”, not all pending/due/delivered work. An empty
+result applies only to that date criterion. Failed/denied reads are not empty
+results. Never infer issue data from personalWork.today. For a combined question,
+read each authorized list and state any missing access separately. Historical
+answers cannot establish fresh facts for a new date.
+
+The server supplies Ben's environment to the panel and customer-request cards.
+Production has no staging badge; staging is labelled only when explicitly
+configured. Simulation labels remain visible. Hostnames and chat statements
+cannot choose environment or confer privileges. Deploy app and updated customer
+worker/protocol/schema together; live natural-language acceptance should cover
+orders today, issues today, combined requests, no results, truncation, date changes,
+and permission loss. Unit/scripted tests do not establish real model acceptance.

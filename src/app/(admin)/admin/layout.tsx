@@ -1,3 +1,4 @@
+import {benEnvironment} from "@/domains/ai-assistant/environment";
 import AdminShell from "./_client/AdminShell";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { redirect } from "next/navigation";
@@ -31,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     <AdminShell
                         assistantSimulation={localSalesSimulationEnabled()}
                         assistantLive={customerAssistantReady()}
+                        assistantEnvironment={benEnvironment(process.env)}
                         assistantImageSearch={process.env.BEN_IMAGE_SEARCH_ENABLED === "1" && (user.roles.includes("ADMIN") || permissions.includes("PRODUCT_VIEW"))}
                         user={{
                             id: user.id,
