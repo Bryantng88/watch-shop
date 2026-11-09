@@ -136,7 +136,7 @@ export default function BenPwaRuntime() {
   return (
     <section
       aria-label="Cài đặt và kết nối Ben"
-      className="mx-4 mb-2 shrink-0 rounded-xl border border-blue-100 bg-white px-3 py-1 text-xs text-slate-600"
+      className="mx-3 shrink-0 px-1 text-xs text-slate-600 sm:mx-4 sm:mb-2 sm:rounded-xl sm:border sm:border-blue-100 sm:bg-white sm:px-3 sm:py-1"
     >
       {offline && (
         <p role="status" className="py-2 text-amber-800">
