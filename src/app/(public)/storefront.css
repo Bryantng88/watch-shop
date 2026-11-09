@@ -1335,3 +1335,18 @@
     animation: none !important;
   }
 }
+
+/* Home editorial variants; header, catalogue and product pages stay light. */
+.vg-hero.vg-hero--charcoal { margin: 0; background: radial-gradient(ellipse at 72% 48%, #45433a 0, #272a26 42%, #202321 76%); color: #f3eee4; }
+.vg-hero--charcoal .vg-hero-copy { padding-left: 12%; }
+.vg-hero--charcoal h1 { color: #f3eee4; }
+.vg-hero--charcoal .vg-kicker { color: #d5bc86; }
+.vg-hero--charcoal .vg-description { color: #d9d6cd; }
+.vg-hero--charcoal .vg-button { background: #e9ddc6; color: #202321; border-color: #e9ddc6; }
+.vg-hero--charcoal .vg-button:hover { background: #f3eee4; border-color: #f3eee4; }
+.vg-hero--charcoal .vg-hero-image { background: transparent; }
+.vg-about.vg-about--text { grid-template-columns: 1fr; }
+.vg-about--text .vg-about-copy { max-width: 780px; padding: 12px 0; }
+.vg-collection.vg-collection--text { display: block; border-top: 1px solid #dedbd5; padding: 22px 0 28px; }
+.vg-collection--text h3 { margin-top: 0; }
+@media(max-width:640px) { .vg-hero.vg-hero--charcoal { margin: 0; } .vg-hero--charcoal .vg-hero-copy { padding: 34px 6%; } }

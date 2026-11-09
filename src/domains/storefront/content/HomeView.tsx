@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import React, { type CSSProperties } from "react";
 import PublicWatchCardView from "../ui/PublicWatchCard";
 import type { PublicWatchCard } from "../contracts";
 import type { EditorialImage, HomeContent, ArticleContent } from "./contract";
@@ -67,7 +67,10 @@ export type HomeViewData = {
 export default function HomeView({ content: c, images, watches, journal }: HomeViewData) {
   const blocks = {
     hero: (
-      <section className="vg-hero" aria-label="Giới thiệu Vintic">
+      <section
+        className={`vg-hero${c.hero.theme === "charcoal" ? " vg-hero--charcoal" : ""}`}
+        aria-label="Giới thiệu Vintic"
+      >
         <div className="vg-hero-copy">
           <p className="vg-kicker">Vintage & pre-owned</p>
           <h1>{c.hero.title}</h1>
@@ -112,10 +115,12 @@ export default function HomeView({ content: c, images, watches, journal }: HomeV
       </section>
     ) : null,
     about: (
-      <section className="vg-about" id="about">
-        <div className="vg-about-image">
-          <EditorialPhoto image={images.about} />
-        </div>
+      <section className={`vg-about${images.about?.url ? "" : " vg-about--text"}`} id="about">
+        {images.about?.url && (
+          <div className="vg-about-image">
+            <EditorialPhoto image={images.about} />
+          </div>
+        )}
         <div className="vg-about-copy">
           <p className="vg-kicker">Về Vintic</p>
           <h2>{c.about.title}</h2>
@@ -133,10 +138,16 @@ export default function HomeView({ content: c, images, watches, journal }: HomeV
         </div>
         <div className="vg-collections">
           {c.collections.map((collection, i) => (
-            <Link className="vg-collection" key={collection.id} href={collection.href}>
-              <div className="vg-collection-image">
-                <EditorialPhoto image={images[`collection-${i}`]} />
-              </div>
+            <Link
+              className={`vg-collection${images[`collection-${i}`]?.url ? "" : " vg-collection--text"}`}
+              key={collection.id}
+              href={collection.href}
+            >
+              {images[`collection-${i}`]?.url && (
+                <div className="vg-collection-image">
+                  <EditorialPhoto image={images[`collection-${i}`]} />
+                </div>
+              )}
               <h3>
                 {collection.title}
                 <span aria-hidden>↗</span>

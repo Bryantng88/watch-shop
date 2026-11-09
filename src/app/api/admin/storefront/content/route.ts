@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
         revision: z.number().int().nonnegative(),
         action: z.enum(["save", "publish", "unpublish"]),
         content: z.unknown().optional(),
+        scope: z.literal("home").optional(),
       })
       .parse(body);
     await saveContent(input, auth.id);

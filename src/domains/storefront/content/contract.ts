@@ -38,13 +38,17 @@ export const sectionIds = [
   "journal",
   "closing",
 ] as const;
-export const sectionSchema = z.object({ id: z.enum(sectionIds), enabled: z.boolean() });
+export const sectionSchema = z.object({
+  id: z.enum(sectionIds),
+  enabled: z.boolean(),
+});
 export const homeSchema = z.object({
   sections: z
     .array(sectionSchema)
     .length(6)
     .refine((v) => new Set(v.map((s) => s.id)).size === 6, "Mỗi khối chỉ xuất hiện một lần."),
   hero: z.object({
+    theme: z.enum(["light", "charcoal"]).default("light"),
     title: text(120).min(1),
     description: text(500),
     button: text(80).min(1),
@@ -107,11 +111,17 @@ export type ContentRecord = {
   publishedAt: string | null;
   updatedAt: string | null;
 };
-export const emptyImage = (): EditorialImage => ({ key: "", alt: "", focalX: 50, focalY: 50 });
+export const emptyImage = (): EditorialImage => ({
+  key: "",
+  alt: "",
+  focalX: 50,
+  focalY: 50,
+});
 export function defaultHome(): HomeContent {
   return {
     sections: sectionIds.map((id) => ({ id, enabled: true })),
     hero: {
+      theme: "light",
       title: "Thiết kế vượt\nqua thời gian.",
       description:
         "Đồng hồ vintage & pre-owned được tuyển chọn.\nTừ thiết kế kinh điển đến những nét riêng ít gặp.",
@@ -156,7 +166,12 @@ export function defaultHome(): HomeContent {
       button: "Khám phá bộ sưu tập",
       href: "/products",
     },
-    general: { logo: emptyImage(), tagline: "Vintage Watch & Accessories", contact: "", links: [] },
+    general: {
+      logo: emptyImage(),
+      tagline: "Vintage Watch & Accessories",
+      contact: "",
+      links: [],
+    },
   };
 }
 export function defaultArticle(): ArticleContent {
@@ -170,6 +185,20 @@ export function defaultArticle(): ArticleContent {
     productIds: [],
   };
 }
+export function homePublicationIssues(home: HomeContent): string[] {
+  const enabled = (id: (typeof sectionIds)[number]) =>
+    home.sections.some((s) => s.id === id && s.enabled);
+  const issues: string[] = [];
+  if (enabled("hero") && !home.hero.image.key)
+    issues.push("Chọn ảnh desktop cho khối mở đầu hoặc ẩn khối.");
+  if (enabled("about") && !home.about.image.key) issues.push("Chọn ảnh Về Vintic hoặc ẩn khối.");
+  if (enabled("collections"))
+    home.collections.forEach((c) => {
+      if (!c.image.key)
+        issues.push(`Chọn ảnh bộ sưu tập “${c.title || c.id}” hoặc bỏ nhóm/ẩn khối.`);
+    });
+  return issues;
+}
 export function contentImages(kind: string, content: unknown): Record<string, EditorialImage> {
   if (kind === "HOME") {
     const c = homeSchema.parse(content);
@@ -182,5 +211,8 @@ export function contentImages(kind: string, content: unknown): Record<string, Ed
     };
   }
   const c = articleSchema.parse(content);
-  return { cover: c.cover, ...Object.fromEntries(c.images.map((v, i) => [`image-${i}`, v])) };
+  return {
+    cover: c.cover,
+    ...Object.fromEntries(c.images.map((v, i) => [`image-${i}`, v])),
+  };
 }

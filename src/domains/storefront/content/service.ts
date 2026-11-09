@@ -7,6 +7,7 @@ import { publicWatchEligibilityWhere, publicWatchListSelect } from "../server/pu
 import {
   articleSchema,
   homeSchema,
+  homePublicationIssues,
   defaultHome,
   defaultArticle,
   contentImages,
@@ -17,7 +18,9 @@ import {
 
 export class ContentConflict extends Error {}
 export async function readHome(draft = false): Promise<HomeContent> {
-  const row = await prisma.storefrontDocument.findUnique({ where: { id: "home" } });
+  const row = await prisma.storefrontDocument.findUnique({
+    where: { id: "home" },
+  });
   return homeSchema.parse((draft ? row?.draft : row?.published) ?? defaultHome());
 }
 export async function selectedWatches(ids: string[], fallback = false) {
@@ -38,20 +41,31 @@ export async function selectedWatches(ids: string[], fallback = false) {
 }
 export async function listArticles(draft = false) {
   const rows = await prisma.storefrontDocument.findMany({
-    where: { kind: "ARTICLE", ...(draft ? {} : { publishedAt: { not: null } }) },
+    where: {
+      kind: "ARTICLE",
+      ...(draft ? {} : { publishedAt: { not: null } }),
+    },
     orderBy: draft ? { updatedAt: "desc" } : { publishedAt: "desc" },
     take: 100,
   });
   return rows.flatMap((row) => {
     const parsed = articleSchema.safeParse(draft ? row.draft : row.published);
     return parsed.success
-      ? [{ id: row.id, content: parsed.data, publishedAt: row.publishedAt?.toISOString() ?? null }]
+      ? [
+          {
+            id: row.id,
+            content: parsed.data,
+            publishedAt: row.publishedAt?.toISOString() ?? null,
+          },
+        ]
       : [];
   });
 }
 export async function getArticle(idOrSlug: string, draft = false) {
   const row = draft
-    ? await prisma.storefrontDocument.findFirst({ where: { id: idOrSlug, kind: "ARTICLE" } })
+    ? await prisma.storefrontDocument.findFirst({
+        where: { id: idOrSlug, kind: "ARTICLE" },
+      })
     : await prisma.storefrontDocument.findFirst({
         where: {
           kind: "ARTICLE",
@@ -61,14 +75,25 @@ export async function getArticle(idOrSlug: string, draft = false) {
       });
   const parsed = articleSchema.safeParse(draft ? row?.draft : row?.published);
   return row && parsed.success
-    ? { id: row.id, content: parsed.data, publishedAt: row.publishedAt?.toISOString() ?? null }
+    ? {
+        id: row.id,
+        content: parsed.data,
+        publishedAt: row.publishedAt?.toISOString() ?? null,
+      }
     : null;
 }
 export async function getEditorRecord(id: string): Promise<ContentRecord | null> {
   const row = await prisma.storefrontDocument.findUnique({ where: { id } });
   if (!row)
     return id === "home"
-      ? { id, kind: "HOME", draft: defaultHome(), revision: 0, updatedAt: null, publishedAt: null }
+      ? {
+          id,
+          kind: "HOME",
+          draft: defaultHome(),
+          revision: 0,
+          updatedAt: null,
+          publishedAt: null,
+        }
       : null;
   return {
     id: row.id,
@@ -97,6 +122,7 @@ export async function saveContent(
     revision: number;
     action: "save" | "publish" | "unpublish";
     content?: unknown;
+    scope?: "home";
   },
   userId: string,
 ) {
@@ -104,33 +130,51 @@ export async function saveContent(
     async (tx) => {
       // Serialize editors before checking revision; publishing never races a draft save.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`storefront:${input.id}`}))`;
-      const row = await tx.storefrontDocument.findUnique({ where: { id: input.id } });
+      const row = await tx.storefrontDocument.findUnique({
+        where: { id: input.id },
+      });
       if ((row?.revision ?? 0) !== input.revision)
         throw new ContentConflict(
           "Nội dung đã được thay đổi ở phiên khác. Hãy tải lại trước khi lưu.",
         );
       if (!row && input.id !== "home") throw new Error("Không tìm thấy bài viết.");
       const kind = row?.kind ?? "HOME";
-      const content = (kind === "HOME" ? homeSchema : articleSchema).parse(
+      if (input.scope === "home" && (kind !== "HOME" || input.action === "unpublish"))
+        throw new Error("Mục Trang chủ chỉ lưu và xuất bản nội dung trang chủ.");
+      const parsed = (kind === "HOME" ? homeSchema : articleSchema).parse(
         input.content ?? row?.draft ?? defaultHome(),
       );
+      const content =
+        input.scope === "home"
+          ? { ...parsed, general: homeSchema.parse(row?.draft ?? defaultHome()).general }
+          : parsed;
+      const publication =
+        input.scope === "home"
+          ? { ...content, general: homeSchema.parse(row?.published ?? defaultHome()).general }
+          : content;
       if (input.action === "publish") {
         if (kind === "ARTICLE" && !("body" in content && content.body.trim()))
           throw new Error("Bài viết cần nội dung trước khi xuất bản.");
         if (kind === "ARTICLE" && !contentImages(kind, content).cover.key)
           throw new Error("Chọn ảnh bìa trước khi xuất bản bài viết.");
-        for (const image of Object.values(contentImages(kind, content))) {
+        for (const image of Object.entries(contentImages(kind, publication))
+          .filter(([slot]) => input.scope !== "home" || slot !== "logo")
+          .map(([, image]) => image)) {
           if (image.key && !(await mediaStorage.stat(image.key)))
             throw new Error("Một ảnh đã mất khỏi kho. Vui lòng chọn lại.");
         }
         if (kind === "HOME") {
           const home = content as HomeContent;
-          if (home.sections.some((s) => s.id === "hero" && s.enabled) && !home.hero.image.key)
-            throw new Error("Chọn ảnh Hero trước khi xuất bản.");
+          const issues = homePublicationIssues(home);
+          if (issues.length) throw new Error(issues.join(" "));
           if (
             home.journal.articleId &&
             !(await tx.storefrontDocument.findFirst({
-              where: { id: home.journal.articleId, kind: "ARTICLE", publishedAt: { not: null } },
+              where: {
+                id: home.journal.articleId,
+                kind: "ARTICLE",
+                publishedAt: { not: null },
+              },
             }))
           )
             throw new Error("Bài nổi bật phải được xuất bản trước.");
@@ -138,7 +182,9 @@ export async function saveContent(
           if (
             selectedIds.length &&
             (await tx.product.count({
-              where: { AND: [publicWatchEligibilityWhere(), { id: { in: selectedIds } }] },
+              where: {
+                AND: [publicWatchEligibilityWhere(), { id: { in: selectedIds } }],
+              },
             })) !== selectedIds.length
           )
             throw new Error("Một đồng hồ đã chọn không còn đủ điều kiện public. Hãy chọn lại.");
@@ -149,7 +195,10 @@ export async function saveContent(
         updatedBy: userId,
         revision: { increment: 1 },
         ...(input.action === "publish"
-          ? { published: content as Prisma.InputJsonValue, publishedAt: new Date() }
+          ? {
+              published: publication as Prisma.InputJsonValue,
+              publishedAt: new Date(),
+            }
           : input.action === "unpublish"
             ? { published: Prisma.DbNull, publishedAt: null }
             : {}),
@@ -163,7 +212,10 @@ export async function saveContent(
             draft: content as Prisma.InputJsonValue,
             updatedBy: userId,
             ...(input.action === "publish"
-              ? { published: content as Prisma.InputJsonValue, publishedAt: new Date() }
+              ? {
+                  published: publication as Prisma.InputJsonValue,
+                  publishedAt: new Date(),
+                }
               : {}),
           },
         });

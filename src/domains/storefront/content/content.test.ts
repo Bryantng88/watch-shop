@@ -17,6 +17,7 @@ import {
   defaultHome,
   editorialKey,
   homeSchema,
+  homePublicationIssues,
   safeLink,
 } from "./contract";
 import { ContentConflict, readHome, resolveImages, saveContent } from "./service";
@@ -129,6 +130,8 @@ test("save, publish, stale revision and unpublish preserve isolated snapshots", 
   patch(mediaStorage, "stat", async () => metadata);
   const home = defaultHome();
   home.hero.image.key = metadata.key;
+  home.about.image.key = metadata.key;
+  home.collections.forEach(c => {c.image.key = metadata.key;});
   await saveContent({ id: "home", revision: 0, action: "save", content: home }, "tester");
   assert.equal((await readHome()).hero.image.key, "", "draft must not become public");
   await saveContent({ id: "home", revision: 1, action: "publish", content: home }, "tester");
@@ -203,4 +206,34 @@ test("public media serves only slots referenced by published content", async () 
   assert.equal(urls.hero.url, "/api/public/storefront/media/home/hero");
   assert.equal(Object.keys(contentImages("HOME", content)).includes("logo"), true);
   mock.restoreAll();
+});
+
+test("home publishing requires images only for enabled editorial sections and preserves legacy light theme",()=>{
+ const home=defaultHome();
+ assert.equal(home.hero.theme,"light");
+ const legacy=JSON.parse(JSON.stringify(home));delete legacy.hero.theme;
+ assert.equal(homeSchema.parse(legacy).hero.theme,"light");
+ assert.equal(homePublicationIssues(home).length,5);
+ home.hero.image.key="storefront/editorial/test.webp";
+ home.sections=home.sections.map(s=>s.id==="about"||s.id==="collections"?{...s,enabled:false}:s);
+ assert.deepEqual(homePublicationIssues(home),[]);
+ assert.equal(isAdminAccessAllowed(getAdminPagePolicy("/admin/storefront/home"),new Set([PERMISSIONS.PRODUCT_UPDATE])),true);
+ assert.equal(isAdminAccessAllowed(getAdminPagePolicy("/admin/storefront/home"),new Set([PERMISSIONS.PRODUCT_VIEW])),false);
+});
+
+test("home-only publication cannot publish or overwrite hidden global draft settings",async()=>{
+ const draft=defaultHome(),published=defaultHome();
+ draft.general.tagline="Unreviewed global draft";published.general.tagline="Current public footer";
+ draft.hero.image.key="storefront/editorial/test.webp";draft.about.image.key=draft.hero.image.key;draft.collections.forEach(c=>{c.image.key=draft.hero.image.key;});
+ const row={id:"home",kind:"HOME",revision:8,draft,published};let written:Record<string,unknown>|undefined;
+ patch(prisma,"$transaction",async(callback:unknown)=>(callback as (tx:typeof prisma)=>Promise<unknown>)(prisma));
+ patch(prisma,"$executeRaw",async()=>1);patch(prisma.storefrontDocument,"findUnique",async()=>row);
+ patch(prisma.storefrontDocument,"update",async({data}:{data:Record<string,unknown>})=>{written=data;return row;});
+ patch(mediaStorage,"stat",async()=>({key:draft.hero.image.key,sizeBytes:10,etag:null,contentType:"image/webp"}));
+ const submitted=structuredClone(draft);submitted.hero.title="Reviewed home hero";submitted.general.tagline="Hidden client change";
+ await saveContent({id:"home",revision:8,action:"publish",scope:"home",content:submitted},"tester");
+ assert.equal((written!.draft as typeof draft).general.tagline,"Unreviewed global draft");
+ assert.equal((written!.published as typeof draft).general.tagline,"Current public footer");
+ assert.equal((written!.published as typeof draft).hero.title,"Reviewed home hero");
+ await assert.rejects(saveContent({id:"home",revision:8,action:"unpublish",scope:"home"},"tester"),/chỉ lưu và xuất bản/);
 });
