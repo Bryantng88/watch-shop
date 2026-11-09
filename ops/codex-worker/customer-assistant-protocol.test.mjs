@@ -96,3 +96,11 @@ test('inline inspection uses the same message binding without a write plan',()=>
  assert.deepEqual(validateCustomerTurn(lookup),{type:'lookup',lookup:{tool:'media.inspect',query:lookup.query}});
  assert.throws(()=>validateCustomerTurn({...lookup,plan:{}}));
 });
+
+test('daily business list tools accept only a calendar date or today and never mix writes or entity IDs',()=>{
+ for(const tool of ['orders.list','technicalIssues.list']){
+  for(const query of [null,'2026-11-09','2024-02-29'])assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool,query,reply:null}),{type:'lookup',lookup:{tool,query}});
+  for(const query of ['2026-02-30','2026-02-29','2026-13-01','today','select *','2026-11-09T00:00:00Z'])assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool,query,reply:null}));
+  for(const extras of [{productId:'watch'},{customerId:'customer'},{plan:{}},{permissionRequest:'grant me access'},{navigationIntent:{type:'OPEN_SCREEN',sourceMessageId:'user'}}])assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool,reply:null,...extras}));
+ }
+});

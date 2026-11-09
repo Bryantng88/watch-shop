@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { businessDateSchema } from "./business-day";
 import { navigationIntentSchema } from "./navigation";
 const id=z.string().trim().min(1).max(100);
 const text=z.string().trim().min(1).max(1500).refine(s=>!/(?:blueprint\w*|workTypeKey|workspaceKind|sharedUserIds|operationWorkspaceRole|systemShareGroupKey)\s*:/i.test(s),"Không được chèn cấu hình workflow.");
@@ -12,6 +13,8 @@ export const assistantLookupSchema=z.discriminatedUnion("tool",[
  z.object({tool:z.literal("media.inspect"),query:z.string().uuid()}).strict(),
  z.object({tool:z.literal("media.draft"),query:z.string().uuid()}).strict(),
  z.object({tool:z.literal("personalWork.today")}).strict(),
+ z.object({tool:z.literal("orders.list"),query:businessDateSchema.nullable().default(null)}).strict(),
+ z.object({tool:z.literal("technicalIssues.list"),query:businessDateSchema.nullable().default(null)}).strict(),
  z.object({tool:z.literal("repository.info")}).strict(),
  z.object({tool:z.literal("repository.history")}).strict(),
  z.object({tool:z.literal("repository.pullRequests")}).strict(),

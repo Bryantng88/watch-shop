@@ -78,6 +78,43 @@ async function main(){
  assert.ok(!imageResult.customerRequest&&!imageResult.orderDraft&&!imageResult.codeDraft);
  const imageRow=await p.customerAssistantConversation.findUniqueOrThrow({where:{id:imageChat.id},select:{state:true}});
  assert.ok(!JSON.stringify(imageRow.state).includes(imageRun.imageBase64));
+ // Daily lists use the business modules, not Personal Work, and remain read-only.
+ const day="2040-01-02",start=new Date(day+"T00:00:00+07:00"),end=new Date(start.getTime()+86400000);
+ const refs=["before","start","last","end"];
+ const dates=[new Date(start.getTime()-1),start,new Date(end.getTime()-1),end];
+ const dailyOrders=[];
+ for(let i=0;i<dates.length;i++)dailyOrders.push(await p.order.create({data:{refNo:`DAILY-${suffix}-${refs[i]}`,createdAt:dates[i],shipPhone:"",shipAddress:"",shipCity:"",subtotal:0,hasShipment:false}}));
+ const dailyIssueId=prospectApproved.customerRequest!.conditions.find(c=>c.kind==="TECHNICAL")!.linkedRef!;
+ await p.technicalIssue.update({where:{id:dailyIssueId},data:{openedAt:start}});
+ const listRole=await p.role.create({data:{name:`DAILY-${suffix}`,permissions:{connect:[{code:"ORDER_VIEW"},{code:"SERVICE_VIEW"}]}}});
+ const listUser=await p.user.create({data:{email:`daily-${suffix}@example.invalid`,name:"Daily reader",roles:{connect:{id:listRole.id}}}});
+ const beforeDaily={orders:await p.order.count(),issues:await p.technicalIssue.count(),tasks:await p.taskItem.count()};
+ const dailyChat=await sendAssistant(listUser.id,{requestKey:randomUUID(),text:"Đơn hàng và phiếu kỹ thuật ngày 02/01/2040 có gì?"});
+ const dailyRun=(await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string;text:string}}).run;
+ assert.equal(dailyRun.id,dailyChat.id);
+ const allowed=JSON.parse(dailyRun.text).requester.allowedLookups;assert.ok(allowed.includes("orders.list")&&allowed.includes("technicalIssues.list"));
+ const orderList=await assistantWorker("lookup",{...dailyRun,lookup:{tool:"orders.list",query:day}}) as {evidence:{result:{items:{id:string}[];total:number;date:string}}};
+ assert.equal(orderList.evidence.result.date,day);
+ assert.deepEqual(orderList.evidence.result.items.map(o=>o.id).sort(),[dailyOrders[1].id,dailyOrders[2].id].sort());
+ const issueList=await assistantWorker("lookup",{...dailyRun,lookup:{tool:"technicalIssues.list",query:day}}) as {evidence:{result:{items:{id:string}[]}}};
+ assert.ok(issueList.evidence.result.items.some(i=>i.id===dailyIssueId));
+ await assistantWorker("finish",{...dailyRun,reply:"Danh sách đơn và phiếu thử nghiệm trong ngày.",plan:null});
+ const dailyReply=(await listAssistant(listUser.id,dailyChat.id)).conversations[0].messages.at(-1)!;
+ assert.ok(dailyReply.requiredPermissions?.includes("ORDER_VIEW")&&dailyReply.requiredPermissions.includes("SERVICE_VIEW"));
+ assert.equal(await p.order.count(),beforeDaily.orders);assert.equal(await p.technicalIssue.count(),beforeDaily.issues);assert.equal(await p.taskItem.count(),beforeDaily.tasks);
+ // A permission revoked after the lookup suppresses the model answer at finish.
+ await sendAssistant(listUser.id,{id:dailyChat.id,requestKey:randomUUID(),text:"Tra cứu lại đơn ngày đó"});
+ const revokeRun=(await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}}).run;
+ await assistantWorker("lookup",{...revokeRun,lookup:{tool:"orders.list",query:day}});
+ await p.role.update({where:{id:listRole.id},data:{permissions:{set:[]}}});
+ await assistantWorker("finish",{...revokeRun,reply:"Sensitive daily order result",plan:null});
+ const revokedChat=(await listAssistant(listUser.id,dailyChat.id)).conversations[0];
+ assert.ok(!JSON.stringify(revokedChat).includes("Sensitive daily order result"));assert.ok(!JSON.stringify(revokedChat).includes("Danh sách đơn và phiếu thử nghiệm"));
+ const deniedChat=await sendAssistant(staff.id,{requestKey:randomUUID(),text:"Đơn hôm nay?"});
+ const deniedRun=(await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}}).run;assert.equal(deniedRun.id,deniedChat.id);
+ for(const tool of ["orders.list","technicalIssues.list"]){const deniedList=await assistantWorker("lookup",{...deniedRun,lookup:{tool,query:null}}) as {evidence:{result:{accessDenied:boolean;items?:unknown}}};assert.equal(deniedList.evidence.result.accessDenied,true);assert.equal(deniedList.evidence.result.items,undefined);}
+ await assistantWorker("finish",{...deniedRun,reply:"Bạn chưa có quyền đọc danh sách này.",plan:null});
+ console.log("PASS daily lists: actual SQL midnight boundaries, read capabilities, lease/evidence, no business writes, finish/history revocation and denial.");
  console.log("PASS image search: scope, decoder, private worker handoff, read-only result and cleanup.");
  console.log("PASS assistant: permission/ownership, scripted model lookups, no writes before approval, concurrent idempotent approval, real technical issue+assigned task, separate condition outcome, cancellation fence, no orders/reservations. CLI execution was scripted, not real.");
 }

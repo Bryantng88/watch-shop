@@ -1,3 +1,4 @@
+import {dailyBusiness} from "./daily-business";
 import {codeEnabled,codePlanSchema,publicCodeJob} from "../code-contract";
 import { canReadRepository, BEN_REPOSITORY } from "../repository-access";
 import { readRepository, isRepositoryLookup } from "./repository-reader";
@@ -192,6 +193,8 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
        const {screen}=await resolveCurrentScreen(tx,actor,current.screenHint,latest?.id);
        const productId=screen?.entity?.kind==="WATCH"&&screen.path.endsWith("/edit")&&screen.entity.id===current.pinnedProductId?screen.entity.id:null;
        result=productId&&latest?.id===request.query?{productId,sourceMessageId:latest.id,mode:request.tool==="media.inspect"?"inspect":"draft"}:{lookupRejected:true,reason:"Hãy mở Xử lý media của đúng sản phẩm rồi gửi lại yêu cầu."};
+     }else if(request.tool==="orders.list"||request.tool==="technicalIssues.list"){
+       result=await dailyBusiness(tx,actor,request.tool,request.query);
      }else if(request.tool==="personalWork.today"){
        const offset=7*60*60*1000, day=24*60*60*1000;
        const start=Math.floor((Date.now()+offset)/day)*day-offset;

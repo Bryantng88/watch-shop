@@ -8,6 +8,11 @@ on:
       - 'ops/codex-worker/**'
       - 'scripts/smoke-ben-*.ts'
       - 'tests/**'
+      - 'public/ben*'
+      - 'public/ben/**'
+      - 'src/app/(admin)/login/**'
+      - 'src/server/auth/login-destination*'
+      - 'next.config.ts'
       - 'docs/design/ai-assistant-interaction-contract.md'
       - '.github/workflows/ben-contract.yml'
       - 'package*.json'
@@ -24,7 +29,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts
+      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts
       - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
       - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit

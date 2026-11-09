@@ -38,6 +38,9 @@ const nextConfig: NextConfig = {
       { source: "/offline", headers: publicSecurityHeaders },
       { source: "/api/public/:path*", headers: [...publicSecurityHeaders, { key: "Cache-Control", value: "no-store" }] },
       { source: "/api/integrations/zalo/:path*", headers: [...publicSecurityHeaders, { key: "Cache-Control", value: "no-store" }] },
+      { source: "/ben-sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/admin/ben" }] },
+      { source: "/ben.webmanifest", headers: [{ key: "Cache-Control", value: "no-cache" }] },
+      ...["/admin/:path*", "/api/admin/:path*", "/api/auth/:path*", "/login"].map(source => ({ source, headers: [{ key: "Cache-Control", value: "private, no-store, max-age=0" }] })),
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/" }] },
       { source: "/manifest.webmanifest", headers: [{ key: "Cache-Control", value: "public, max-age=3600" }] },
     ];

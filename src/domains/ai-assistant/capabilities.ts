@@ -11,6 +11,8 @@ export const LOOKUP_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   "media.inspect": ["PRODUCT_VIEW", "PRODUCT_UPDATE"],
   "media.draft": ["PRODUCT_VIEW", "PRODUCT_UPDATE"],
   "personalWork.today": ["TASK_VIEW"],
+  "orders.list": ["ORDER_VIEW"],
+  "technicalIssues.list": ["SERVICE_VIEW"],
   "customers.search": ["CUSTOMER_VIEW"],
   "watches.search": ["PRODUCT_VIEW"],
   "watches.detail": ["PRODUCT_VIEW"],

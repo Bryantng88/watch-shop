@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-export default function LoginForm({ localAutoLogin = false }: { localAutoLogin?: boolean }) {
+export default function LoginForm({ localAutoLogin = false, destination = "/admin/dashboard" }: { localAutoLogin?: boolean; destination?: string }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [autoLoggingIn, setAutoLoggingIn] = useState(localAutoLogin);
+    const [submitting,setSubmitting]=useState(false);
 
     useEffect(() => {
         if (!localAutoLogin) return;
@@ -19,7 +20,7 @@ export default function LoginForm({ localAutoLogin = false }: { localAutoLogin?:
                     credentials: "same-origin",
                 });
                 if (!response.ok) throw new Error("Không thể tự đăng nhập local. Bạn vẫn có thể đăng nhập bằng mật khẩu.");
-                if (!controller.signal.aborted) window.location.replace("/admin/dashboard");
+                if (!controller.signal.aborted) window.location.replace(destination);
             } catch (cause) {
                 if (!controller.signal.aborted) {
                     setError(cause instanceof Error ? cause.message : "Không thể tự đăng nhập local.");
@@ -28,25 +29,27 @@ export default function LoginForm({ localAutoLogin = false }: { localAutoLogin?:
             }
         })();
         return () => controller.abort();
-    }, [localAutoLogin]);
+    }, [localAutoLogin,destination]);
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError("");
 
-        const res = await fetch("/api/auth/login", {
-            method: "POST",
-            body: JSON.stringify({ email, password }),
-            headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) {
-            const data = await res.json();
-            setError(data.error ?? "Login failed");
-            return;
-        }
-
-        window.location.href = "/admin/dashboard";
+        if(submitting||autoLoggingIn)return;
+        setSubmitting(true);
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST", body: JSON.stringify({ email, password }),
+                headers: { "Content-Type": "application/json" },
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                setError(data.error ?? "Không đăng nhập được.");
+                return;
+            }
+            window.location.assign(destination);
+        } catch { setError("Không kết nối được. Kiểm tra mạng rồi thử lại nhé."); }
+        finally { setSubmitting(false); }
     }
 
     return (
@@ -61,23 +64,25 @@ export default function LoginForm({ localAutoLogin = false }: { localAutoLogin?:
 
             <input
                 type="email"
-                disabled={autoLoggingIn}
+                disabled={autoLoggingIn||submitting}
+                aria-label="Email" autoComplete="username" required
                 placeholder="Email"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-2 text-base"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
             />
 
             <input
                 type="password"
-                disabled={autoLoggingIn}
+                disabled={autoLoggingIn||submitting}
+                aria-label="Mật khẩu" autoComplete="current-password" required
                 placeholder="Password"
-                className="w-full border rounded px-3 py-2"
+                className="w-full border rounded px-3 py-2 text-base"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
 
-            <button disabled={autoLoggingIn} className="w-full bg-black text-white py-2 rounded disabled:opacity-50">
+            <button disabled={autoLoggingIn||submitting} className="w-full bg-black text-white py-2 rounded disabled:opacity-50">
                 Đăng nhập
             </button>
         </form>
