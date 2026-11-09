@@ -134,6 +134,7 @@ export type PersonalWorkShare = {
 };
 
 export type PersonalCalendarEvent = {
+  pointInTime?:boolean;
   etag?: string;
   canEdit?: boolean;
   recurring?: boolean;

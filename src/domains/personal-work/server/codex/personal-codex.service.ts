@@ -27,6 +27,7 @@ export async function requestPersonalCodexRun(taskItemId: string, auth: unknown,
   if (!userId || !await eligibleRequester(userId)) throw new Error("CODEX_ADMIN_REQUIRED");
   const item = await ownerItem(taskItemId, userId);
   if (!item || !["TODO", "IN_PROGRESS"].includes(item.status)) throw new Error("CODEX_OWNER_ACTIVE_TASK_REQUIRED");
+  if (item.workTypeId === "EVENT") throw new Error("CODEX_EVENT_NOT_EXECUTABLE");
   if (!await hasCodexTag(taskItemId)) throw new Error("CODEX_TAG_REQUIRED");
   const prompt = [item.title, item.note ?? "", ...item.checklists.map(entry => `${entry.isDone ? "[x]" : "[ ]"} ${entry.title}`)].join("\n");
   if (prompt.length > 24000) throw new Error("CODEX_TASK_TOO_LONG");

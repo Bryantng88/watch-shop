@@ -1,4 +1,6 @@
 "use client";
+import {PersonalWorkKindField} from "./PersonalWorkKindField";
+import {isPersonalEvent,personalEventBounds,personalEventLabel,personalItemScheduleInput,personalEventTiming} from "../shared/personal-event";
 
 import PersonalWorkTagsField, { parsePersonalWorkTags } from "./PersonalWorkTagsField";
 import PersonalCodexPanel from "./PersonalCodexPanel";
@@ -8,12 +10,12 @@ import createStyles from "./PersonalWorkCreate.module.css";
 import { GoogleCalendarEventDialog } from "./GoogleCalendarEventDialog";
 import { PersonalWorkTimeFields } from "./PersonalWorkTimeFields";
 import { PersonalCalendarPreview } from "./PersonalCalendarPreview";
-import { calendarScheduleInput, scheduleDate, scheduleTime } from "../shared/personal-work-schedule";
+import { scheduleDate, scheduleTime } from "../shared/personal-work-schedule";
 import { buildPersonalCalendarEvents, groupCalendarEvents, calendarShareLabel, calendarDayKey } from "../shared/personal-calendar";
 import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -151,6 +153,8 @@ function monthCells(cursor: Date) {
 export function PersonalWorkClient({ data, localCalendar = false }: { data: PersonalWorkPageData; localCalendar?: boolean }) {
   const calendarAvailable = data.calendar.connected || localCalendar;
   const router = useRouter();
+  const requestedItem=useSearchParams().get("item");
+  const openedItem=useRef<string|null>(null);
   const appDialog = useAppDialog();
   const checklistMutation = useUiMutation();
   const calendarCreateMutation = useUiMutation();
@@ -159,7 +163,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null);
   const [calendarSyncFailures, setCalendarSyncFailures] = useState<Record<string, {id:string;title:string}>>({});
   const [pending, startTransition] = useTransition();
-  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE">("ALL");
+  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE" | "EVENTS">("ALL");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
   const [domain, setDomain] = useState<string>("ALL");
   const [newCategoryKey, setNewCategoryKey] = useState("GENERAL");
@@ -240,7 +244,8 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     const date = new Date();
     return new Date(date.getFullYear(), date.getMonth(), 1);
   });
-  const now = new Date();
+  const [now,setNow]=useState(()=>new Date());
+  useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==="visible")setNow(new Date());},60000);return()=>clearInterval(timer);},[]);
   const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
   const items = useMemo(
     () =>
@@ -248,6 +253,14 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
         if (scope === "MINE" && item.access !== "OWNER") return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
+        if(view==="EVENTS")return isPersonalEvent(item.workType);
+        if(isPersonalEvent(item.workType)){
+          if(view==="DONE")return false;
+          const bounds=item.dueAt?personalEventBounds(item.dueAt,item.scheduledEndAt,item.estimatedDays):{start:0,end:0};const {start,end}=bounds;
+          if(view==="TODAY")return start<=todayEndMs&&end>todayEndMs-86400000+1;
+          if(view==="UPCOMING")return start>todayEndMs;
+          return true;
+        }
         if (view === "DONE") return item.status === "DONE";
         if (item.status === "DONE") return false;
         if (view === "TODAY") return !item.dueAt || new Date(item.dueAt).getTime() <= todayEndMs;
@@ -256,9 +269,9 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
       }),
     [workItems, domain, scope, view, todayEndMs],
   );
-  const openCount = workItems.filter((item) => item.status !== "DONE").length;
+  const openCount = workItems.filter((item) => !isPersonalEvent(item.workType) && item.status !== "DONE").length;
   const overdue = workItems.filter(
-    (item) => item.status !== "DONE" && isPastDueDate(item.dueAt, now),
+    (item) => !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.dueAt, now),
   ).length;
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
   const visibleCalendarEvents = useMemo(() => buildPersonalCalendarEvents(workItems, calendar.events), [workItems, calendar.events]);
@@ -299,7 +312,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
 
   function changeDomain(nextDomain: PersonalWorkDomain) {
     setNewDomain(nextDomain);
-    setWorkType(PERSONAL_WORK_TYPES[nextDomain][0]?.key || "");
+    setWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0]?.key || "");
     setTargetType(domainTargets[nextDomain][0]?.type || "");
     setTargetQuery("");
     setTargetResults([]);
@@ -373,7 +386,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     setEditDomain(item.domain);
     setEditCategoryKey(item.category.key);
     setEditDueAt(item.dueAt ? scheduleDate(item.dueAt) : "");
-    setEditStartTime(item.scheduledEndAt && item.dueAt ? scheduleTime(item.dueAt) : "");
+    setEditStartTime(personalEventTiming(item).timed && item.dueAt ? scheduleTime(item.dueAt) : "");
     setEditEndTime(item.scheduledEndAt ? scheduleTime(item.scheduledEndAt) : "");
     setEditWorkType(item.workType || PERSONAL_WORK_TYPES[item.domain][0].key);
     setEditScheduleError(null);
@@ -407,6 +420,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     });
   }
 
+  useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
   return (
     <AdminPageCanvas>
       <AdminPageHeader
@@ -446,12 +460,12 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   categoryKey: newCategoryKey,
                   workType,
                   targets: selectedTargets,
-                  ...(dueAt ? calendarScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays) : { dueAt: null, scheduledEndAt: null }),
+                  ...(dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
                   estimatedDays,
                 });
-                if (data.calendar.connected) await syncPersonalWorkCalendarAction(created.id);
+                if (data.calendar.connected) syncCreatedCalendarTask({id:created.id,title:nextTitle});
               },
-              data.calendar.connected ? "Đã thêm công việc vào Google Calendar" : "Đã thêm công việc",
+              isPersonalEvent(workType) ? "Đã thêm sự kiện" : "Đã thêm công việc",
               () => {
                 setTitle("");
                 setNewTags("");
@@ -462,6 +476,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             );
           }}
         >
+          <PersonalWorkKindField event={isPersonalEvent(workType)} onChange={event=>setWorkType(event?"EVENT":PERSONAL_WORK_TYPES[newDomain][0].key)}/>
           <AdminFlatToolbar
             className={createStyles.toolbar}
           >
@@ -469,7 +484,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Việc cần làm..."
+              placeholder={isPersonalEvent(workType)?"Tên sự kiện...":"Việc cần làm..."}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             <select
@@ -483,7 +498,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 </option>
               ))}
             </select>
-            {newDomain === "WORK" && (
+            {!isPersonalEvent(workType) && newDomain === "WORK" && (
               <select
                 aria-label="Loại công việc"
                 value={workType}
@@ -499,6 +514,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             )}
             <input
               type="date"
+              required={isPersonalEvent(workType)}
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
@@ -531,11 +547,11 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               disabled={pending}
               className="h-11 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             >
-              Thêm việc
+              {isPersonalEvent(workType)?"Thêm sự kiện":"Thêm việc"}
             </button>
           </AdminFlatToolbar>
-          <div className="mt-3"><PersonalWorkTagsField value={newTags} onChange={setNewTags} configuration={data.codex} /></div>
-          {newDomain !== "GENERAL" && newDomain !== "WORK" && (
+          <div className="mt-3"><PersonalWorkTagsField allowCodex={!isPersonalEvent(workType)} value={newTags} onChange={setNewTags} configuration={data.codex} /></div>
+          {!isPersonalEvent(workType) && newDomain !== "GENERAL" && newDomain !== "WORK" && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Loại công việc</span>
@@ -802,7 +818,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                                 : null;
                               const category = linkedTask?.category;
                               const isOverdue = Boolean(
-                                linkedTask &&
+                                linkedTask && !isPersonalEvent(linkedTask.workType) &&
                                   linkedTask.status !== "DONE" &&
                                   isPastDueDate(linkedTask.dueAt, now),
                               );
@@ -874,6 +890,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     ["TODAY", "Hôm nay"],
                     ["UPCOMING", "Sắp tới"],
                     ["ALL", "Tất cả"],
+                    ["EVENTS", "Sự kiện"],
                     ["DONE", "Đã xong"],
                   ] as const
                 ).map(([key, label]) => (
@@ -923,7 +940,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
           <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">
             {items.length ? (
               items.map((item) => {
-                const late = item.status !== "DONE" && isPastDueDate(item.dueAt, now);
+                const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.dueAt, now);
                 return (
                   <div
                     key={item.id}
@@ -933,7 +950,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     }}
                     className="group grid cursor-pointer gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
                   >
-                    <button
+                    {isPersonalEvent(item.workType)?<span title="Sự kiện không cần hoàn thành" className="flex h-7 w-7 items-center justify-center text-blue-600"><Clock3 className="h-4 w-4"/></span>:<button
                       aria-label="Đánh dấu hoàn thành"
                       disabled={pending || item.access === "VIEWER"}
                       onClick={() =>
@@ -946,7 +963,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       className={`flex h-7 w-7 items-center justify-center rounded-full border transition ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}
                     >
                       <Check className="h-3.5 w-3.5" />
-                    </button>
+                    </button>}
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <button
@@ -966,7 +983,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                         </span>
                         {item.workType && (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                            {PERSONAL_WORK_TYPES[item.domain].find((type) => type.key === item.workType)?.label ||
+                            {isPersonalEvent(item.workType)?"Sự kiện":PERSONAL_WORK_TYPES[item.domain].find((type) => type.key === item.workType)?.label ||
                               item.workType}
                           </span>
                         )}
@@ -991,8 +1008,8 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                         className={`mt-1 flex items-center gap-1 text-xs ${late ? "font-semibold text-amber-700" : "text-slate-500"}`}
                       >
                         <Clock3 className="h-3.5 w-3.5" />
-                        {late ? "Quá hạn · " : ""}
-                        {dueLabel(item.dueAt, Boolean(item.scheduledEndAt))} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
+                        {isPersonalEvent(item.workType)?personalEventLabel(item.dueAt,item.scheduledEndAt,now,item.estimatedDays)+" · ":late ? "Quá hạn · " : ""}
+                        {dueLabel(item.dueAt, personalEventTiming(item).timed)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
                       </p>
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
@@ -1025,7 +1042,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       )}
                     </div>
                     <div className="flex items-center justify-end gap-3">
-                      {item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
+                      {!isPersonalEvent(item.workType) && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
                         <ProgressMetric
                           value={item.progressPercent}
                           numerator={item.checklist.filter((entry) => entry.isDone).length}
@@ -1070,7 +1087,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               let editedSchedule;
               try {
                 if (!editDueAt && (editStartTime || editEndTime)) throw new Error("Vui lòng chọn ngày bắt đầu");
-                editedSchedule = editDueAt ? calendarScheduleInput(editDueAt, editStartTime, editEndTime, editEstimatedDays) : { dueAt: null, scheduledEndAt: null };
+                editedSchedule = editDueAt ? personalItemScheduleInput(editDueAt, editStartTime, editEndTime, editEstimatedDays,isPersonalEvent(editWorkType)) : { dueAt: null, scheduledEndAt: null };
                 setEditScheduleError(null);
               } catch (error) {
                 setEditScheduleError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
@@ -1120,7 +1137,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             </div>
             <div className="mt-5 space-y-4">
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">Việc cần làm</span>
+                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(calendarWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
                 <input
                   autoFocus
                   required
@@ -1130,7 +1147,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
-              <PersonalWorkTagsField value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} />
+              <PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
                 <textarea
@@ -1143,7 +1160,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
-              <section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+              {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Các đầu việc</h3>
@@ -1317,7 +1334,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                     Xác nhận hoàn thành công việc
                   </AsyncActionButton>
                 ) : null}
-              </section>
+              </section>}
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
                 <textarea
@@ -1340,7 +1357,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       setEditCategoryKey(event.target.value);
                       const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setEditDomain(nextDomain);
-                      setEditWorkType(PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setEditWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
                       setEditTargetType(domainTargets[nextDomain][0]?.type || "");
                       setEditTargetQuery("");
                       setEditTargetResults([]);
@@ -1366,7 +1383,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   />
                 </label>
               </div>
-              {editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
+              {!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
                   <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
@@ -1374,7 +1391,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
-              <PersonalWorkTimeFields start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
+              <PersonalWorkTimeFields endOptional={isPersonalEvent(editWorkType)} start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
               {editScheduleError && <p role="alert" className="text-xs text-rose-600">{editScheduleError}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
@@ -1632,7 +1649,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               const syncToGoogle = calendarCreateSync && data.calendar.connected;
               let schedule;
               try {
-                schedule = calendarScheduleInput(calendarCreateDueAt, calendarStartTime, calendarEndTime, calendarCreateEstimatedDays);
+                schedule = personalItemScheduleInput(calendarCreateDueAt, calendarStartTime, calendarEndTime, calendarCreateEstimatedDays,isPersonalEvent(calendarWorkType));
               } catch (error) {
                 setCalendarCreateError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
                 return;
@@ -1664,7 +1681,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Tạo từ Calendar</p>
-                <h2 id="calendar-create-title" className="mt-1 text-xl font-bold text-slate-950">Thêm công việc</h2>
+                <h2 id="calendar-create-title" className="mt-1 text-xl font-bold text-slate-950">{isPersonalEvent(calendarWorkType)?"Thêm sự kiện":"Thêm công việc"}</h2>
               </div>
               <button
                 type="button"
@@ -1677,9 +1694,10 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               </button>
             </div>
             <fieldset disabled={calendarCreating} className="mt-5 min-w-0 space-y-4">
-              <PersonalWorkTagsField value={calendarTags} onChange={setCalendarTags} configuration={data.codex} />
+              <PersonalWorkKindField event={isPersonalEvent(calendarWorkType)} onChange={event=>setCalendarWorkType(event?"EVENT":PERSONAL_WORK_TYPES[calendarCreateDomain][0].key)}/>
+              <PersonalWorkTagsField allowCodex={!isPersonalEvent(calendarWorkType)} value={calendarTags} onChange={setCalendarTags} configuration={data.codex} />
               <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">Việc cần làm</span>
+                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(calendarWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
                 <input
                   autoFocus
                   required
@@ -1698,7 +1716,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       const nextDomain = data.categories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setCalendarCategoryKey(event.target.value);
                       setCalendarCreateDomain(nextDomain);
-                      setCalendarWorkType(PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setCalendarWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
                     }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
@@ -1720,7 +1738,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   />
                 </label>
               </div>
-              {data.categories.find(category => category.key === calendarCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[calendarCreateDomain].length > 1 && (
+              {!isPersonalEvent(calendarWorkType) && data.categories.find(category => category.key === calendarCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[calendarCreateDomain].length > 1 && (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
                   <select aria-label="Loại công việc" value={calendarWorkType} onChange={event => setCalendarWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
@@ -1728,7 +1746,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
-              <PersonalWorkTimeFields start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
+              <PersonalWorkTimeFields endOptional={isPersonalEvent(calendarWorkType)} start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
                 <select
@@ -1786,7 +1804,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 pendingLabel="Đang tạo…"
                 className="w-40 rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
               >
-                Tạo công việc
+                {isPersonalEvent(calendarWorkType)?"Tạo sự kiện":"Tạo công việc"}
               </AsyncActionButton>
             </div>
           </form>

@@ -1,4 +1,5 @@
 "use client";
+import {isPersonalEvent,personalEventLabel} from "../shared/personal-event";
 
 import { cloneElement, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from "react";
 import { createPortal } from "react-dom";
@@ -16,7 +17,7 @@ function eventTime(event: PersonalCalendarEvent) {
     return last && scheduleDate(last) !== event.startAt.slice(0, 10) ? `${start} – ${date.format(last)} · Cả ngày` : `${start} · Cả ngày`;
   }
   const start = `${date.format(new Date(event.startAt))} · ${scheduleTime(event.startAt)}`;
-  if (!event.endAt) return start;
+  if (!event.endAt || event.pointInTime) return start;
   return `${start} – ${scheduleDate(event.startAt) === scheduleDate(event.endAt) ? "" : `${date.format(new Date(event.endAt))} · `}${scheduleTime(event.endAt)}`;
 }
 
@@ -59,7 +60,7 @@ export function PersonalCalendarPreview({ event, item, children }: {
   }, [position]);
 
   const typeLabel = item?.workType
-    ? PERSONAL_WORK_TYPES[item.domain].find(type => type.key === item.workType)?.label || item.workType
+    ? isPersonalEvent(item.workType)?"Sự kiện":PERSONAL_WORK_TYPES[item.domain].find(type => type.key === item.workType)?.label || item.workType
     : item ? "Chưa chọn loại việc" : "Sự kiện Google";
   const fallbackTitle = `${event.title}\nNhóm: ${item?.category.label || "Google Calendar"}\nLoại việc: ${typeLabel}\n${eventTime(event)}`;
   return <span ref={anchor} className={styles.anchor} onMouseEnter={open} onMouseLeave={close}
@@ -74,7 +75,7 @@ export function PersonalCalendarPreview({ event, item, children }: {
       </p>
       <p className={styles.time}>{eventTime(event)}</p>
       {item && <div className={styles.footer}>
-        <span>{statusLabels[item.status]}</span>
+        <span>{isPersonalEvent(item.workType)?personalEventLabel(item.dueAt,item.scheduledEndAt,new Date(),item.estimatedDays):statusLabels[item.status]}</span>
         {item.checklist.length > 0 && <span>· {item.checklist.filter(entry => entry.isDone).length}/{item.checklist.length} đầu việc</span>}
         {item.priority === "URGENT" && <span className="text-rose-600">· Khẩn</span>}
         {item.priority === "HIGH" && <span className="text-amber-700">· Ưu tiên cao</span>}

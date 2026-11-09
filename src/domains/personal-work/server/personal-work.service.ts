@@ -1,3 +1,4 @@
+import {isPersonalEvent} from "../shared/personal-event";
 import { publicRunSelect } from "./codex/personal-codex.service";
 import { codexExecutionReadiness } from "./codex/codex-config";
 import { googleCalendarReadiness } from "./google-calendar-config";
@@ -91,6 +92,7 @@ function normalizeWorkType(value: unknown, domain: PersonalWorkDomain) {
   const key = String(value || "")
     .trim()
     .toUpperCase();
+  if (key === "EVENT") return key;
   return PERSONAL_WORK_TYPES[domain].some(item => item.key === key) ? key : null;
 }
 
@@ -350,7 +352,9 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   const schedule = validatePersonalSchedule(input.dueAt, input.scheduledEndAt);
   const category = await resolvePersonalCategory(userId, input.categoryKey || normalizePersonalDomain(input.domain));
   const domain = category.domain;
-  const workType = category.id ? null : normalizeWorkType(input.workType, domain);
+  const workType = isPersonalEvent(input.workType) ? "EVENT" : category.id ? null : normalizeWorkType(input.workType, domain);
+  if (isPersonalEvent(workType) && !schedule.dueAt) throw new Error("Sự kiện cần ngày diễn ra");
+  if (isPersonalEvent(workType) && input.tags?.some(t=>t.trim().toLowerCase()==="codex")) throw new Error("Sự kiện không gửi cho Codex thực hiện");
   const resolvedTargets = await Promise.all(
     (input.targets || []).map((target) => resolvePersonalWorkTarget(domain, target)),
   );
@@ -495,6 +499,10 @@ export async function updatePersonalWorkItem(
   auth: unknown,
 ) {
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
+  const event = isPersonalEvent(current.workTypeId);
+  if(input.workType!==undefined && isPersonalEvent(input.workType)!==event)throw new Error("Không đổi qua lại giữa công việc và sự kiện; hãy tạo mục mới.");
+  if(event && ((input.status && input.status!==TaskStatus.CANCELLED)||input.progressMode!==undefined||input.progressPercent!==undefined))throw new Error("Sự kiện không có trạng thái hoàn thành hoặc tiến độ");
+  if(event && input.tags?.some(t=>t.trim().toLowerCase()==="codex"))throw new Error("Sự kiện không gửi cho Codex thực hiện");
   if (input.title !== undefined && !input.title.trim()) throw new Error("Tên công việc không được để trống");
   const needsContext = input.categoryKey !== undefined || input.domain !== undefined || input.tags !== undefined || input.targets !== undefined || input.workType !== undefined;
   const [tagged] = needsContext ? await hydrateTaskItemsWithTagsRepo(prisma, [current]) : [];
@@ -507,6 +515,7 @@ export async function updatePersonalWorkItem(
       ? new Date(new Date(nextStart).getTime() + current.scheduledEndAt.getTime() - current.dueAt.getTime())
       : nextStart ? current.scheduledEndAt : null;
   const schedule = validatePersonalSchedule(nextStart, nextEnd);
+  if(event && !schedule.dueAt)throw new Error("Sự kiện cần ngày diễn ra");
   const ownerId = current.personalOwnerUserId || current.task?.createdByUserId || current.task?.assignedToUserId;
   const category = input.categoryKey !== undefined
     ? await resolvePersonalCategory(ownerId || current.userId, input.categoryKey)
@@ -538,7 +547,7 @@ export async function updatePersonalWorkItem(
       data: {
       ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
       ...(category ? { personalCategoryId: category.id } : {}),
-      ...(category || input.workType !== undefined ? { workTypeId: (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
+      ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
       ...(estimatedDays !== undefined ? { estimatedDays } : {}),
@@ -562,7 +571,7 @@ export async function updatePersonalWorkItem(
           taskItemId: input.id,
           sourceType: "DISCUSSION",
           actorUserId: current.userId,
-          title: input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          title: event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
           body: input.updateBody?.trim() || null,
           metadataJson: {
             ...(status ? { status } : {}),
@@ -651,7 +660,8 @@ async function updateChecklistProgress(tx: Prisma.TransactionClient, taskItemId:
   return { total, done, progressPercent };
 }
 
-function assertChecklistOpen(item: { status: TaskStatus; checklistLockedAt: Date | null }) {
+function assertChecklistOpen(item: { status: TaskStatus; checklistLockedAt: Date | null; workTypeId?:string|null }) {
+  if(isPersonalEvent(item.workTypeId))throw new Error("Sự kiện không có đầu việc hay xác nhận hoàn thành");
   if (item.status === TaskStatus.DONE || item.checklistLockedAt) {
     throw new Error("Danh sách đầu việc đã được khóa sau khi hoàn thành");
   }

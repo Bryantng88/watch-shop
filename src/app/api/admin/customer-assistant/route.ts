@@ -1,7 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
-import { approveAssistantOrder, approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
+import { approveAssistantPersonalWork, approveAssistantOrder, approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
 import { AssistantError } from "@/domains/ai-assistant/server/access";
 import {screenPathForMessage} from "@/domains/ai-assistant/server/current-screen";
 import { MAX_BEN_IMAGE_BASE64 } from "@/domains/ai-assistant/image-search";
@@ -10,6 +10,7 @@ const command=z.discriminatedUnion("action",[
  z.object({action:z.literal("send"),id:uuid.optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
  z.object({action:z.literal("cancel"),id:uuid}).strict(),
  z.object({action:z.literal("permission-support"),id:uuid,revision:z.number().int().min(1)}).strict(),
+ z.object({action:z.literal("approve-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-order"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("outcome"),id:uuid,conditionId:z.string().min(1).max(30),requestRevision:z.number().int().min(1).optional(),outcome:z.enum(["Chưa xác minh","Đạt","Không đạt","Cần khách xác nhận"]),result:z.string().max(1500)}).strict(),
@@ -41,6 +42,7 @@ async function handle(req:NextRequest){try{
  if(c.action==="send")return NextResponse.json(await sendAssistant(user.id,{...c,screenPath:screenPathForMessage(c.screenPath,req.headers.get("referer"),process.env.APP_URL)}));
  if(c.action==="cancel")return NextResponse.json(await cancelAssistant(user.id,c.id));
  if(c.action==="permission-support")return NextResponse.json(await approvePermissionSupport(user.id,c.id,c.revision,work=>after(work)));
+ if(c.action==="approve-personal-work")return NextResponse.json(await approveAssistantPersonalWork(user.id,c.id,c.revision));
  if(c.action==="approve-order")return NextResponse.json(await approveAssistantOrder(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="approve")return NextResponse.json(await approveAssistant(user.id,c.id,c.revision,work=>after(work)));
  return NextResponse.json(await recordConditionOutcome(user.id,c.id,c.conditionId,c.outcome,c.result,c.requestRevision));
