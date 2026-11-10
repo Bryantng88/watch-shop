@@ -245,6 +245,10 @@ export async function cleanupCopiedMediaPostFiles(
 
 export async function createMediaPostWithGallerySelections(
   input: CreateMediaPostInput & { selections: MediaPostThemeSelection[] },
+  hooks: {
+    beforeCreate?: (tx: Prisma.TransactionClient) => Promise<void>;
+    afterCreate?: (tx: Prisma.TransactionClient, post: {id:string;refNo:string}) => Promise<void>;
+  } = {},
 ) {
   const selections = normalizeMediaPostThemeSelections(input.selections);
   if (!selections.length) throw new Error("Cần chọn ít nhất một watch cho bài theo chủ đề.");
@@ -258,6 +262,7 @@ export async function createMediaPostWithGallerySelections(
 
   try {
     committed = await runBusinessEventTransaction(async (tx, delivery) => {
+      await hooks.beforeCreate?.(tx);
       const watches = await tx.watch.findMany({
         where: { id: { in: selections.map((selection) => selection.watchId) } },
         select: {
@@ -331,8 +336,11 @@ export async function createMediaPostWithGallerySelections(
         actorUserId: input.createdByUserId ?? null,
         payload: { copied, errors: [] },
       });
+      await hooks.afterCreate?.(tx, post);
       return { post, media: { copied, errors: [] } };
     }, {
+      timeout: hooks.beforeCreate ? 45000 : undefined,
+      maxWait: hooks.beforeCreate ? 10000 : undefined,
       deferConsumers(work) {
         drainConsumers = work;
       },
