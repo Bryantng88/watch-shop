@@ -398,3 +398,12 @@ again on reload and worker handoff. Nothing executes on browser reload/history.
 These tools do not modify regular workspace business tasks, technical issues,
 orders or purchase-condition results. Existing personal calendar update behavior
 is retained: no implicit Google or external notification send is added here.
+
+## Ben push notifications
+
+Signed-in Ben users opt in on each device. Subscription endpoints are accepted
+only from supported browser push services. Delivery is post-commit, best effort,
+for a newly approved task assigned to another user through Ben. Notifications
+carry a fixed message and open /admin/ben. They contain no task or customer
+details. Expired browser subscriptions are removed. Existing approval and
+authorization checks remain in effect.

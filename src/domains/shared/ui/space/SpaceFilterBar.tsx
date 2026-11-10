@@ -26,13 +26,14 @@ export function SpaceViewSwitch({
   onChange?: (value: string) => void;
 }) {
   return (
-    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+    <div role="group" aria-label="Cách hiển thị" className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           onClick={() => onChange?.(option.value)}
           disabled={option.disabled}
+          aria-pressed={activeView===option.value}
           className={cn(
             "inline-flex h-8 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition",
             activeView === option.value

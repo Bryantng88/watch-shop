@@ -16,7 +16,9 @@ import {currentMediaEditor, subscribeMediaEditor, type MediaEditor} from "./medi
 import BenScreenContext from "./BenScreenContext";
 import BenAvatar from "./BenAvatar";
 import PersonalWorkDraftReview from "./PersonalWorkDraftReview";
+import BenPushControls from "./BenPushControls";
 import BenPwaRuntime from "./BenPwaRuntime";
+import { LiveReadGate, livePollDelay } from "./live-read";
 import {takeNavigation,type PendingNavigation} from "./navigation-client";
 import { usePathname, useRouter } from "next/navigation";
 import { MAX_BEN_IMAGE_BYTES } from "./image-search";
@@ -58,14 +60,24 @@ export default function AiAssistant({ userId, canManage, live = false, environme
   const [ready, setReady] = useState(false), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [scenario, setScenario] = useState<Scenario>("normal"), [notice, setNotice] = useState("");
   const launcher = useRef<HTMLButtonElement>(null), textarea = useRef<HTMLTextAreaElement>(null), bottom = useRef<HTMLDivElement>(null), latestReply = useRef<HTMLDivElement>(null), panel = useRef<HTMLElement>(null), generation = useRef(0);
   const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string;screenPath:string;image?:File}|null>(null);
+  const liveReads=useRef(new LiveReadGate());
+  const livePoll=useRef({finishedAt:0,failures:0});
   useEffect(()=>{liveSelected.current=selected;},[selected]);
   const expireSession=useCallback(()=>{
+    liveReads.current.cancel();
     liveSequence.current++;livePending.current=false;liveTracking.current=false;liveRequestKey.current=null;liveSelected.current="";
     pendingNavigation.current=null;pendingMedia.current=null;setMediaRequest(undefined);setManualMedia(undefined);setMediaStatus(undefined);setProductionRelease(undefined);
     setChats([]);setSelected("");setInput("");setAttachment(undefined);setBusy(false);setSessionExpired(true);
   },[]);
-  const refreshLive=useCallback(async(preferred?:string)=>{
-    const sequence=++liveSequence.current;const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store"});if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");if(sequence!==liveSequence.current)return;
+  const refreshLive=useCallback(async(preferred?:string,background=false)=>{
+    if(background&&liveSubmitting.current)return;
+    const read=liveReads.current.begin(background);if(!read)return;
+    const sequence=++liveSequence.current;
+    try {
+    const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store",signal:read.signal});
+    if(!read.isCurrent()||sequence!==liveSequence.current)return;
+    if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!read.isCurrent()||sequence!==liveSequence.current)return;if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");
+    livePoll.current.failures=0;
     const rows=data.conversations as Conversation[];const navigation=takeNavigation(pendingNavigation.current,rows.find(r=>r.id===(preferred||liveSelected.current)));if(navigation){pendingNavigation.current=null;router.push(navigation.href);}
     const pending=pendingMedia.current;
     const row=pending&&rows.find(item=>item.id===pending.conversationId&&item.id===(preferred||liveSelected.current));
@@ -77,9 +89,33 @@ export default function AiAssistant({ userId, canManage, live = false, environme
       else setNotice("Form media đã đổi hoặc đã đóng. Mở lại đúng sản phẩm rồi nhắn Ben để tiếp tục.");
     }
     const id=preferred||liveSelected.current||rows[0]?.id||"";liveSelected.current=id;setSelected(id);livePending.current=rows.some(r=>["QUEUED","RUNNING"].includes(r.runStatus||"")||["QUEUED","RUNNING","MERGE_QUEUED","MERGING","DEPLOY_QUEUED","DEPLOYING"].includes(r.codeJob?.status||""));liveTracking.current=rows.some(r=>r.id===id&&r.approved);setBusy(liveSubmitting.current||rows.some(r=>r.id===id&&["QUEUED","RUNNING"].includes(r.runStatus||"")));setChats(current=>data.partial?current.map(r=>rows.find(row=>row.id===r.id)||r).concat(rows.filter(row=>!current.some(r=>r.id===row.id))):[...current.filter(r=>liveDrafts.current.has(r.id)),...rows]);
+    } catch(error) {
+      // Superseded reads cannot show errors or mutate another conversation.
+      if(sequence!==liveSequence.current||(read.signal.aborted&&!read.timedOut()))return;
+      livePoll.current.failures++;
+      if(read.timedOut())throw Error("Tải cuộc trao đổi quá lâu. Ben sẽ thử tải lại khi có kết nối.");
+      throw error;
+    } finally {
+      if(sequence===liveSequence.current)livePoll.current.finishedAt=Date.now();
+      read.finish();
+    }
   },[router,expireSession]);
   async function livePost(body:unknown){const response=await fetch("/api/admin/customer-assistant",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!response.ok)throw Error(data.error||"Chưa thực hiện được yêu cầu.");return data;}
-  useEffect(()=>{if(!live||sessionExpired)return;const sequenceRef=liveSequence;let disposed=false;const load=()=>refreshLive().catch(e=>{if(!disposed)setNotice(e.message);});const resume=()=>{if(document.visibilityState==="visible"&&navigator.onLine)void load();};void load();const timer=setInterval(()=>{if(document.visibilityState==="visible"&&navigator.onLine&&(livePending.current||(open&&liveTracking.current)))void load();},5000);window.addEventListener("online",resume);window.addEventListener("pageshow",resume);document.addEventListener("visibilitychange",resume);return()=>{disposed=true;sequenceRef.current++;clearInterval(timer);window.removeEventListener("online",resume);window.removeEventListener("pageshow",resume);document.removeEventListener("visibilitychange",resume);};},[live,open,refreshLive,sessionExpired]);
+  useEffect(()=>{
+    if(!live||sessionExpired)return;
+    const reads=liveReads.current;const sequenceRef=liveSequence;let disposed=false;
+    const available=()=>document.visibilityState==="visible"&&navigator.onLine;
+    const load=()=>refreshLive(undefined,true).catch(e=>{if(!disposed)setNotice(e.message);});
+    const resume=()=>{if(available())void load();else{sequenceRef.current++;reads.cancel();}};
+    resume();
+    // A cheap clock tick does no network work while idle, hidden or offline.
+    const timer=setInterval(()=>{
+      const delay=livePollDelay(livePending.current,open&&liveTracking.current,livePoll.current.failures);
+      if(available()&&delay!==null&&Date.now()-livePoll.current.finishedAt>=delay)void load();
+    },1000);
+    window.addEventListener("online",resume);window.addEventListener("offline",resume);window.addEventListener("pageshow",resume);document.addEventListener("visibilitychange",resume);
+    return()=>{disposed=true;sequenceRef.current++;reads.cancel();clearInterval(timer);window.removeEventListener("online",resume);window.removeEventListener("offline",resume);window.removeEventListener("pageshow",resume);document.removeEventListener("visibilitychange",resume);};
+  },[live,open,refreshLive,sessionExpired]);
   useEffect(()=>{const el=textarea.current;if(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,144)+"px";}},[input,open,history,assignedOpen]);
   const storedChat = chats.find(c => c.id === selected);
   const chat = storedChat && (live || isProductContext(storedChat.context)) ? live ? storedChat : followScreenWhileEmpty(storedChat, current) : undefined;
@@ -131,7 +167,7 @@ export default function AiAssistant({ userId, canManage, live = false, environme
   }, [open, history, assignedOpen, fullPage, latestMessage?.id, latestMessage?.role, busy]);
   useEffect(() => () => { generation.current++; }, []);
   function close() { if(fullPage)return; pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); setWindowOpen(false); launcher.current?.focus(); }
-  function create(context = live ? null : current) { pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); const c = newConversation(context); if(live)liveDrafts.current.add(c.id); liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
+  function create(context = live ? null : current) { pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); const c = newConversation(context); if(live){liveSequence.current++;liveReads.current.cancel();liveSelected.current=c.id;livePending.current=false;liveTracking.current=false;liveDrafts.current.add(c.id);} liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
   function update(id: string, fn: (c: Conversation) => Conversation) { setChats(rows => rows.map(c => c.id === id ? { ...fn(c), updatedAt: new Date().toISOString() } : c).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))); }
   const selectedImage=live&&imageSearch&&attachment?.chatId===(chat?.id||"")?attachment.file:undefined;
   async function send(value = input) {
@@ -141,6 +177,7 @@ export default function AiAssistant({ userId, canManage, live = false, environme
     const c = chat || create();
     if(live){
       setBusy(true);setNotice("");liveSubmitting.current=true;liveSequence.current++;
+      liveReads.current.cancel();
       if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text||liveRequestKey.current.screenPath!==screenPath||liveRequestKey.current.image!==image)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID(),screenPath,image};
       pendingMedia.current=!image&&mediaEditor?{requestKey:liveRequestKey.current.key,conversationId:c.id,editor:mediaEditor}:null;
       setMediaRequest(undefined);
@@ -210,7 +247,7 @@ export default function AiAssistant({ userId, canManage, live = false, environme
     <aside ref={panel} style={fullPage?{height:"var(--ben-viewport-height, 100dvh)",top:"var(--ben-viewport-top, 0px)"}:undefined} aria-label="Ben · Hỗ trợ công việc" onKeyDown={event => { if (event.key === "Escape") close(); if (event.key === "Tab" && window.innerWidth < 640) { const nodes = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), textarea, input, select, a[href]'); if (!nodes?.length) return; const first = nodes[0], last = nodes[nodes.length - 1]; if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); } } }} className={fullPage ? "fixed inset-0 z-[70] mx-auto flex h-[100dvh] w-full max-w-3xl flex-col bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-xl" : "fixed inset-y-0 right-0 z-[70] flex w-full flex-col border-l border-slate-200 bg-white shadow-2xl sm:w-[540px] lg:w-[600px] xl:w-[640px]"}>
       <header className="flex items-center justify-between border-b-0 border-blue-100 px-3 py-1 sm:px-5 sm:py-4"><div className="flex items-center gap-3"><BenAvatar /><div><h2 className="font-semibold text-slate-950">Ben</h2><p className="text-xs text-slate-500"><span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${busy?"bg-blue-500":"bg-emerald-500"}`}/>{busy?"Đang xử lý…":"Cùng bạn xử lý công việc"}</p></div></div><div className="flex gap-1">{live&&!fullPage&&<Link href="/admin/ben" className="self-center rounded-lg px-2 text-xs text-indigo-700">Mở riêng</Link>}<button disabled={busy} aria-label="Lịch sử trao đổi" onClick={() => {setAssignedOpen(false);setHistory(v => !v);}} className="min-h-11 min-w-11 rounded-lg p-2 hover:bg-slate-100"><History size={19}/></button><button disabled={busy || (!live && !isProductContext(current))} aria-label="Trao đổi mới" onClick={() => create()} className="min-h-11 min-w-11 rounded-lg p-2 hover:bg-slate-100"><Plus size={19}/></button>{!fullPage&&<button aria-label="Đóng Ben" onClick={close} className="min-h-11 min-w-11 rounded-lg p-2 hover:bg-slate-100"><X size={20}/></button>}</div></header>
       <div className="flex items-center gap-2 px-3 pb-1 text-[11px] sm:px-5 sm:pb-3 text-slate-500">{benEnvironmentLabel(live,environment)&&<span className="rounded border border-blue-100 bg-blue-50 px-1.5 py-0.5 font-medium text-blue-700">{benEnvironmentLabel(live,environment)}</span>}<span>{live?"Tra cứu · Đề xuất · Bạn quyết định":"Không gọi AI hoặc tạo việc thật"}</span></div>
-      {live&&fullPage&&<BenPwaRuntime/>}
+      {live&&fullPage&&<><BenPwaRuntime/><BenPushControls/></>}
       {live&&(mediaEditor ? <BenMediaReview key={mediaEditor.productId+":"+selected} editor={mediaEditor} awaitingInsight={awaitingInsight} status={currentMediaStatus} onAsk={()=>{mediaEditor.showDraft();setMediaStatus(undefined);setManualMedia({key:crypto.randomUUID(),session:mediaEditor.session});}} onSkip={()=>void writeMedia("")} requestKey={mediaRequest?.mode==="inspect"&&mediaRequest.editor.session===mediaEditor.session?mediaRequest.key:undefined}/> : <BenScreenContext pathname={pathname}/>)}
       {live&&<nav aria-label="Mục trong cuộc trao đổi" className="mx-3 mb-1 flex rounded-xl sm:mx-4 sm:mb-3 border border-blue-100 bg-slate-50/70 p-1 text-sm"><button type="button" aria-pressed={!history&&!assignedOpen} onClick={()=>{setHistory(false);setAssignedOpen(false);}} className={`min-h-10 flex-1 rounded-lg px-3 py-1 sm:py-2 ${!history&&!assignedOpen?"bg-blue-100/70 font-semibold text-blue-700":"text-slate-500 hover:bg-white"}`}>Trò chuyện</button><button type="button" aria-pressed={assignedOpen} onClick={()=>{setHistory(false);setAssignedOpen(true);}} className={`min-h-10 flex-1 rounded-lg px-3 py-1 sm:py-2 ${assignedOpen?"bg-blue-100/70 font-semibold text-blue-700":"text-slate-500 hover:bg-white"}`}>Công việc <span className="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{assignedCount}</span></button></nav>}
       {live&&assignedOpen?<section aria-label="Các yêu cầu đã giao" className="min-h-0 flex-1 overflow-y-auto p-5"><h3 className="font-semibold">Công việc trong cuộc trò chuyện</h3><p className="mt-2 text-xs leading-5 text-slate-500">Các yêu cầu trong cuộc trao đổi này. Đã giao việc chưa có nghĩa là đã hoàn tất.</p>{!assignedCount&&<p className="mt-6 text-sm text-slate-500">Chưa có yêu cầu nào được giao.</p>}{assigned.map(r=><details key={r.key} className="mt-4 rounded-xl border p-3"><summary className="cursor-pointer text-sm font-medium">{r.request.reference||"Yêu cầu đã giao"} · {r.request.watch}</summary><CustomerRequestDemo request={r.request} live environment={environment} busy={busy} canManage={canManage&&!busy} onEdit={()=>{setAssignedOpen(false);}} onChange={request=>{void updateLiveRequest(request,r.current?undefined:r.revision);}} /></details>)}{chat?.updatedPersonalWork?.map(item=><Link key={"updated-"+item.revision} href={"/admin/personal-work?item="+encodeURIComponent(item.id)} className="mt-4 block rounded-xl border p-3 text-sm text-blue-700">Đã cập nhật: {item.title}</Link>)}{chat?.createdPersonalWork?.map(item=><Link key={"personal-"+item.revision} href={"/admin/personal-work?item="+encodeURIComponent(item.id)} className="mt-4 block rounded-xl border p-3 text-sm text-blue-700">{item.kind==="EVENT"?"Sự kiện":"Công việc"}: {item.title}{item.calendar==="FAILED"?" · Đã lưu, chưa đồng bộ Google. Mở Công việc của tôi để thử lại.":item.calendar==="PENDING"?" · Chưa xác nhận đồng bộ Google.":""}</Link>)}{chat?.createdMediaPosts?.map(post=><Link key={"post-"+post.revision} href={"/admin/media-posts/"+encodeURIComponent(post.id)} className="mt-4 block rounded-xl border p-3 text-sm text-blue-700">Post nháp {post.reference} · {post.count} đồng hồ</Link>)}{chat?.createdOrders?.map(o=><Link key={`order-${o.revision}`} href={`/admin/orders/${o.id}`} className="mt-4 block rounded-xl border p-3 text-sm text-indigo-700 underline">Đơn nháp {o.reference} · Mở đơn hàng</Link>)}{chat?.permissionRequests?.map(r=><p key={r.revision} className="mt-4 rounded-xl border p-3 text-sm">{r.reference} · Đã gửi Long xem xét quyền hạn</p>)}{notice&&<p role="status" className="mt-4 rounded bg-amber-50 p-2 text-xs text-amber-900">{notice}</p>}</section>:history ? <div className="flex-1 overflow-y-auto p-5"><div className="mb-4 flex items-center justify-between"><h3 className="font-semibold">Trao đổi gần đây</h3><button disabled={live || busy || !chats.length} onClick={() => { setChats([]); setSelected(""); setNotice("Đã xóa lịch sử mẫu khỏi trình duyệt."); }} className="text-xs text-rose-700 underline">Xóa tất cả</button></div>{!chats.length && <p className="text-sm text-slate-500">Chưa có cuộc trao đổi nào.</p>}{chats.filter(c => live || isProductContext(c.context)).map(c => <div key={c.id} className="mb-2 flex rounded-xl border p-3"><button className="min-w-0 flex-1 text-left" onClick={() => { pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); setSelected(c.id); if(live)void refreshLive(c.id).catch(e=>setNotice(e.message)); setHistory(false); setNotice(""); }}><p className="truncate text-sm font-medium">{c.title}</p><p className="mt-1 text-xs text-slate-500">{live?"Trò chuyện với Ben":c.context?.label || "Trao đổi tự do"} · {c.approved || c.customerRequest?.status === "TRACKING" ? live ? "Đã giao việc" : "Đã duyệt mẫu" : "Đang trao đổi"}</p></button><button disabled={live} aria-label={`Xóa trao đổi ${c.title}`} onClick={() => { setChats(rows => rows.filter(row => row.id !== c.id)); if (selected === c.id) setSelected(""); }} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={16}/></button></div>)}</div> : <>

@@ -1606,6 +1606,7 @@ model TechnicalDetailCatalog {
 }
 
 model User {
+  benPushSubscriptions BenPushSubscription[]
   customerAssistantConversations CustomerAssistantConversation[]
   orderCodexProposals OrderCodexProposal[]
   personalCodexRuns PersonalCodexRun[] @relation("PersonalCodexRequester")
@@ -4083,4 +4084,15 @@ model StorefrontDocument {
   updatedAt   DateTime @updatedAt
 
   @@index([kind, publishedAt])
+}
+
+model BenPushSubscription {
+  endpoint  String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  p256dh    String
+  auth      String
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, updatedAt])
 }
