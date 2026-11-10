@@ -45,7 +45,7 @@ is not cached between requests, accounts or permission changes.
   the actual AiAssistant component with synthetic API data; Next routing,
   image rendering and Markdown rendering are adapters. It covers response
   delivery, slow-read coalescing, idle/hidden/offline behavior, new chat/history
-  selection, expired sessions and absence of automatic write replay. It does
+  selection, cancellation, expired sessions and absence of automatic write replay. It does
   not test actual model speed, the database or production infrastructure.
 
 In the local fixture, an answer completed at 150 ms became visible at about
@@ -58,7 +58,8 @@ that missing module and its consequent type errors, and the production build
 failed. Other contract tests passed (92); BenMessage's renderer test could not
 load that dependency. Worker/PWA tests passed (46), including the new queue
 tests. Lint for changed files passed; repository-wide lint still reports
-pre-existing errors. CI must validate the normal installed dependency set.
+pre-existing errors. CI validates the normal installed dependency set and runs
+the production build before this change is ready for review.
 
 Persistent Codex sessions, model changes, streamed model output and splitting
 the history API are deferred. They need measurements and a separate review of

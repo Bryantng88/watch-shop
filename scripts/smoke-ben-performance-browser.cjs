@@ -12,14 +12,14 @@ const assert=require('node:assert/strict');
 (async()=>{
 const fixture=()=>{
  const row=(id,title,text)=>({id,title,context:null,steps:[],tasks:[],approved:false,revision:1,updatedAt:new Date().toISOString(),runStatus:'NEEDS_INFO',messages:[{id:id+'-reply',role:'assistant',text}]});
- const f=window.fixture={rows:[row('a','Conversation A','Answer A'),row('b','Conversation B','Answer B')],gets:0,posts:[],delayNext:0,active:0,maxActive:0,status:200,visibility:'visible'};
+ const f=window.fixture={rows:[row('a','Conversation A','Answer A'),row('b','Conversation B','Answer B')],gets:0,posts:[],delayNext:0,active:0,maxActive:0,status:200,visibility:'visible',completeAfter:150};
  Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>f.visibility});
  window.fetch=async(url,options={})=>{
   if(!String(url).startsWith('/api/admin/customer-assistant'))throw Error('Unexpected API '+url);
   if(options.method==='POST'){
    const body=JSON.parse(options.body);f.posts.push(body.action);if(body.action!=='send'&&body.action!=='cancel')throw Error('Unexpected business write');
    const current=f.rows.find(r=>r.id===body.id)||f.rows[0];
-   if(body.action==='send'){current.runStatus='QUEUED';current.messages.push({id:body.requestKey,role:'user',text:body.text});setTimeout(()=>{current.runStatus='NEEDS_INFO';current.messages.push({id:'completed',role:'assistant',text:'Fresh answer completed'});},150);}
+   if(body.action==='send'){current.runStatus='QUEUED';current.messages.push({id:body.requestKey,role:'user',text:body.text});setTimeout(()=>{if(current.runStatus!=='QUEUED')return;current.runStatus='NEEDS_INFO';current.messages.push({id:'completed',role:'assistant',text:'Fresh answer completed'});},f.completeAfter);}
    else current.runStatus='CANCELLED';
    return new Response(JSON.stringify(current));
   }
@@ -38,12 +38,13 @@ try{
  await page.getByText('Answer A',{exact:true}).waitFor();const initial=await page.evaluate(()=>fixture.gets);await page.waitForTimeout(2300);assert.equal(await page.evaluate(()=>fixture.gets),initial,'idle must not poll');
  const start=Date.now();await page.getByRole('textbox',{name:'Tin nhắn cho Ben'}).fill('Hello');await page.getByRole('button',{name:'Gửi tin nhắn'}).click();await page.getByText('Fresh answer completed',{exact:true}).waitFor({timeout:4500});console.log('Completed response visible in',Date.now()-start,'ms');
  assert.deepEqual(await page.evaluate(()=>fixture.posts),['send']);
+ await page.evaluate(()=>{fixture.completeAfter=1500;});await page.getByRole('textbox',{name:'Tin nhắn cho Ben'}).fill('Cancel this turn');await page.getByRole('button',{name:'Gửi tin nhắn'}).click();await page.getByRole('button',{name:'Hủy lượt trả lời'}).click();await page.waitForTimeout(1700);assert.equal(await page.getByText('Fresh answer completed',{exact:true}).count(),1,'cancelled run must not append another reply');
  await page.evaluate(()=>{fixture.delayNext=2200;for(let i=0;i<12;i++)window.dispatchEvent(new Event('pageshow'));});await page.waitForTimeout(2400);assert.equal(await page.evaluate(()=>fixture.maxActive),1,'resume events must not overlap reads');
  await page.evaluate(()=>{fixture.visibility='hidden';document.dispatchEvent(new Event('visibilitychange'));});let count=await page.evaluate(()=>fixture.gets);await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);await page.evaluate(()=>{fixture.visibility='visible';document.dispatchEvent(new Event('visibilitychange'));});await page.waitForFunction(n=>fixture.gets>n,count);
  await context.setOffline(true);count=await page.evaluate(()=>fixture.gets);await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);await context.setOffline(false);await page.waitForFunction(n=>fixture.gets>n,count);
  await page.evaluate(()=>{fixture.delayNext=1400;window.dispatchEvent(new Event('pageshow'));});await page.getByRole('button',{name:'Trao đổi mới'}).click();await page.waitForTimeout(1600);assert.equal(await page.getByText('Fresh answer completed',{exact:true}).count(),0,'old reads cannot restore a replaced chat');
  await page.getByRole('button',{name:'Lịch sử trao đổi'}).click();await page.getByRole('button').filter({hasText:'Conversation B'}).click();await page.getByText('Answer B',{exact:true}).waitFor();assert.equal(await page.getByText('Answer A',{exact:true}).count(),0);
- await page.evaluate(()=>{fixture.status=401;window.dispatchEvent(new Event('pageshow'));});await page.getByRole('heading',{name:'Đăng nhập lại để tiếp tục với Ben'}).waitFor();count=await page.evaluate(()=>fixture.gets);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);assert.deepEqual(await page.evaluate(()=>fixture.posts),['send']);assert.deepEqual(errors,[]);
- console.log('Actual Ben client transport: idle/hidden/offline suppression, single-flight resume, response delivery, new chat/history fencing, 401 cleanup and zero write replay passed. Next routing and text rendering are fixture adapters; no server/business data is used.');
+ await page.evaluate(()=>{fixture.status=401;window.dispatchEvent(new Event('pageshow'));});await page.getByRole('heading',{name:'Đăng nhập lại để tiếp tục với Ben'}).waitFor();count=await page.evaluate(()=>fixture.gets);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);assert.deepEqual(await page.evaluate(()=>fixture.posts),['send','send','cancel']);assert.deepEqual(errors,[]);
+ console.log('Actual Ben client transport: idle/hidden/offline suppression, single-flight resume, response delivery, new chat/history fencing, cancellation, 401 cleanup and zero write replay passed. Next routing and text rendering are fixture adapters; no server/business data is used.');
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});
