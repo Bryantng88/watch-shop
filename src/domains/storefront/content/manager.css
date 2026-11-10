@@ -82,7 +82,6 @@
   z-index: 20;
   background: #fff;
   border: 1px solid #dce1e7;
-  box-shadow: 0 8px 25px #1e293b0c;
   border-radius: 10px;
   padding: 16px;
   display: flex;
@@ -406,3 +405,65 @@
 }
 .sfc-readiness { border-color: #e8cf9d; background: #fffbf2; }
 .sfc-readiness ul { padding-left: 20px; list-style: disc; font-size: 13px; line-height: 1.8; }
+
+/* Admin workspace: shared canvas/tokens; domains keep only editor geometry. */
+.sfc { max-width: none; margin: 0; padding: 20px 24px; background: white; color: #0f172a; }
+.sfc > header { margin-bottom: 20px; }
+.sfc button, .sfc-upload { min-height: 32px; font-weight: 600; }
+.sfc button.primary { background: #020617; border-color: #020617; }
+.sfc button.primary:hover { background: #1e293b; }
+.sfc button:focus-visible, .sfc input:focus-visible, .sfc textarea:focus-visible, .sfc select:focus-visible, .sfc summary:focus-visible { outline-color: #3b82f6; }
+.sfc-toolbar { top: 8px; align-items: center; box-shadow: none; border-color: #e2e8f0; background: #f8fafc; padding: 10px 12px; margin-bottom: 12px; }
+.sfc-toolbar small { font-size: 12px; margin-top: 3px; }
+.sfc-actions > button { min-height: 40px; }
+.sfc small, .sfc-help { font-size: 12px; line-height: 1.5; }
+.sfc-field { gap: 6px; margin-bottom: 16px; }
+.sfc-field > span { font-weight: 600; }
+.sfc textarea { line-height: 1.5; }
+.sfc-success { border: 0; border-radius: 0; background: transparent; padding: 0; font-size: 12px; margin-bottom: 8px; }
+.sfc-guidance { border-bottom: 1px solid #f1f5f9; padding: 4px 0 12px; margin-bottom: 16px; font-size: 12px; color: #64748b; }
+.sfc-guidance > summary { cursor: pointer; width: fit-content; padding: 4px 0; }
+.sfc-guidance > button { display: flex; justify-content: start; border: 0; background: transparent; font-weight: 400; text-align: left; }
+.sfc-guidance > button:hover { color: #1d4ed8; background: #f8fafc; }
+.sfc-home-layout { display: grid; grid-template-columns: 300px minmax(0,1fr); gap: 28px; align-items: start; }
+.sfc-section-nav { min-width: 0; grid-column: 1; grid-row: 1; padding-right: 20px; border-right: 1px solid #f1f5f9; }
+.sfc-section-nav > h2, .sfc-section-editor > h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.sfc-section-nav .sfc-section-row { gap: 4px; padding: 6px 0; border: 0; border-radius: 8px; }
+.sfc-section-nav .sfc-section-row:hover { background: #f8fafc; }
+.sfc-section-nav .sfc-section-row.is-selected { background: #eff6ff; }
+.sfc-section-nav .sfc-section-row > label { flex: 0 0 auto; padding: 8px 4px; }
+.sfc-section-row .sfc-section-select { flex: 1; min-width: 0; display: flex; align-items: start; flex-direction: column; gap: 3px; background: transparent; border: 0; padding: 6px; text-align: left; font-size: 12px; }
+.sfc-section-select > small { font-size: 12px; font-weight: 400; color: #64748b; }
+.sfc-section-nav .sfc-section-row > button:not(.sfc-section-select) { border: 0; padding: 6px; min-width: 32px; background: transparent; }
+.sfc-section-editor { min-width: 0; grid-column: 2; grid-row: 1; scroll-margin-top: 100px; }
+.sfc-section-editor[hidden] { display: none !important; }
+.sfc-section-editor > h2 { margin-bottom: 20px; }
+.sfc-home .sfc-image { border: 0; border-top: 1px solid #f1f5f9; border-radius: 0; padding: 12px 0 0; margin-bottom: 20px; }
+.sfc-home .sfc-image legend { font-weight: 600; padding: 0 8px 0 0; }
+.sfc-home .sfc-collection { margin-top: 14px; padding-top: 12px; border-color: #f1f5f9; }
+@media (max-width: 900px) {
+ .sfc { padding: 20px 16px; }
+ .sfc-home-layout { grid-template-columns: minmax(0,1fr); gap: 20px; }
+ .sfc-section-nav { grid-column: 1; grid-row: 1; padding-right: 0; padding-bottom: 16px; border-right: 0; border-bottom: 1px solid #f1f5f9; }
+ .sfc-section-editor { grid-column: 1; grid-row: 2; scroll-margin-top: 140px; }
+ .sfc-toolbar { position: sticky; top: 0; }
+ .sfc-toolbar .sfc-actions { width: 100%; }
+ .sfc-actions > button { flex: 1 1 auto; }
+ .sfc-grid { grid-template-columns: minmax(0,1fr); }
+ .sfc-heading, .sfc-toolbar { gap: 12px; }
+ .sfc-preview-toolbar { flex-wrap: wrap; }
+}
+
+.sfc-advanced { margin: 4px 0 16px; font-size: 12px; }
+.sfc-advanced > summary { width: fit-content; cursor: pointer; color: #64748b; padding: 4px 0; }
+.sfc-advanced[open] > summary { margin-bottom: 12px; }
+.sfc-actions > button { font-size: 14px; }
+
+.sfc-section-mobile { display: none; }
+@media (max-width: 900px) {
+ .sfc-home .sfc-section-desktop, .sfc-home .sfc-section-nav > h2, .sfc-home .sfc-section-nav > .sfc-help { display: none; }
+ .sfc-section-mobile { display: block; }
+ .sfc-section-mobile .sfc-field { margin-bottom: 8px; }
+ .sfc-section-mobile button { min-width: 32px; padding: 6px; }
+ .sfc-section-editor { scroll-margin-top: 240px; }
+}

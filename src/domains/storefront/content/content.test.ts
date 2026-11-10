@@ -18,6 +18,7 @@ import {
   editorialKey,
   homeSchema,
   homePublicationIssues,
+  homeImageGuidance,
   safeLink,
 } from "./contract";
 import { ContentConflict, readHome, resolveImages, saveContent } from "./service";
@@ -208,12 +209,14 @@ test("public media serves only slots referenced by published content", async () 
   mock.restoreAll();
 });
 
-test("home publishing requires images only for enabled editorial sections and preserves legacy light theme",()=>{
+test("home publishing supports optional editorial photos and preserves legacy light theme",()=>{
  const home=defaultHome();
  assert.equal(home.hero.theme,"light");
  const legacy=JSON.parse(JSON.stringify(home));delete legacy.hero.theme;
  assert.equal(homeSchema.parse(legacy).hero.theme,"light");
- assert.equal(homePublicationIssues(home).length,5);
+ assert.equal(homePublicationIssues(home).length,1);
+ assert.deepEqual(homePublicationIssues(home,true),[]);
+ assert.deepEqual(homeImageGuidance(home).map(n=>n.section),["hero","about","collections"]);
  home.hero.image.key="storefront/editorial/test.webp";
  home.sections=home.sections.map(s=>s.id==="about"||s.id==="collections"?{...s,enabled:false}:s);
  assert.deepEqual(homePublicationIssues(home),[]);
@@ -236,4 +239,20 @@ test("home-only publication cannot publish or overwrite hidden global draft sett
  assert.equal((written!.published as typeof draft).general.tagline,"Current public footer");
  assert.equal((written!.published as typeof draft).hero.title,"Reviewed home hero");
  await assert.rejects(saveContent({id:"home",revision:8,action:"unpublish",scope:"home"},"tester"),/chỉ lưu và xuất bản/);
+});
+
+
+test("home can publish a theme change with automatic hero and optional photos; empty catalogue remains blocked",async()=>{
+ const draft=defaultHome();draft.hero.theme="charcoal";
+ const row={id:"home",kind:"HOME",revision:4,draft,published:null};let written:Record<string,unknown>|undefined;
+ patch(prisma,"$transaction",async(callback:unknown)=>(callback as (tx:typeof prisma)=>Promise<unknown>)(prisma));
+ patch(prisma,"$executeRaw",async()=>1);patch(prisma.storefrontDocument,"findUnique",async()=>row);
+ patch(prisma.storefrontDocument,"update",async({data}:{data:Record<string,unknown>})=>{written=data;return row;});
+ patch(prisma.product,"count",async()=>1);
+ await saveContent({id:"home",revision:4,action:"publish",scope:"home",content:draft},"tester");
+ assert.equal((written!.published as typeof draft).hero.theme,"charcoal");
+ assert.equal((written!.published as typeof draft).about.image.key,"");
+ patch(prisma.product,"count",async()=>0);written=undefined;
+ await assert.rejects(saveContent({id:"home",revision:4,action:"publish",scope:"home",content:draft},"tester"),/danh mục chưa có ảnh tự động/);
+ assert.equal(written,undefined);
 });

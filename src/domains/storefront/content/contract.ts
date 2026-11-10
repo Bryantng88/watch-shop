@@ -185,19 +185,19 @@ export function defaultArticle(): ArticleContent {
     productIds: [],
   };
 }
-export function homePublicationIssues(home: HomeContent): string[] {
-  const enabled = (id: (typeof sectionIds)[number]) =>
-    home.sections.some((s) => s.id === id && s.enabled);
-  const issues: string[] = [];
-  if (enabled("hero") && !home.hero.image.key)
-    issues.push("Chọn ảnh desktop cho khối mở đầu hoặc ẩn khối.");
-  if (enabled("about") && !home.about.image.key) issues.push("Chọn ảnh Về Vintic hoặc ẩn khối.");
-  if (enabled("collections"))
-    home.collections.forEach((c) => {
-      if (!c.image.key)
-        issues.push(`Chọn ảnh bộ sưu tập “${c.title || c.id}” hoặc bỏ nhóm/ẩn khối.`);
-    });
-  return issues;
+export function homePublicationIssues(home: HomeContent, hasAutomaticHero = false): string[] {
+  const heroEnabled=home.sections.some(s=>s.id==="hero"&&s.enabled);
+  return heroEnabled&&!home.hero.image.key&&!hasAutomaticHero
+    ? ["Khối mở đầu chưa có ảnh riêng và danh mục chưa có ảnh tự động. Chọn ảnh hoặc ẩn khối mở đầu."] : [];
+}
+export function homeImageGuidance(home: HomeContent): {section:HomeContent["sections"][number]["id"];message:string}[] {
+  const enabled=(id:string)=>home.sections.some(s=>s.id===id&&s.enabled);
+  const notes:ReturnType<typeof homeImageGuidance>=[];
+  if(enabled("hero")&&!home.hero.image.key)notes.push({section:"hero",message:"Dùng ảnh đồng hồ tự động từ danh mục; có thể chọn ảnh riêng."});
+  if(enabled("about")&&!home.about.image.key)notes.push({section:"about",message:"Chưa chọn ảnh: hiển thị phần giới thiệu dạng văn bản gọn."});
+  const count=home.collections.filter(c=>!c.image.key).length;
+  if(enabled("collections")&&count)notes.push({section:"collections",message:`${count} nhóm chưa có ảnh: hiển thị liên kết gọn.`});
+  return notes;
 }
 export function contentImages(kind: string, content: unknown): Record<string, EditorialImage> {
   if (kind === "HOME") {
