@@ -9,3 +9,20 @@ self.addEventListener("fetch", (event) => {
     { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } }
   )));
 });
+
+self.addEventListener("push", event => {
+  event.waitUntil(self.registration.showNotification("Ben", {
+    body: "Bạn có công việc mới",
+    icon: "/ben/icon-192.png",
+  }));
+});
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const ben = windows.find(client => new URL(client.url).pathname === "/admin/ben");
+    if (ben) await ben.focus();
+    else await self.clients.openWindow("/admin/ben");
+  })());
+});
