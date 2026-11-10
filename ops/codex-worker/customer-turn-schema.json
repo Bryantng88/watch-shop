@@ -37,7 +37,9 @@
         "technical.catalog",
         null,
         "personalWork.categories",
-        "personalWork.people"
+        "personalWork.people",
+        "personalWork.search",
+        "personalWork.detail"
       ]
     },
     "query": {
@@ -521,6 +523,12 @@
                 "type": "string",
                 "maxLength": 500
               }
+            },
+            "assigneeUserId": {
+              "type": [
+                "string",
+                "null"
+              ]
             }
           },
           "required": [
@@ -535,12 +543,97 @@
             "shares",
             "syncGoogle",
             "priority",
-            "checklist"
+            "checklist",
+            "assigneeUserId"
           ]
         },
         {
           "type": "null"
         }
+      ]
+    },
+    "personalWorkUpdatePlan": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "itemId": {
+          "type": "string"
+        },
+        "expectedUpdatedAt": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "title",
+              "note",
+              "dueAt",
+              "scheduledEndAt",
+              "status"
+            ]
+          }
+        },
+        "changes": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "note": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "dueAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scheduledEndAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "status": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "TODO",
+                "IN_PROGRESS",
+                "DONE",
+                "CANCELLED",
+                null
+              ]
+            }
+          },
+          "required": [
+            "title",
+            "note",
+            "dueAt",
+            "scheduledEndAt",
+            "status"
+          ]
+        }
+      },
+      "required": [
+        "itemId",
+        "expectedUpdatedAt",
+        "fields",
+        "changes"
       ]
     }
   },
@@ -558,6 +651,7 @@
     "unsupportedCapability",
     "navigationIntent",
     "codePlan",
-    "personalWorkPlan"
+    "personalWorkPlan",
+    "personalWorkUpdatePlan"
   ]
 }

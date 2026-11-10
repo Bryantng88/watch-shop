@@ -115,3 +115,12 @@ test('personal work and event proposals are strict drafts, never mixed writes or
  assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.categories',reply:null}).lookup,{tool:'personalWork.categories'});
  assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.people',query:'Nam',reply:null}).lookup,{tool:'personalWork.people',query:'Nam'});
 });
+
+test('personal update needs exact fields and a separate finish; assignment never changes event semantics',()=>{
+ const personalWorkUpdatePlan={itemId:'task-id',expectedUpdatedAt:'2026-11-10T12:00:00+07:00',fields:['status'],changes:{title:null,note:null,dueAt:null,scheduledEndAt:null,status:'DONE'}};
+ assert.deepEqual(validateCustomerTurn({...finish,personalWorkUpdatePlan}).personalWorkUpdatePlan,personalWorkUpdatePlan);
+ for(const extra of [{fields:[]},{fields:['status','status']},{ownerId:'other'},{expectedUpdatedAt:'yesterday'},{changes:{...personalWorkUpdatePlan.changes,title:'overwrite'}},{changes:{...personalWorkUpdatePlan.changes,status:null}}])assert.throws(()=>validateCustomerTurn({...finish,personalWorkUpdatePlan:{...personalWorkUpdatePlan,...extra}}));
+ assert.throws(()=>validateCustomerTurn({...finish,personalWorkUpdatePlan,codePlan:{title:'Change code please',request:'Edit a source file and run its tests'}}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.detail',query:'task-id',reply:null,personalWorkUpdatePlan}));
+ for(const tool of ['personalWork.search','personalWork.detail'])assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool,query:'task-id',reply:null}).lookup,{tool,query:'task-id'});
+});

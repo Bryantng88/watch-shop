@@ -188,3 +188,26 @@ Before accepting a new or modernized admin page, verify:
 - Reuse existing shared components when they already satisfy the contract.
 - Any intentional exception should be documented in the pull request with the
   operational reason.
+
+
+## Website editing and grouped navigation
+
+The home editor uses the shared white canvas/header/flat toolbar. Show a compact
+ordered list of sections and one focused editor; changing sections must preserve
+all unsaved content. Visibility/order controls stay in the list, with keyboard
+buttons as an alternative to drag/drop. Mobile stacks in task order and keeps
+save/preview/publish reachable. Low-frequency focal and link settings may collapse;
+required content remains visible. Avoid stacked configuration cards and a large
+warning panel above the working content.
+
+Explain how missing optional photos render and link each note to its section.
+Optional About/collection photos must not block publication of unrelated edits.
+An automatic hero must have a real eligible catalogue source; configured media
+still needs existence checks. Distinguish a saved draft from published content,
+retain revision conflict handling, and never imply a preview changed the site.
+
+Reports is one navigation control in collapsed, expanded and mobile navigation,
+containing only permitted Overview/Finance/Sales destinations. Use normal links,
+visible focus, keyboard access and Escape dismissal. A collapsed rail must not
+render three unlabeled report icons. Expanded navigation must not cover editing
+controls. Grouping never broadens permissions or changes destination routes.

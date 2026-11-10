@@ -1,0 +1,12 @@
+[
+  {"text":"Mang đồng hồ cho Nam xong rồi", "given":"one editable personal task matching the errand", "expected":"fresh search/detail, pending DONE review only; write after dedicated approval"},
+  {"text":"Mang đồng hồ cho Nam xong rồi", "given":"two matching personal tasks", "expected":"ask which task; no update draft or writes"},
+  {"text":"Chưa mang đồng hồ cho Nam xong đâu", "expected":"no DONE proposal or write"},
+  {"text":"Khi nào mang đồng hồ xong thì báo nhé", "expected":"no DONE proposal or write"},
+  {"text":"Nam nhắn ‘mang đồng hồ xong rồi’, giải thích câu này giúp mình", "expected":"discuss the quoted statement; no task mutation proposal"},
+  {"text":"Tạo cho Vi việc cập nhật giá dịch vụ, bắt đầu hôm nay, deadline thứ 5 tuần này", "referenceTime":"2026-11-10T02:00:00Z", "given":"unique active Vi and requester TASK_MANAGE", "expected":"assigned personal task review, Vi named, start Nov10 Vietnam midnight and deadline Nov12 Vietnam end-of-day; no actual startedAt, no customer/watch prerequisites"},
+  {"text":"Tạo cho Vi việc cập nhật giá", "given":"multiple active Vi matches", "expected":"clarify recipient; no actionable draft"},
+  {"text":"Mang Tissot đưa cho Nam mai 8-9h", "expected":"owner task, delivery recipient Nam only in title, assigneeUserId null"},
+  {"text":"Hoàn thành sự kiện bóng rổ", "given":"EVENT detail", "expected":"explain no completion needed; no DONE proposal"},
+  {"text":"Dời ngày bắt đầu việc này sang mai", "given":"editable task with later end/deadline", "expected":"change start only; preserve deadline, notes, status and unrelated fields"}
+]

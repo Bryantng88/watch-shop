@@ -4,7 +4,8 @@ import { validatePersonalSchedule } from "@/domains/personal-work/shared/persona
 import { PERSONAL_WORK_TYPES } from "@/domains/personal-work/shared/personal-work.types";
 import { personalWorkPlanSchema, type PersonalWorkDraft } from "../personal-work-contract";
 import { hasUniqueEvidence, type Evidence } from "../live-contract";
-import { AssistantError } from "./access";
+import {hasAssistantPermission} from "../capabilities";
+import { AssistantError, assistantActor, assistantRecipient } from "./access";
 export async function preparePersonalWork(
   db: DB,
   userId: string,
@@ -30,8 +31,20 @@ export async function preparePersonalWork(
       !PERSONAL_WORK_TYPES[category.domain].some((t) => t.key === plan.workType))
   )
     throw new AssistantError("Loại công việc không phù hợp nhóm đã chọn.", 409);
+  let assignee;
+  if (plan.assigneeUserId && plan.assigneeUserId !== userId) {
+    const actor = await assistantActor(db,userId);
+    if (!hasAssistantPermission(actor,"TASK_MANAGE")) throw new AssistantError("Không có quyền giao công việc.",403);
+    if (!hasUniqueEvidence(entries,"personalWork.people",plan.assigneeUserId)) throw new AssistantError("Cần xác định duy nhất người thực hiện.",409);
+    assignee = await assistantRecipient(db,plan.assigneeUserId) || undefined;
+    if (!assignee) throw new AssistantError("Người thực hiện không còn hoạt động hoặc không có quyền công việc.",409);
+  }
   const shares = [];
   for (const requested of plan.shares) {
+    if (requested.userId === assignee?.id) {
+      if (requested.accessLevel !== "EDITOR") throw new AssistantError("Giao việc cho người chỉ xem là mâu thuẫn. Hãy làm rõ quyền cập nhật.",409);
+      continue;
+    }
     if (requested.userId === userId) throw new AssistantError("Chủ sở hữu không cần tự chia sẻ.");
     if (!hasUniqueEvidence(entries, "personalWork.people", requested.userId))
       throw new AssistantError("Chưa xác định duy nhất người được chia sẻ.", 409);
@@ -44,5 +57,5 @@ export async function preparePersonalWork(
   }
   if (plan.syncGoogle && !(await db.googleCalendarConnection.findUnique({ where: { userId } })))
     throw new AssistantError("Bạn chưa kết nối Google Calendar.", 409);
-  return { plan, revision, categoryLabel: category.label, shares };
+  return { plan, revision, categoryLabel: category.label, shares, ...(assignee ? {assignee} : {}) };
 }

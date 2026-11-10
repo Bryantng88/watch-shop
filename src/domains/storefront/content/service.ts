@@ -165,7 +165,9 @@ export async function saveContent(
         }
         if (kind === "HOME") {
           const home = content as HomeContent;
-          const issues = homePublicationIssues(home);
+          const needsAutomaticHero=home.sections.some(s=>s.id==="hero"&&s.enabled)&&!home.hero.image.key;
+          const automaticHero=needsAutomaticHero&&await tx.product.count({where:{AND:[publicWatchEligibilityWhere(),...(home.featured.productIds.length?[{id:{in:home.featured.productIds}}]:[{status:"AVAILABLE" as const}])]}})>0;
+          const issues = homePublicationIssues(home,automaticHero);
           if (issues.length) throw new Error(issues.join(" "));
           if (
             home.journal.articleId &&
