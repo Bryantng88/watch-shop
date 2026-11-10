@@ -1,0 +1,35 @@
+name: Technical issue list contract
+on:
+  pull_request:
+    paths:
+      - 'src/domains/coordination/shared/technical-issue-list*'
+      - 'src/domains/coordination/ui/TechnicalIssueListView*'
+      - 'src/domains/coordination/ui/OperationCoordinationWorkspace.tsx'
+      - 'src/domains/shared/ui/space/SpaceFilterBar.tsx'
+      - 'tests/browser/technical-issue-list.fixture.tsx'
+      - 'scripts/smoke-technical-issue-list-browser.cjs'
+      - 'docs/development/technical-issue-list-workspace.md'
+      - 'package*.json'
+      - '.github/workflows/technical-issue-list-contract.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --import tsx --test src/domains/coordination/shared/technical-issue-list.test.ts
+      - run: >-
+          npx eslint src/domains/coordination/shared/technical-issue-list.ts
+          src/domains/coordination/shared/technical-issue-list.test.ts
+          src/domains/coordination/ui/TechnicalIssueListView.tsx
+          src/domains/coordination/ui/OperationCoordinationWorkspace.tsx
+          src/domains/shared/ui/space/SpaceFilterBar.tsx
+          tests/browser/technical-issue-list.fixture.tsx
+      - run: npx tsc --noEmit
