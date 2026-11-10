@@ -1,8 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { googleTaskEventId, writeGoogleTaskEvent } from "./google-task-event";
+import { googleTaskEventId, writeGoogleTaskEvent, googleTaskScheduleHash, shouldImportGoogleTaskSchedule } from "./google-task-event";
 
 const payload = { summary: "Synthetic task", extendedProperties: { private: { watchShopTaskItemId: "task", source: "WATCH_SHOP_PERSONAL_WORK" } } };
+
+test("unchanged exports and another account's stale schedule cannot overwrite task dates", () => {
+  const version = new Date("2026-11-10T08:00:00Z");
+  const schedule = { start: { dateTime: "2026-11-12T08:00:00+07:00" }, end: { dateTime: "2026-11-12T09:00:00+07:00" } };
+  const event = { ...schedule, extendedProperties: { private: { watchShopTaskVersion: version.toISOString(), watchShopScheduleHash: googleTaskScheduleHash(schedule) } } };
+  assert.equal(shouldImportGoogleTaskSchedule(event, version), false);
+  assert.equal(shouldImportGoogleTaskSchedule({ ...event, start: { dateTime: "2026-11-12T01:00:00Z" } }, version), false);
+  const edited = { ...event, start: { dateTime: "2026-11-12T07:00:00+07:00" } };
+  assert.equal(shouldImportGoogleTaskSchedule(edited, version), true);
+  assert.equal(shouldImportGoogleTaskSchedule(edited, new Date("2026-11-10T08:00:01Z")), false);
+  assert.equal(shouldImportGoogleTaskSchedule(schedule, version), true);
+  const allDay = { start: { date: "2026-11-12" }, end: { date: "2026-11-13" } };
+  assert.equal(shouldImportGoogleTaskSchedule({ ...allDay, extendedProperties: { private: { watchShopTaskVersion: version.toISOString(), watchShopScheduleHash: googleTaskScheduleHash(allDay) } } }, version), false);
+});
 
 test("event identity is stable, account-scoped and valid Google base32hex", () => {
   const id = googleTaskEventId("connection", "task");

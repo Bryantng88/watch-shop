@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../src/server/db/client";
 import { encryptCalendarToken } from "../src/domains/personal-work/server/google-calendar-crypto";
-import { syncPersonalTaskToGoogle } from "../src/domains/personal-work/server/google-calendar.service";
+import { syncPersonalTaskToGoogle, listPersonalGoogleCalendarEvents } from "../src/domains/personal-work/server/google-calendar.service";
 import { sendAssistant, assistantWorker, listAssistant, approveAssistantPersonalWork } from "../src/domains/ai-assistant/server/service";
 import type { PersonalWorkPlan } from "../src/domains/ai-assistant/personal-work-contract";
 
@@ -33,16 +33,18 @@ async function main() {
     googleCalls++;
     const calendar = decodeURIComponent(match[1]);
     if (fail.has(calendar)) return new Response(null, { status: 503 });
+    const method = init?.method || "GET";
+    if (method === "GET" && !match[2]) return Response.json({ items: [...events].filter(([key]) => key.startsWith(calendar + ":")).map(([key, event]) => ({ ...event, id: key.slice(calendar.length + 1) })) });
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     const id = match[2] || body?.id;
     const key = `${calendar}:${id}`;
-    if (init?.method === "POST") {
+    if (method === "POST") {
       if (events.has(key)) return new Response(null, { status: 409 });
       events.set(key, body);
       if (loseResponse.delete(calendar)) throw Error("Synthetic lost successful response");
-    } else if (init?.method === "PUT") {
+    } else if (method === "PUT") {
       assert.ok(events.has(key)); events.set(key, body);
-    } else assert.equal(init?.method, "GET");
+    } else assert.equal(method, "GET");
     const event = events.get(key);
     return event ? Response.json({ ...event, id, htmlLink: "https://calendar.google.com/calendar/event?eid=synthetic" }) : new Response(null, { status: 404 });
   };
@@ -85,6 +87,20 @@ async function main() {
     await assert.rejects(syncPersonalTaskToGoogle(viewer.id, receipt.id));
     await assert.rejects(approveAssistantPersonalWork(viewer.id, review.id, review.revision!));
     assert.equal(googleCalls, 2, "Viewer cannot write a calendar link");
+    // Merely loading an unchanged all-day Google export must preserve the task's
+    // original 08:00 start, even though Google represents the task as a date.
+    await listPersonalGoogleCalendarEvents(owner.id);
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).dueAt!.toISOString(), "2026-11-12T01:00:00.000Z");
+    // A legitimate Google edit may import once. The other participant's older
+    // copy must not undo that new canonical schedule.
+    const ownedEntry = [...events].find(([key, event]) => key.startsWith(`fixture-${owner.id}:`) && (event.extendedProperties as { private: { watchShopTaskItemId: string } }).private.watchShopTaskItemId === receipt.id)!;
+    ownedEntry[1].start = { date: "2026-11-13" };
+    ownedEntry[1].end = { date: "2026-11-14" };
+    await listPersonalGoogleCalendarEvents(owner.id);
+    const moved = (await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).dueAt!.toISOString();
+    assert.equal(moved, "2026-11-12T17:00:00.000Z");
+    await listPersonalGoogleCalendarEvents(assignee.id);
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).dueAt!.toISOString(), moved);
     const scheduledCount = events.size;
     const undated = await prepare({ dueAt: null });
     assert.deepEqual(undated.personalWorkDraft!.calendarTargets, []);

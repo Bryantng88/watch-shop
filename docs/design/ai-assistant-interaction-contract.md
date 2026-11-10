@@ -303,7 +303,12 @@ provider failure never loses the already-created item or repeats creation; show
 per-account saved-but-not-synced state and link to the existing calendar sync control.
 A stable user/calendar/task event identity prevents duplicate creation when a
 Google create succeeds but its response is lost. Conflicts are checked against
-the exact source task before reconciliation; legacy event links retain their IDs. Receipt
+the exact source task before reconciliation; legacy event links retain their IDs.
+New exports carry the source task version and a semantic schedule fingerprint.
+Unchanged exports cannot round-trip a less precise Google representation into
+the task; a stale participant calendar cannot overwrite a newer canonical
+schedule. An actual Google date edit imports only against its published task
+version, with an exact version predicate protecting concurrent task edits. Receipt
 and draft history require TASK_VIEW; current revocation redacts both. The server
 keeps private leases out of browser data. Pending drafts are context, never
 consent; old results never authorize another write. No offline/background replay.

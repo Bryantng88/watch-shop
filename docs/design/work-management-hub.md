@@ -73,6 +73,10 @@ Sự kiện không có nút hoàn thành và không bị đếm thành công vi�
   đồng bộ. Google lỗi không rollback việc đã lưu và được báo theo từng tài khoản.
 - ID sự kiện ổn định hỗ trợ hòa giải khi Google đã tạo nhưng phản hồi bị mất.
   Không đưa thêm dữ liệu nghiệp vụ vào sự kiện ngoài thông tin task hiện có.
+- Mỗi bản lịch mới mang phiên bản công việc và dấu vết lịch đã xuất. Tải lại
+  một bản xuất chưa sửa không làm mất giờ gốc; bản lịch cũ của người khác không
+  được ghi đè lịch công việc đã thay đổi. Chỉnh lịch trên Google chỉ nhập khi
+  phiên bản còn khớp; lịch cũ cần đồng bộ lại trước khi tiếp tục chỉnh hai chiều.
 - Việc chưa đặt ngày không bị gán vào hôm nay. Khi bổ sung lịch, người có quyền
   có thể dùng nút đồng bộ hiện có. Không tự đẩy toàn bộ việc cũ lên Google.
 
