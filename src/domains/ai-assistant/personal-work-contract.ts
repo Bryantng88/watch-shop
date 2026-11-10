@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { BenCalendarTarget, BenCalendarResult } from "@/domains/personal-work/shared/ben-calendar-sync";
 const time = z.string().datetime({ offset: true });
 export const personalWorkPlanSchema = z
   .object({
@@ -45,6 +46,7 @@ export const personalWorkPlanSchema = z
   });
 export type PersonalWorkPlan = z.infer<typeof personalWorkPlanSchema>;
 export type PersonalWorkDraft = {
+  calendarTargets?: BenCalendarTarget[];
   requiredPermissions?: string[];
   requiredTaskIds?: string[];
   plan: PersonalWorkPlan;
@@ -54,6 +56,7 @@ export type PersonalWorkDraft = {
   shares: { id: string; name: string | null; accessLevel: "VIEWER" | "EDITOR" }[];
 };
 export type CreatedPersonalWork = {
+  calendarRecipients?: BenCalendarResult[];
   revision: number;
   id: string;
   title: string;

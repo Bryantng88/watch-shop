@@ -39,7 +39,8 @@ export function personalItemScheduleInput(
   event: boolean,
 ) {
   if (event && !date) throw Error("Sự kiện cần ngày diễn ra");
-  if (event && start && !end) {
+  if (!date && (start || end)) throw Error("Cần chọn ngày khi đặt giờ thực hiện");
+  if (start && !end) {
     const dueAt = new Date(`${date}T${start}:00+07:00`).toISOString();
     validatePersonalSchedule(dueAt, null);
     return { dueAt, scheduledEndAt: null };
@@ -53,7 +54,10 @@ export function personalEventTiming(item: {
   scheduledEndAt?: string | Date | null;
 }) {
   const event = isPersonalEvent(item.workType ?? item.workTypeId);
-  const point = event && !!item.dueAt && !item.scheduledEndAt && !allDayDate(item.dueAt);
+  // Start-only Ben tasks carry a real clock time too. Preserve legacy date-only
+  // tasks stored at midnight and the current end-of-day all-day encoding.
+  const point = !!item.dueAt && !item.scheduledEndAt && !allDayDate(item.dueAt) &&
+    (event || scheduleTime(item.dueAt) !== "00:00");
   return {
     event,
     point,

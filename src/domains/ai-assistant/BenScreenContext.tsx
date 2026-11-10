@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { ChevronRight, PanelsTopLeft } from "lucide-react";
 const labels: Record<string,string> = {
-  "/admin":"Tổng quan", "/admin/ben":"Trò chuyện với Ben", "/admin/personal-work":"Công việc của tôi",
+  "/admin":"Tổng quan", "/admin/ben":"Trò chuyện với Ben", "/admin/personal-work":"Quản lý công việc",
   "/admin/watches":"Danh sách đồng hồ", "/admin/orders":"Đơn hàng", "/admin/customers":"Khách hàng",
   "/admin/coordination/operation":"Không gian vận hành", "/admin/coordination/sales":"Không gian bán hàng",
   "/admin/services/issues-board":"Bảng kỹ thuật", "/admin/media":"Thư viện media", "/admin/users/profile":"Hồ sơ cá nhân",

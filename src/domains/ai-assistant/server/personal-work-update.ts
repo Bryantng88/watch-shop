@@ -24,7 +24,7 @@ export async function preparePersonalWorkUpdate(db:DB,userId:string,raw:unknown,
  if(item.updatedAt.toISOString()!==new Date(plan.expectedUpdatedAt).toISOString())throw new AssistantError("Công việc đã thay đổi. Hãy đọc lại và chuẩn bị bản cập nhật mới.",409);
  const event=isPersonalEvent(item.workTypeId),c=personalWorkUpdateInput(plan);
  if(event&&c.status&&c.status!=="CANCELLED")throw new AssistantError("Sự kiện không cần hoàn thành.");
- if(c.status==="DONE"&&item.progressMode==="CHECKLIST"&&!item.checklistLockedAt)throw new AssistantError("Công việc còn checklist cần xác nhận trong Công việc của tôi.",409);
+ if(c.status==="DONE"&&item.progressMode==="CHECKLIST"&&!item.checklistLockedAt)throw new AssistantError("Công việc còn checklist cần xác nhận trong Quản lý công việc.",409);
  const start=c.dueAt===undefined?item.dueAt:c.dueAt,end=c.scheduledEndAt===undefined?item.scheduledEndAt:c.scheduledEndAt;
  validatePersonalSchedule(start,end);
  if(event&&!start)throw new AssistantError("Sự kiện cần thời điểm diễn ra.");

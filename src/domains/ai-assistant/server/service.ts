@@ -9,6 +9,7 @@ import {listPersonalCategories} from "@/domains/personal-work/server/personal-wo
 import {PERSONAL_WORK_TYPES} from "@/domains/personal-work/shared/personal-work.types";
 import {isPersonalEvent,personalEventLabel,personalEventBounds} from "@/domains/personal-work/shared/personal-event";
 import {syncPersonalTaskToGoogle} from "@/domains/personal-work/server/google-calendar.service";
+import {syncBenCalendars,benCalendarStatus} from "@/domains/personal-work/shared/ben-calendar-sync";
 import {dailyBusiness} from "./daily-business";
 import {codeEnabled,codePlanSchema,publicCodeJob} from "../code-contract";
 import { canReadRepository, BEN_REPOSITORY } from "../repository-access";
@@ -241,7 +242,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      }else if(request.tool==="orders.list"||request.tool==="technicalIssues.list"){
        result=await dailyBusiness(tx,actor,request.tool,request.query);
      }else if(request.tool==="personalWork.categories"){
-       result={categories:(await listPersonalCategories(actor.id)).map(c=>({key:c.key,label:c.label,workTypes:c.isDefault?PERSONAL_WORK_TYPES[c.domain]:[]})),googleConnected:!!await tx.googleCalendarConnection.findUnique({where:{userId:actor.id},select:{id:true}})};
+       result={googleSyncPolicy:"CONNECTED_CREATOR_AND_ASSIGNEE_AFTER_APPROVAL",categories:(await listPersonalCategories(actor.id)).map(c=>({key:c.key,label:c.label,workTypes:c.isDefault?PERSONAL_WORK_TYPES[c.domain]:[]})),googleConnected:!!await tx.googleCalendarConnection.findUnique({where:{userId:actor.id},select:{id:true}})};
      }else if(request.tool==="personalWork.people"){
        const matches=await tx.user.findMany({where:{isActive:true,NOT:{id:actor.id},OR:[{id:request.query},{name:{contains:request.query,mode:"insensitive"}}]},select:{id:true,name:true},orderBy:{id:"asc"},take:7});result={matches:matches.slice(0,6),truncated:matches.length>6};
      }else if(request.tool==="personalWork.search"||request.tool==="personalWork.detail"){
@@ -501,7 +502,7 @@ export async function approveAssistantPersonalWork(userId:string,id:string,revis
   await lock(tx,id);const row=await owned(tx,id,userId),actor=await assistantActor(tx,userId),s=state(row);
   if(!hasAssistantPermission(actor,"TASK_VIEW"))throw new AssistantError("Không có quyền tạo công việc cá nhân.",403);
   const existing=s.createdPersonalWork?.find(c=>c.revision===revision);
-  if(existing)return {item:existing,sync:false,recipient:undefined};
+  if(existing)return {item:existing,syncTargets:[],recipient:undefined};
   const pending=s.personalWorkDraft;
   if(!pending||pending.revision!==revision||row.revision!==revision||["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem lại.",409);
   if((pending.requiredPermissions||["TASK_VIEW"]).some(p=>!hasAssistantPermission(actor,p))||!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((pending.requiredTaskIds||[]).map(id=>visibleTask(tx,id,actor)))).some(t=>!t))throw new AssistantError("Quyền đọc dữ liệu của bản đề xuất đã thay đổi. Hãy chuẩn bị lại.",403);
@@ -517,14 +518,19 @@ export async function approveAssistantPersonalWork(userId:string,id:string,revis
   if(draft.shares.length)await tx.personalTaskShare.createMany({data:draft.shares.filter(person=>person.id!==draft.assignee?.id).map(person=>({taskItemId:item.id,userId:person.id,accessLevel:person.accessLevel,sharedByUserId:userId}))});
   const created={revision,id:item.id,title:item.title,kind:p.kind,calendar:p.syncGoogle?"PENDING" as const:"NONE" as const};
   s.createdPersonalWork=[...(s.createdPersonalWork||[]),created];delete s.personalWorkDraft;
-  const next=message(s,p.kind==="EVENT"?"Đã tạo sự kiện trong Công việc của tôi. Sự kiện không cần đánh dấu hoàn thành.":draft.assignee?"Đã tạo và giao công việc cho "+(draft.assignee.name||draft.assignee.id)+".":"Đã tạo công việc trong Công việc của tôi.",["TASK_VIEW"]);
+  const next=message(s,p.kind==="EVENT"?"Đã tạo sự kiện trong Quản lý công việc. Sự kiện không cần đánh dấu hoàn thành.":draft.assignee?"Đã tạo và giao công việc cho "+(draft.assignee.name||draft.assignee.id)+".":"Đã tạo công việc trong Quản lý công việc.",["TASK_VIEW"]);
   await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:"NEEDS_INFO"}});
-  return {item:created,sync:p.syncGoogle,recipient:draft.assignee?.id};
+  return {item:created,syncTargets:draft.calendarTargets||[],recipient:draft.assignee?.id};
  });
  if(outcome.recipient&&outcome.recipient!==userId)defer?.(()=>notifyBenAssignment(outcome.recipient!));
- if(outcome.sync){
-  let status:"SYNCED"|"FAILED"="SYNCED";try{await syncPersonalTaskToGoogle(userId,outcome.item.id);}catch{status="FAILED";}
-  await transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId),s=state(row);s.createdPersonalWork=s.createdPersonalWork?.map(c=>c.revision===revision?{...c,calendar:status}:c);await tx.customerAssistantConversation.update({where:{id},data:{state:json(s)}});});
+ if(outcome.syncTargets.length){
+  const results=await syncBenCalendars(outcome.syncTargets,outcome.item.id,async(targetUserId,itemId)=>{
+    const currentActor=await assistantActor(prisma,targetUserId);
+    if(!hasAssistantPermission(currentActor,"TASK_VIEW"))throw new AssistantError("Tài khoản không còn quyền công việc.",403);
+    return syncPersonalTaskToGoogle(targetUserId,itemId);
+  });
+  const status=benCalendarStatus(results);
+  await transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId),s=state(row);s.createdPersonalWork=s.createdPersonalWork?.map(c=>c.revision===revision?{...c,calendar:status,calendarRecipients:results}:c);await tx.customerAssistantConversation.update({where:{id},data:{state:json(s)}});});
  }
  return dto(await owned(prisma,id,userId));
 }
