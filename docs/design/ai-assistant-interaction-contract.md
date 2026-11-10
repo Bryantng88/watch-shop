@@ -320,6 +320,9 @@ calendar/local/Google surfaces keep their times and allow editing/cancellation.
 A point event uses a technical one-minute Google interval because Google requires
 an end, while the local item and UI retain a start-only schedule. The metadata
 round-trip preserves that distinction. Existing tasks keep their prior semantics.
+Start-only tasks with a clock time use the same technical point interval without
+creating a completion/end time in Watch Shop. Existing midnight date-only task
+encoding and end-of-day all-day encoding remain date-only for compatibility.
 
 Customer repair progress uses customerRepairs.search under SERVICE_VIEW. The
 lookup searches active and completed-but-not-delivered CUSTOMER_OWNED tickets

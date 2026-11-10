@@ -83,22 +83,24 @@ async function main() {
     assert.equal(receipt.calendar, "SYNCED");
     assert.equal(receipt.calendarRecipients!.length, 2);
     assert.equal(events.size, 2);
+    assert.ok([...events.values()].every(event => (event.start as { dateTime?: string }).dateTime === "2026-11-12T01:00:00.000Z"));
     assert.equal(googleCalls, 2, "Concurrent approval must sync each account only once");
     await assert.rejects(syncPersonalTaskToGoogle(viewer.id, receipt.id));
     await assert.rejects(approveAssistantPersonalWork(viewer.id, review.id, review.revision!));
     assert.equal(googleCalls, 2, "Viewer cannot write a calendar link");
-    // Merely loading an unchanged all-day Google export must preserve the task's
-    // original 08:00 start, even though Google represents the task as a date.
+    // Merely loading an unchanged point-time export must preserve the task's
+    // original start without inventing a user-selected end.
     await listPersonalGoogleCalendarEvents(owner.id);
     assert.equal((await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).dueAt!.toISOString(), "2026-11-12T01:00:00.000Z");
     // A legitimate Google edit may import once. The other participant's older
     // copy must not undo that new canonical schedule.
     const ownedEntry = [...events].find(([key, event]) => key.startsWith(`fixture-${owner.id}:`) && (event.extendedProperties as { private: { watchShopTaskItemId: string } }).private.watchShopTaskItemId === receipt.id)!;
-    ownedEntry[1].start = { date: "2026-11-13" };
-    ownedEntry[1].end = { date: "2026-11-14" };
+    ownedEntry[1].start = { dateTime: "2026-11-12T02:00:00.000Z" };
+    ownedEntry[1].end = { dateTime: "2026-11-12T02:01:00.000Z" };
     await listPersonalGoogleCalendarEvents(owner.id);
     const moved = (await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).dueAt!.toISOString();
-    assert.equal(moved, "2026-11-12T17:00:00.000Z");
+    assert.equal(moved, "2026-11-12T02:00:00.000Z");
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).scheduledEndAt, null);
     await listPersonalGoogleCalendarEvents(assignee.id);
     assert.equal((await prisma.taskItem.findUniqueOrThrow({ where: { id: receipt.id } })).dueAt!.toISOString(), moved);
     const scheduledCount = events.size;

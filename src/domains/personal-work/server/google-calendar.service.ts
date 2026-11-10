@@ -349,7 +349,7 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
     await prisma.$transaction(linkedEvents.map((event) => {
       const startDate = event.start?.date || bangkokDateKey(new Date(event.start!.dateTime!));
       const dueAt = event.start?.dateTime ? new Date(event.start.dateTime) : calendarDateToStoredDate(startDate);
-      const point=links.some(l=>l.eventId===event.id&&l.taskItem.workTypeId==="EVENT")&&event.extendedProperties?.private?.pointInTime==="1"&&!!event.start?.dateTime&&!!event.end?.dateTime&&Date.parse(event.end.dateTime)-Date.parse(event.start.dateTime)===60000;
+      const point=event.extendedProperties?.private?.pointInTime==="1"&&!!event.start?.dateTime&&!!event.end?.dateTime&&Date.parse(event.end.dateTime)-Date.parse(event.start.dateTime)===60000;
       const scheduledEndAt = event.start?.dateTime&&!point
         ? new Date(event.end?.dateTime || new Date(dueAt.getTime() + 3600000).toISOString()) : null;
       const estimatedDays = event.start?.date

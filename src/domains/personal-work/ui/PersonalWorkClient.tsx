@@ -519,7 +519,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
-            <PersonalWorkTimeFields compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
+            <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
             <div className="flex min-w-0 gap-2">
               <select
                 aria-label="Thời lượng dự kiến"
@@ -1392,7 +1392,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
-              <PersonalWorkTimeFields endOptional={isPersonalEvent(editWorkType)} start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
+              <PersonalWorkTimeFields endOptional start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
               {editScheduleError && <p role="alert" className="text-xs text-rose-600">{editScheduleError}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
@@ -1747,7 +1747,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
-              <PersonalWorkTimeFields endOptional={isPersonalEvent(calendarWorkType)} start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
+              <PersonalWorkTimeFields endOptional start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
                 <select

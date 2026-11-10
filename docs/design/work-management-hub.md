@@ -69,6 +69,9 @@ Sự kiện không có nút hoàn thành và không bị đếm thành công vi�
 - Đổi tên các điểm vào chính sang “Quản lý công việc”, giữ đường dẫn hiện có.
 - Việc/sự kiện có ngày được Ben tạo sau khi duyệt sẽ tự đồng bộ Google cho
   người tạo và người phụ trách đã kết nối. Người chỉ xem không nhận sự kiện.
+- Việc chỉ có giờ bắt đầu vẫn giữ đúng giờ trên lịch, không biến thành cả ngày
+  hoặc bắt người dùng thêm một giờ kết thúc chưa được yêu cầu. Khoảng một phút
+  kỹ thuật trên Google không được ghi ngược thành giờ kết thúc của công việc.
 - Kiểm tra lại quyền/kết nối khi duyệt; replay không tạo lại task hoặc gửi lại
   đồng bộ. Google lỗi không rollback việc đã lưu và được báo theo từng tài khoản.
 - ID sự kiện ổn định hỗ trợ hòa giải khi Google đã tạo nhưng phản hồi bị mất.
