@@ -85,6 +85,14 @@ import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-p
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
 import FlowItemListView from "./FlowItemListView";
 import TechnicalIssueListView from "./TechnicalIssueListView";
+import {
+  DEFAULT_TI_LIST_STATE,
+  technicalIssueLayoutUrl,
+  technicalIssueMatches,
+  technicalIssueViewSelection,
+  type TechnicalIssueListState,
+} from "../shared/technical-issue-list";
+import { useUiMutation } from "@/domains/shared/ui/mutation/use-ui-mutation";
 import { useAdHocWorkCreate } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import { createMediaPostAction } from "@/domains/media-post/actions";
 import MediaPostCreateForm from "@/domains/media-post/ui/MediaPostCreateForm";
@@ -740,6 +748,13 @@ export default function OperationCoordinationWorkspace({
   const [title, setTitle] = useState(initialTitle);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [technicalFilterResetKey, setTechnicalFilterResetKey] = useState(0);
+  const [technicalLayout, setTechnicalLayout] = useState<"board" | "list">(
+    () => searchParams.get("tiLayout") === "list" ? "list" : "board",
+  );
+  useEffect(() => {
+    setTechnicalLayout(searchParams.get("tiLayout") === "list" ? "list" : "board");
+  }, [searchParams]);
   const [workTicketView, setWorkTicketView] = useState<"LIST" | "TI_BOARD" | "MEDIA_BOARD">(() =>
     (searchParams.get("view") ?? data.viewConfig.defaultModeKey) === "technical-issue-flow"
       ? "TI_BOARD"
@@ -1318,13 +1333,20 @@ export default function OperationCoordinationWorkspace({
     searchParams,
   ]);
   const changeWorkTicketView = useCallback((value: string) => {
+    const technical = technicalIssueViewSelection(activeViewModeKey, value);
+    if (technical) {
+      setWorkTicketView(technical.engine);
+      setTechnicalLayout(technical.layout);
+      window.history.replaceState(null, "", technicalIssueLayoutUrl(window.location.href, technical.layout));
+      return;
+    }
     const nextView = value === "TI_BOARD"
       ? "TI_BOARD"
       : value === "MEDIA_BOARD"
         ? "MEDIA_BOARD"
         : "LIST";
     setWorkTicketView(nextView);
-  }, []);
+  }, [activeViewModeKey]);
   const refreshBoard = useCallback(async (kind: "technical" | "media") => {
     if (isBoardRefreshing) return;
     setError(null);
@@ -1549,10 +1571,12 @@ export default function OperationCoordinationWorkspace({
     setTechnicalIssuePriorityFilter("ALL");
     setTechnicalIssueCommentFilter("ALL");
     setFocusedTechnicalIssueId(technicalIssueId);
+    setFilterQuery("");
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("context", data.context);
     params.set("view", "technical-issue-flow");
+    params.delete("flowQuery");
     const technicalBoardEndpoint =
       `/api/admin/coordination/operation/boards/technical-issue?taskId=${encodeURIComponent(data.cycle.id)}&pageSize=10`;
     router.replace(`/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
@@ -1788,15 +1812,15 @@ export default function OperationCoordinationWorkspace({
           (item) => technicalIssuePriorityValue(item.priority) === technicalIssuePriorityFilter,
         );
     return technicalBoardSummary(
-      technicalIssueCommentFilter === "COMMENTED"
+      (technicalIssueCommentFilter === "COMMENTED"
         ? visibleItems.filter((item) => item.commentCount > 0)
         : technicalIssueCommentFilter === "MENTIONED_ME"
           ? visibleItems.filter((item) => item.mentionedMeCount > 0)
           : technicalIssueCommentFilter === "UNREAD_MENTION"
             ? visibleItems.filter((item) => item.unreadMentionCount > 0)
-          : visibleItems,
+          : visibleItems).filter(item=>technicalIssueMatches(item,filterQuery)),
     );
-  }, [technicalIssueBoardItems, technicalIssueCommentFilter, technicalIssuePriorityFilter]);
+  }, [technicalIssueBoardItems, technicalIssueCommentFilter, technicalIssuePriorityFilter,filterQuery]);
   useEffect(() => {
     if (activeViewMode?.key !== "technical-issue-flow" && workTicketView === "TI_BOARD") {
       setWorkTicketView("LIST");
@@ -2121,17 +2145,17 @@ export default function OperationCoordinationWorkspace({
                 searchPlaceholder={isOperationalBoardView
                   ? "Tìm item, mã tham chiếu..."
                   : "Tìm item, mã tham chiếu, đối tượng..."}
-                onSearchChange={setFilterQuery}
-                activeView={isTechnicalIssueBoardView ? "TI_BOARD" : isMediaBoardView ? "MEDIA_BOARD" : "LIST"}
+                onSearchChange={query=>{setFilterQuery(query);if(isTechnicalIssueFlowMode){const url=new URL(window.location.href);if(query.trim())url.searchParams.set("flowQuery",query);else url.searchParams.delete("flowQuery");window.history.replaceState(null,"",url.toString());}}}
+                activeView={isTechnicalIssueBoardView ? technicalLayout==="list"?"LIST":"TI_BOARD" : isMediaBoardView ? "MEDIA_BOARD" : "LIST"}
                 onViewChange={changeWorkTicketView}
                 viewOptions={[
                   ...(isMediaFlowMode
                     ? [{ value: "MEDIA_BOARD", label: "Board Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
-                    : [{ value: "TI_BOARD", label: "Board TI", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
+                    : [{ value: "TI_BOARD", label: "Board", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
                   { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
-                  ...(isTaskItemListMode ? [] : [{
+                  ...(isTaskItemListMode || isTechnicalIssueFlowMode ? [] : [{
                     key: "work-status",
                     label: "Trạng thái công việc",
                     value: filterWorkStatus,
@@ -2271,7 +2295,7 @@ export default function OperationCoordinationWorkspace({
                     </span>
                   </>
                 )}
-                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || filterPaymentDirection !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setFilterQuery(""); setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || filterPaymentDirection !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setTechnicalFilterResetKey(value => value + 1); setFilterQuery(""); if (isTechnicalIssueFlowMode) { const url = new URL(window.location.href); url.searchParams.delete("flowQuery"); window.history.replaceState(null, "", url.toString()); } setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
                 <SpaceDataRefreshButton
                   loading={isBoardRefreshing || isFlowItemsLoading}
                   refreshedAt={boardRefreshedAt}
@@ -2552,6 +2576,10 @@ export default function OperationCoordinationWorkspace({
 
           {isTechnicalIssueBoardView ? (
             <TechnicalIssueBoardView
+              layout={technicalLayout}
+              filterResetKey={technicalFilterResetKey}
+              loading={isBoardRefreshing}
+              query={filterQuery}
               items={asyncTechnicalIssueBoard?.items ?? []}
               actions={technicalIssueBoardActions}
               vendorOptions={asyncTechnicalIssueBoard?.vendorOptions ?? []}
@@ -2574,7 +2602,7 @@ export default function OperationCoordinationWorkspace({
                   toStageKey: input.toStage,
                   syncFlowList: false,
                 });
-                setFocusedTechnicalIssueId(input.itemId);
+                setFocusedTechnicalIssueId(technicalLayout==="board"?input.itemId:null);
               }}
             />
           ) : isMediaBoardView ? (
@@ -3453,6 +3481,10 @@ function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoard
 }
 
 function TechnicalIssueBoardView({
+  layout,
+  query,
+  loading,
+  filterResetKey,
   items,
   actions,
   vendorOptions,
@@ -3468,6 +3500,10 @@ function TechnicalIssueBoardView({
   doneRange,
   onDoneRangeChange,
 }: {
+  layout: "board" | "list";
+  query: string;
+  loading: boolean;
+  filterResetKey: number;
   items: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["items"];
   actions: OperationalBlueprintAction[];
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
@@ -3489,9 +3525,13 @@ function TechnicalIssueBoardView({
 }) {
   const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
-  const layoutParams = useSearchParams();
-  const [layout, setLayout] = useState<"board" | "list">(layoutParams.get("tiLayout") === "list" ? "list" : "board");
-  useEffect(() => { setLayout(layoutParams.get("tiLayout") === "list" ? "list" : "board"); }, [layoutParams]);
+  const [listState, setListState] = useState<TechnicalIssueListState>(DEFAULT_TI_LIST_STATE);
+  useEffect(() => {
+    setListState(current => current.attention === "ALL" && current.page === 1
+      ? current : { ...current, attention: "ALL", page: 1 });
+  }, [filterResetKey]);
+  const priorityMutation = useUiMutation();
+  const listFocusMemory = useRef("");
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
   const [moveRequest, setMoveRequest] = useState<TechnicalIssueBoardMoveRequest | null>(null);
   const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
@@ -3501,7 +3541,7 @@ function TechnicalIssueBoardView({
   const [boardItems, setBoardItems] = useState(items);
   const [isMovePending, startMoveTransition] = useTransition();
   const [isCostApprovalPending, startCostApprovalTransition] = useTransition();
-  const [isPriorityPending, startPriorityTransition] = useTransition();
+  const isPriorityPending=priorityIssueId?priorityMutation.isPending(`technical-priority:${priorityIssueId}`):false;
   useEffect(() => {
     setBoardItems(items);
   }, [items]);
@@ -3521,15 +3561,15 @@ function TechnicalIssueBoardView({
         ? boardItems
         : boardItems.filter((item) => technicalIssuePriorityValue(item.priority) === priorityFilter);
     return sortTechnicalBoardItems(
-      commentFilter === "COMMENTED"
+      (commentFilter === "COMMENTED"
         ? filtered.filter((item) => item.commentCount > 0)
         : commentFilter === "MENTIONED_ME"
           ? filtered.filter((item) => item.mentionedMeCount > 0)
           : commentFilter === "UNREAD_MENTION"
             ? filtered.filter((item) => item.unreadMentionCount > 0)
-          : filtered,
+          : filtered).filter(item=>technicalIssueMatches(item,query)),
     );
-  }, [boardItems, commentFilter, priorityFilter]);
+  }, [boardItems, commentFilter, priorityFilter,query]);
   useEffect(() => {
     if (!focusedIssueId || !visibleItems.some((item) => item.id === focusedIssueId)) return;
 
@@ -3541,23 +3581,14 @@ function TechnicalIssueBoardView({
   function togglePriority(item: TechnicalIssueBoardItem) {
     const nextPriority = technicalIssuePriorityValue(item.priority) === "URGENT" ? "NORMAL" : "URGENT";
     setPriorityIssueId(item.id);
-    startPriorityTransition(async () => {
-      try {
-        await updateTechnicalIssuePriorityAction({
-          issueId: item.id,
-          priority: nextPriority,
-          context: "TECHNICAL",
-        });
-        setBoardItems((current) =>
-          current.map((candidate) =>
-            candidate.id === item.id
-              ? { ...candidate, priority: nextPriority }
-              : candidate,
-          ),
-        );
-      } finally {
-        setPriorityIssueId(null);
-      }
+    void priorityMutation.run({
+      key: `technical-priority:${item.id}`,
+      action: async () => {
+        await updateTechnicalIssuePriorityAction({ issueId: item.id, priority: nextPriority, context: "TECHNICAL" });
+        setBoardItems(current => current.map(candidate =>
+          candidate.id === item.id ? { ...candidate, priority: nextPriority } : candidate,
+        ));
+      },
     });
   }
 
@@ -3808,21 +3839,16 @@ function TechnicalIssueBoardView({
   }
 
   return (
-    <div className="min-w-0 max-w-full border-t border-slate-200 bg-slate-50/80 px-3 py-4 sm:px-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-xs font-semibold text-slate-600">Theo dõi và xử lý TI</span>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1" aria-label="Cách hiển thị TI">
-          {([{ key: "board", label: "Board", icon: Grid2X2 }, { key: "list", label: "List", icon: List }] as const).map(option => <button key={option.key} type="button" aria-pressed={layout === option.key} onClick={() => {
-            setLayout(option.key);
-            const url = new URL(window.location.href);
-            if (option.key === "list") url.searchParams.set("tiLayout", "list");
-            else url.searchParams.delete("tiLayout");
-            window.history.replaceState(null, "", url.toString());
-          }} className={cn("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold", layout === option.key ? "bg-violet-100 text-violet-800" : "text-slate-500 hover:bg-slate-50")}><option.icon className="h-3.5 w-3.5" />{option.label}</button>)}
-        </div>
-      </div>
+    <div className={cn("min-w-0 max-w-full border-t border-slate-100 px-3 py-4 sm:px-4",layout==="list"?"bg-white":"bg-slate-50/80")}>
       {layout === "list" ? <TechnicalIssueListView
         items={visibleItems}
+        state={listState}
+        focusMemory={listFocusMemory}
+        filtered={priorityFilter!=="ALL"||commentFilter!=="ALL"}
+        loading={loading}
+        onStateChange={setListState}
+        query={query}
+        isPriorityPendingFor={id=>priorityMutation.isPending(`technical-priority:${id}`)}
         pagination={columnPagination}
         loadingColumn={loadingColumn}
         focusedIssueId={focusedIssueId}
@@ -3849,6 +3875,7 @@ function TechnicalIssueBoardView({
                 <TechnicalIssueBoardColumn
                   key={column.key}
                   column={column}
+                  isPriorityPendingFor={id=>priorityMutation.isPending(`technical-priority:${id}`)}
                   items={columnItems}
                   pagination={columnPagination[column.key]}
                 loading={loadingColumn === `technical:${column.key}`}
@@ -4199,6 +4226,7 @@ function TechnicalIssueBoardColumn({
   isOver,
   onTogglePriority,
   priorityPendingIssueId,
+  isPriorityPendingFor,
   focusedIssueId,
   onPreview,
   doneRange,
@@ -4215,6 +4243,7 @@ function TechnicalIssueBoardColumn({
   isOver: boolean;
   onTogglePriority: (item: TechnicalIssueBoardItem) => void;
   priorityPendingIssueId: string | null;
+  isPriorityPendingFor?: (id:string)=>boolean;
   focusedIssueId: string | null;
   onPreview: (item: TechnicalIssueBoardItem) => void;
   doneRange: "14D" | "30D" | "ALL";
@@ -4282,7 +4311,7 @@ function TechnicalIssueBoardColumn({
             key={item.id}
             item={item}
             onTogglePriority={onTogglePriority}
-            priorityPending={priorityPendingIssueId === item.id}
+            priorityPending={isPriorityPendingFor?.(item.id)??priorityPendingIssueId === item.id}
             focused={focusedIssueId === item.id}
             onPreview={onPreview}
             onDragEnd={onDragEnd}
