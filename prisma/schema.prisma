@@ -3976,6 +3976,7 @@ model PersonalCodexRun {
   leaseToken String?
   workerId String?
   leaseExpiresAt DateTime?
+  notBefore DateTime? @db.Timestamptz(6)
   startedAt DateTime?
   finishedAt DateTime?
   summary String?
@@ -3985,6 +3986,7 @@ model PersonalCodexRun {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([status, createdAt])
+  @@index([status, notBefore, createdAt])
   @@index([taskItemId, createdAt])
 }
 

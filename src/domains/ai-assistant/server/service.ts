@@ -1,3 +1,4 @@
+import {requestPersonalCodexRun} from "@/domains/personal-work/server/codex/personal-codex.service";
 import {personalWorkUpdateInput} from "../personal-work-update";
 import {lookupPersonalWork,preparePersonalWorkUpdate} from "./personal-work-update";
 import {preparePersonalWork} from "./personal-work-plan";
@@ -469,7 +470,7 @@ export async function approveAssistantPersonalWork(userId:string,id:string,revis
   if((pending.requiredPermissions||["TASK_VIEW"]).some(p=>!hasAssistantPermission(actor,p))||!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((pending.requiredTaskIds||[]).map(id=>visibleTask(tx,id,actor)))).some(t=>!t))throw new AssistantError("Quyền đọc dữ liệu của bản đề xuất đã thay đổi. Hãy chuẩn bị lại.",403);
   const draft=await preparePersonalWork(tx,userId,pending.plan,revision,evidence(row));
   const p=draft.plan;
-  const item=await createPersonalWorkItem({title:p.title,note:p.note,dueAt:p.dueAt,scheduledEndAt:p.scheduledEndAt,categoryKey:p.categoryKey,workType:p.kind==="EVENT"?"EVENT":p.workType,tags:p.tags,priority:p.priority},actor,tx);
+  const item=await createPersonalWorkItem({title:p.title,note:p.note,dueAt:p.dueAt,scheduledEndAt:p.scheduledEndAt,categoryKey:p.categoryKey,workType:p.kind==="EVENT"?"EVENT":p.workType,tags:p.codex?[...p.tags.filter(t=>t.trim().toLowerCase()!=="codex"),"codex"]:p.tags,priority:p.priority},actor,tx);
   if(draft.assignee){
    await tx.taskItem.update({where:{id:item.id},data:{assignedToUserId:draft.assignee.id}});
    await tx.personalTaskShare.create({data:{taskItemId:item.id,userId:draft.assignee.id,accessLevel:"EDITOR",sharedByUserId:userId}});
@@ -477,9 +478,10 @@ export async function approveAssistantPersonalWork(userId:string,id:string,revis
   }
   if(p.checklist.length){await tx.taskItemChecklist.createMany({data:p.checklist.map((title,i)=>({taskItemId:item.id,title,sortOrder:i+1}))});await tx.taskItem.update({where:{id:item.id},data:{progressMode:"CHECKLIST",progressPercent:0}});}
   if(draft.shares.length)await tx.personalTaskShare.createMany({data:draft.shares.filter(person=>person.id!==draft.assignee?.id).map(person=>({taskItemId:item.id,userId:person.id,accessLevel:person.accessLevel,sharedByUserId:userId}))});
-  const created={revision,id:item.id,title:item.title,kind:p.kind,calendar:p.syncGoogle?"PENDING" as const:"NONE" as const};
+  const codex=p.codex?await requestPersonalCodexRun(item.id,actor,false,{notBefore:p.codex.startAt,db:tx}):null;
+  const created={revision,id:item.id,title:item.title,kind:p.kind,...(codex?{codex:{runId:codex.id,notBefore:codex.notBefore?.toISOString()??null}}:{}),calendar:p.syncGoogle?"PENDING" as const:"NONE" as const};
   s.createdPersonalWork=[...(s.createdPersonalWork||[]),created];delete s.personalWorkDraft;
-  const next=message(s,p.kind==="EVENT"?"Đã tạo sự kiện trong Công việc của tôi. Sự kiện không cần đánh dấu hoàn thành.":draft.assignee?"Đã tạo và giao công việc cho "+(draft.assignee.name||draft.assignee.id)+".":"Đã tạo công việc trong Công việc của tôi.",["TASK_VIEW"]);
+  const next=message(s,p.codex?(p.codex.startAt?"Đã tạo việc và xếp hàng cho Codex, không chạy trước giờ đã duyệt.":"Đã tạo việc và xếp hàng cho Codex xử lý ngay khi worker sẵn sàng."):p.kind==="EVENT"?"Đã tạo sự kiện trong Công việc của tôi. Sự kiện không cần đánh dấu hoàn thành.":draft.assignee?"Đã tạo và giao công việc cho "+(draft.assignee.name||draft.assignee.id)+".":"Đã tạo công việc trong Công việc của tôi.",["TASK_VIEW"]);
   await tx.customerAssistantConversation.update({where:{id},data:{state:json(next),status:"NEEDS_INFO"}});
   return {item:created,sync:p.syncGoogle};
  });

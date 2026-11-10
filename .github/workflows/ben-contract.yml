@@ -4,6 +4,8 @@ on:
     paths:
       - 'src/domains/ai-assistant/**'
       - 'src/domains/personal-work/**'
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
       - 'src/app/api/admin/ben-code/**'
       - 'src/app/api/internal/ben-code/**'
       - 'ops/codex-worker/**'

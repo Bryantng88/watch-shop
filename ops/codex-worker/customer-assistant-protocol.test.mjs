@@ -124,3 +124,10 @@ test('personal update needs exact fields and a separate finish; assignment never
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.detail',query:'task-id',reply:null,personalWorkUpdatePlan}));
  for(const tool of ['personalWork.search','personalWork.detail'])assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool,query:'task-id',reply:null}).lookup,{tool,query:'task-id'});
 });
+
+test('scheduled personal Codex is explicit, task-only, and separate from the calendar date',()=>{
+ const p={kind:'TASK',title:'Vendor list',note:null,categoryKey:'GENERAL',workType:null,dueAt:'2026-11-11T23:59:59+07:00',scheduledEndAt:null,tags:['codex'],shares:[],priority:'MEDIUM',checklist:[],syncGoogle:false,codex:{startAt:'2026-11-11T08:00:00+07:00'}};
+ assert.equal(validateCustomerTurn({...finish,personalWorkPlan:p}).personalWorkPlan.codex.startAt,p.codex.startAt);
+ for(const change of [{kind:'EVENT'},{assigneeUserId:'other'},{codex:null},{codex:{startAt:'tomorrow'}},{codex:{startAt:null,merge:true}}])assert.throws(()=>validateCustomerTurn({...finish,personalWorkPlan:{...p,...change}}));
+ assert.equal(validateCustomerTurn({...finish,personalWorkPlan:{...p,codex:{startAt:null}}}).personalWorkPlan.codex.startAt,null);
+});

@@ -76,7 +76,7 @@ export type PersonalWorkTarget = {
 };
 
 export type PersonalCodexRun = {
-  id: string; status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "TIMED_OUT"; attempt: number; summary: string | null; errorCode: string | null; resultUrl: string | null; commitSha: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null;
+  notBefore?: string | null; id: string; status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "TIMED_OUT"; attempt: number; summary: string | null; errorCode: string | null; resultUrl: string | null; commitSha: string | null; createdAt: string; startedAt: string | null; finishedAt: string | null;
 };
 
 export type PersonalWorkItem = {
