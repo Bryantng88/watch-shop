@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 const source=readFileSync('public/ben-sw.js','utf8');
-function worker(fetch){const events={};vm.runInNewContext(source,{self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting(){},clients:{claim(){}}},URL,Response,fetch});return events;}
+function worker(fetch, overrides={}){const events={};vm.runInNewContext(source,{self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting(){},clients:{claim(){}},...overrides},URL,Response,fetch});return events;}
 test('Ben worker leaves APIs and other admin documents untouched',()=>{
  const events=worker(()=>{throw Error('Unexpected fetch');});
  for(const [mode,path] of [['cors','/api/admin/customer-assistant'],['navigate','/admin/watches'],['navigate','/login']])events.fetch({request:{method:"GET",mode,url:'https://example.test'+path},respondWith(){assert.fail('Must not intercept');}});
@@ -35,4 +35,19 @@ test('successful navigation and HTTP auth failures are returned without caching 
 test('Ben requests its protected manifest with browser credentials', () => {
  const page=readFileSync('src/app/(admin)/admin/ben/page.tsx','utf8');
  assert.match(page, /<link rel="manifest" href="\/ben\.webmanifest" crossOrigin="use-credentials"/);
+});
+
+test('Ben push shows generic copy and opens only the Ben page', async () => {
+ const shown=[];const opened=[];
+ const events=worker(undefined,{
+  registration:{showNotification:async (title,options)=>shown.push({title,body:options.body})},
+  clients:{matchAll:async()=>[],openWindow:async path=>opened.push(path)},
+ });
+ let work;
+ events.push({data:{json(){assert.fail('Do not read private payload');}},waitUntil(p){work=p;}});
+ await work;
+ assert.deepEqual(shown,[{title:'Ben',body:'Bạn có công việc mới'}]);
+ events.notificationclick({notification:{close(){}},waitUntil(p){work=p;}});
+ await work;
+ assert.deepEqual(opened,['/admin/ben']);
 });

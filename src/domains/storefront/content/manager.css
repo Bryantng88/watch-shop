@@ -438,7 +438,7 @@
 .sfc-section-editor { min-width: 0; grid-column: 2; grid-row: 1; scroll-margin-top: 100px; }
 .sfc-section-editor[hidden] { display: none !important; }
 .sfc-section-editor > h2 { margin-bottom: 20px; }
-.sfc-home .sfc-image { border: 0; border-top: 1px solid #f1f5f9; border-radius: 0; padding: 12px 0 0; margin-bottom: 20px; }
+.sfc-home .sfc-image { border: 0; border-radius: 0; padding: 12px 0 0; margin-bottom: 20px; }
 .sfc-home .sfc-image legend { font-weight: 600; padding: 0 8px 0 0; }
 .sfc-home .sfc-collection { margin-top: 14px; padding-top: 12px; border-color: #f1f5f9; }
 @media (max-width: 900px) {

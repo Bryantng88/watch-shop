@@ -239,6 +239,50 @@ technical fact. The draft opens in the active product's Content tab with
 sources and review notes collapsed. The existing one-click approval still
 fills the form and does not save or publish it.
 
+## Group Media posts and stock receipts
+
+`media.watches.select` reads catalog candidates using a strict JSON-string query
+with brand, keywords, count (1–20), optional sale-price bounds and similarPrices.
+It requires PRODUCT_VIEW + MEDIA_VIEW. Candidates must be available, in stock,
+not sold/held/consigned, have a positive sale price and a Gallery image. Match
+keywords against catalog title/model/reference/tags; never infer diver capability
+from appearance or substitute unknown technical specifications. No cost/minimum
+price or customer/vendor data is returned. Scan coverage is explicit; a truncated
+scan cannot produce a post draft and must be narrowed.
+
+For “prices roughly alike”, use the largest group up to the requested count whose
+maximum sale price is at most 125% of its minimum, then the tightest relative
+spread. Show the actual selected count, price range and the 25% rule. Shortages
+remain visible and never authorize substituting unrelated watches.
+
+`media.posts.draft` accepts a strict JSON-string query with current user message
+ID, selected watch IDs, caption and brief. Only watches from the latest complete
+selection in this leased turn are eligible. It requires PRODUCT_UPDATE in
+addition to the read permissions. This lookup prepares conversation state only;
+finish carries no other plan, support request or navigation. Drafts and corrections
+do not create business records. Model-written copy must be grounded in the
+returned inventory facts and is displayed for review.
+
+The compact review lists the exact watches/prices, full caption and one
+“Tạo post nháp” action. Chat remains the correction mechanism. Approval rechecks
+the owner, revision, current authority, inherited read scope and exact current
+stock/price/title/Gallery snapshot. The existing Media Post command copies one
+Gallery image per watch, binds all watches and creates a single DRAFT post. The
+conversation lock and durable receipt are in that same transaction. Concurrent
+clicks, retries and post-commit delivery failures return the receipt without
+creating another post. Gallery copy failure rolls back records and cleans copied
+files through the existing command. This never schedules, publishes or sends
+anything to social accounts. Current permissions gate restored drafts/receipts.
+
+`stock.receipts` requires WATCH_ACQUISITION_VIEW + PRODUCT_VIEW and accepts brand
+and a bounded receipt count. Shop convention: creating a receipt means stocking
+in, so importedAt is Acquisition.createdAt, not acquiredAt or Product timestamps.
+Return only receipt reference/date, watch identities and an admin link. Watch-only
+viewers cannot inspect mixed receipts; ACQUISITION_VIEW_ALL may. Both receipt and
+child-watch truncation remain explicit. Receipt reads and group-post proposals
+are separate turns. Deploy the app and updated worker protocol/schema together;
+scripted tests do not establish live natural-language acceptance.
+
 ## Daily order and technical issue reads
 
 `orders.list` requires ORDER_VIEW and returns orders created on a selected date.
@@ -370,3 +414,12 @@ again on reload and worker handoff. Nothing executes on browser reload/history.
 These tools do not modify regular workspace business tasks, technical issues,
 orders or purchase-condition results. Existing personal calendar update behavior
 is retained: no implicit Google or external notification send is added here.
+
+## Ben push notifications
+
+Signed-in Ben users opt in on each device. Subscription endpoints are accepted
+only from supported browser push services. Delivery is post-commit, best effort,
+for a newly approved task assigned to another user through Ben. Notifications
+carry a fixed message and open /admin/ben. They contain no task or customer
+details. Expired browser subscriptions are removed. Existing approval and
+authorization checks remain in effect.
