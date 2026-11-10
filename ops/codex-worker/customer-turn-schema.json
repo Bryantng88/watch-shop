@@ -39,7 +39,10 @@
         "personalWork.categories",
         "personalWork.people",
         "personalWork.search",
-        "personalWork.detail"
+        "personalWork.detail",
+        "stock.receipts",
+        "media.watches.select",
+        "media.posts.draft"
       ]
     },
     "query": {
