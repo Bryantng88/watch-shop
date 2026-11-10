@@ -2,7 +2,7 @@
 import type {BenEnvironment} from "@/domains/ai-assistant/environment";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import {useState,type CSSProperties,type ReactNode} from "react";
 import AdminTopbar from "./AdminTopBar";
 import AdminSidebar from "./AdmidSideBar";
 import { AdminNavigationHistoryProvider } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
@@ -26,6 +26,7 @@ type AdminShellProps = {
 };
 
 export default function AdminShell({ user, children, assistantSimulation = false, assistantLive = false, assistantEnvironment, assistantImageSearch = false }: AdminShellProps) {
+    const [sidebarExpanded,setSidebarExpanded]=useState(false);
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const isBen = pathname === "/admin/ben";
@@ -37,9 +38,10 @@ export default function AdminShell({ user, children, assistantSimulation = false
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
-        <div className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[76px_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]">
+        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]">
             <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
                 <AdminSidebar
+                    onExpandedChange={setSidebarExpanded}
                     user={{ permissions: user.permissions, name: user.name, roles: user.roles }}
                 />
             </div>

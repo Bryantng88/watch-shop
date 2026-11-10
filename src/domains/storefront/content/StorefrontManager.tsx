@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {AdminPageCanvas,AdminPageHeader,AdminFlatToolbar} from "@/domains/shared/ui/admin-design-contract";
+import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
+import {AsyncActionButton} from "@/domains/shared/ui/mutation/AsyncActionButton";
+import {useAppDialog} from "@/domains/shared/feedback/AppDialogProvider";
 import { ArrowDown, ArrowUp, Eye, Globe, ImagePlus, Plus, Save, X } from "lucide-react";
 import {
   type ArticleContent,
@@ -9,7 +13,7 @@ import {
   type EditorialImage,
   type HomeContent,
   emptyImage,
-  homePublicationIssues,
+  homeImageGuidance,
 } from "./contract";
 import type { PublicWatchCard } from "../contracts";
 import "./manager.css";
@@ -28,6 +32,10 @@ const names = {
   journal: "Chuyện đồng hồ",
   closing: "Lời mời khám phá",
 };
+type HomeSectionId = HomeContent["sections"][number]["id"];
+function HomeSection({id,title,homeOnly,active,children}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode}){
+ return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} className="sfc-section-editor" aria-label={title}><h2>{title}</h2>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><summary>{title}</summary>{children}</details>;
+}
 async function jsonRequest(url: string, init?: RequestInit) {
   const res = await fetch(url, { cache: "no-store", ...init });
   const json = await res.json();
@@ -78,6 +86,7 @@ function ImageField({
   onUpload: (file: File) => Promise<LibraryImage | null>;
   disabled: boolean;
 }) {
+  const fileInput=useRef<HTMLInputElement>(null);
   const current = library.find((i) => i.key === value.key);
   return (
     <fieldset className="sfc-image">
@@ -113,10 +122,10 @@ function ImageField({
               </option>
             ))}
           </select>
-          <label className="sfc-upload">
-            <ImagePlus size={15} />
-            Tải ảnh mới
+          <button type="button" className="sfc-upload" disabled={disabled} aria-label={`Tải ${label}`} onClick={()=>fileInput.current?.click()}><ImagePlus size={15}/>Tải ảnh mới</button>
             <input
+              ref={fileInput}
+              hidden
               type="file"
               accept="image/jpeg,image/png,image/webp"
               disabled={disabled}
@@ -129,7 +138,6 @@ function ImageField({
                 e.target.value = "";
               }}
             />
-          </label>
           {value.key ? (
             <button type="button" onClick={() => onChange(emptyImage())}>
               Bỏ ảnh
@@ -138,6 +146,7 @@ function ImageField({
         </div>
       </div>
       <Field label="Mô tả ảnh" value={value.alt} onChange={(alt) => onChange({ ...value, alt })} />
+      <details className="sfc-advanced"><summary>Chỉnh vị trí ảnh</summary>
       <div className="sfc-grid">
         <label>
           Điểm lấy nét ngang: {value.focalX}%
@@ -162,6 +171,7 @@ function ImageField({
           />
         </label>
       </div>
+      </details>
     </fieldset>
   );
 }
@@ -282,8 +292,11 @@ export default function StorefrontManager({
   const [record, setRecord] = useState<ContentRecord | null>(null);
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [library, setLibrary] = useState<LibraryImage[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const documentMutation=useUiMutation(),uploadMutation=useUiMutation(),dialog=useAppDialog();
+  const busy=documentMutation.hasPending,uploading=uploadMutation.hasPending;
+  const [pendingAction,setPendingAction]=useState<"save"|"preview"|"publish"|"unpublish"|"create">("save");
+  const [needsReload,setNeedsReload]=useState(false);
+  const [activeSection,setActiveSection]=useState<HomeSectionId>("hero");
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("");
@@ -304,6 +317,7 @@ export default function StorefrontManager({
       const r = await jsonRequest(`/api/admin/storefront/content?id=${encodeURIComponent(id)}`);
       if (request !== loadCounter.current) return;
       setRecord(r.record);
+      setNeedsReload(false);
       setArticles(r.articles);
       setDirty(false);
       setMessage("");
@@ -331,15 +345,9 @@ export default function StorefrontManager({
     window.addEventListener("beforeunload", listener);
     return () => window.removeEventListener("beforeunload", listener);
   }, [dirty]);
-  function choose(id: string) {
-    if (
-      busy ||
-      uploading ||
-      (dirty && !window.confirm("Bạn có thay đổi chưa lưu. Chuyển nội dung và bỏ các thay đổi đó?"))
-    )
-      return;
-    setPreview("");
-    void load(id);
+  async function choose(id: string) {
+    if (busy || uploading || (dirty && !await dialog.confirm({title:"Bỏ thay đổi chưa lưu?",message:"Chuyển nội dung sẽ bỏ các thay đổi chưa lưu.",confirmText:"Bỏ thay đổi",cancelText:"Ở lại"})))return;
+    setPreview("");void load(id);
   }
   function edit(content: HomeContent | ArticleContent) {
     if (!record) return;
@@ -348,79 +356,34 @@ export default function StorefrontManager({
     setMessage("");
   }
   async function upload(file: File) {
-    setUploading(true);
     setError("");
-    try {
-      const data = new FormData();
-      data.append("file", file);
-      const r = await jsonRequest("/api/admin/storefront/media", {
-        method: "POST",
-        body: data,
-      });
-      setLibrary((v) => [r.item, ...v]);
-      return r.item as LibraryImage;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không tải được ảnh.");
-      return null;
-    } finally {
-      setUploading(false);
-    }
+    return await uploadMutation.run({key:"media-upload",action:async()=>{
+      const data=new FormData();data.append("file",file);
+      const result=await jsonRequest("/api/admin/storefront/media",{method:"POST",body:data});
+      setLibrary(value=>[result.item,...value]);return result.item as LibraryImage;
+    }}) || null;
   }
   async function save(action: "save" | "publish" | "unpublish", openPreview = false) {
-    if (!record) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      const r = await jsonRequest("/api/admin/storefront/content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: record.id,
-          revision: record.revision,
-          action,
-          ...(homeOnly ? { scope: "home" } : {}),
-          content: record.draft,
-        }),
-      });
-      setRecord(r.record);
-      setDirty(false);
-      setMessage(
-        action === "publish"
-          ? "Đã xuất bản. Khách sẽ thấy phiên bản mới khi tải lại trang."
-          : action === "unpublish"
-            ? "Đã gỡ xuất bản. Bản nháp vẫn được giữ."
-            : "Đã lưu bản nháp. Nội dung đang công khai chưa thay đổi.",
-      );
-      if (openPreview)
-        setPreview(
-          `/storefront-preview?${record.kind === "ARTICLE" ? `article=${record.id}&` : ""}v=${r.record.revision}`,
-        );
-      const list = await jsonRequest(`/api/admin/storefront/content?id=${record.id}`);
-      setArticles(list.articles);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể lưu.");
-    } finally {
-      setBusy(false);
-    }
+    if (!record || uploading) return;
+    setPendingAction(openPreview?"preview":action);setError("");setMessage("");
+    await documentMutation.run({key:"document",onError:()=>setNeedsReload(true),action:async()=>{
+      const result=await jsonRequest("/api/admin/storefront/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:record.id,revision:record.revision,action,...(homeOnly?{scope:"home"}:{}),content:record.draft})});
+      setRecord(result.record);setDirty(false);setNeedsReload(false);
+      setMessage(action==="publish"?"Đã xuất bản phiên bản mới.":action==="unpublish"?"Đã gỡ xuất bản. Bản nháp được giữ.":"Đã lưu nháp · website chưa thay đổi.");
+      if(openPreview)setPreview(`/storefront-preview?${record.kind==="ARTICLE"?`article=${record.id}&`:""}v=${result.record.revision}`);
+      // The mutation result is authoritative. A separate list refresh must not
+      // turn a committed publication into a false save failure.
+      if(record.kind==="ARTICLE")setArticles(rows=>rows.map(row=>row.id===result.record.id?{id:row.id,content:result.record.draft,publishedAt:result.record.publishedAt}:row));
+      return result;
+    }});
   }
   async function create() {
-    if (dirty && !window.confirm("Bỏ thay đổi chưa lưu để tạo bài mới?")) return;
-    setBusy(true);
-    setError("");
-    try {
-      const r = await jsonRequest("/api/admin/storefront/content", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create" }),
-      });
-      await load(r.record.id);
-      setTab("articles");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không tạo được bài.");
-    } finally {
-      setBusy(false);
-    }
+    if(busy||uploading||(dirty&&!await dialog.confirm({title:"Tạo bài mới?",message:"Các thay đổi chưa lưu sẽ bị bỏ.",confirmText:"Tạo bài",cancelText:"Ở lại"})))return;
+    setPendingAction("create");setError("");
+    await documentMutation.run({key:"document",action:async()=>{
+      const result=await jsonRequest("/api/admin/storefront/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create"})});
+      await load(result.record.id);setTab("articles");return result;
+    }});
   }
   const home = record?.kind === "HOME" ? (record.draft as HomeContent) : null;
   const article = record?.kind === "ARTICLE" ? (record.draft as ArticleContent) : null;
@@ -433,21 +396,8 @@ export default function StorefrontManager({
     edit({ ...home, sections });
   }
   return (
-    <div className="sfc">
-      <div className="sfc-heading">
-        <div>
-          <p>VINTIC / STOREFRONT</p>
-          <h1>{homeOnly ? "Trang chủ website" : "Quản lý Storefront"}</h1>
-          <span>
-            {homeOnly
-              ? "Quản lý ảnh, nội dung và thứ tự các khối của trang chủ. Lưu nháp chưa thay đổi website."
-              : "Thiết kế cố định. Nội dung do bạn tuyển chọn."}
-          </span>
-        </div>
-        <a href={storefrontUrl} target="_blank" rel="noreferrer">
-          Mở storefront ↗
-        </a>
-      </div>
+    <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
+      <AdminPageHeader eyebrow="Website" title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn một khối để sửa. Lưu nháp → xem trước → xuất bản.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
       {!homeOnly && (
         <div className="sfc-tabs">
           <button
@@ -477,8 +427,7 @@ export default function StorefrontManager({
           <button
             type="button"
             onClick={() => {
-              if (!dirty || window.confirm("Tải lại sẽ bỏ thay đổi chưa lưu?"))
-                void load(record?.id || "home");
+              void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại nội dung?",message:"Thay đổi chưa lưu sẽ bị bỏ.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record?.id||"home");})();
             }}
           >
             Tải lại nội dung
@@ -494,9 +443,9 @@ export default function StorefrontManager({
         <section className="sfc-card">
           <div className="sfc-row">
             <h2>Bài viết</h2>
-            <button type="button" disabled={busy || uploading} onClick={() => void create()}>
+            <AsyncActionButton type="button" pending={busy&&pendingAction==="create"} pendingLabel="Đang tạo…" disabled={busy || uploading} onClick={() => void create()}>
               <Plus size={16} /> Tạo bài
-            </button>
+            </AsyncActionButton>
           </div>
           <div className="sfc-article-list">
             {articles.length ? (
@@ -523,84 +472,84 @@ export default function StorefrontManager({
         <p role="status">Đang tải nội dung…</p>
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
-          <div className="sfc-toolbar">
+          <AdminFlatToolbar className="sfc-toolbar">
             <div>
               <strong>{record.kind === "HOME" ? "Trang chủ" : article?.title}</strong>
               <small>
-                {dirty ? "Có thay đổi chưa lưu" : "Đã lưu"} · Phiên bản {record.revision}
+                {uploading?"Đang tải ảnh…":dirty ? "Có thay đổi chưa lưu" : "Đã lưu nháp"} · Phiên bản {record.revision}
                 {record.publishedAt
-                  ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN")}`
+                  ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh"})}`
                   : " · Chưa xuất bản"}
               </small>
             </div>
+            {needsReload&&<button type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</button>}
             <div className="sfc-actions">
-              <button type="button" disabled={busy || uploading} onClick={() => void save("save")}>
+              <AsyncActionButton type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
                 <Save size={15} />
                 Lưu nháp
-              </button>
-              <button
+              </AsyncActionButton>
+              <AsyncActionButton
                 type="button"
+                pending={busy&&pendingAction==="preview"}
+                pendingLabel="Đang mở…"
                 disabled={busy || uploading}
                 onClick={() => void save("save", true)}
               >
                 <Eye size={15} />
                 Xem trước
-              </button>
-              <button
+              </AsyncActionButton>
+              <AsyncActionButton
                 type="button"
                 className="primary"
-                disabled={busy || uploading || Boolean(home && homePublicationIssues(home).length)}
+                pending={busy&&pendingAction==="publish"}
+                pendingLabel="Đang xuất bản…"
+                disabled={busy || uploading}
                 onClick={() => void save("publish")}
               >
                 <Globe size={15} />
                 Xuất bản
-              </button>
+              </AsyncActionButton>
               {record.publishedAt && !homeOnly ? (
                 <button
                   type="button"
                   disabled={busy || uploading}
                   onClick={() => {
-                    if (window.confirm("Gỡ phiên bản đang công khai? Bản nháp vẫn được giữ."))
-                      void save("unpublish");
+                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
                   }}
                 >
                   Gỡ xuất bản
                 </button>
               ) : null}
             </div>
-          </div>
-          {home && homePublicationIssues(home).length > 0 && (
-            <section className="sfc-card sfc-readiness" aria-label="Cần bổ sung trước khi xuất bản">
-              <h2>Ảnh còn thiếu</h2>
-              <ul>
-                {homePublicationIssues(home).map((issue) => (
-                  <li key={issue}>{issue}</li>
-                ))}
-              </ul>
-              <p className="sfc-help">
-                Bạn vẫn có thể lưu nháp và xem trước. Website chỉ thay đổi khi xuất bản thành công.
-              </p>
-            </section>
+          </AdminFlatToolbar>
+          {home && homeImageGuidance(home).length > 0 && (
+            <details className="sfc-guidance"><summary>{homeImageGuidance(home).length} lưu ý về cách hiển thị ảnh</summary>
+              {homeImageGuidance(home).map(item=><button key={item.section} type="button" onClick={()=>{setActiveSection(item.section);requestAnimationFrame(()=>document.getElementById(`home-editor-${item.section}`)?.scrollIntoView({block:"start",behavior:"smooth"}));}}>{names[item.section]} · {item.message} <span aria-hidden>→</span></button>)}
+            </details>
           )}
-          <fieldset disabled={busy || uploading} className="sfc-editor">
+          <fieldset disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?"sfc-home-layout":""}`}>
             {home ? (
               <>
-                <section className="sfc-card">
-                  <h2>Thứ tự hiển thị</h2>
+                <section className="sfc-section-nav" aria-label="Các khối trang chủ">
+                  <h2>Các khối trang chủ</h2>
                   <p className="sfc-help">
-                    Kéo thả hoặc dùng mũi tên. Bỏ chọn để ẩn khối. Bài viết chỉ hiện khi có bài đã
-                    xuất bản được chọn.
+                    Chọn khối để sửa · kéo để sắp xếp.
                   </p>
+                  {homeOnly&&<div className="sfc-section-mobile">
+                    <label className="sfc-field"><span>Khối đang sửa</span><select value={activeSection} onChange={event=>setActiveSection(event.target.value as HomeSectionId)}>{home.sections.map(section=><option key={section.id} value={section.id}>{names[section.id]}</option>)}</select></label>
+                    <div className="sfc-row"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={home.sections.find(section=>section.id===activeSection)?.enabled||false} onChange={event=>edit({...home,sections:home.sections.map(section=>section.id===activeSection?{...section,enabled:event.target.checked}:section)})}/>Hiển thị khối</label><div className="flex gap-1"><button type="button" aria-label="Đưa khối đang sửa lên" disabled={home.sections[0].id===activeSection} onClick={()=>{const i=home.sections.findIndex(section=>section.id===activeSection);moveSection(i,i-1);}}><ArrowUp size={15}/></button><button type="button" aria-label="Đưa khối đang sửa xuống" disabled={home.sections.at(-1)?.id===activeSection} onClick={()=>{const i=home.sections.findIndex(section=>section.id===activeSection);moveSection(i,i+1);}}><ArrowDown size={15}/></button></div></div>
+                  </div>}
+                  <div className={homeOnly?"sfc-section-desktop":""}>
                   {home.sections.map((section, i) => (
                     <div
-                      className="sfc-section-row"
+                      className={`sfc-section-row ${homeOnly&&activeSection===section.id?"is-selected":""}`}
                       key={section.id}
                       draggable
-                      onDragStart={(e) => e.dataTransfer.setData("text/plain", String(i))}
+                      onDragStart={(e) => e.dataTransfer.setData("application/x-vintic-home-section", section.id)}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         e.preventDefault();
-                        const from = Number(e.dataTransfer.getData("text/plain"));
+                        const from = home.sections.findIndex(s=>s.id===e.dataTransfer.getData("application/x-vintic-home-section"));
                         if (Number.isInteger(from) && from >= 0 && from < home.sections.length)
                           moveSection(from, i);
                       }}
@@ -619,8 +568,9 @@ export default function StorefrontManager({
                             })
                           }
                         />
-                        {names[section.id]}
+                        <span className="sr-only">Hiển thị {names[section.id]}</span>
                       </label>
+                      <button type="button" className="sfc-section-select" aria-current={activeSection===section.id?"true":undefined} aria-controls={`home-editor-${section.id}`} onClick={()=>{setActiveSection(section.id);if(window.matchMedia("(max-width: 900px)").matches)requestAnimationFrame(()=>document.getElementById(`home-editor-${section.id}`)?.scrollIntoView({block:"start",behavior:"smooth"}));}}><span>{names[section.id]}</span><small>{section.enabled?"Đang bật":"Đang ẩn"}</small></button>
                       <button
                         type="button"
                         disabled={!i}
@@ -639,9 +589,9 @@ export default function StorefrontManager({
                       </button>
                     </div>
                   ))}
+                  </div>
                 </section>
-                <details className="sfc-card" open>
-                  <summary>Ảnh mở đầu — Hero</summary>
+                <HomeSection id="hero" title="Ảnh mở đầu — Hero" homeOnly={homeOnly} active={activeSection}>
                   <label className="sfc-field">
                     <span>Tông màu khối mở đầu</span>
                     <select
@@ -680,6 +630,7 @@ export default function StorefrontManager({
                       }
                     />
                   </div>
+                  <details className="sfc-advanced"><summary>Nút liên kết & chú thích</summary>
                   <div className="sfc-grid">
                     <Field
                       label="Chữ trên nút"
@@ -697,6 +648,8 @@ export default function StorefrontManager({
                     value={home.hero.caption}
                     onChange={(caption) => edit({ ...home, hero: { ...home.hero, caption } })}
                   />
+                  </details>
+                  {!home.hero.image.key&&<p className="sfc-help">Đang dùng ảnh đồng hồ tự động từ danh mục. Bạn có thể giữ ảnh này và chỉ đổi tông màu.</p>}
                   <div className="sfc-grid">
                     <ImageField
                       {...imageProps}
@@ -713,9 +666,8 @@ export default function StorefrontManager({
                       }
                     />
                   </div>
-                </details>
-                <details className="sfc-card">
-                  <summary>Đồng hồ nổi bật</summary>
+                </HomeSection>
+                <HomeSection id="featured" title="Đồng hồ nổi bật" homeOnly={homeOnly} active={activeSection}>
                   <Field
                     label="Tiêu đề khối"
                     value={home.featured.title}
@@ -739,9 +691,8 @@ export default function StorefrontManager({
                       })
                     }
                   />
-                </details>
-                <details className="sfc-card">
-                  <summary>Về Vintic</summary>
+                </HomeSection>
+                <HomeSection id="about" title="Về Vintic" homeOnly={homeOnly} active={activeSection}>
                   <Field
                     label="Tiêu đề"
                     value={home.about.title}
@@ -759,9 +710,8 @@ export default function StorefrontManager({
                     value={home.about.image}
                     onChange={(image) => edit({ ...home, about: { ...home.about, image } })}
                   />
-                </details>
-                <details className="sfc-card">
-                  <summary>Bộ sưu tập theo phong cách</summary>
+                </HomeSection>
+                <HomeSection id="collections" title="Bộ sưu tập theo phong cách" homeOnly={homeOnly} active={activeSection}>
                   {home.collections.map((collection, i) => (
                     <section className="sfc-collection" key={collection.id}>
                       <div className="sfc-row">
@@ -835,9 +785,8 @@ export default function StorefrontManager({
                   >
                     + Thêm nhóm
                   </button>
-                </details>
-                <details className="sfc-card">
-                  <summary>Chuyện đồng hồ trên Home</summary>
+                </HomeSection>
+                <HomeSection id="journal" title="Chuyện đồng hồ trên Home" homeOnly={homeOnly} active={activeSection}>
                   <Field
                     label="Tên khối"
                     value={home.journal.title}
@@ -870,9 +819,8 @@ export default function StorefrontManager({
                     Khách đọc phiên bản đã xuất bản. Các chỉnh sửa nháp của bài không thay đổi nội
                     dung công khai.
                   </p>
-                </details>
-                <details className="sfc-card">
-                  <summary>Lời mời khám phá</summary>
+                </HomeSection>
+                <HomeSection id="closing" title="Lời mời khám phá" homeOnly={homeOnly} active={activeSection}>
                   {(
                     [
                       ["title", "Tiêu đề"],
@@ -892,7 +840,7 @@ export default function StorefrontManager({
                       }
                     />
                   ))}
-                </details>
+                </HomeSection>
                 {!homeOnly && (
                   <details className="sfc-card">
                     <summary>Thông tin chung & footer</summary>
@@ -1097,6 +1045,6 @@ export default function StorefrontManager({
           />
         </dialog>
       ) : null}
-    </div>
+    </AdminPageCanvas>
   );
 }

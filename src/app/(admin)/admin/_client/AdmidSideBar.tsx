@@ -23,6 +23,7 @@ import {
     Globe,
 } from "lucide-react";
 
+import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -33,6 +34,7 @@ type Props = {
         roles?: string[];
     };
     variant?: "desktop" | "mobile";
+    onExpandedChange?: (expanded:boolean)=>void;
 };
 
 type NavItem = {
@@ -230,11 +232,15 @@ function buildAllowedNav(user: Props["user"]) {
 export default function AdminSidebar({
     user,
     variant = "desktop",
+    onExpandedChange,
 }: Props) {
     const isMobile = variant === "mobile";
+    const [wideScreen,setWideScreen]=useState(false);
+    useEffect(()=>{const media=window.matchMedia("(min-width: 2200px)");const update=()=>setWideScreen(media.matches);update();media.addEventListener("change",update);return()=>media.removeEventListener("change",update);},[]);
     const [open, setOpen] = useState(false);
     const [desktopExpanded, setDesktopExpanded] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
+    useEffect(()=>{if(!isMobile)onExpandedChange?.(desktopExpanded);},[desktopExpanded,isMobile,onExpandedChange]);
     const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
         () => new Set(),
     );
@@ -283,13 +289,14 @@ export default function AdminSidebar({
                 <ActiveLink
                     href={item.href}
                     label={item.label}
+                    title={item.label}
                     onNavigate={() => { if (isMobile) setOpen(false); }}
                     exact={item.exact}
-                    expanded={!isMobile && desktopExpanded}
+                    expanded={isMobile || desktopExpanded}
                 >
                     <Icon size={18} className="shrink-0 opacity-80" />
 
-                    <span className={`${desktopExpanded && !isMobile ? "inline-flex" : "hidden min-[2200px]:inline-flex"} min-w-0 items-center gap-2`}>
+                    <span className={`${(isMobile || desktopExpanded) ? "inline-flex" : "hidden min-[2200px]:inline-flex"} min-w-0 items-center gap-2`}>
                         <span
                             className={[
                                 "truncate text-[14px] leading-none",
@@ -302,7 +309,7 @@ export default function AdminSidebar({
                     </span>
                 </ActiveLink>
 
-                <div className={`pointer-events-none absolute left-[68px] top-1/2 z-[9999] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl min-[2200px]:hidden ${desktopExpanded && !isMobile ? "hidden" : "hidden group-hover:block"}`}>
+                <div className={`pointer-events-none absolute left-[68px] top-1/2 z-[9999] -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-xl min-[2200px]:hidden ${(isMobile || desktopExpanded) ? "hidden" : "hidden group-hover:block"}`}>
                     {item.label}
                 </div>
             </div>
@@ -348,8 +355,8 @@ export default function AdminSidebar({
                 className={[
                     "fixed left-0 top-0 z-50 h-full overflow-visible bg-[#11191f] text-gray-200",
                     "flex flex-col transition-[width,transform,box-shadow] duration-200 ease-out",
-                    desktopExpanded && !isMobile
-                        ? "w-[240px] shadow-[18px_0_40px_rgba(15,23,42,0.22)]"
+                    (isMobile || desktopExpanded)
+                        ? "w-[240px]"
                         : "w-[76px] min-[2200px]:w-[240px]",
                     "lg:static lg:h-screen lg:translate-x-0",
                     open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
@@ -366,9 +373,9 @@ export default function AdminSidebar({
                             type="button"
                             onClick={toggleDesktopSidebar}
                             className="grid h-9 w-9 place-items-center rounded-lg text-white/65 transition hover:bg-white/10 hover:text-white"
-                            aria-label={desktopExpanded ? "Thu gá»n thanh Ä‘iá»u hÆ°á»›ng" : "Má»Ÿ rá»™ng thanh Ä‘iá»u hÆ°á»›ng"}
+                            aria-label={desktopExpanded ? "Thu gọn thanh điều hướng" : "Mở rộng thanh điều hướng"}
                             aria-expanded={desktopExpanded}
-                            title={desktopExpanded ? "Thu gá»n sidebar" : "Má»Ÿ rá»™ng sidebar"}
+                            title={desktopExpanded ? "Thu gọn sidebar" : "Mở rộng sidebar"}
                         >
                             {desktopExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
                         </button>
@@ -396,9 +403,10 @@ export default function AdminSidebar({
                     ) : null}
                 </div> : null}
 
-                <nav className="relative z-50 space-y-1 overflow-visible px-3 py-3">
+                <nav aria-label="Điều hướng quản trị" className="relative z-50 min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
                     {allowedNav.map((entry, index) => {
                         if (entry.type === "group") {
+                            if(entry.label === "Báo cáo") return <ReportMenu key="reports" items={entry.children||[]} expanded={isMobile||desktopExpanded||wideScreen} onNavigate={()=>{if(isMobile)setOpen(false);}}/>;
                             const hasChildren = Boolean(entry.children?.length);
                             const isCollapsed = collapsedGroups.has(entry.label);
                             const isOpen = hasChildren && !isCollapsed;
@@ -412,7 +420,7 @@ export default function AdminSidebar({
                                         <button
                                             type="button"
                                             onClick={() => toggleGroup(entry.label)}
-                                            className={`mx-2 w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 ${desktopExpanded && !isMobile ? "flex" : "hidden min-[2200px]:flex"}`}
+                                            className={`mx-2 w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 ${(isMobile || desktopExpanded) ? "flex" : "hidden min-[2200px]:flex"}`}
                                             aria-expanded={isOpen}
                                         >
                                             <span>{entry.label}</span>
@@ -424,15 +432,15 @@ export default function AdminSidebar({
                                             />
                                         </button>
                                     ) : (
-                                        <div className={`mx-2 border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 ${desktopExpanded && !isMobile ? "block" : "hidden min-[2200px]:block"}`}>
+                                        <div className={`mx-2 border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 ${(isMobile || desktopExpanded) ? "block" : "hidden min-[2200px]:block"}`}>
                                             {entry.label}
                                         </div>
                                     )}
 
-                                    <div className={`mx-auto h-px w-7 bg-white/10 min-[2200px]:hidden ${desktopExpanded && !isMobile ? "hidden" : "block"}`} />
+                                    <div className={`mx-auto h-px w-7 bg-white/10 min-[2200px]:hidden ${(isMobile || desktopExpanded) ? "hidden" : "block"}`} />
 
                                     {isOpen ? (
-                                        <div className={`mt-1 space-y-1 ${desktopExpanded && !isMobile ? "pl-2" : "min-[2200px]:pl-2"}`}>
+                                        <div className={`mt-1 space-y-1 ${(isMobile || desktopExpanded) ? "pl-2" : "min-[2200px]:pl-2"}`}>
                                             {entry.children?.map((item) =>
                                                 renderNavItem(item, true),
                                             )}
@@ -447,7 +455,7 @@ export default function AdminSidebar({
                 </nav>
 
                 <div className="mt-auto p-3 text-[11px] opacity-50">
-                    <span className={desktopExpanded && !isMobile ? "inline" : "hidden min-[2200px]:inline"}>
+                    <span className={(isMobile || desktopExpanded) ? "inline" : "hidden min-[2200px]:inline"}>
                         © {new Date().getFullYear()} Admin
                     </span>
                 </div>

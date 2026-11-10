@@ -17,10 +17,11 @@ Uploads use the existing validated image conversion and storefront-only media
 keys. Public stock/price/eligibility still come from the catalogue. No product,
 order, storefront inventory or price is edited by the home editor.
 
-Save draft and preview (desktop/mobile) do not publish. Publication requires
-photos for each enabled hero/About/collection slot and checks storage existence.
-Choose the missing photos, remove a collection or hide its section; drafts remain
-saveable. A failed publish or stale revision retains the existing public snapshot.
+Save draft and preview (desktop/mobile) do not publish. Publication validates configured media against storage and requires a usable
+hero source for an enabled opening section. An empty hero slot preserves the
+existing automatic catalogue-watch fallback; the server checks an eligible
+source exists. About/collection photos are optional: missing slots use the
+existing compact text/link rendering and do not block unrelated theme edits. A failed publish or stale revision retains the existing public snapshot.
 Previously published content without About/collection images displays compact
 text and links rather than large branded placeholders. Actual photos take their
 normal image layout once configured. Other pages and article placeholders retain
@@ -46,13 +47,37 @@ Browser acceptance should cover missing-image warnings, filling slots, draft sav
 private preview, publication errors, mobile layout and the public home fallback.
 
 Isolated browser regression: run a built app on http://127.0.0.1:3016 with the
-existing loopback personal_codex_test DB and synthetic AUTH_SECRET. Create a
-fixture with scripts/seed-ben-pwa-smoke.ts (using BEN_PWA_FIXTURE_FILE to choose
+existing loopback personal_codex_test DB and synthetic AUTH_SECRET. Create a two-account
+fixture with scripts/seed-storefront-home-browser.ts (using BEN_PWA_FIXTURE_FILE to choose
 its private JSON), then run `node --import tsx scripts/smoke-storefront-home-browser.cjs`
 with that fixture path and Playwright/Chromium available. The browser runner only
 connects to loopback; editor API replies, media thumbnails and preview iframe are
 fixtures. It checks real authenticated routing/menu/rendering, home-only fields,
-readiness, scope=home requests, image/theme choice, save/preview/publish controls
-and mobile width. It does not prove real object-store upload or production
+focused section switching without losing edits, optional-image guidance, scope=home
+requests, image/theme choice, save/preview/publish controls, mobile width and Reports
+menu grouping (rail/expanded/mobile, Escape and per-report permission filtering). It does not prove real object-store upload or production
 publication. Deactivate the synthetic account and remove its token fixture after
 checking. Never use production credentials for this script.
+
+
+The editor follows docs/design/admin-ui-language-contract.md and the shared
+mutation-feedback contract: white flat canvas/header/toolbar, section list on the
+left and one active editor on the right, natural stacking on mobile, compact image
+notes with direct section actions, low-frequency link/focal controls collapsed,
+keyed pending states and accessible async buttons. Expanded navigation pushes the
+workspace rather than covering its controls. Reports is one menu with the same
+three authorized destination links; child permissions and direct route policies
+remain unchanged. No content, assets or production publication is changed merely
+by deploying these presentation improvements.
+
+
+Verified locally for this revision: 27 content/catalog/shared tests, scoped ESLint,
+TypeScript and production build passed. Real Chromium exercised both synthetic
+accounts, section edits surviving switching, keyboard file chooser with a fixture
+upload response, failed-save preservation/retry, desktop/mobile private preview,
+explicit fixture publication, mobile section selection and no horizontal overflow,
+Reports submenu keyboard/Escape behavior and per-report visibility. Local editor
+API/media/preview replies are fixtures; unit tests cover server publication rules.
+No live object-storage or production mutation was performed. Cleanup accounts with
+`node --import tsx scripts/seed-storefront-home-browser.ts --cleanup` against the
+same loopback test database, then stop the temporary app/database.
