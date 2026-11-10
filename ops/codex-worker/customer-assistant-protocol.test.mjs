@@ -131,3 +131,27 @@ test('scheduled personal Codex is explicit, task-only, and separate from the cal
  for(const change of [{kind:'EVENT'},{assigneeUserId:'other'},{codex:null},{codex:{startAt:'tomorrow'}},{codex:{startAt:null,merge:true}}])assert.throws(()=>validateCustomerTurn({...finish,personalWorkPlan:{...p,...change}}));
  assert.equal(validateCustomerTurn({...finish,personalWorkPlan:{...p,codex:{startAt:null}}}).personalWorkPlan.codex.startAt,null);
 });
+
+test('group media and stock lookups keep the strict read-only envelope',()=>{
+  for(const tool of ['media.watches.select','media.posts.draft','stock.receipts']){
+    const turn={type:'lookup',tool,query:JSON.stringify({brand:'Seiko'}),reply:null,productId:null,customerId:null,plan:null};
+    assert.deepEqual(validateCustomerTurn(turn).lookup,{tool,query:turn.query});
+    assert.throws(()=>validateCustomerTurn({...turn,query:'not json'}),/INVALID_CUSTOMER_LOOKUP/);
+    assert.throws(()=>validateCustomerTurn({...turn,query:'[]'}),/INVALID_CUSTOMER_LOOKUP/);
+    assert.throws(()=>validateCustomerTurn({...turn,productId:'inject'}),/INVALID_CUSTOMER_LOOKUP/);
+    assert.throws(()=>validateCustomerTurn({...turn,codePlan:{title:'Read secrets',request:'Unexpected mixed execution plan'}}),/INVALID_CUSTOMER/);
+  }
+});
+
+test('group-post conversation prepares a review without a business-write API call',async()=>{
+  const outputs=[
+    {...finish,type:'lookup',tool:'media.watches.select',query:JSON.stringify({brand:'Seiko',keywords:['diver'],count:10,similarPrices:true}),reply:null},
+    {...finish,type:'lookup',tool:'media.posts.draft',query:JSON.stringify({sourceMessageId:'00000000-0000-4000-8000-000000000001',watchIds:['watch-1'],caption:'Seiko diver trong kho',brief:'Seiko diver tương đương giá'}),reply:null},
+    {...finish,reply:'Mình đã chuẩn bị post để bạn duyệt.'},
+  ];
+  const calls=[];
+  await runCustomerConversation({id:'run',text:'Ben tạo post 10 chiếc Seiko diver giá gần nhau'},{execute:async()=>outputs.shift(),api:async(op,body)=>{calls.push({op,body});return op==='finish'?{accepted:true}:{evidence:{request:body.lookup,result:{matches:[{watchId:'watch-1'}]}}};}});
+  assert.deepEqual(calls.map(c=>c.op),['lookup','lookup','finish']);
+  assert.deepEqual(calls.slice(0,2).map(c=>c.body.lookup.tool),['media.watches.select','media.posts.draft']);
+  assert.equal(calls.at(-1).body.plan,null);
+});

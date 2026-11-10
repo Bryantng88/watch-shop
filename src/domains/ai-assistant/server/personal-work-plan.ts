@@ -7,6 +7,7 @@ import { personalWorkPlanSchema, type PersonalWorkDraft } from "../personal-work
 import { hasUniqueEvidence, type Evidence } from "../live-contract";
 import {hasAssistantPermission} from "../capabilities";
 import { AssistantError, assistantActor, assistantRecipient } from "./access";
+import { benCalendarTargets } from "./calendar-targets";
 export async function preparePersonalWork(
   db: DB,
   userId: string,
@@ -61,7 +62,8 @@ export async function preparePersonalWork(
     if (!person) throw new AssistantError("Người nhận không còn hoạt động.", 409);
     shares.push({ ...person, accessLevel: requested.accessLevel });
   }
-  if (plan.syncGoogle && !(await db.googleCalendarConnection.findUnique({ where: { userId } })))
-    throw new AssistantError("Bạn chưa kết nối Google Calendar.", 409);
-  return { plan, revision, categoryLabel: category.label, shares, ...(assignee ? {assignee} : {}) };
+  const calendarTargets = await benCalendarTargets(db, userId, assignee?.id, plan.dueAt);
+  // Connection policy is server-owned, never selected by model output.
+  plan.syncGoogle = calendarTargets.length > 0;
+  return { plan, revision, calendarTargets, categoryLabel: category.label, shares, ...(assignee ? {assignee} : {}) };
 }

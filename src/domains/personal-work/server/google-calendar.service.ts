@@ -7,6 +7,7 @@ import { personalWorkEditAccessWhere } from "./personal-work-access";
 import { validateGoogleEventEdit, type GoogleEventEditInput } from "../shared/google-event-edit";
 import type { PersonalCalendarEvent } from "../shared/personal-work.types";
 import { scheduleDayCount } from "../shared/personal-work-schedule";
+import { googleTaskEventId, writeGoogleTaskEvent, googleTaskScheduleHash, shouldImportGoogleTaskSchedule } from "./google-task-event";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -232,24 +233,30 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   const estimatedDays = Math.max(1, Math.min(365, item.estimatedDays || 1));
   const endDate = addCalendarDays(startDate, estimatedDays);
   const timing=personalEventTiming(item);
+  const start = timing.timed && item.dueAt ? { dateTime: item.dueAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: startDate };
+  const end = timing.end ? { dateTime: timing.end.toISOString(), timeZone: "Asia/Bangkok" } : { date: endDate };
   const payload = {
     summary: item.title,
     description: item.note || "Đồng bộ từ Watch Shop Admin",
-    start: timing.timed && item.dueAt ? { dateTime: item.dueAt.toISOString(), timeZone: "Asia/Bangkok" } : { date: startDate },
-    end: timing.end ? { dateTime: timing.end.toISOString(), timeZone: "Asia/Bangkok" } : { date: endDate },
+    start,
+    end,
     status: item.status === "CANCELLED" ? "cancelled" : "confirmed",
-    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", pointInTime:timing.point?"1":"0", estimatedDays: String(estimatedDays) } },
+    extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", pointInTime:timing.point?"1":"0", estimatedDays: String(estimatedDays), watchShopTaskVersion: item.updatedAt.toISOString(), watchShopScheduleHash: googleTaskScheduleHash({ start, end }) } },
   };
   const syncHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   if (existing?.syncHash === syncHash) return existing;
-  const endpoint = existing
-    ? `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events/${encodeURIComponent(existing.eventId)}`
-    : `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
-  const { response } = await fetchGoogleWithTokenRetry(userId, endpoint, {
-    method: existing ? "PUT" : "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-    cache: "no-store",
+  const endpoint = `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
+  const response = await writeGoogleTaskEvent({
+    existingId: existing?.eventId,
+    stableId: googleTaskEventId(userId, item.id, auth.connection.calendarId),
+    taskItemId: item.id,
+    payload,
+    request: async (suffix, init) => (await fetchGoogleWithTokenRetry(userId, endpoint + suffix, {
+      ...init,
+      signal: AbortSignal.timeout(15000),
+      headers: { "content-type": "application/json" },
+      cache: "no-store",
+    })).response,
   });
   if (!response.ok) throw await googleApiError(response, "Google Calendar sync");
   const event = await response.json() as { id: string; htmlLink?: string };
@@ -330,16 +337,19 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
           // Google date is a task edit, not a view operation.
           taskItem: personalWorkEditAccessWhere(userId),
         },
-        select: { eventId: true, taskItemId: true,taskItem:{select:{workTypeId:true}} },
+        select: { eventId: true, taskItemId: true,taskItem:{select:{workTypeId:true,updatedAt:true}} },
       })
     : [];
   const linkMap = new Map(links.map((link) => [link.eventId, link.taskItemId]));
-  const linkedEvents = visibleEvents.filter((event) => linkMap.has(event.id!));
+  const linkedEvents = visibleEvents.filter(event => {
+    const link = links.find(row => row.eventId === event.id);
+    return link && shouldImportGoogleTaskSchedule(event, link.taskItem.updatedAt);
+  });
   if (linkedEvents.length) {
     await prisma.$transaction(linkedEvents.map((event) => {
       const startDate = event.start?.date || bangkokDateKey(new Date(event.start!.dateTime!));
       const dueAt = event.start?.dateTime ? new Date(event.start.dateTime) : calendarDateToStoredDate(startDate);
-      const point=links.some(l=>l.eventId===event.id&&l.taskItem.workTypeId==="EVENT")&&event.extendedProperties?.private?.pointInTime==="1"&&!!event.start?.dateTime&&!!event.end?.dateTime&&Date.parse(event.end.dateTime)-Date.parse(event.start.dateTime)===60000;
+      const point=event.extendedProperties?.private?.pointInTime==="1"&&!!event.start?.dateTime&&!!event.end?.dateTime&&Date.parse(event.end.dateTime)-Date.parse(event.start.dateTime)===60000;
       const scheduledEndAt = event.start?.dateTime&&!point
         ? new Date(event.end?.dateTime || new Date(dueAt.getTime() + 3600000).toISOString()) : null;
       const estimatedDays = event.start?.date
@@ -349,7 +359,11 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
         where: {
           id: linkMap.get(event.id!)!,
           status: { not: "CANCELLED" },
-          updatedAt: { lte: syncStartedAt },
+          updatedAt: {
+            lte: syncStartedAt,
+            ...(event.extendedProperties?.private?.watchShopTaskVersion
+              ? { equals: new Date(event.extendedProperties.private.watchShopTaskVersion) } : {}),
+          },
           AND: [personalWorkEditAccessWhere(userId), { OR: [{ dueAt: { not: dueAt } }, { dueAt: null }, { estimatedDays: { not: estimatedDays } }, { scheduledEndAt: { not: scheduledEndAt } }, ...(scheduledEndAt ? [{ scheduledEndAt: null }] : [])] }],
         },
         data: { dueAt, scheduledEndAt, estimatedDays },

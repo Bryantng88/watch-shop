@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/domains/ai-assistant/**'
+      - 'src/domains/media-post/**'
+      - 'src/app/api/admin/customer-assistant/route.ts'
       - 'src/domains/personal-work/**'
       - 'prisma/schema.prisma'
       - 'prisma/migrations/**'
@@ -32,7 +34,42 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
-      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
+      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
+      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
       - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit
+  calendar-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-fixture-only
+          POSTGRES_DB: personal_codex_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixture -d personal_codex_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/personal_codex_test
+      DIRECT_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/personal_codex_test
+      APP_URL: http://127.0.0.1:3015
+      CUSTOMER_AI_ENABLED: '1'
+      PERSONAL_CODEX_ENABLED: '1'
+      PERSONAL_CODEX_ENVIRONMENT: staging
+      PERSONAL_CODEX_WORKER_TOKEN: synthetic-calendar-fixture-worker-token-no-real-access
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma db push --skip-generate
+      - run: node --import tsx scripts/smoke-ben-auto-calendar.ts
+      - run: npm run build

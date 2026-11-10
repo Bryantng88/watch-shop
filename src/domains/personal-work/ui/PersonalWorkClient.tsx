@@ -424,8 +424,8 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   return (
     <AdminPageCanvas>
       <AdminPageHeader
-        eyebrow="Không gian cá nhân"
-        title="Công việc của tôi"
+        eyebrow="Công việc và lịch"
+        title="Quản lý công việc"
         description="Lập lịch, theo dõi và gắn công việc với từng khu vực nghiệp vụ."
         meta={
           <>
@@ -519,7 +519,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
-            <PersonalWorkTimeFields compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
+            <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
             <div className="flex min-w-0 gap-2">
               <select
                 aria-label="Thời lượng dự kiến"
@@ -1123,7 +1123,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Công việc cá nhân</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Thông tin công việc</p>
                 <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.access === "VIEWER" ? "Chi tiết công việc" : "Chỉnh sửa công việc"}</h2>
                 {calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
@@ -1392,7 +1392,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
-              <PersonalWorkTimeFields endOptional={isPersonalEvent(editWorkType)} start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
+              <PersonalWorkTimeFields endOptional start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
               {editScheduleError && <p role="alert" className="text-xs text-rose-600">{editScheduleError}</p>}
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block space-y-1.5">
@@ -1747,7 +1747,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
-              <PersonalWorkTimeFields endOptional={isPersonalEvent(calendarWorkType)} start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
+              <PersonalWorkTimeFields endOptional start={calendarStartTime} end={calendarEndTime} onChange={(start, end) => { setCalendarStartTime(start); setCalendarEndTime(end); }} />
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Thời lượng dự kiến</span>
                 <select

@@ -1,95 +1,649 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
-import type { CoordinationDashboardDTO, CoordinationTechnicalIssueBoardItemDTO as Item } from "../server/coordination-dashboard.types";
-import { TECHNICAL_LIST_STAGES, technicalIssueListRows, type TechnicalIssueListSort, type TechnicalIssueListStage } from "../shared/technical-issue-list";
+import {
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Loader2,
+  MessageCircle,
+  MoreHorizontal,
+  Search,
+  Zap,
+} from "lucide-react";
+import {
+  ADMIN_DOMAIN_TONE,
+  AdminUserAvatar,
+} from "@/domains/shared/ui/admin-design-contract";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
-
+import type {
+  CoordinationDashboardDTO,
+  CoordinationTechnicalIssueBoardItemDTO as Item,
+} from "../server/coordination-dashboard.types";
+import {
+  TECHNICAL_LIST_STAGES,
+  technicalIssueListRows,
+  technicalIssueListStages,
+  technicalIssueListLoadTarget,
+  technicalIssuePrimaryMove,
+  type TechnicalIssueListState,
+  type TechnicalIssueListStage,
+} from "../shared/technical-issue-list";
+import styles from "./TechnicalIssueListView.module.css";
 const PAGE_SIZE = 25;
-const money = (value: number) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value);
-const date = (value: string | null) => value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeZone: "Asia/Bangkok" }).format(new Date(value)) : "—";
-
-export default function TechnicalIssueListView({ items, pagination, loadingColumn, focusedIssueId, pending, priorityPendingIssueId, doneRange, onDoneRangeChange, onLoadMore, onPreview, onMove, onTogglePriority, moveOptions, areaLabel, ownerLabel }: {
+const money = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(value);
+const date = (value: string | null) =>
+  value && Number.isFinite(Date.parse(value))
+    ? new Intl.DateTimeFormat("vi-VN", {
+        dateStyle: "short",
+        timeZone: "Asia/Ho_Chi_Minh",
+      }).format(new Date(value))
+    : "—";
+type Move = { stage: TechnicalIssueListStage; label: string };
+type Props = {
   items: Item[];
-  pagination: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["columnPagination"];
+  pagination: NonNullable<
+    CoordinationDashboardDTO["technicalIssueBoard"]
+  >["columnPagination"];
   loadingColumn: string | null;
   focusedIssueId: string | null;
   pending: boolean;
   priorityPendingIssueId: string | null;
+  isPriorityPendingFor?: (id: string) => boolean;
   doneRange: "14D" | "30D" | "ALL";
   onDoneRangeChange: (value: "14D" | "30D" | "ALL") => void;
   onLoadMore: (stage: TechnicalIssueListStage, page: number) => void;
   onPreview: (item: Item) => void;
   onMove: (id: string, stage: TechnicalIssueListStage) => void;
   onTogglePriority: (item: Item) => void;
-  moveOptions: (item: Item) => { stage: TechnicalIssueListStage; label: string }[];
+  moveOptions: (item: Item) => Move[];
   areaLabel: (area: string | null) => string;
   ownerLabel: (mode: string | null, vendor: string | null) => string;
+  state: TechnicalIssueListState;
+  focusMemory?: { current: string };
+  filtered?: boolean;
+  loading?: boolean;
+  onStateChange: (state: TechnicalIssueListState) => void;
+  query?: string;
+};
+function RowActions({
+  item,
+  options,
+  pending,
+  onPreview,
+  onMove,
+}: {
+  item: Item;
+  options: Move[];
+  pending: boolean;
+  onPreview: () => void;
+  onMove: (stage: TechnicalIssueListStage) => void;
 }) {
-  const [stage, setStage] = useState<TechnicalIssueListStage>("INSPECT");
-  const [sort, setSort] = useState<TechnicalIssueListSort>("PRIORITY");
-  const [page, setPage] = useState(1);
-  const focusedStage = items.find(item => item.id === focusedIssueId)?.stage;
-  const focusedPage = focusedStage ? Math.floor(technicalIssueListRows(items, focusedStage, sort).findIndex(item => item.id === focusedIssueId) / PAGE_SIZE) + 1 : 1;
+  const primary = technicalIssuePrimaryMove(item.stage, options),
+    trigger = useRef<HTMLButtonElement>(null),
+    menu = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false),
+    [position, setPosition] = useState({ top: 0, left: 0 });
   useEffect(() => {
-    if (focusedStage) { setStage(focusedStage); setPage(Math.max(1, focusedPage)); }
-  }, [focusedIssueId, focusedStage, focusedPage]);
-  const rows = technicalIssueListRows(items, stage, sort);
-  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pages);
-  const displayed = rows.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-  const serverPage = pagination[stage];
-  return <div className="space-y-3">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap gap-1" aria-label="Stage TI">
-        {TECHNICAL_LIST_STAGES.map(column => <button key={column.key} type="button" aria-pressed={stage === column.key}
-          onClick={() => { setStage(column.key); setPage(1); }}
-          className={`rounded-lg border px-3 py-2 text-xs font-semibold ${stage === column.key ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-600"}`}>
-          {column.label} · {pagination[column.key]?.total ?? items.filter(item => item.stage === column.key).length}
-        </button>)}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {stage === "DONE" && <select aria-label="Lịch sử Done" value={doneRange} onChange={event => { setPage(1); onDoneRangeChange(event.target.value as typeof doneRange); }} className="rounded-lg border p-2 text-xs">
-          <option value="14D">14 ngày</option><option value="30D">30 ngày</option><option value="ALL">Tất cả lịch sử</option>
-        </select>}
-        <select aria-label="Sắp xếp TI đã tải" value={sort} onChange={event => { setSort(event.target.value as TechnicalIssueListSort); setPage(1); }} className="rounded-lg border p-2 text-xs">
-          <option value="PRIORITY">Ưu tiên gấp</option><option value="UPDATED">Cập nhật gần nhất</option><option value="DUE">Hạn gần nhất</option>
-        </select>
-      </div>
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      if (
+        !trigger.current?.contains(event.target as Node) &&
+        !menu.current?.contains(event.target as Node)
+      )
+        setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        trigger.current?.focus();
+      }
+    };
+    const scroll = () => setOpen(false);
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    window.addEventListener("scroll", scroll, true);
+    window.addEventListener("resize", scroll);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", escape);
+      window.removeEventListener("scroll", scroll, true);
+      window.removeEventListener("resize", scroll);
+    };
+  }, [open]);
+  useEffect(() => setOpen(false), [item.stage, pending]);
+  function toggle() {
+    const rect = trigger.current?.getBoundingClientRect();
+    if (rect)
+      setPosition({
+        top: Math.max(
+          8,
+          Math.min(
+            rect.bottom + 6,
+            window.innerHeight - ((options.length + 1) * 40 + 16),
+          ),
+        ),
+        left: Math.max(8, Math.min(rect.right - 240, window.innerWidth - 248)),
+      });
+    setOpen(!open);
+    if (!open)
+      requestAnimationFrame(() =>
+        menu.current?.querySelector<HTMLButtonElement>("button")?.focus(),
+      );
+  }
+  return (
+    <div className={styles.actions}>
+      <button
+        type="button"
+        className={styles.move}
+        disabled={pending}
+        aria-label={`${primary ? primary.label : "Xem nhanh"}: ${item.summary}`}
+        onClick={() => (primary ? onMove(primary.stage) : onPreview())}
+      >
+        {primary ? primary.label : "Xem nhanh"}
+        <ChevronRight size={13} />
+      </button>
+      {options.some((option) => option.stage !== primary?.stage) && (
+        <button
+          ref={trigger}
+          type="button"
+          className={styles.iconButton}
+          disabled={pending}
+          aria-label={`Thao tác khác: ${item.summary}`}
+          aria-expanded={open}
+          onClick={toggle}
+        >
+          <MoreHorizontal size={17} />
+        </button>
+      )}
+      {open &&
+        createPortal(
+          <div
+            ref={menu}
+            className={styles.menu}
+            style={position}
+            aria-label={`Thao tác TI ${item.summary}`}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onPreview();
+              }}
+            >
+              Xem nhanh
+            </button>
+            {options
+              .filter((option) => option.stage !== primary?.stage)
+              .map((option) => (
+                <button
+                  key={option.stage}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    setOpen(false);
+                    onMove(option.stage);
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+          </div>,
+          document.body,
+        )}
     </div>
-    <p className="text-xs text-slate-500">{rows.length} TI khớp bộ lọc trong dữ liệu đã tải · {serverPage?.loaded ?? items.filter(item => item.stage === stage).length}/{serverPage?.total ?? rows.length} TI đã tải ở stage này. Sắp xếp áp dụng cho dữ liệu đã tải.</p>
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-      <table className="w-full min-w-[1000px] text-left text-xs">
-        <caption className="sr-only">Danh sách Technical Issue — {TECHNICAL_LIST_STAGES.find(column => column.key === stage)?.label}</caption>
-        <thead className="bg-slate-50 text-slate-500"><tr>{["Ưu tiên", "TI / Watch / SR", "Nhóm kỹ thuật", "Phụ trách", "Thời hạn", "Chi phí", "Cập nhật", "Xử lý"].map(label => <th key={label} scope="col" className="px-3 py-3 font-semibold">{label}</th>)}</tr></thead>
-        <tbody className="divide-y divide-slate-100">
-          {displayed.map(item => {
-            const image = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
-            const options = moveOptions(item);
-            return <tr key={item.id} data-technical-issue-id={item.id} className={focusedIssueId === item.id ? "bg-violet-50" : "hover:bg-slate-50"}>
-              <td className="px-3 py-3"><button type="button" disabled={priorityPendingIssueId === item.id} aria-pressed={item.priority?.toUpperCase() === "URGENT"} aria-label={`Ưu tiên gấp: ${item.summary}`} onClick={() => onTogglePriority(item)} className="rounded border px-2 py-1 disabled:opacity-50">{item.priority?.toUpperCase() === "URGENT" ? "⚡ Gấp" : "Thường"}</button></td>
-              <td className="max-w-sm px-3 py-3"><button type="button" onClick={() => onPreview(item)} className="flex w-full items-center gap-2 text-left hover:text-violet-700">
-                {image && <Image src={image} alt="" width={36} height={36} unoptimized className="h-9 w-9 shrink-0 rounded object-cover" />}
-                <span className="min-w-0"><span className="block font-semibold">{item.summary}</span><span className="block text-[11px] text-slate-500">{item.serviceRequest.refNo || "Chưa có mã SR"} · {item.serviceRequest.productTitle || item.serviceRequest.sku || "Watch"}</span>
-                  {item.commentCount > 0 && <span className="text-[11px] text-violet-600">{item.commentCount} bình luận{item.unreadMentionCount > 0 ? ` · ${item.unreadMentionCount} nhắc bạn chưa đọc` : ""}</span>}
-                </span>
-              </button></td>
-              <td className="px-3 py-3">{areaLabel(item.area)}{item.processingDetails.length > 0 && <div className="mt-1 max-w-48 text-[11px] text-slate-500">{item.processingDetails.join(" · ")}</div>}</td>
-              <td className="px-3 py-3">{ownerLabel(item.actionMode, item.vendorName)}</td>
-              <td className="whitespace-nowrap px-3 py-3">{date(item.expectedCompletionAt)}{item.overdueDays != null && item.overdueDays > 0 && <div className="text-rose-600">Trễ {item.overdueDays} ngày</div>}</td>
-              <td className="whitespace-nowrap px-3 py-3">{item.actualCost != null ? money(item.actualCost) : item.estimatedCost != null ? `Dự kiến ${money(item.estimatedCost)}` : "Chưa có chi phí"}</td>
-              <td className="px-3 py-3">{item.lastUpdatedBy.label}<div className="text-[11px] text-slate-400">{date(item.updatedAt)}</div></td>
-              <td className="px-3 py-3"><div className="flex flex-col items-start gap-1"><button type="button" onClick={() => onPreview(item)} className="font-semibold text-violet-700">Xem nhanh</button>{options.map(option => <button type="button" key={option.stage} disabled={pending} onClick={() => onMove(item.id, option.stage)} className="whitespace-nowrap rounded border px-2 py-1 disabled:opacity-50">{option.label}</button>)}</div></td>
-            </tr>;
+  );
+}
+export default function TechnicalIssueListView({
+  items,
+  pagination,
+  loadingColumn,
+  focusedIssueId,
+  pending,
+  priorityPendingIssueId,
+  isPriorityPendingFor,
+  doneRange,
+  onDoneRangeChange,
+  onLoadMore,
+  onPreview,
+  onMove,
+  onTogglePriority,
+  moveOptions,
+  areaLabel,
+  ownerLabel,
+  state,
+  onStateChange,
+  query = "",
+  focusMemory,
+  filtered = false,
+  loading = false,
+}: Props) {
+  const { scope, sort, attention, page } = state,
+    root = useRef<HTMLDivElement>(null),
+    localFocus = useRef("");
+  const lastFocus = focusMemory || localFocus,
+    previousQuery = useRef(query);
+  const focused = items.find((item) => item.id === focusedIssueId);
+  useEffect(() => {
+    if (!focused) {
+      lastFocus.current = "";
+      return;
+    }
+    const key = focused.id + ":" + focused.stage;
+    if (lastFocus.current === key) return;
+    lastFocus.current = key;
+    const rows = technicalIssueListRows(items, focused.stage, sort);
+    const index = rows.findIndex((item) => item.id === focused.id);
+    onStateChange({
+      ...state,
+      scope: focused.stage,
+      attention: "ALL",
+      page: Math.floor(Math.max(0, index) / PAGE_SIZE) + 1,
+    });
+  }, [focused, items, onStateChange, sort, state, lastFocus]);
+  const rows = technicalIssueListRows(items, scope, sort, attention),
+    pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE)),
+    currentPage = Math.max(1, Math.min(page, pages));
+  const displayed = rows.slice(
+      (currentPage - 1) * PAGE_SIZE,
+      currentPage * PAGE_SIZE,
+    ),
+    stages = technicalIssueListStages(scope);
+  const loaded = stages.reduce(
+      (n, stage) =>
+        n +
+        (pagination[stage.key]?.loaded ??
+          items.filter((item) => item.stage === stage.key).length),
+      0,
+    ),
+    total = stages.reduce(
+      (n, stage) =>
+        n +
+        (pagination[stage.key]?.total ??
+          items.filter((item) => item.stage === stage.key).length),
+      0,
+    ),
+    loadTarget = technicalIssueListLoadTarget(scope, pagination);
+  const narrow = filtered || !!query || attention !== "ALL";
+  useEffect(() => {
+    if (previousQuery.current !== query) {
+      previousQuery.current = query;
+      if (page !== 1) onStateChange({ ...state, page: 1 });
+    } else if (page > pages) onStateChange({ ...state, page: pages });
+  }, [query, page, pages, state, onStateChange]);
+  useEffect(() => {
+    if (!focusedIssueId) return;
+    const row = root.current?.querySelector<HTMLElement>(
+      `[data-technical-issue-id="${CSS.escape(focusedIssueId)}"]`,
+    );
+    row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focusedIssueId, currentPage, scope]);
+  function change(patch: Partial<TechnicalIssueListState>) {
+    lastFocus.current = focused ? focused.id + ":" + focused.stage : "";
+    onStateChange({ ...state, ...patch, page: 1 });
+  }
+  return (
+    <div
+      ref={root}
+      className={styles.list}
+      aria-busy={loading || !!loadingColumn}
+    >
+      <div className={styles.toolbar}>
+        <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
+          {[
+            { key: "OPEN" as const, label: "Đang mở" },
+            ...TECHNICAL_LIST_STAGES,
+          ].map((stage) => (
+            <button
+              type="button"
+              key={stage.key}
+              aria-pressed={scope === stage.key}
+              onClick={() => change({ scope: stage.key })}
+            >
+              {stage.label}
+              <span>
+                {narrow
+                  ? technicalIssueListRows(items, stage.key, sort, attention)
+                      .length
+                  : technicalIssueListStages(stage.key).reduce(
+                      (n, s) =>
+                        n +
+                        (pagination[s.key]?.total ??
+                          items.filter((item) => item.stage === s.key).length),
+                      0,
+                    )}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className={styles.filters}>
+          {scope === "DONE" && (
+            <select
+              disabled={!!loadingColumn}
+              aria-label="Lịch sử TI đã xong"
+              value={doneRange}
+              onChange={(event) => {
+                change({});
+                onDoneRangeChange(event.target.value as typeof doneRange);
+              }}
+            >
+              <option value="14D">14 ngày gần đây</option>
+              <option value="30D">30 ngày gần đây</option>
+              <option value="ALL">Toàn bộ lịch sử</option>
+            </select>
+          )}
+          <select
+            aria-label="Lọc chú ý TI"
+            value={attention}
+            onChange={(event) =>
+              change({ attention: event.target.value as typeof attention })
+            }
+          >
+            <option value="ALL">Tất cả mức chú ý</option>
+            <option value="OVERDUE">Quá hạn</option>
+            <option value="URGENT">Ưu tiên gấp</option>
+            <option value="MENTIONED">Nhắc tôi chưa đọc</option>
+          </select>
+          <select
+            aria-label="Sắp xếp TI"
+            value={sort}
+            onChange={(event) =>
+              change({ sort: event.target.value as typeof sort })
+            }
+          >
+            <option value="PRIORITY">Ưu tiên trước</option>
+            <option value="DUE">Hạn gần nhất</option>
+            <option value="UPDATED">Mới cập nhật</option>
+          </select>
+        </div>
+      </div>
+      {(loading || loadingColumn) && (
+        <p role="status" className={styles.loading}>
+          <Loader2 size={14} className="animate-spin" />
+          Đang tải dữ liệu TI…
+        </p>
+      )}
+      <div
+        className={styles.table}
+        role="table"
+        aria-label="Danh sách TI"
+        aria-describedby="ti-list-coverage"
+      >
+        <div role="rowgroup" className={styles.headerGroup}>
+          <div role="row" className={styles.header}>
+            {[
+              "TI / Đồng hồ",
+              "Trạng thái",
+              "Đơn vị xử lý",
+              "Thời hạn",
+              "Chi phí",
+              "Thao tác",
+            ].map((label) => (
+              <div role="columnheader" key={label}>
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div role="rowgroup">
+          {displayed.map((item) => {
+            const image = resolveMediaPreviewSrc(item.serviceRequest.imageUrl),
+              urgent = item.priority?.toUpperCase() === "URGENT",
+              busy =
+                isPriorityPendingFor?.(item.id) ??
+                priorityPendingIssueId === item.id,
+              late = (item.overdueDays ?? 0) > 0;
+            return (
+              <div
+                role="row"
+                key={item.id}
+                data-technical-issue-id={item.id}
+                className={`${styles.row} ${focusedIssueId === item.id ? styles.focused : ""}`}
+              >
+                <div role="cell" className={styles.identity}>
+                  <button
+                    type="button"
+                    className={styles.open}
+                    onClick={() => onPreview(item)}
+                    aria-label={`Xem nhanh TI ${item.summary}`}
+                  >
+                    <span className={styles.thumbnail}>
+                      {image ? (
+                        <Image
+                          src={image}
+                          alt=""
+                          width={40}
+                          height={40}
+                          unoptimized
+                        />
+                      ) : (
+                        <Clock3 size={18} aria-hidden="true" />
+                      )}
+                    </span>
+                    <span className={styles.identityText}>
+                      <span className={styles.title}>{item.summary}</span>
+                      <span
+                        className={styles.product}
+                        title={
+                          item.serviceRequest.productTitle ||
+                          item.serviceRequest.sku ||
+                          undefined
+                        }
+                      >
+                        {item.serviceRequest.productTitle ||
+                          item.serviceRequest.sku ||
+                          "Đồng hồ chưa đặt tên"}
+                      </span>
+                      <span className={styles.meta}>
+                        <span>
+                          {item.serviceRequest.refNo || "Chưa có mã SR"}
+                        </span>
+                        <span className={ADMIN_DOMAIN_TONE.TECHNICAL.soft}>
+                          {areaLabel(item.area)}
+                        </span>
+                        {item.requestOrigin === "CUSTOMER_ORDER" && (
+                          <span className={styles.order}>Đơn khách</span>
+                        )}
+                        {(item.commentCount > 0 ||
+                          item.unreadMentionCount > 0) && (
+                          <span
+                            className={
+                              item.unreadMentionCount ? styles.unread : ""
+                            }
+                            title={`${item.commentCount} bình luận · ${item.unreadMentionCount} nhắc bạn chưa đọc`}
+                          >
+                            <MessageCircle size={12} />
+                            {item.commentCount}
+                            {item.unreadMentionCount > 0
+                              ? ` · @${item.unreadMentionCount}`
+                              : ""}
+                          </span>
+                        )}
+                      </span>
+                      {item.processingDetails.length > 0 && (
+                        <span
+                          className={styles.processing}
+                          title={item.processingDetails.join(" · ")}
+                        >
+                          {item.processingDetails.join(" · ")}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={urgent}
+                    aria-busy={busy}
+                    disabled={busy}
+                    aria-label={`${urgent ? "Bỏ gấp" : "Đánh dấu gấp"}: ${item.summary}`}
+                    title={urgent ? "Bỏ ưu tiên gấp" : "Đánh dấu ưu tiên gấp"}
+                    className={`${styles.priority} ${urgent ? styles.urgent : ""}`}
+                    onClick={() => onTogglePriority(item)}
+                  >
+                    {busy ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Zap size={14} />
+                    )}
+                    <span className={urgent ? "" : "sr-only"}>
+                      {urgent ? "Gấp" : "Thường"}
+                    </span>
+                  </button>
+                </div>
+                <div role="cell" className={styles.stage}>
+                  <span data-stage={item.stage}>
+                    {
+                      TECHNICAL_LIST_STAGES.find(
+                        (stage) => stage.key === item.stage,
+                      )?.label
+                    }
+                  </span>
+                </div>
+                <div role="cell" className={styles.owner}>
+                  <span className={styles.ownerName}>
+                    {ownerLabel(item.actionMode, item.vendorName)}
+                  </span>
+                  <span className={styles.updated}>
+                    <AdminUserAvatar
+                      user={{
+                        name: item.lastUpdatedBy.label,
+                        avatarUrl: item.lastUpdatedBy.avatarUrl,
+                      }}
+                      size="xs"
+                    />
+                    <span>
+                      Cập nhật: {item.lastUpdatedBy.label}
+                      <small>{date(item.updatedAt)}</small>
+                    </span>
+                  </span>
+                </div>
+                <div role="cell" className={styles.due}>
+                  <span className={styles.mobileLabel}>Thời hạn</span>
+                  <span
+                    className={late && item.stage !== "DONE" ? styles.late : ""}
+                  >
+                    {item.expectedCompletionAt
+                      ? date(item.expectedCompletionAt)
+                      : "Chưa hẹn hạn"}
+                  </span>
+                  {late && (
+                    <small className={item.stage === "DONE" ? "" : styles.late}>
+                      <Clock3 size={12} />
+                      {item.stage === "DONE"
+                        ? `Hoàn tất trễ ${item.overdueDays} ngày`
+                        : `Quá hạn ${item.overdueDays} ngày`}
+                    </small>
+                  )}
+                </div>
+                <div role="cell" className={styles.cost}>
+                  <span className={styles.mobileLabel}>Chi phí</span>
+                  <span>
+                    {item.actualCost != null
+                      ? money(item.actualCost)
+                      : item.estimatedCost != null
+                        ? money(item.estimatedCost)
+                        : "Chưa có chi phí"}
+                  </span>
+                  {(item.actualCost != null || item.estimatedCost != null) && (
+                    <small>
+                      {item.actualCost != null ? "Thực tế" : "Dự kiến"}
+                    </small>
+                  )}
+                </div>
+                <div role="cell" className={styles.actionCell}>
+                  <RowActions
+                    item={item}
+                    options={moveOptions(item)}
+                    pending={pending}
+                    onPreview={() => onPreview(item)}
+                    onMove={(stage) => onMove(item.id, stage)}
+                  />
+                </div>
+              </div>
+            );
           })}
-          {!displayed.length && <tr><td colSpan={8} className="p-8 text-center text-slate-500">Không có TI khớp bộ lọc trong dữ liệu đã tải.</td></tr>}
-        </tbody>
-      </table>
+        </div>
+      </div>
+      {!displayed.length && !loading && !loadingColumn && (
+        <div className={styles.empty}>
+          <Search size={22} />
+          <strong>Không có TI khớp bộ lọc</strong>
+          <p>
+            {loaded < total
+              ? "Bạn có thể đổi bộ lọc hoặc tải thêm dữ liệu bên dưới."
+              : "Thử đổi trạng thái hoặc xóa bộ lọc đang chọn."}
+          </p>
+          {attention !== "ALL" && (
+            <button type="button" onClick={() => change({ attention: "ALL" })}>
+              Bỏ lọc chú ý
+            </button>
+          )}
+        </div>
+      )}
+      <div className={styles.footer}>
+        <div>
+          <p id="ti-list-coverage">
+            {rows.length > 0
+              ? `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, rows.length)} / ${rows.length} TI khớp bộ lọc`
+              : "0 TI khớp bộ lọc"}{" "}
+            <span>
+              · {loaded}/{total} TI đã tải
+            </span>
+          </p>
+          {loaded < total && (
+            <small>Lọc và sắp xếp áp dụng cho TI đã tải.</small>
+          )}
+        </div>
+        <div className={styles.pager}>
+          <button
+            type="button"
+            aria-label="Trang TI trước"
+            disabled={currentPage <= 1}
+            onClick={() => onStateChange({ ...state, page: currentPage - 1 })}
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <span>
+            {currentPage}/{pages}
+          </span>
+          <button
+            type="button"
+            aria-label="Trang TI sau"
+            disabled={currentPage >= pages}
+            onClick={() => onStateChange({ ...state, page: currentPage + 1 })}
+          >
+            <ChevronRight size={15} />
+          </button>
+          {loadTarget && (
+            <button
+              type="button"
+              className={styles.load}
+              disabled={!!loadingColumn}
+              aria-busy={loadingColumn === `technical:${loadTarget}`}
+              onClick={() =>
+                onLoadMore(loadTarget, pagination[loadTarget].nextPage!)
+              }
+            >
+              {loadingColumn === `technical:${loadTarget}` ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <ArrowDown size={14} />
+              )}
+              Tải thêm{" "}
+              {TECHNICAL_LIST_STAGES.find(
+                (stage) => stage.key === loadTarget,
+              )?.label.toLocaleLowerCase("vi")}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
-      <div className="flex items-center gap-2"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="rounded border px-3 py-2 disabled:opacity-40">Trước</button><span>Trang {currentPage}/{pages} · tối đa {PAGE_SIZE} TI/trang</span><button type="button" disabled={currentPage >= pages} onClick={() => setPage(currentPage + 1)} className="rounded border px-3 py-2 disabled:opacity-40">Sau</button></div>
-      {serverPage?.hasMore && serverPage.nextPage != null && <button type="button" disabled={loadingColumn === `technical:${stage}`} onClick={() => onLoadMore(stage, serverPage.nextPage!)} className="rounded-lg border bg-white px-3 py-2 font-semibold disabled:opacity-50">{loadingColumn === `technical:${stage}` ? "Đang tải…" : "Tải thêm TI của stage này"}</button>}
-    </div>
-  </div>;
+  );
 }

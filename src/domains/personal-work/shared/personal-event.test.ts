@@ -81,5 +81,15 @@ test("UI point-event schedules require a date and preserve start-only scheduling
   assert.equal(schedule.scheduledEndAt, null);
   assert.equal(schedule.dueAt, "2026-11-10T01:00:00.000Z");
   assert.throws(() => personalItemScheduleInput("", "08:00", "", 1, true));
-  assert.throws(() => personalItemScheduleInput("2026-11-10", "08:00", "", 1, false));
+  assert.deepEqual(personalItemScheduleInput("2026-11-10", "08:00", "", 1, false), schedule);
+});
+
+test("a task with a clock time keeps that time; legacy midnight/all-day tasks stay date-only", () => {
+  const task = { workType: "REMINDER", dueAt: plan.dueAt, scheduledEndAt: null };
+  assert.equal(personalEventTiming(task).event, false);
+  assert.equal(personalEventTiming(task).timed, true);
+  assert.equal(personalEventTiming(task).point, true);
+  assert.equal(personalEventTiming(task).end!.toISOString(), "2026-11-10T01:01:00.000Z");
+  assert.equal(personalEventTiming({ ...task, dueAt: "2026-11-10T00:00:00+07:00" }).timed, false);
+  assert.equal(personalEventTiming({ ...task, dueAt: "2026-11-10T23:59:59.999+07:00" }).timed, false);
 });
