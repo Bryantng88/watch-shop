@@ -250,7 +250,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const items = useMemo(
     () =>
       workItems.filter((item) => {
-        if (scope === "MINE" && item.access !== "OWNER") return false;
+        if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe) return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
         if(view==="EVENTS")return isPersonalEvent(item.workType);
@@ -271,7 +271,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   );
   const openCount = workItems.filter((item) => !isPersonalEvent(item.workType) && item.status !== "DONE").length;
   const overdue = workItems.filter(
-    (item) => !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.dueAt, now),
+    (item) => !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
   ).length;
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
   const visibleCalendarEvents = useMemo(() => buildPersonalCalendarEvents(workItems, calendar.events), [workItems, calendar.events]);
@@ -820,7 +820,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                               const isOverdue = Boolean(
                                 linkedTask && !isPersonalEvent(linkedTask.workType) &&
                                   linkedTask.status !== "DONE" &&
-                                  isPastDueDate(linkedTask.dueAt, now),
+                                  isPastDueDate(linkedTask.scheduledEndAt || linkedTask.dueAt, now),
                               );
                               const isDone = linkedTask?.status === "DONE";
                               const eventStartKey = eventDayKey(event.startAt, event.allDay);
@@ -940,7 +940,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
           <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">
             {items.length ? (
               items.map((item) => {
-                const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.dueAt, now);
+                const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
                 return (
                   <div
                     key={item.id}
@@ -973,6 +973,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                         >
                           {item.title}
                         </button>
+                        {item.assignee && item.assignee.id !== item.owner.id && <span className="text-[11px] text-slate-500">→ {item.assignee.name || "Người thực hiện"}</span>}
                         {item.access !== "OWNER" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}

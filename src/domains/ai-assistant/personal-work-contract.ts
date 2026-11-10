@@ -2,6 +2,7 @@ import { z } from "zod";
 const time = z.string().datetime({ offset: true });
 export const personalWorkPlanSchema = z
   .object({
+    assigneeUserId: z.string().min(1).max(100).nullable().optional(),
     kind: z.enum(["TASK", "EVENT"]),
     title: z.string().trim().min(1).max(300),
     note: z.string().trim().max(4000).nullable(),
@@ -32,6 +33,7 @@ export const personalWorkPlanSchema = z
   })
   .strict()
   .superRefine((p, c) => {
+    if (p.kind === "EVENT" && p.assigneeUserId) c.addIssue({code:"custom",message:"Sự kiện không giao người thực hiện"});
     if (p.kind === "EVENT" && p.checklist.length)
       c.addIssue({ code: "custom", message: "Sự kiện không có đầu việc cần hoàn thành" });
     if (p.kind === "EVENT" && !p.dueAt)
@@ -47,6 +49,7 @@ export type PersonalWorkDraft = {
   requiredTaskIds?: string[];
   plan: PersonalWorkPlan;
   revision: number;
+  assignee?: { id: string; name: string | null };
   categoryLabel: string;
   shares: { id: string; name: string | null; accessLevel: "VIEWER" | "EDITOR" }[];
 };

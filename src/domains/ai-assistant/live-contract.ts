@@ -12,6 +12,8 @@ export type AssistantPlan=z.infer<typeof assistantPlanSchema>;
 export const assistantLookupSchema=z.discriminatedUnion("tool",[
  z.object({tool:z.literal("media.inspect"),query:z.string().uuid()}).strict(),
  z.object({tool:z.literal("media.draft"),query:z.string().uuid()}).strict(),
+ z.object({tool:z.literal("personalWork.search"),query:z.string().trim().min(2).max(100)}).strict(),
+ z.object({tool:z.literal("personalWork.detail"),query:id}).strict(),
  z.object({tool:z.literal("personalWork.today")}).strict(),
  z.object({tool:z.literal("personalWork.categories")}).strict(),
  z.object({tool:z.literal("personalWork.people"),query:z.string().trim().min(2).max(100)}).strict(),

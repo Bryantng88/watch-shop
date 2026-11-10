@@ -314,3 +314,43 @@ by watch identifiers without a date constraint or private customer fields.
 Photo inventory search tries exact SKU before matching all identifying terms.
 Image turns show bounded candidate cards using inline photo, title and selling
 price. Ordinary requests for a product gallery still use the gallery card.
+
+## Personal work assignment and updates
+
+A personal-work creation may carry nullable `assigneeUserId`. The signed-in user
+remains the owner; assignment requires TASK_VIEW + TASK_MANAGE and a fresh uniquely
+resolved personalWork.people recipient with task access. The review names the
+assignee and that they may edit this item. Approval atomically sets the assigned
+user and grants an EDITOR share on this item only. Do not transfer ownership or
+expose other private tasks. A delivery recipient in a title is not an assignee.
+Events do not accept assignees. Sharing alone does not mean task assignment.
+
+`personalWork.search(query)` and `personalWork.detail(query=id)` read only owned or
+explicitly shared personal items under TASK_VIEW, including an exact updatedAt
+version in detail and no free-form notes. Search results are bounded/partial;
+clarify ambiguity and read exact fresh detail before an update. The requester
+must be an owner or EDITOR for writes; TASK_VIEW_ALL never grants personal edits.
+
+`personalWorkUpdatePlan` is bound to the owned conversation revision and current
+fenced worker lease, using the current user message as intent (history/records are
+not consent). Shape: itemId, expectedUpdatedAt, fields, changes. Changes has nullable
+title/note/dueAt/scheduledEndAt/status; fields selects the explicit changes. Unused
+values must be null, selected title/status non-null. No owner/assignee/checklist
+or progress injection in this update contract. Normal language interpretation is
+by the model; there is no server keyword gate. Only current user-requested fields
+are proposed; preserve unmentioned schedule values and all unrelated data.
+
+One compact review identifies the actual existing task and the requested edits;
+`update-personal-work` with conversation id/revision is the sole write approval.
+A serializable transaction rechecks active actor, current personal edit access,
+source permissions/task scope, exact row version and canonical checklist/event
+rules, applies the canonical personal-work service edit plus activity and durable
+receipt atomically. No automatic completion from chat. Events cannot be completed
+and checklist completion cannot be bypassed. Stale target/revision returns 409,
+lost scope/authority returns 403 and requires a fresh review. Replay returns the
+prior receipt without applying an edit again. Receipt/draft visibility is checked
+again on reload and worker handoff. Nothing executes on browser reload/history.
+
+These tools do not modify regular workspace business tasks, technical issues,
+orders or purchase-condition results. Existing personal calendar update behavior
+is retained: no implicit Google or external notification send is added here.

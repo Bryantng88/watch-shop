@@ -24,6 +24,7 @@ export default function PersonalWorkDraftReview({
       <h3 className="font-semibold">
         {p.kind === "EVENT" ? "Sự kiện" : "Công việc"} · {p.title}
       </h3>
+      {draft.assignee && <p className="mt-2">Giao cho {draft.assignee.name || draft.assignee.id} · có thể cập nhật việc này</p>}
       <p className="mt-2 text-slate-600">
         {draft.categoryLabel} · {p.dueAt ? date(p.dueAt) : "Chưa đặt lịch"}
         {p.scheduledEndAt ? " → " + date(p.scheduledEndAt) : ""}
