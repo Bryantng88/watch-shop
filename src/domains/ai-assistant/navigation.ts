@@ -8,7 +8,7 @@ export type NavigationIntent= z.infer<typeof navigationIntentSchema>;
 // Model outputs select keys, never URLs. Keep this list to existing read/view pages.
 export const BEN_SCREENS = [
   { key: "ben", label: "Trò chuyện với Ben", href: "/admin/ben" },
-  { key: "personal-work", label: "Công việc của tôi", href: "/admin/personal-work" },
+  { key: "personal-work", label: "Quản lý công việc", href: "/admin/personal-work" },
   { key: "watches", label: "Danh sách đồng hồ", href: "/admin/watches" },
   { key: "orders", label: "Đơn hàng", href: "/admin/orders" },
   { key: "customers", label: "Khách hàng", href: "/admin/customers" },

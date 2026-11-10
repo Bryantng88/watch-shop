@@ -52,7 +52,13 @@ export default function PersonalWorkDraftReview({
       )}
       {p.tags.length > 0 && <p className="mt-2">Tag: {p.tags.join(", ")}</p>}
       <p className="mt-2 text-xs text-slate-500">
-        {p.syncGoogle ? "Đồng bộ lên Google Calendar." : "Lưu trong Công việc của tôi."}{" "}
+        {draft.calendarTargets?.length
+          ? `Tự đồng bộ Google Calendar: ${draft.calendarTargets.map(t => t.name || "Tài khoản đã kết nối").join(", ")}.`
+          : !p.dueAt
+            ? "Chưa đặt ngày nên chưa đưa lên Google Calendar."
+            : p.syncGoogle
+              ? "Đồng bộ lên Google Calendar."
+              : "Người tạo và người phụ trách chưa kết nối Google Calendar; việc vẫn được lưu."}{" "}
         {p.kind === "EVENT" ? "Sự kiện không cần hoàn thành." : ""}
       </p>
       <button

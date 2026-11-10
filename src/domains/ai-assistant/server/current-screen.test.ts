@@ -9,7 +9,7 @@ test("screen hints use pathname and canonical page permissions, never client tit
  assert.equal(screenDescriptor("/admin/orders/new",actor("ORDER_CREATE"))?.detail,null);
  assert.equal(screenDescriptor("/admin/orders/new",actor("ORDER_VIEW")),null);
  assert.equal(screenDescriptor("/admin/unknown-private-record",{admin:true,permissions:new Set()}),null);
- assert.equal(screenDescriptor("/admin/personal-work",actor())?.label,"Công việc của tôi");
+ assert.equal(screenDescriptor("/admin/personal-work",actor())?.label,"Quản lý công việc");
  assert.equal(screenDescriptor("/admin/task-items/private-id",actor("TASK_VIEW"))?.path,"/admin/task-items");
 });
 test("dedicated Ben is labeled explicitly and legacy fallback never guesses hardware or other tabs",()=>{

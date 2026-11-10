@@ -280,7 +280,7 @@ The strict plan contains kind TASK/EVENT, title, note, categoryKey, workType,
 offset-aware dueAt/scheduledEndAt, priority, tags, checklist, shares and syncGoogle.
 Times resolve from current referenceTime in Vietnam; ask only ambiguous/missing
 required facts. Defaults are GENERAL group, MEDIUM priority, no tags/checklist/
-shares/Google sync. Viewer sharing is the default for an explicit share request;
+shares. Google sync follows the connected-account policy below. Viewer sharing is the default for an explicit share request;
 EDITOR must be expressly requested. Reserved codex execution is not part of this
 personal plan. EVENT requires a date, has no checklist/completion/progress and can
 have a start-only time. All-day uses the existing local end-of-day date encoding.
@@ -293,9 +293,17 @@ receipt, never create duplicates. No order, technical issue, product reservation
 or notification dispatch is inferred from this plan. Business, personal, order,
 permission, code and navigation proposals must not be mixed in a turn.
 
-Google sync is a separately described optional result of that same approval. A
+Google sync is an automatic, disclosed result of that same approval for scheduled
+Ben-created tasks/events. The server targets the active connected creator and
+verified assignee, deduplicating self-assignment and excluding view-only shares.
+Unconnected accounts are skipped; undated work is not assigned an invented date.
+Model syncGoogle output is retained for schema compatibility but does not select
+recipients or require opt-in. Current connections are rechecked at approval. A
 provider failure never loses the already-created item or repeats creation; show
-saved-but-not-synced and link to the existing Personal Work sync control. Receipt
+per-account saved-but-not-synced state and link to the existing calendar sync control.
+A stable user/calendar/task event identity prevents duplicate creation when a
+Google create succeeds but its response is lost. Conflicts are checked against
+the exact source task before reconciliation; legacy event links retain their IDs. Receipt
 and draft history require TASK_VIEW; current revocation redacts both. The server
 keeps private leases out of browser data. Pending drafts are context, never
 consent; old results never authorize another write. No offline/background replay.

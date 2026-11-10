@@ -424,8 +424,8 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   return (
     <AdminPageCanvas>
       <AdminPageHeader
-        eyebrow="Không gian cá nhân"
-        title="Công việc của tôi"
+        eyebrow="Công việc và lịch"
+        title="Quản lý công việc"
         description="Lập lịch, theo dõi và gắn công việc với từng khu vực nghiệp vụ."
         meta={
           <>
@@ -1123,7 +1123,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Công việc cá nhân</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Thông tin công việc</p>
                 <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.access === "VIEWER" ? "Chi tiết công việc" : "Chỉnh sửa công việc"}</h2>
                 {calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>

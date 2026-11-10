@@ -7,6 +7,7 @@ import { personalWorkEditAccessWhere } from "./personal-work-access";
 import { validateGoogleEventEdit, type GoogleEventEditInput } from "../shared/google-event-edit";
 import type { PersonalCalendarEvent } from "../shared/personal-work.types";
 import { scheduleDayCount } from "../shared/personal-work-schedule";
+import { googleTaskEventId, writeGoogleTaskEvent } from "./google-task-event";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -242,14 +243,18 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   };
   const syncHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
   if (existing?.syncHash === syncHash) return existing;
-  const endpoint = existing
-    ? `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events/${encodeURIComponent(existing.eventId)}`
-    : `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
-  const { response } = await fetchGoogleWithTokenRetry(userId, endpoint, {
-    method: existing ? "PUT" : "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-    cache: "no-store",
+  const endpoint = `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
+  const response = await writeGoogleTaskEvent({
+    existingId: existing?.eventId,
+    stableId: googleTaskEventId(userId, item.id, auth.connection.calendarId),
+    taskItemId: item.id,
+    payload,
+    request: async (suffix, init) => (await fetchGoogleWithTokenRetry(userId, endpoint + suffix, {
+      ...init,
+      signal: AbortSignal.timeout(15000),
+      headers: { "content-type": "application/json" },
+      cache: "no-store",
+    })).response,
   });
   if (!response.ok) throw await googleApiError(response, "Google Calendar sync");
   const event = await response.json() as { id: string; htmlLink?: string };

@@ -117,7 +117,7 @@ const NAV: NavEntry[] = [
             {
                 type: "item",
                 href: "/admin/personal-work",
-                label: "Việc cá nhân",
+                label: "Quản lý công việc",
                 icon: CalendarCheck2,
                 permission: PERMISSIONS.TASK_VIEW,
             },
