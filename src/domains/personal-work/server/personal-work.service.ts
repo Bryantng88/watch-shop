@@ -49,10 +49,11 @@ export async function assertPersonalWorkAccess(
   taskItemId: string,
   auth: unknown,
   required: "VIEW" | "EDIT" | "OWNER" = "VIEW",
+  db: DB = prisma,
 ) {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
-  const item = await prisma.taskItem.findFirst({
+  const item = await db.taskItem.findFirst({
     where: { id: taskItemId, ...personalWorkScopeWhere },
     select: {
       id: true,
@@ -230,6 +231,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
+        assignedToUser: { select: { id: true, name: true } },
         personalCategory: true,
         codexRuns: { orderBy: { createdAt: "desc" }, take: 5, select: publicRunSelect },
         personalOwner: { select: { id: true, name: true, email: true, avatarUrl: true } },
@@ -287,6 +289,8 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       return {
         id: item.id,
+        assignedToMe: item.assignedToUserId === userId,
+        assignee: item.assignedToUser || null,
         codexRuns: item.codexRuns.map(run => ({ ...run, createdAt: run.createdAt.toISOString(), startedAt: run.startedAt?.toISOString() ?? null, finishedAt: run.finishedAt?.toISOString() ?? null })),
         codexRun: item.codexRuns[0] ? { ...item.codexRuns[0], createdAt: item.codexRuns[0].createdAt.toISOString(), startedAt: item.codexRuns[0].startedAt?.toISOString() ?? null, finishedAt: item.codexRuns[0].finishedAt?.toISOString() ?? null } : null,
         title: item.title,
@@ -497,15 +501,16 @@ export async function updatePersonalWorkItem(
     updateBody?: string | null;
   },
   auth: unknown,
+  db: DB = prisma,
 ) {
-  const current = await assertPersonalWorkAccess(input.id, auth, "EDIT");
+  const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
   const event = isPersonalEvent(current.workTypeId);
   if(input.workType!==undefined && isPersonalEvent(input.workType)!==event)throw new Error("Không đổi qua lại giữa công việc và sự kiện; hãy tạo mục mới.");
   if(event && ((input.status && input.status!==TaskStatus.CANCELLED)||input.progressMode!==undefined||input.progressPercent!==undefined))throw new Error("Sự kiện không có trạng thái hoàn thành hoặc tiến độ");
   if(event && input.tags?.some(t=>t.trim().toLowerCase()==="codex"))throw new Error("Sự kiện không gửi cho Codex thực hiện");
   if (input.title !== undefined && !input.title.trim()) throw new Error("Tên công việc không được để trống");
   const needsContext = input.categoryKey !== undefined || input.domain !== undefined || input.tags !== undefined || input.targets !== undefined || input.workType !== undefined;
-  const [tagged] = needsContext ? await hydrateTaskItemsWithTagsRepo(prisma, [current]) : [];
+  const [tagged] = needsContext ? await hydrateTaskItemsWithTagsRepo(db, [current]) : [];
   const currentDomain = current.personalCategoryId ? "GENERAL" : normalizePersonalDomain(tagged?.tags.find(tag => domainKeys.has(tag.name.toUpperCase()))?.name);
   const retainedTags = tagged?.tags.filter(tag => !domainKeys.has(tag.name.toUpperCase())).map(tag => tag.name) ?? [];
   const scheduleChanged = input.dueAt !== undefined || input.scheduledEndAt !== undefined;
@@ -541,7 +546,7 @@ export async function updatePersonalWorkItem(
         ).values(),
       ]
     : null;
-  await prisma.$transaction(async (tx) => {
+  await withDbTransaction(db, async (tx) => {
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
