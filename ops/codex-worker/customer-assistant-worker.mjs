@@ -4,8 +4,8 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { codexArguments, validateWorkerConfiguration } from './worker.mjs';
 import { runCustomerConversation } from './customer-assistant-protocol.mjs';
+import { pollCustomerQueue } from './customer-queue.mjs';
 
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 export function customerCodexArguments(directory, output, imagePath) {
   const args = codexArguments(directory, output).map(arg => arg.startsWith('permissions.staging-worker=')
     ? arg.replace('extends=":workspace"', 'extends=":read-only"').replace('filesystem={', 'filesystem={"/work/repo"="deny","/work/runs"="deny","/work/order-runs"="deny","/work/sales-runs"="deny",') : arg);
@@ -34,11 +34,11 @@ export async function runCustomerAssistantWorker() {
     return response.json();
   };
   try {
-    while (!stopping) {
+    await pollCustomerQueue({ stopped: () => stopping, runOnce: async () => {
       let run, heartbeat, deadline, heartbeatWork, active = true, heartbeatBusy = false, output, imagePath;
       try {
         ({ run } = await api('claim', { workerId: config.workerId, imageInput: true }));
-        if (!run) { await sleep(5000); continue; }
+        if (!run) return 'idle';
         if (!/^[a-f0-9-]{36}$/.test(run.id)) throw Error('INVALID_CUSTOMER_RUN');
         const directory = '/work/customer-runs/' + run.id;
         output = '/work/results/customer-' + run.id + '.json';
@@ -80,10 +80,12 @@ export async function runCustomerAssistantWorker() {
           return JSON.parse(text);
         };
         await runCustomerConversation(run, { api, execute, assertActive });
+        return 'processed';
       } catch (error) {
         if (run && active && !stopping) await api('finish', { id: run.id, leaseToken: run.leaseToken, failed: true }).catch(() => {});
         const code = typeof error?.message === 'string' && /^(?:CUSTOMER_[A-Z0-9_]+|INVALID_CUSTOMER_[A-Z0-9_]+)$/.test(error.message) ? error.message : 'CUSTOMER_EXECUTION_FAILED';
         console.error('Customer assistant did not complete: ' + code + '. No business text or secrets logged.');
+        return 'failed';
       } finally {
         clearInterval(heartbeat); clearTimeout(deadline);
         await heartbeatWork?.catch(() => {});
@@ -91,8 +93,7 @@ export async function runCustomerAssistantWorker() {
         if (imagePath) await rm(imagePath, { force: true }).catch(() => {});
         if (output) await rm(output, { force: true }).catch(() => {});
       }
-      if (!stopping) await sleep(5000);
-    }
+    } });
   } finally { process.removeListener('SIGTERM', stop); process.removeListener('SIGINT', stop); stop(); }
 }
 

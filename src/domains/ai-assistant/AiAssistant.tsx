@@ -17,6 +17,7 @@ import BenAvatar from "./BenAvatar";
 import PersonalWorkDraftReview from "./PersonalWorkDraftReview";
 import BenPushControls from "./BenPushControls";
 import BenPwaRuntime from "./BenPwaRuntime";
+import { LiveReadGate, livePollDelay } from "./live-read";
 import {takeNavigation,type PendingNavigation} from "./navigation-client";
 import { usePathname, useRouter } from "next/navigation";
 import { MAX_BEN_IMAGE_BYTES } from "./image-search";
@@ -58,14 +59,24 @@ export default function AiAssistant({ userId, canManage, live = false, environme
   const [ready, setReady] = useState(false), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [scenario, setScenario] = useState<Scenario>("normal"), [notice, setNotice] = useState("");
   const launcher = useRef<HTMLButtonElement>(null), textarea = useRef<HTMLTextAreaElement>(null), bottom = useRef<HTMLDivElement>(null), latestReply = useRef<HTMLDivElement>(null), panel = useRef<HTMLElement>(null), generation = useRef(0);
   const liveSelected=useRef("");const liveSequence=useRef(0);const livePending=useRef(false);const liveTracking=useRef(false);const liveSubmitting=useRef(false);const liveDrafts=useRef(new Set<string>());const liveRequestKey=useRef<{id:string;text:string;key:string;screenPath:string;image?:File}|null>(null);
+  const liveReads=useRef(new LiveReadGate());
+  const livePoll=useRef({finishedAt:0,failures:0});
   useEffect(()=>{liveSelected.current=selected;},[selected]);
   const expireSession=useCallback(()=>{
+    liveReads.current.cancel();
     liveSequence.current++;livePending.current=false;liveTracking.current=false;liveRequestKey.current=null;liveSelected.current="";
     pendingNavigation.current=null;pendingMedia.current=null;setMediaRequest(undefined);setManualMedia(undefined);setMediaStatus(undefined);setProductionRelease(undefined);
     setChats([]);setSelected("");setInput("");setAttachment(undefined);setBusy(false);setSessionExpired(true);
   },[]);
-  const refreshLive=useCallback(async(preferred?:string)=>{
-    const sequence=++liveSequence.current;const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store"});if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");if(sequence!==liveSequence.current)return;
+  const refreshLive=useCallback(async(preferred?:string,background=false)=>{
+    if(background&&liveSubmitting.current)return;
+    const read=liveReads.current.begin(background);if(!read)return;
+    const sequence=++liveSequence.current;
+    try {
+    const active=preferred||liveSelected.current;const target=active&&!liveDrafts.current.has(active)?"?id="+encodeURIComponent(active):"";const response=await fetch("/api/admin/customer-assistant"+target,{cache:"no-store",signal:read.signal});
+    if(!read.isCurrent()||sequence!==liveSequence.current)return;
+    if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!read.isCurrent()||sequence!==liveSequence.current)return;if(!response.ok)throw Error(data.error||"Không tải được cuộc trao đổi.");
+    livePoll.current.failures=0;
     const rows=data.conversations as Conversation[];const navigation=takeNavigation(pendingNavigation.current,rows.find(r=>r.id===(preferred||liveSelected.current)));if(navigation){pendingNavigation.current=null;router.push(navigation.href);}
     const pending=pendingMedia.current;
     const row=pending&&rows.find(item=>item.id===pending.conversationId&&item.id===(preferred||liveSelected.current));
@@ -77,9 +88,33 @@ export default function AiAssistant({ userId, canManage, live = false, environme
       else setNotice("Form media đã đổi hoặc đã đóng. Mở lại đúng sản phẩm rồi nhắn Ben để tiếp tục.");
     }
     const id=preferred||liveSelected.current||rows[0]?.id||"";liveSelected.current=id;setSelected(id);livePending.current=rows.some(r=>["QUEUED","RUNNING"].includes(r.runStatus||"")||["QUEUED","RUNNING","MERGE_QUEUED","MERGING","DEPLOY_QUEUED","DEPLOYING"].includes(r.codeJob?.status||""));liveTracking.current=rows.some(r=>r.id===id&&r.approved);setBusy(liveSubmitting.current||rows.some(r=>r.id===id&&["QUEUED","RUNNING"].includes(r.runStatus||"")));setChats(current=>data.partial?current.map(r=>rows.find(row=>row.id===r.id)||r).concat(rows.filter(row=>!current.some(r=>r.id===row.id))):[...current.filter(r=>liveDrafts.current.has(r.id)),...rows]);
+    } catch(error) {
+      // Superseded reads cannot show errors or mutate another conversation.
+      if(sequence!==liveSequence.current||(read.signal.aborted&&!read.timedOut()))return;
+      livePoll.current.failures++;
+      if(read.timedOut())throw Error("Tải cuộc trao đổi quá lâu. Ben sẽ thử tải lại khi có kết nối.");
+      throw error;
+    } finally {
+      if(sequence===liveSequence.current)livePoll.current.finishedAt=Date.now();
+      read.finish();
+    }
   },[router,expireSession]);
   async function livePost(body:unknown){const response=await fetch("/api/admin/customer-assistant",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!response.ok)throw Error(data.error||"Chưa thực hiện được yêu cầu.");return data;}
-  useEffect(()=>{if(!live||sessionExpired)return;const sequenceRef=liveSequence;let disposed=false;const load=()=>refreshLive().catch(e=>{if(!disposed)setNotice(e.message);});const resume=()=>{if(document.visibilityState==="visible"&&navigator.onLine)void load();};void load();const timer=setInterval(()=>{if(document.visibilityState==="visible"&&navigator.onLine&&(livePending.current||(open&&liveTracking.current)))void load();},5000);window.addEventListener("online",resume);window.addEventListener("pageshow",resume);document.addEventListener("visibilitychange",resume);return()=>{disposed=true;sequenceRef.current++;clearInterval(timer);window.removeEventListener("online",resume);window.removeEventListener("pageshow",resume);document.removeEventListener("visibilitychange",resume);};},[live,open,refreshLive,sessionExpired]);
+  useEffect(()=>{
+    if(!live||sessionExpired)return;
+    const reads=liveReads.current;const sequenceRef=liveSequence;let disposed=false;
+    const available=()=>document.visibilityState==="visible"&&navigator.onLine;
+    const load=()=>refreshLive(undefined,true).catch(e=>{if(!disposed)setNotice(e.message);});
+    const resume=()=>{if(available())void load();else{sequenceRef.current++;reads.cancel();}};
+    resume();
+    // A cheap clock tick does no network work while idle, hidden or offline.
+    const timer=setInterval(()=>{
+      const delay=livePollDelay(livePending.current,open&&liveTracking.current,livePoll.current.failures);
+      if(available()&&delay!==null&&Date.now()-livePoll.current.finishedAt>=delay)void load();
+    },1000);
+    window.addEventListener("online",resume);window.addEventListener("offline",resume);window.addEventListener("pageshow",resume);document.addEventListener("visibilitychange",resume);
+    return()=>{disposed=true;sequenceRef.current++;reads.cancel();clearInterval(timer);window.removeEventListener("online",resume);window.removeEventListener("offline",resume);window.removeEventListener("pageshow",resume);document.removeEventListener("visibilitychange",resume);};
+  },[live,open,refreshLive,sessionExpired]);
   useEffect(()=>{const el=textarea.current;if(el){el.style.height="auto";el.style.height=Math.min(el.scrollHeight,144)+"px";}},[input,open,history,assignedOpen]);
   const storedChat = chats.find(c => c.id === selected);
   const chat = storedChat && (live || isProductContext(storedChat.context)) ? live ? storedChat : followScreenWhileEmpty(storedChat, current) : undefined;
@@ -131,7 +166,7 @@ export default function AiAssistant({ userId, canManage, live = false, environme
   }, [open, history, assignedOpen, fullPage, latestMessage?.id, latestMessage?.role, busy]);
   useEffect(() => () => { generation.current++; }, []);
   function close() { if(fullPage)return; pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); setWindowOpen(false); launcher.current?.focus(); }
-  function create(context = live ? null : current) { pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); const c = newConversation(context); if(live)liveDrafts.current.add(c.id); liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
+  function create(context = live ? null : current) { pendingNavigation.current=null; pendingMedia.current=null; setMediaRequest(undefined); setManualMedia(undefined); const c = newConversation(context); if(live){liveSequence.current++;liveReads.current.cancel();liveSelected.current=c.id;livePending.current=false;liveTracking.current=false;liveDrafts.current.add(c.id);} liveRequestKey.current=null; setChats(rows => [c, ...rows].slice(0, 20)); setSelected(c.id); setHistory(false); setAssignedOpen(false); setInput(""); setNotice(""); return c; }
   function update(id: string, fn: (c: Conversation) => Conversation) { setChats(rows => rows.map(c => c.id === id ? { ...fn(c), updatedAt: new Date().toISOString() } : c).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))); }
   const selectedImage=live&&imageSearch&&attachment?.chatId===(chat?.id||"")?attachment.file:undefined;
   async function send(value = input) {
@@ -141,6 +176,7 @@ export default function AiAssistant({ userId, canManage, live = false, environme
     const c = chat || create();
     if(live){
       setBusy(true);setNotice("");liveSubmitting.current=true;liveSequence.current++;
+      liveReads.current.cancel();
       if(!liveRequestKey.current||liveRequestKey.current.id!==c.id||liveRequestKey.current.text!==text||liveRequestKey.current.screenPath!==screenPath||liveRequestKey.current.image!==image)liveRequestKey.current={id:c.id,text,key:crypto.randomUUID(),screenPath,image};
       pendingMedia.current=!image&&mediaEditor?{requestKey:liveRequestKey.current.key,conversationId:c.id,editor:mediaEditor}:null;
       setMediaRequest(undefined);

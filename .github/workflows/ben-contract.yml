@@ -31,6 +31,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
-      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
+      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
       - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit
+      - run: npm run build
