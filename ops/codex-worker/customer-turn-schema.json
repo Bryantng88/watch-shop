@@ -532,6 +532,28 @@
                 "string",
                 "null"
               ]
+            },
+            "codex": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "startAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "startAt"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           "required": [
@@ -547,7 +569,8 @@
             "syncGoogle",
             "priority",
             "checklist",
-            "assigneeUserId"
+            "assigneeUserId",
+            "codex"
           ]
         },
         {

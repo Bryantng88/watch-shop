@@ -325,8 +325,8 @@ offset-aware dueAt/scheduledEndAt, priority, tags, checklist, shares and syncGoo
 Times resolve from current referenceTime in Vietnam; ask only ambiguous/missing
 required facts. Defaults are GENERAL group, MEDIUM priority, no tags/checklist/
 shares. Google sync follows the connected-account policy below. Viewer sharing is the default for an explicit share request;
-EDITOR must be expressly requested. Reserved codex execution is not part of this
-personal plan. EVENT requires a date, has no checklist/completion/progress and can
+EDITOR must be expressly requested. Codex execution uses the separate explicit
+schedule contract below. EVENT requires a date, has no checklist/completion/progress and can
 have a start-only time. All-day uses the existing local end-of-day date encoding.
 
 A complete compact review is corrected in chat and approved once via the dedicated
@@ -374,6 +374,34 @@ by watch identifiers without a date constraint or private customer fields.
 Photo inventory search tries exact SKU before matching all identifying terms.
 Image turns show bounded candidate cards using inline photo, title and selling
 price. Ordinary requests for a product gallery still use the gallery card.
+
+## Scheduled Codex dispatch from personal task creation
+
+Only an explicit current request and an available `canSchedulePersonalCodex`
+capability allow `personalWorkPlan.codex={startAt}`. `startAt` is an offset-aware
+execution start gate; null means explicitly approved run-now. Omitted/null codex
+means no dispatch. It is independent of dueAt/scheduledEndAt; date-only requests
+must ask the execution hour, never use 23:59 or a deadline silently. A raw codex
+tag without this object is invalid. Server adds the canonical tag on approval.
+TASK only, owner execution only: no EVENT or different assignee. This extends the
+existing ADMIN/staging personal worker boundary; production remains disabled and
+worker unavailability is explained instead of silently dropping execution intent.
+
+The compact review shows task/calendar time and Codex start time in Vietnam, with
+one “Tạo việc và giao Codex” approval. That transaction creates the canonical task,
+tags/checklist/shares, a PersonalCodexRun and durable conversation receipt together.
+Failure rolls back all of them; replay returns the receipt. It grants no merge,
+deploy or task-completion approval. Corrections before approval happen in chat.
+
+PersonalCodexRun.notBefore is nullable. Old/manual unscheduled jobs remain
+immediately eligible. Worker discovery and conditional claim both require null
+or notBefore <= server now. Future jobs do not block ready jobs. At claim, recheck
+owner/admin, active task, tag, non-event kind and approved prompt fingerprint;
+changed content is cancelled rather than executed under old consent. Existing
+lease/heartbeat/cancel behavior remains. A late/offline/busy worker may start
+after the gate, never promise exact-second execution. Existing cancellation is
+available from the task's Codex panel. Rescheduling an existing approved run is
+not supported by personal-work updates; cancel it and approve a new run instead.
 
 ## Personal work assignment and updates
 

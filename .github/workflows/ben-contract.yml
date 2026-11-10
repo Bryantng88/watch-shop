@@ -6,6 +6,8 @@ on:
       - 'src/domains/media-post/**'
       - 'src/app/api/admin/customer-assistant/route.ts'
       - 'src/domains/personal-work/**'
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
       - 'src/app/api/admin/ben-code/**'
       - 'src/app/api/internal/ben-code/**'
       - 'ops/codex-worker/**'

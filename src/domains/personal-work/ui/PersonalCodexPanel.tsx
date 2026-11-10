@@ -25,6 +25,7 @@ export default function PersonalCodexPanel({ item, configuration }: { item: Pers
   return <section className="mt-4 space-y-2 rounded-xl border border-violet-200 bg-violet-50/50 p-4">
     <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold">Codex</h3><span className="text-xs">{item.codexRun ? LABELS[item.codexRun.status] : "Chưa gửi thực hiện"}</span></div>
     {!configuration?.ready && <p className="text-xs text-slate-600">{configuration?.reason || "Chưa cấu hình worker Codex"}</p>}
+    {item.codexRun?.status==="QUEUED"&&item.codexRun.notBefore&&<p className="text-xs text-blue-700">Không chạy trước {new Intl.DateTimeFormat("vi-VN",{timeZone:"Asia/Ho_Chi_Minh",dateStyle:"short",timeStyle:"short"}).format(new Date(item.codexRun.notBefore))} (giờ Việt Nam). Worker sẽ nhận khi đến giờ và sẵn sàng.</p>}
     {item.codexRun?.summary && <p className="whitespace-pre-wrap text-sm text-slate-700">{item.codexRun.summary}</p>}
     {item.codexRun?.resultUrl && <a href={item.codexRun.resultUrl} target="_blank" rel="noreferrer" className="block text-sm font-semibold text-violet-700 underline">Mở draft PR / kết quả</a>}
     {error && <p role="alert" className="text-xs text-red-700">{error}</p>}

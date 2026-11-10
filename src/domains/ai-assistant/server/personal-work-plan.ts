@@ -1,3 +1,4 @@
+import {codexExecutionReadiness} from "@/domains/personal-work/server/codex/codex-config";
 import type { DB } from "@/server/db/client";
 import { listPersonalCategories } from "@/domains/personal-work/server/personal-work-categories.service";
 import { validatePersonalSchedule } from "@/domains/personal-work/shared/personal-work-schedule";
@@ -16,6 +17,11 @@ export async function preparePersonalWork(
 ): Promise<PersonalWorkDraft> {
   const plan = personalWorkPlanSchema.parse(raw);
   validatePersonalSchedule(plan.dueAt, plan.scheduledEndAt);
+  if(plan.codex){
+    const actor=await assistantActor(db,userId),readiness=codexExecutionReadiness();
+    if(!actor.admin)throw new AssistantError("Chỉ ADMIN được gửi việc của mình cho worker Codex.",403);
+    if(!readiness.ready)throw new AssistantError(readiness.reason||"Worker Codex chưa sẵn sàng.",409);
+  }
   const category = (await listPersonalCategories(userId)).find((c) => c.key === plan.categoryKey);
   const seen = entries.some(
     (e) =>

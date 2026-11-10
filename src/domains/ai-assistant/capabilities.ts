@@ -1,3 +1,4 @@
+import {codexExecutionReadiness} from "@/domains/personal-work/server/codex/codex-config";
 import { canRequestProduction } from "./production-release";
 import { codeEnabled } from "./code-contract";
 import { canReadRepository } from "./repository-access";
@@ -56,9 +57,11 @@ export function assistantCapabilities(actor: AssistantAuthority) {
     canDeployCode:codeEnabled(actor)&&(process.env.BEN_CODE_RELEASE_TOKEN?.length||0)>=32&&process.env.BEN_CODE_RELEASE_ENABLED==="1"&&/^[a-f0-9]{64}$/.test(process.env.BEN_CODE_RELEASE_HANDLER_SHA256||""),
     canReadCode:canReadRepository(actor),
     allowedLookups: Object.keys(LOOKUP_PERMISSIONS).filter(tool => lookupAllowed(actor, tool)),
-    supportedActions:["CREATE_MEDIA_POST_DRAFT","UPDATE_PERSONAL_WORK","ASSIGN_PERSONAL_WORK","CREATE_PERSONAL_WORK","CREATE_PERSONAL_EVENT","CREATE_TASK","CREATE_TECHNICAL","CREATE_DRAFT_ORDER"],
+    supportedActions:["SCHEDULE_PERSONAL_CODEX","CREATE_MEDIA_POST_DRAFT","UPDATE_PERSONAL_WORK","ASSIGN_PERSONAL_WORK","CREATE_PERSONAL_WORK","CREATE_PERSONAL_EVENT","CREATE_TASK","CREATE_TECHNICAL","CREATE_DRAFT_ORDER"],
     canUpdatePersonalWork:hasAssistantPermission(actor,"TASK_VIEW"),
     canAssignPersonalWork:["TASK_VIEW","TASK_MANAGE"].every(p=>hasAssistantPermission(actor,p)),
+    canSchedulePersonalCodex:actor.admin&&codexExecutionReadiness().ready,
+    personalCodexAvailability:actor.admin?codexExecutionReadiness():{ready:false,reason:"Chỉ ADMIN được giao việc cho Codex."},
     canCreatePersonalWork:hasAssistantPermission(actor,"TASK_VIEW"),
     canCreateMediaPosts:["PRODUCT_VIEW","PRODUCT_UPDATE","MEDIA_VIEW"].every(p=>hasAssistantPermission(actor,p)),
     canCreateOrders:["ORDER_CREATE","PRODUCT_VIEW"].every(p=>hasAssistantPermission(actor,p)),
