@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 export const metadata: Metadata = {
-  title: "Ben", manifest: "/ben.webmanifest",
+  title: "Ben",
   appleWebApp: { capable: true, title: "Ben", statusBarStyle: "default" },
   icons: { icon: "/ben/icon-192.png", apple: "/ben/apple-touch-icon.png" },
 };
