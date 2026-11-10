@@ -31,3 +31,8 @@ test('successful navigation and HTTP auth failures are returned without caching 
   assert.equal(await promise,expected);
  }
 });
+
+test('Ben requests its protected manifest with browser credentials', () => {
+ const page=readFileSync('src/app/(admin)/admin/ben/page.tsx','utf8');
+ assert.match(page, /<link rel="manifest" href="\/ben\.webmanifest" crossOrigin="use-credentials"/);
+});
