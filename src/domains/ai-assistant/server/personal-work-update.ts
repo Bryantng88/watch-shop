@@ -19,6 +19,15 @@ export async function lookupPersonalWork(db:DB,userId:string,tool:"personalWork.
     const item=await db.taskItem.findFirst({where:{...(number !== null ? {personalWorkNumber:number} : {id:query}),...personalWorkViewAccessWhere(userId)},select});
     return {item:item?{...item,code:personalWorkCode(item.id,item.personalWorkNumber),updatedAt:item.updatedAt.toISOString(),dueAt:item.dueAt?.toISOString()??null,scheduledEndAt:item.scheduledEndAt?.toISOString()??null,kind:isPersonalEvent(item.workTypeId)?"EVENT":"TASK"}:null};
   }
+  const search = query.trim().toLowerCase().normalize("NFD").replace(/\p{M}/gu,"").replace(/[?!.]+$/,"");
+  if (/^(?:@latest|(?:(?:cv|viec|cong viec|task) )?moi nhat(?: hien tai)?(?: la gi)?)$/.test(search)) {
+    const row = await db.taskItem.findFirst({
+      where: {...personalWorkViewAccessWhere(userId), status:{not:"CANCELLED"}},
+      select: {id:true,personalWorkNumber:true,title:true,status:true},
+      orderBy: [{createdAt:"desc"},{id:"desc"}],
+    });
+    return {matches:row?[{...row,code:personalWorkCode(row.id,row.personalWorkNumber)}]:[],truncated:false};
+  }
   const codePrefix=/^CV-([a-z0-9]{8}-[a-z0-9]{4})$/i.exec(query)?.[1];
   const words=query.trim().split(/\s+/).slice(0,8);
   const rows=await db.taskItem.findMany({where:{AND:[personalWorkViewAccessWhere(userId),{status:{not:"CANCELLED"}},...(number !== null?[{personalWorkNumber:number}]:codePrefix?[{id:{startsWith:codePrefix,mode:"insensitive" as const}}]:words.map(word=>({title:{contains:word,mode:"insensitive" as const}})))]},select:{id:true,personalWorkNumber:true,title:true,status:true},orderBy:[{updatedAt:"desc"},{id:"asc"}],take:7});
