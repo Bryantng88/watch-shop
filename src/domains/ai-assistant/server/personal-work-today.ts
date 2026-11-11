@@ -3,43 +3,14 @@ import type { DB } from "@/server/db/client";
 import { personalWorkViewAccessWhere } from "@/domains/personal-work/server/personal-work-access";
 import {
   isPersonalEvent,
-  personalEventBounds,
   personalEventLabel,
 } from "@/domains/personal-work/shared/personal-event";
+import { personalDayBucket, type PersonalWorkSchedule } from "@/domains/personal-work/shared/personal-work-day";
 import { businessDay } from "../business-day";
 
-const DAY = 86400000,
-  OFFSET = 7 * 3600000;
-type Schedule = {
-  id: string;
-  dueAt: Date | null;
-  scheduledEndAt: Date | null;
-  workTypeId: string | null;
-  estimatedDays: number;
-};
-export function personalDayBucket(
-  item: Schedule,
-  start: number,
-  end: number,
-): "TODAY" | "OVERDUE" | "UNSCHEDULED" | "OTHER" {
-  const event = isPersonalEvent(item.workTypeId);
-  if (!item.dueAt) return event ? "OTHER" : "UNSCHEDULED";
-  const bounds = event
-    ? personalEventBounds(item.dueAt, item.scheduledEndAt, item.estimatedDays)
-    : item.scheduledEndAt
-      ? { start: item.dueAt.getTime(), end: item.scheduledEndAt.getTime() }
-      : {
-          start:
-            Math.floor((item.dueAt.getTime() + OFFSET) / DAY) * DAY - OFFSET,
-          end:
-            (Math.floor((item.dueAt.getTime() + OFFSET) / DAY) +
-              Math.max(1, item.estimatedDays)) *
-              DAY -
-            OFFSET,
-        };
-  if (bounds.start < end && bounds.end > start) return "TODAY";
-  return !event && bounds.end <= start ? "OVERDUE" : "OTHER";
-}
+export { personalDayBucket };
+type Schedule = PersonalWorkSchedule & { id: string };
+
 export async function personalWorkToday(
   db: DB,
   userId: string,

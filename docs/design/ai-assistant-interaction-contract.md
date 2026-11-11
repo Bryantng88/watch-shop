@@ -434,6 +434,12 @@ not supported by personal-work updates; cancel it and approve a new run instead.
 
 ## Personal work assignment and updates
 
+For creation, recognize category labels in parentheses, after an explicit category
+marker, or immediately after a creation phrase. Preserve unrelated title text.
+Ask only for a missing or ambiguous category or time window. A date alone needs
+a time, unless the user explicitly chooses all day or no schedule. Classification
+as Codex does not authorize worker execution.
+
 Show a stable CV code next to each personal work item and in Ben's lookup
 results. A single message may propose updates to up to eight distinct items.
 Read fresh detail for each item, clarify unresolved references in chat, and

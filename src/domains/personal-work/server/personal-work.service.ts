@@ -126,6 +126,8 @@ function targetFromExecution(execution: {
 }
 
 const allowedTargets: Record<PersonalWorkDomain, PersonalWorkTargetType[]> = {
+  WATCHSHOP: [],
+  CODEX_WORK: [],
   GENERAL: [],
   WORK: [],
   MEDIA: ["WATCH"],

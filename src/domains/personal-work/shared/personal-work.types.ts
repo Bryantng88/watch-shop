@@ -1,6 +1,8 @@
 export const PERSONAL_WORK_DOMAINS = [
   { key: "GENERAL", label: "Cá nhân" },
   { key: "WORK", label: "Công việc" },
+  { key: "WATCHSHOP", label: "WatchShop" },
+  { key: "CODEX_WORK", label: "Codex" },
   { key: "MEDIA", label: "Media" },
   { key: "TECHNICAL", label: "Technical" },
   { key: "SALES", label: "Sales" },
@@ -11,7 +13,7 @@ export const PERSONAL_WORK_DOMAINS = [
 export type PersonalWorkDomain = (typeof PERSONAL_WORK_DOMAINS)[number]["key"];
 
 export const PERSONAL_WORK_COLORS: Record<PersonalWorkDomain, string> = {
-  GENERAL: "#64748b", WORK: "#6366f1", MEDIA: "#8b5cf6", TECHNICAL: "#3b82f6",
+  GENERAL: "#64748b", WATCHSHOP: "#0f766e", CODEX_WORK: "#7c3aed", WORK: "#6366f1", MEDIA: "#8b5cf6", TECHNICAL: "#3b82f6",
   SALES: "#10b981", ORDER: "#f59e0b", ACQUISITION: "#f43f5e",
 };
 
@@ -37,6 +39,8 @@ export const PERSONAL_WORK_TYPES = {
     { key: "PLANNING", label: "Kế hoạch" },
     { key: "ADMIN", label: "Việc hành chính" },
   ],
+  WATCHSHOP: [{ key: "GENERAL_TASK", label: "Công việc chung" }],
+  CODEX_WORK: [{ key: "GENERAL_TASK", label: "Công việc chung" }],
   MEDIA: [
     { key: "PHOTOGRAPHY", label: "Chụp ảnh" },
     { key: "IMAGE_PROCESSING", label: "Xử lý ảnh" },
