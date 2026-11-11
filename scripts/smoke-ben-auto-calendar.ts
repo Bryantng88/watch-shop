@@ -63,6 +63,15 @@ async function main() {
     await assistantWorker("finish", { ...run, reply: "Synthetic review", personalWorkPlan: { ...plan, ...changes } });
     return (await listAssistant(owner.id, chat.id)).conversations[0];
   };
+  const prepareBatch = async (plans: PersonalWorkPlan[]) => {
+    const chat=await sendAssistant(owner.id,{requestKey:randomUUID(),text:"Synthetic request for two independent personal tasks"});
+    const {run}=await assistantWorker("claim",{}) as {run:{id:string;leaseToken:string}};
+    assert.equal(run.id,chat.id);
+    await assistantWorker("lookup",{...run,lookup:{tool:"personalWork.categories"}});
+    for(const user of [assignee,viewer])await assistantWorker("lookup",{...run,lookup:{tool:"personalWork.people",query:user.id}});
+    await assistantWorker("finish",{...run,reply:"Synthetic complete batch review",personalWorkPlans:plans});
+    return (await listAssistant(owner.id,chat.id)).conversations[0];
+  };
   const approve = async (review: Awaited<ReturnType<typeof prepare>>) => {
     await Promise.all([approveAssistantPersonalWork(owner.id, review.id, review.revision!), approveAssistantPersonalWork(owner.id, review.id, review.revision!)]);
     return (await listAssistant(owner.id, review.id)).conversations[0].createdPersonalWork!.at(-1)!;
@@ -128,6 +137,40 @@ async function main() {
     const calls = googleCalls;
     await syncPersonalTaskToGoogle(assignee.id, uncertain.id);
     assert.equal(googleCalls, calls, "Unchanged linked event must not be written again");
+    const batchStart=await prisma.taskItem.count();
+    const batch=await prepareBatch([{...plan,title:"Synthetic batch first"},{...plan,title:"Synthetic batch second",assigneeUserId:null,shares:[],dueAt:"2026-11-13T14:00:00+07:00"}]);
+    assert.equal(batch.personalWorkDraft!.items!.length,2);
+    assert.equal(await prisma.taskItem.count(),batchStart,"No partial creation before batch approval");
+    fail.add(`fixture-${assignee.id}`);
+    await Promise.all([approveAssistantPersonalWork(owner.id,batch.id,batch.revision!),approveAssistantPersonalWork(owner.id,batch.id,batch.revision!)]);
+    fail.clear();
+    const batchReceipts=(await listAssistant(owner.id,batch.id)).conversations[0].createdPersonalWork!.filter(c=>c.revision===batch.revision);
+    assert.equal(batchReceipts.length,2);assert.equal(new Set(batchReceipts.map(c=>c.id)).size,2);
+    assert.equal(await prisma.taskItem.count(),batchStart+2);
+    assert.deepEqual(batchReceipts.map(c=>c.calendar),["FAILED","SYNCED"],"Calendar status must belong to its own task, not every receipt in the revision");
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:batchReceipts[1].id}})).dueAt!.toISOString(),"2026-11-13T07:00:00.000Z");
+    const batchCalls=googleCalls;
+    await approveAssistantPersonalWork(owner.id,batch.id,batch.revision!);
+    assert.equal(await prisma.taskItem.count(),batchStart+2);assert.equal(googleCalls,batchCalls,"Batch replay must not repeat calendar sync");
+    const invalidSecond=await prepareBatch([{...plan,shares:[],assigneeUserId:null},{...plan,title:"Synthetic second recipient revoked",shares:[],assigneeUserId:viewer.id}]);
+    await prisma.user.update({where:{id:viewer.id},data:{isActive:false}});
+    const invalidCount=await prisma.taskItem.count();
+    await assert.rejects(approveAssistantPersonalWork(owner.id,invalidSecond.id,invalidSecond.revision!));
+    assert.equal(await prisma.taskItem.count(),invalidCount,"An invalid second item must not create the first item");
+    await prisma.user.update({where:{id:viewer.id},data:{isActive:true}});
+    const rollback=await prepareBatch([{...plan,shares:[],assigneeUserId:null,title:"Synthetic batch rollback first"},{...plan,shares:[],assigneeUserId:null,title:"Synthetic batch rollback second"}]);
+    // Fixture-only DB guard above prevents touching any non-local database.
+    await prisma.$executeRawUnsafe(`CREATE FUNCTION ben_batch_fixture_reject() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.title = 'Synthetic batch rollback second' THEN RAISE EXCEPTION 'Synthetic batch insert failure'; END IF; RETURN NEW; END $$`);
+    await prisma.$executeRawUnsafe(`CREATE TRIGGER ben_batch_fixture_reject BEFORE INSERT ON "TaskItem" FOR EACH ROW EXECUTE FUNCTION ben_batch_fixture_reject()`);
+    try{
+      const rollbackCount=await prisma.taskItem.count();
+      await assert.rejects(approveAssistantPersonalWork(owner.id,rollback.id,rollback.revision!));
+      assert.equal(await prisma.taskItem.count(),rollbackCount,"Failure creating item two must roll back item one");
+      assert.equal((await listAssistant(owner.id,rollback.id)).conversations[0].createdPersonalWork?.length||0,0);
+    }finally{
+      await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ben_batch_fixture_reject ON "TaskItem"`);
+      await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ben_batch_fixture_reject()`);
+    }
     const revoked = await prepare();
     await prisma.role.update({ where: { id: role.id }, data: { permissions: { set: [] } } });
     const tasks = await prisma.taskItem.count();
@@ -135,7 +178,7 @@ async function main() {
     assert.equal(await prisma.taskItem.count(), tasks);
     assert.equal(await prisma.order.count(), baseline.orders);
     assert.equal(await prisma.technicalIssue.count(), baseline.issues);
-    console.log("PASS auto-calendar DB integration: creator/assignee only, disconnected/undated skip, explicit approval, concurrent replay, viewer/cross-owner denial, partial failure, lost-response recovery, revocation, no order/issue writes. Google/model calls are synthetic.");
+    console.log("PASS auto-calendar DB integration (including batch replay, independent sync statuses, invalid second item and transaction rollback): creator/assignee only, disconnected/undated skip, explicit approval, concurrent replay, viewer/cross-owner denial, partial failure, lost-response recovery, revocation, no order/issue writes. Google/model calls are synthetic.");
   } finally {
     globalThis.fetch = oldFetch;
     await prisma.user.updateMany({ where: { id: { in: users.map(u => u.id) } }, data: { isActive: false } });
