@@ -958,7 +958,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           onClick={() => openTaskEdit(item)}
                           className={`truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
                         >
-                          {item.title} <span className="ml-1 whitespace-nowrap font-mono text-xs text-slate-500">{personalWorkCode(item.id)}</span>
+                          <span className="mr-1.5 whitespace-nowrap font-mono text-xs font-semibold text-slate-600">{personalWorkCode(item.id, item.personalWorkNumber)}</span>{item.title}
                         </button>
                         {item.assignee && item.assignee.id !== item.owner.id && <span className="text-[11px] text-slate-500">→ {item.assignee.name || "Người thực hiện"}</span>}
                         {item.access !== "OWNER" && (

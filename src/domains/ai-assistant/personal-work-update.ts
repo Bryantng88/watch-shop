@@ -12,7 +12,7 @@ export const personalWorkUpdateSchema=z.object({
   }).strict(),
 }).strict().superRefine((p,c)=>{for(const field of p.fields){if((field==="title"||field==="status")&&p.changes[field]===null)c.addIssue({code:"custom",message:"Trường cập nhật không được trống"});}for(const [field,value] of Object.entries(p.changes)){if(value!==null&&!p.fields.includes(field as typeof p.fields[number]))c.addIssue({code:"custom",message:"Có giá trị ngoài các trường cần cập nhật"});}});
 export type PersonalWorkUpdate=z.infer<typeof personalWorkUpdateSchema>;
-export type PersonalWorkUpdateItem={plan:PersonalWorkUpdate;title:string;kind:"TASK"|"EVENT"};
+export type PersonalWorkUpdateItem={plan:PersonalWorkUpdate;title:string;code?:string;kind:"TASK"|"EVENT"};
 export type PersonalWorkUpdateDraft=PersonalWorkUpdateItem & {
   revision:number;
   requiredPermissions:string[];

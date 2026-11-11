@@ -440,8 +440,8 @@ Ask only for a missing or ambiguous category or time window. A date alone needs
 a time, unless the user explicitly chooses all day or no schedule. Classification
 as Codex does not authorize worker execution.
 
-Show a stable CV code next to each personal work item and in Ben's lookup
-results. A single message may propose updates to up to eight distinct items.
+Show a stable sequential CV code (such as CV-42) before each personal work title and in Ben's lookup
+results. Resolve old UUID-based codes for compatibility. A single message may propose updates to up to eight distinct items.
 Read fresh detail for each item, clarify unresolved references in chat, and
 show one review with a single approval. Recheck permissions and item versions
 for the whole batch at approval and commit the updates together.

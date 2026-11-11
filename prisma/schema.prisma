@@ -2812,6 +2812,7 @@ model Task {
 }
 
 model TaskItem {
+  personalWorkNumber Int? @unique
   codexRuns PersonalCodexRun[]
   id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
   taskId String?

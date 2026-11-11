@@ -79,6 +79,7 @@ export async function personalWorkToday(
         select: {
           id: true,
           title: true,
+          personalWorkNumber: true,
           status: true,
           dueAt: true,
           scheduledEndAt: true,
@@ -109,7 +110,7 @@ export async function personalWorkToday(
       return [
         {
           ...row,
-          code: personalWorkCode(row.id),
+          code: personalWorkCode(row.id,row.personalWorkNumber),
           title: row.title.slice(0, 180),
           dueAt: row.dueAt?.toISOString() ?? null,
           scheduledEndAt: row.scheduledEndAt?.toISOString() ?? null,

@@ -84,6 +84,7 @@ export type PersonalCodexRun = {
 };
 
 export type PersonalWorkItem = {
+  personalWorkNumber?: number | null;
   assignedToMe?: boolean;
   assignee?: { id: string; name: string | null } | null;
   codexRun?: PersonalCodexRun | null;
