@@ -13,7 +13,7 @@ import {
   updateMediaPostContentAction,
 } from "@/domains/media-post/actions";
 import { applyQueueItemManualTransitionAction } from "@/domains/task/actions/task.actions";
-import { notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
+import { notifyParentOfWorkspaceRefresh, notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 import { PostTargetMultiSelect } from "@/domains/shared/ui/post-target/PostTargetMultiSelect";
 
 type ContentValue = {
@@ -74,6 +74,7 @@ export default function MediaPostEditor({
     setMessage(null);
     try {
       await updateMediaPostContentAction({ mediaPostId, ...content });
+      notifyParentOfWorkspaceRefresh();
       setContentSaved(true);
       setWorkProgress((current) => ({ ...current, content: Boolean(content.title.trim() && (content.hook.trim() || content.caption.trim() || content.body.trim())) }));
     } catch (error) {
@@ -104,14 +105,17 @@ export default function MediaPostEditor({
           role: "SOCIAL",
           sortOrder: savedKeys.current.size + index,
         });
+        notifyParentOfWorkspaceRefresh();
       }
       for (const storageKey of removed) {
         await removeMediaFromPostAction({ mediaPostId, storageKey });
+        notifyParentOfWorkspaceRefresh();
       }
       await reorderMediaPostAssetsAction({
         mediaPostId,
         storageKeys: selected.map((item) => item.key),
       });
+      notifyParentOfWorkspaceRefresh();
       setWorkProgress((current) => ({ ...current, image: selected.length > 0 }));
       savedKeys.current = nextKeys;
       setMediaDirty(false);

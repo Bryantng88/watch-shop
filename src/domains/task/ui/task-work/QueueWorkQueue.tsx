@@ -1034,6 +1034,7 @@ export function OpenTargetAction({
   const scheduleRefresh = useCoalescedRouterRefresh(router);
   const href = openTargetHref({ queueItem, transition });
   const label = openTargetActionLabel(transition, queueItem);
+  const refreshOnlyAfterSave = metadataTextValue(objectValue(transition.metadata), "targetMode") === "media" || queueItem.targetType === "MEDIA_POST";
   const modal =
     transitionPresentation(transition) === "MODAL" ||
     transitionIntent(transition) === "OPEN_TARGET";
@@ -1063,14 +1064,18 @@ export function OpenTargetAction({
 
       // Persisted edits invalidate once on close; unsaved dirtiness alone does not.
       if (event.data.type === "workspace-target-modal-refresh") {
-        targetChangedRef.current = true;
+        if (refreshOnlyAfterSave) targetChangedRef.current = true;
+        else if (!transitionAppliedRef.current) {
+          if (onRefreshRequested) void onRefreshRequested();
+          else scheduleRefresh();
+        }
         return;
       }
       setTargetDirty(false);
       setOpen(false);
       const changed = targetChangedRef.current;
       targetChangedRef.current = false;
-      if (changed && !transitionAppliedRef.current) {
+      if ((!refreshOnlyAfterSave || changed) && !transitionAppliedRef.current) {
         if (onRefreshRequested) void onRefreshRequested();
         else scheduleRefresh();
       }
@@ -1078,7 +1083,7 @@ export function OpenTargetAction({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, scheduleRefresh]);
+  }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, refreshOnlyAfterSave, scheduleRefresh]);
 
   const activate = () => {
     if (!href) return;
@@ -1110,7 +1115,7 @@ export function OpenTargetAction({
     setOpen(false);
     const changed = targetChangedRef.current;
     targetChangedRef.current = false;
-    if (changed && !transitionAppliedRef.current) {
+    if ((!refreshOnlyAfterSave || changed) && !transitionAppliedRef.current) {
       if (onRefreshRequested) await onRefreshRequested();
       else scheduleRefresh();
     }

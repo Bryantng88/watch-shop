@@ -6,6 +6,7 @@ on:
       - 'src/domains/watch/client/WatchFormClient.tsx'
       - 'src/domains/watch/client/WatchListClient.tsx'
       - 'src/domains/watch/ui/edit/WatchImageSection.tsx'
+      - 'src/domains/media-post/ui/MediaPostEditor.tsx'
       - 'src/domains/shared/ui/transitions/**'
       - 'scripts/smoke-media-target-close.cjs'
       - '.github/workflows/media-editor-close.yml'
@@ -28,6 +29,7 @@ jobs:
           src/domains/watch/client/WatchListClient.tsx
           src/domains/watch/ui/edit/WatchImageSection.tsx
           src/domains/shared/ui/transitions/workspace-transition-outcome.ts
+          src/domains/media-post/ui/MediaPostEditor.tsx
       - run: npx tsc --noEmit
       - run: npm install --prefix /tmp/media-close-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/media-close-browser/node_modules/.bin/playwright install --with-deps chromium

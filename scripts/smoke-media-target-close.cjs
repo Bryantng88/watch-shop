@@ -6,7 +6,9 @@ const http = require("node:http");
 const assert = require("node:assert/strict");
 const ts = require("typescript");
 const esbuild = require("esbuild");
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
+const { chromium } = require(
+  process.env.PLAYWRIGHT_MODULE_PATH || "playwright",
+);
 (async () => {
   const root = path.resolve(__dirname, "..");
   const file = path.join(
@@ -56,7 +58,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright")
     stdin: {
       resolveDir: root,
       loader: "tsx",
-      contents: `import React from 'react';import{createRoot}from'react-dom/client';import{OpenTargetAction}from'${file}';window.reloads=0;window.transitions=0;window.confirmations=0;window.allowClose=true;window.fixtureRouter={refresh:()=>window.reloads++,push:()=>{}};createRoot(document.getElementById('app')).render(React.createElement(OpenTargetAction,{queueItem:{id:'binding',href:'/editor',targetId:'watch',targetType:'WATCH',status:'IN_PROGRESS',preview:{title:'Fixture watch'}},transition:{metadata:{intent:'OPEN_TARGET',presentation:'MODAL',targetMode:'media'}},className:'',onRefreshRequested:()=>window.reloads++,onTransitionApplied:()=>window.transitions++}));`,
+      contents: `import React from 'react';import{createRoot}from'react-dom/client';import{OpenTargetAction}from'${file}';window.reloads=0;window.transitions=0;window.confirmations=0;window.allowClose=true;window.fixtureRouter={refresh:()=>window.reloads++,push:()=>{}};createRoot(document.getElementById('app')).render(React.createElement(OpenTargetAction,{queueItem:{id:'binding',href:'/editor',targetId:'watch',targetType:'WATCH',status:'IN_PROGRESS',preview:{title:'Fixture watch'}},transition:{metadata:{intent:'OPEN_TARGET',presentation:'MODAL',targetMode:new URLSearchParams(location.search).has('legacy')?'edit':'media'}},className:'',onRefreshRequested:()=>window.reloads++,onTransitionApplied:()=>window.transitions++}));`,
     },
     outfile: path.join(tmp, "app.js"),
     bundle: true,
@@ -200,9 +202,18 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright")
     await send({ type: "workspace-target-modal-close" });
     await page.locator("iframe").waitFor({ state: "detached" });
     assert.equal(await page.evaluate(() => reloads), 2);
+    await page.goto("http://127.0.0.1:" + server.address().port + "/?legacy=1");
+    await page.getByRole("button").first().click();
+    await page.locator("iframe").waitFor();
+    await close();
+    assert.equal(
+      await page.evaluate(() => reloads),
+      1,
+      "Non-media target dialogs retain their existing close refresh behavior",
+    );
     assert.deepEqual(errors, []);
     console.log(
-      "PASS actual OpenTargetAction: unchanged close, saved changes once, reopen, unsaved discard/confirmation, handled transition, source isolation and child close. No business writes.",
+      "PASS actual OpenTargetAction: unchanged close, saved changes once, reopen, unsaved discard/confirmation, handled transition, source isolation, child close and preserved non-media behavior. No business writes.",
     );
   } finally {
     await browser.close();
