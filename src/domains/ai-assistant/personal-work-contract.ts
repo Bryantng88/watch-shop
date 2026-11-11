@@ -1,5 +1,8 @@
 import { z } from "zod";
-import type { BenCalendarTarget, BenCalendarResult } from "@/domains/personal-work/shared/ben-calendar-sync";
+import type {
+  BenCalendarTarget,
+  BenCalendarResult,
+} from "@/domains/personal-work/shared/ben-calendar-sync";
 const time = z.string().datetime({ offset: true });
 export const personalWorkPlanSchema = z
   .object({
@@ -71,7 +74,11 @@ export const personalWorkPlanSchema = z
       c.addIssue({ code: "custom", message: "Người chia sẻ bị trùng" });
   });
 export type PersonalWorkPlan = z.infer<typeof personalWorkPlanSchema>;
-export type PersonalWorkDraft = {
+export const personalWorkPlansSchema = z
+  .array(personalWorkPlanSchema)
+  .min(2)
+  .max(8);
+export type PersonalWorkDraftItem = {
   calendarTargets?: BenCalendarTarget[];
   requiredPermissions?: string[];
   requiredTaskIds?: string[];
@@ -85,6 +92,14 @@ export type PersonalWorkDraft = {
     accessLevel: "VIEWER" | "EDITOR";
   }[];
 };
+export type PersonalWorkDraft = PersonalWorkDraftItem & {
+  items?: PersonalWorkDraftItem[];
+};
+export function personalWorkDraftItems(
+  draft: PersonalWorkDraft,
+): PersonalWorkDraftItem[] {
+  return draft.items ?? [draft];
+}
 export type CreatedPersonalWork = {
   calendarRecipients?: BenCalendarResult[];
   revision: number;
