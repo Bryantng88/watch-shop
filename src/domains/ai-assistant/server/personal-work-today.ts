@@ -1,3 +1,4 @@
+import { personalWorkCode } from "@/domains/personal-work/shared/personal-work-code";
 import type { DB } from "@/server/db/client";
 import { personalWorkViewAccessWhere } from "@/domains/personal-work/server/personal-work-access";
 import {
@@ -137,6 +138,7 @@ export async function personalWorkToday(
       return [
         {
           ...row,
+          code: personalWorkCode(row.id),
           title: row.title.slice(0, 180),
           dueAt: row.dueAt?.toISOString() ?? null,
           scheduledEndAt: row.scheduledEndAt?.toISOString() ?? null,

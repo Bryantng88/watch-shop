@@ -434,6 +434,12 @@ not supported by personal-work updates; cancel it and approve a new run instead.
 
 ## Personal work assignment and updates
 
+Show a stable CV code next to each personal work item and in Ben's lookup
+results. A single message may propose updates to up to eight distinct items.
+Read fresh detail for each item, clarify unresolved references in chat, and
+show one review with a single approval. Recheck permissions and item versions
+for the whole batch at approval and commit the updates together.
+
 A personal-work creation may carry nullable `assigneeUserId`. The signed-in user
 remains the owner; assignment requires TASK_VIEW + TASK_MANAGE and a fresh uniquely
 resolved personalWork.people recipient with task access. The review names the
