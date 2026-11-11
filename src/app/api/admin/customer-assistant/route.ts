@@ -11,7 +11,7 @@ const command=z.discriminatedUnion("action",[
  z.object({action:z.literal("push-status"),endpoint:pushEndpoint}).strict(),
  z.object({action:z.literal("subscribe-push"),subscription:pushSubscription}).strict(),
  z.object({action:z.literal("unsubscribe-push"),endpoint:pushEndpoint}).strict(),
- z.object({action:z.literal("send"),id:uuid.optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
+ z.object({action:z.literal("send"),id:uuid.optional(),personalWorkApprovalRevision:z.number().int().positive().optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
  z.object({action:z.literal("cancel"),id:uuid}).strict(),
  z.object({action:z.literal("permission-support"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("update-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),
@@ -49,7 +49,7 @@ async function handle(req:NextRequest){try{
  if(c.action==="push-status")return NextResponse.json({enabled:await hasBenPush(user.id,c.endpoint)},{headers:{"Cache-Control":"no-store"}});
  if(c.action==="subscribe-push"){await saveBenPush(user.id,c.subscription);return NextResponse.json({ok:true});}
  if(c.action==="unsubscribe-push"){await removeBenPush(user.id,c.endpoint);return NextResponse.json({ok:true});}
- if(c.action==="send")return NextResponse.json(await sendAssistant(user.id,{...c,screenPath:screenPathForMessage(c.screenPath,req.headers.get("referer"),process.env.APP_URL)}));
+ if(c.action==="send")return NextResponse.json(await sendAssistant(user.id,{...c,screenPath:screenPathForMessage(c.screenPath,req.headers.get("referer"),process.env.APP_URL)},work=>after(work)));
  if(c.action==="cancel")return NextResponse.json(await cancelAssistant(user.id,c.id));
  if(c.action==="permission-support")return NextResponse.json(await approvePermissionSupport(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="update-personal-work")return NextResponse.json(await approveAssistantPersonalWorkUpdate(user.id,c.id,c.revision));

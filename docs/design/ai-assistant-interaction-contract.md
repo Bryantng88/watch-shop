@@ -336,8 +336,9 @@ EDITOR must be expressly requested. Codex execution uses the separate explicit
 schedule contract below. EVENT requires a date, has no checklist/completion/progress and can
 have a start-only time. All-day uses the existing local end-of-day date encoding.
 
-A complete compact review is corrected in chat and approved once via the dedicated
-button. Approval rechecks current authority/category/recipients and exact revision,
+A complete compact review is corrected in chat and approved once via the create
+button or an explicit chat confirmation of the displayed revision. Scheduling
+Codex execution requires the dedicated button. Approval rechecks current authority/category/recipients and exact revision,
 then atomically creates one canonical owner-scoped TaskItem plus checklist/shares
 and a durable conversation receipt. Concurrent/replayed approvals return that
 receipt, never create duplicates. No order, technical issue, product reservation
@@ -433,6 +434,10 @@ available from the task's Codex panel. Rescheduling an existing approved run is
 not supported by personal-work updates; cancel it and approve a new run instead.
 
 ## Personal work assignment and updates
+
+An explicit chat acknowledgment of the current personal work creation draft
+uses the same revision, authorization and idempotency checks as the create
+button. The model does not authorize creation.
 
 For creation, recognize category labels in parentheses, after an explicit category
 marker, or immediately after a creation phrase. Preserve unrelated title text.

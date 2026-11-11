@@ -131,35 +131,39 @@ async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<Retur
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
 export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor)))};}
-export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string}){
+export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string;personalWorkApprovalRevision?:number},defer?: (work:()=>Promise<void>)=>void){
  const sender=await assistantActor(prisma,userId);
  if(input.imageBase64!==undefined&&(process.env.BEN_IMAGE_SEARCH_ENABLED!=="1"||!hasAssistantPermission(sender,"PRODUCT_VIEW")))
    throw new AssistantError("Tài khoản chưa được phép tìm đồng hồ bằng ảnh.",403);
  const image=input.imageBase64!==undefined?await normalizeBenImage(input.imageBase64):undefined;
  const identityQuestion=!image&&accountQuestion(input.text);
  const screenPath=screenPathSchema.safeParse(input.screenPath);const screenHint=screenPath.success?{pathname:screenPath.data,requestKey:input.requestKey,receivedAt:new Date().toISOString()}:null;
- const id=await transaction(async tx=>{
+ const result=await transaction(async tx=>{
    let row=input.id?await owned(tx,input.id,userId):await tx.customerAssistantConversation.findUnique({where:{firstRequestKey:input.requestKey}});
-   if(row){await lock(tx,row.id);row=await owned(tx,row.id,userId);let s=state(row);if(s.messages.some(m=>m.id===input.requestKey)){if(s.messages.find(m=>m.id===input.requestKey)?.text!==input.text)throw new AssistantError("Mã tin nhắn đã được dùng với nội dung khác.",409);return row.id;}
+   if(row){await lock(tx,row.id);row=await owned(tx,row.id,userId);let s=state(row);if(s.messages.some(m=>m.id===input.requestKey)){if(s.messages.find(m=>m.id===input.requestKey)?.text!==input.text)throw new AssistantError("Mã tin nhắn đã được dùng với nội dung khác.",409);return {id:row.id};}
      if(["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Đang xử lý tin trước. Bạn có thể hủy hoặc đợi kết quả.",409);
      await quota(tx,userId);
      if(row.approvedAt){s=archiveApproved(s,row.approvedRevision);delete s.customerRequest;s.approved=false;}
      let next:State={...withoutImage(s),...(image?{pendingImage:image}:{}),screenHint,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
      const acknowledgment=input.text.normalize("NFD").replace(/\p{M}/gu,"").trim().toLowerCase().replace(/[.!]+$/,"").trim();
-     if(!image&&s.personalWorkDraft?.revision===row.revision&&hasAssistantPermission(sender,"TASK_VIEW")&&/^(?:ok(?: duyet)?|duyet|dong y|xac nhan)$/.test(acknowledgment.replace(/đ/g,"d").replace(/\s+/g," "))){
-       next=message(next,"Bản nháp vẫn ở bên dưới. Bấm nút tạo để xác nhận nhé.",["TASK_VIEW"]);
+     if(!image&&input.personalWorkApprovalRevision!==undefined&&/^(?:ok(?: duyet)?|duyet|dong y|xac nhan)$/.test(acknowledgment.replace(/đ/g,"d").replace(/\s+/g," "))){
+       if(input.personalWorkApprovalRevision!==row.revision||s.personalWorkDraft?.revision!==row.revision)throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem lại.",409);
+       const schedulesCodex=personalWorkDraftItems(s.personalWorkDraft).some(item=>!!item.plan.codex);
+       if(schedulesCodex)next=message(next,"Bản nháp có yêu cầu giao Codex chạy. Bấm nút trên thẻ để xác nhận cả việc tạo và giao chạy.",["TASK_VIEW"]);
        await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next)}});
-       return row.id;
+       return {id:row.id,approveRevision:schedulesCodex?undefined:row.revision};
      }
      if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
-     await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return row.id;
+     await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return {id:row.id};
    }
    if(await tx.customerAssistantConversation.count({where:{ownerId:userId,status:{in:["QUEUED","RUNNING"]}}})>=3)throw new AssistantError("Bạn đang có 3 yêu cầu chờ.",429);
    await quota(tx,userId);
    if(input.productId&&hasAssistantPermission(sender,"PRODUCT_VIEW")&&!await tx.product.findFirst({where:{id:input.productId,type:"WATCH"},select:{id:true}}))throw new AssistantError("Không tìm thấy watch đang xem.");
    let s=newConversation(null);s.messages=[{id:input.requestKey,role:"user",text:input.text}];s.title=input.text.slice(0,65);if(identityQuestion){const actor=await assistantActor(tx,userId);delete s.orderDraft;delete s.permissionRequest;s=message(s,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
-   const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,...(identityQuestion?{status:"NEEDS_INFO"}:{}),state:json({...s,...(image?{pendingImage:image}:{}),screenHint,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return created.id;
- });return dto(await owned(prisma,id,userId));
+   const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,...(identityQuestion?{status:"NEEDS_INFO"}:{}),state:json({...s,...(image?{pendingImage:image}:{}),screenHint,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return {id:created.id};
+ });
+ if(result.approveRevision!==undefined)return approveAssistantPersonalWork(userId,result.id,result.approveRevision,defer);
+ return dto(await owned(prisma,result.id,userId));
 }
 export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(withoutImage(state(row)),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
 async function leased(tx:Tx,id:string,token:string){const row=await tx.customerAssistantConversation.findFirst({where:{id,leaseToken:token,status:"RUNNING",leaseExpiresAt:{gt:new Date()}}});if(!row)throw new AssistantError("Lượt xử lý đã hết hiệu lực.",409);await assistantActor(tx,row.ownerId);return row;}
