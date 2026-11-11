@@ -1,4 +1,5 @@
 "use client";
+import { notifyParentOfWorkspaceRefresh } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 
 import { useEffect, useState, useTransition } from "react";
 import { Check, ImageIcon, Sparkles, Undo2, X } from "lucide-react";
@@ -318,6 +319,7 @@ export default function WatchImageSection({
         const succeededKeys = Array.isArray(payload?.succeededKeys)
             ? payload.succeededKeys
             : [];
+        if (succeededKeys.length) notifyParentOfWorkspaceRefresh();
         const failed = Number(payload?.failed ?? 0);
         if (failed) {
             notify.warning({
@@ -361,6 +363,7 @@ export default function WatchImageSection({
                 return;
             }
             await waitForOperationProjectionDeliveries(json?.data ?? json);
+            notifyParentOfWorkspaceRefresh();
             const key = String(json?.data?.storageKey ?? storageKey).trim();
             const nextSlug = String(json?.data?.storefrontSlug ?? "").trim();
             onCoverImageChange?.({
@@ -423,6 +426,7 @@ export default function WatchImageSection({
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.error || "Không thể đưa Watch lên storefront.");
+            notifyParentOfWorkspaceRefresh();
             setQuickPublished(nextPublished);
             notify.success({
                 title: nextPublished ? "Đã đưa lên storefront" : "Đã ẩn khỏi storefront",
@@ -451,6 +455,7 @@ export default function WatchImageSection({
             });
             const json = await res.json().catch(() => null);
             if (!res.ok) throw new Error(json?.error || "Không thể cập nhật cách hiển thị giá.");
+            notifyParentOfWorkspaceRefresh();
             setQuickShowPrice(nextShowPrice);
             notify.success({
                 title: "Đã cập nhật hiển thị giá",
@@ -592,6 +597,7 @@ export default function WatchImageSection({
                 return;
             }
             await waitForOperationProjectionDeliveries(json?.data ?? json);
+            notifyParentOfWorkspaceRefresh();
             setPendingCoverKey(null);
             onCoverImageChange?.(null);
             setCoverPickerVersion((version) => version + 1);
@@ -958,6 +964,7 @@ export default function WatchImageSection({
                     });
                     const json = await response.json().catch(() => ({}));
                     if (!response.ok) throw new Error(json?.error || "Không thể áp dụng ảnh Sharp.");
+                    notifyParentOfWorkspaceRefresh();
                 }}
                 onApply={(replacements) => {
                     const replace = (items: PickedMediaItem[]) => items.map((item) => replacements.get(getMediaKey(item)) ?? item);

@@ -15,7 +15,7 @@ import {
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import AfterSaveDialog from "@/domains/shared/ui/navigation/AfterSaveDialog";
 import { applyQueueItemManualTransitionAction } from "@/domains/task/actions/task.actions";
-import { notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
+import { notifyParentOfWorkspaceRefresh, notifyParentOfWorkspaceTransition } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 
 import { submitWatchForm } from "./form/watch-form.actions";
 import {
@@ -805,6 +805,7 @@ export default function WatchFormClient({
     target: "content" | "image",
     next: ReviewStatusChange,
   ) => {
+    notifyParentOfWorkspaceRefresh();
     setFormValues((prev) => patchReviewState(prev, target, next));
     const done = next.status === "APPROVED";
     setMediaWorkDone((current) => ({ ...current, [target]: done }));
@@ -842,6 +843,7 @@ export default function WatchFormClient({
     if (!res.ok) {
       throw new Error(json?.error || "Không thể gửi duyệt.");
     }
+    notifyParentOfWorkspaceRefresh();
 
     setFormValues((prev): WatchFormValues => {
       if (target === "content") {
@@ -904,6 +906,7 @@ export default function WatchFormClient({
   const updateValuesAfterSave = (
     result: Awaited<ReturnType<typeof submitWatchForm>>,
   ) => {
+    notifyParentOfWorkspaceRefresh();
     setValues((prev): WatchFormValues => {
       const serverChosenImages = result?.media?.poolImages as
         | WatchFormValues["media"]["poolImages"]
@@ -963,13 +966,6 @@ export default function WatchFormClient({
           title: "Đã lưu watch",
           message: result?.message || "Thông tin watch đã được cập nhật.",
         });
-
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage(
-            { type: "workspace-target-modal-refresh" },
-            window.location.origin,
-          );
-        }
 
         if (result?.askContinueContent) {
           setAfterSaveMode("continueContent");
@@ -1397,6 +1393,7 @@ export default function WatchFormClient({
       if (!workflowResult.applied) {
         throw new Error(`Workflow chua hoan tat: ${workflowResult.reason}`);
       }
+      notifyParentOfWorkspaceRefresh();
       if (workflowResult.toState !== "DONE") {
         throw new Error("Workflow chua hoan tat: INVALID_STATE");
       }
@@ -1629,6 +1626,7 @@ export default function WatchFormClient({
 
       const outcome = result.result;
       if (!outcome.applied) throw new Error(outcome.reason ?? "REOPEN_MEDIA_NOT_APPLIED");
+      notifyParentOfWorkspaceRefresh();
       if (outcome.toState !== "RETURNED") throw new Error("REOPEN_MEDIA_INVALID_STATE");
 
       setWorkspaceState("RETURNED");

@@ -1027,12 +1027,14 @@ export function OpenTargetAction({
   const [open, setOpen] = useState(false);
   const [targetDirty, setTargetDirty] = useState(false);
   const transitionAppliedRef = useRef(false);
+  const targetChangedRef = useRef(false);
   const targetFrameRef = useRef<HTMLIFrameElement | null>(null);
   const router = useRouter();
   const dialog = useAppDialog();
   const scheduleRefresh = useCoalescedRouterRefresh(router);
   const href = openTargetHref({ queueItem, transition });
   const label = openTargetActionLabel(transition, queueItem);
+  const refreshOnlyAfterSave = metadataTextValue(objectValue(transition.metadata), "targetMode") === "media" || queueItem.targetType === "MEDIA_POST";
   const modal =
     transitionPresentation(transition) === "MODAL" ||
     transitionIntent(transition) === "OPEN_TARGET";
@@ -1060,11 +1062,20 @@ export function OpenTargetAction({
         return;
       }
 
-      if (event.data?.type === "workspace-target-modal-close") {
-        setTargetDirty(false);
-        setOpen(false);
+      // Persisted edits invalidate once on close; unsaved dirtiness alone does not.
+      if (event.data.type === "workspace-target-modal-refresh") {
+        if (refreshOnlyAfterSave) targetChangedRef.current = true;
+        else if (!transitionAppliedRef.current) {
+          if (onRefreshRequested) void onRefreshRequested();
+          else scheduleRefresh();
+        }
+        return;
       }
-      if (!transitionAppliedRef.current) {
+      setTargetDirty(false);
+      setOpen(false);
+      const changed = targetChangedRef.current;
+      targetChangedRef.current = false;
+      if ((!refreshOnlyAfterSave || changed) && !transitionAppliedRef.current) {
         if (onRefreshRequested) void onRefreshRequested();
         else scheduleRefresh();
       }
@@ -1072,12 +1083,13 @@ export function OpenTargetAction({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, scheduleRefresh]);
+  }, [onRefreshRequested, onTransitionApplied, open, queueItem.id, refreshOnlyAfterSave, scheduleRefresh]);
 
   const activate = () => {
     if (!href) return;
     onActivate?.();
     transitionAppliedRef.current = false;
+    targetChangedRef.current = false;
     setTargetDirty(false);
     if (modal) setOpen(true);
     else router.push(href);
@@ -1101,7 +1113,9 @@ export function OpenTargetAction({
     if (!(await confirmTargetLeave())) return;
     setTargetDirty(false);
     setOpen(false);
-    if (!transitionAppliedRef.current) {
+    const changed = targetChangedRef.current;
+    targetChangedRef.current = false;
+    if ((!refreshOnlyAfterSave || changed) && !transitionAppliedRef.current) {
       if (onRefreshRequested) await onRefreshRequested();
       else scheduleRefresh();
     }
