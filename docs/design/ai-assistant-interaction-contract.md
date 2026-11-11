@@ -336,8 +336,9 @@ EDITOR must be expressly requested. Codex execution uses the separate explicit
 schedule contract below. EVENT requires a date, has no checklist/completion/progress and can
 have a start-only time. All-day uses the existing local end-of-day date encoding.
 
-A complete compact review is corrected in chat and approved once via the dedicated
-button. Approval rechecks current authority/category/recipients and exact revision,
+A complete compact review is corrected in chat and approved once via the create
+button or an explicit chat confirmation of the displayed revision. Scheduling
+Codex execution requires the dedicated button. Approval rechecks current authority/category/recipients and exact revision,
 then atomically creates one canonical owner-scoped TaskItem plus checklist/shares
 and a durable conversation receipt. Concurrent/replayed approvals return that
 receipt, never create duplicates. No order, technical issue, product reservation
@@ -434,13 +435,17 @@ not supported by personal-work updates; cancel it and approve a new run instead.
 
 ## Personal work assignment and updates
 
+An explicit chat acknowledgment of the current personal work creation draft
+uses the same revision, authorization and idempotency checks as the create
+button. The model does not authorize creation.
+
 For creation, recognize category labels in parentheses, after an explicit category
 marker, or immediately after a creation phrase. Preserve unrelated title text.
 Ask only for a missing or ambiguous category or time window. A date alone needs
 a time, unless the user explicitly chooses all day or no schedule. Classification
 as Codex does not authorize worker execution.
 
-Show a stable sequential CV code (such as CV-42) before each personal work title and in Ben's lookup
+Show a stable sequential CV code (such as CV-42 for a task or EV-43 for an event) before each personal work title and in Ben's lookup
 results. Resolve old UUID-based codes for compatibility. A single message may propose updates to up to eight distinct items.
 Read fresh detail for each item, clarify unresolved references in chat, and
 show one review with a single approval. Recheck permissions and item versions

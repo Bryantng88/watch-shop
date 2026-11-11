@@ -182,6 +182,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const [calendarTags, setCalendarTags] = useState("");
   const [newDomain, setNewDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [workType, setWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
+  const creatingEvent = isPersonalEvent(workType);
   const [targetType, setTargetType] = useState<PersonalWorkTargetType | "">("");
   const [targetQuery, setTargetQuery] = useState("");
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
@@ -462,10 +463,10 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
                   tags: parsePersonalWorkTags(newTags),
-                  domain: newDomain,
-                  categoryKey: newCategoryKey,
+                  domain: creatingEvent ? "GENERAL" : newDomain,
+                  categoryKey: creatingEvent ? "GENERAL" : newCategoryKey,
                   workType,
-                  targets: selectedTargets,
+                  targets: creatingEvent ? [] : selectedTargets,
                   ...(dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
                   estimatedDays,
                 });
@@ -483,6 +484,15 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             );
           }}
         >
+          <div role="group" aria-label="Kiểu mục" className="mb-2 inline-flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
+            {[false, true].map(event => (
+              <button key={String(event)} type="button" aria-pressed={creatingEvent === event}
+                onClick={() => setWorkType(event ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${creatingEvent === event ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}>
+                {event ? "Sự kiện" : "Công việc"}
+              </button>
+            ))}
+          </div>
           <AdminFlatToolbar
             className={createStyles.toolbar}
           >
@@ -490,12 +500,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              aria-label={isPersonalEvent(workType) ? "Tên sự kiện" : "Tên công việc"}
-              placeholder={isPersonalEvent(workType)?"Tên sự kiện...":"Việc cần làm..."}
+              aria-label={creatingEvent ? "Tên sự kiện" : "Tên công việc"}
+              placeholder={creatingEvent?"Tên sự kiện...":"Việc cần làm..."}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
+            {!creatingEvent && (
             <select
-              aria-label="Loại công việc"
+              aria-label="Nhóm công việc"
               value={newCategoryKey}
               onChange={(e) => { setNewCategoryKey(e.target.value); changeDomain(data.categories.find(c => c.key === e.target.value)?.domain || "GENERAL"); }}
               className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm"
@@ -506,10 +517,11 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 </option>
               ))}
             </select>
+            )}
             <input
               type="date"
               aria-label="Ngày dự kiến"
-              required={isPersonalEvent(workType)}
+              required={creatingEvent}
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
@@ -520,14 +532,14 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               disabled={pending}
               className="h-11 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             >
-              {isPersonalEvent(workType)?"Thêm sự kiện":"Thêm việc"}
+              {creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </button>
           </AdminFlatToolbar>
+          {creatingEvent && <div className="mt-2"><PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} /></div>}
           <details className="mt-2 text-sm">
-            <summary className="cursor-pointer text-slate-600">Giờ, sự kiện và thẻ</summary>
+            <summary className="cursor-pointer text-slate-600">{creatingEvent ? "Thẻ và thời lượng" : "Giờ và thẻ"}</summary>
             <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              <PersonalWorkKindField event={isPersonalEvent(workType)} onChange={event=>setWorkType(event?"EVENT":PERSONAL_WORK_TYPES[newDomain][0].key)}/>
-              <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
+              {!creatingEvent && <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />}
               <label className="flex items-center gap-2 text-xs text-slate-600">
                 Số ngày dự kiến
                 <input type="number" min={1} max={365} value={estimatedDays}
@@ -958,7 +970,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           onClick={() => openTaskEdit(item)}
                           className={`truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
                         >
-                          <span className="mr-1.5 whitespace-nowrap font-mono text-xs font-semibold text-slate-600">{personalWorkCode(item.id, item.personalWorkNumber)}</span>{item.title}
+                          <span className="mr-1.5 whitespace-nowrap font-mono text-xs font-semibold text-slate-600">{personalWorkCode(item.id, item.personalWorkNumber, item.workType)}</span>{item.title}
                         </button>
                         {item.assignee && item.assignee.id !== item.owner.id && <span className="text-[11px] text-slate-500">→ {item.assignee.name || "Người thực hiện"}</span>}
                         {item.access !== "OWNER" && (

@@ -110,7 +110,7 @@ export async function personalWorkToday(
       return [
         {
           ...row,
-          code: personalWorkCode(row.id,row.personalWorkNumber),
+          code: personalWorkCode(row.id,row.personalWorkNumber,row.workTypeId),
           title: row.title.slice(0, 180),
           dueAt: row.dueAt?.toISOString() ?? null,
           scheduledEndAt: row.scheduledEndAt?.toISOString() ?? null,
