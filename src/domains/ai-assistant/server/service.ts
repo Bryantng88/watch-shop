@@ -145,6 +145,12 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
      await quota(tx,userId);
      if(row.approvedAt){s=archiveApproved(s,row.approvedRevision);delete s.customerRequest;s.approved=false;}
      let next:State={...withoutImage(s),...(image?{pendingImage:image}:{}),screenHint,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
+     const acknowledgment=input.text.normalize("NFD").replace(/\p{M}/gu,"").trim().toLowerCase().replace(/[.!]+$/,"").trim();
+     if(!image&&s.personalWorkDraft?.revision===row.revision&&hasAssistantPermission(sender,"TASK_VIEW")&&/^(?:ok(?: duyet)?|duyet|dong y|xac nhan)$/.test(acknowledgment.replace(/đ/g,"d").replace(/\s+/g," "))){
+       next=message(next,"Bản nháp vẫn ở bên dưới. Bấm nút tạo để xác nhận nhé.",["TASK_VIEW"]);
+       await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next)}});
+       return row.id;
+     }
      if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
      await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return row.id;
    }
