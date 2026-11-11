@@ -580,87 +580,175 @@
       ]
     },
     "personalWorkUpdatePlan": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "itemId": {
-          "type": "string"
-        },
-        "expectedUpdatedAt": {
-          "type": "string"
-        },
-        "fields": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": [
-              "title",
-              "note",
-              "dueAt",
-              "scheduledEndAt",
-              "status"
-            ]
-          }
-        },
-        "changes": {
+      "anyOf": [
+        {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "title": {
-              "type": [
-                "string",
-                "null"
-              ]
+            "itemId": {
+              "type": "string"
             },
-            "note": {
-              "type": [
-                "string",
-                "null"
-              ]
+            "expectedUpdatedAt": {
+              "type": "string"
             },
-            "dueAt": {
-              "type": [
-                "string",
-                "null"
-              ]
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "title",
+                  "note",
+                  "dueAt",
+                  "scheduledEndAt",
+                  "status"
+                ]
+              }
             },
-            "scheduledEndAt": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "status": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "enum": [
-                "TODO",
-                "IN_PROGRESS",
-                "DONE",
-                "CANCELLED",
-                null
+            "changes": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "title": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "note": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "dueAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "scheduledEndAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "TODO",
+                    "IN_PROGRESS",
+                    "DONE",
+                    "CANCELLED",
+                    null
+                  ]
+                }
+              },
+              "required": [
+                "title",
+                "note",
+                "dueAt",
+                "scheduledEndAt",
+                "status"
               ]
             }
           },
           "required": [
-            "title",
-            "note",
-            "dueAt",
-            "scheduledEndAt",
-            "status"
+            "itemId",
+            "expectedUpdatedAt",
+            "fields",
+            "changes"
           ]
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "itemId": {
+                "type": "string"
+              },
+              "expectedUpdatedAt": {
+                "type": "string"
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "title",
+                    "note",
+                    "dueAt",
+                    "scheduledEndAt",
+                    "status"
+                  ]
+                }
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "note": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "dueAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "scheduledEndAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "TODO",
+                      "IN_PROGRESS",
+                      "DONE",
+                      "CANCELLED",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "note",
+                  "dueAt",
+                  "scheduledEndAt",
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "itemId",
+              "expectedUpdatedAt",
+              "fields",
+              "changes"
+            ]
+          }
+        },
+        {
+          "type": "null"
         }
-      },
-      "required": [
-        "itemId",
-        "expectedUpdatedAt",
-        "fields",
-        "changes"
       ]
     },
     "personalWorkPlans": {
