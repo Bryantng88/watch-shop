@@ -155,3 +155,18 @@ test('group-post conversation prepares a review without a business-write API cal
   assert.deepEqual(calls.slice(0,2).map(c=>c.body.lookup.tool),['media.watches.select','media.posts.draft']);
   assert.equal(calls.at(-1).body.plan,null);
 });
+
+test('two requested personal tasks survive one finish and cannot mix with a single plan or a partial batch',async()=>{
+ const p={kind:'TASK',title:'Lấy con Bell về từ thầy Long',note:null,categoryKey:'GENERAL',workType:null,dueAt:'2026-11-11T16:00:00+07:00',scheduledEndAt:null,tags:[],shares:[],priority:'MEDIUM',checklist:[],syncGoogle:false};
+ const batch=[p,{...p,title:'Khảo sát số hóa hậu cần',dueAt:'2026-11-12T14:00:00+07:00'}];
+ const turn={...finish,reply:'Mình đã chuẩn bị đủ 2 việc.',personalWorkPlans:batch};
+ assert.deepEqual(validateCustomerTurn(turn).personalWorkPlans,batch);
+ for(const extra of [{personalWorkPlan:p},{personalWorkPlans:[p]},{personalWorkPlans:Array(9).fill(p)},{personalWorkPlans:[p,{...p,title:''}]},{permissionRequest:'mixed'},{personalWorkUpdatePlan:{}}])assert.throws(()=>validateCustomerTurn({...turn,...extra}));
+ let body;
+ await runCustomerConversation({id:'r',text:'Tạo 2 việc'},{execute:async()=>turn,api:async(op,b)=>{body=b;return{accepted:true};}});
+ assert.deepEqual(body.personalWorkPlans,batch);assert.equal(body.personalWorkPlan,null);
+});
+test('overdue lookup is separate from the zero-argument today lookup',()=>{
+ assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.overdue',reply:null}).lookup,{tool:'personalWork.overdue'});
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.overdue',reply:null,query:'today'}));
+});

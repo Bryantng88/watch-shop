@@ -38,6 +38,7 @@ jobs:
       - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
       - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit
+      - run: npm run build
   calendar-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15

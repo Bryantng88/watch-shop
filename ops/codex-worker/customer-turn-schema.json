@@ -42,7 +42,8 @@
         "personalWork.detail",
         "stock.receipts",
         "media.watches.select",
-        "media.posts.draft"
+        "media.posts.draft",
+        "personalWork.overdue"
       ]
     },
     "query": {
@@ -661,6 +662,160 @@
         "fields",
         "changes"
       ]
+    },
+    "personalWorkPlans": {
+      "anyOf": [
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "TASK",
+                  "EVENT"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "categoryKey": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "workType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "dueAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "scheduledEndAt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tags": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "string",
+                  "maxLength": 80
+                }
+              },
+              "shares": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "accessLevel": {
+                      "type": "string",
+                      "enum": [
+                        "VIEWER",
+                        "EDITOR"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "accessLevel"
+                  ]
+                }
+              },
+              "syncGoogle": {
+                "type": "boolean"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "LOW",
+                  "MEDIUM",
+                  "HIGH",
+                  "URGENT"
+                ]
+              },
+              "checklist": {
+                "type": "array",
+                "maxItems": 12,
+                "items": {
+                  "type": "string",
+                  "maxLength": 500
+                }
+              },
+              "assigneeUserId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "codex": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "startAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "startAt"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "title",
+              "note",
+              "categoryKey",
+              "workType",
+              "dueAt",
+              "scheduledEndAt",
+              "tags",
+              "shares",
+              "syncGoogle",
+              "priority",
+              "checklist",
+              "assigneeUserId",
+              "codex"
+            ]
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "required": [
@@ -678,6 +833,7 @@
     "navigationIntent",
     "codePlan",
     "personalWorkPlan",
-    "personalWorkUpdatePlan"
+    "personalWorkUpdatePlan",
+    "personalWorkPlans"
   ]
 }

@@ -17,6 +17,7 @@ export const LOOKUP_PERMISSIONS: Readonly<Record<string, readonly string[]>> = {
   "personalWork.search": ["TASK_VIEW"],
   "personalWork.detail": ["TASK_VIEW"],
   "personalWork.today": ["TASK_VIEW"],
+  "personalWork.overdue": ["TASK_VIEW"],
   "personalWork.categories": ["TASK_VIEW"],
   "personalWork.people": ["TASK_VIEW"],
   "orders.list": ["ORDER_VIEW"],

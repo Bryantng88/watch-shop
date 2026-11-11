@@ -207,8 +207,15 @@ For a request to list today's personal work, the worker calls
 `personalWork.today` with no arguments. The leased conversation owner is
 the only account used by the server. The lookup requires TASK_VIEW and
 uses the same owner/share scope as the Personal Work page. It returns
-bounded open work through the end of today in Asia/Ho_Chi_Minh, including
-overdue and unscheduled work, with no notes or actions. Empty results and
+only bounded open tasks/events scheduled or still ongoing today in Asia/Ho_Chi_Minh.
+Overdue and unscheduled work is returned as counts, never historical titles in
+this lookup. Today-only replies list today's items first and mention overdue
+work in one brief count sentence. Do not fetch/list overdue titles from history
+or another tool unless explicitly requested. `personalWork.overdue` is a separate
+zero-argument read for that explicit request, with the same scope. Scan schedule
+metadata only (at most 10,000 active records); fetch titles only for the selected
+day/bucket's first 12 items. When countsExact is false, counts are lower bounds
+and an empty scanned selection cannot establish no work exists. Empty results and
 truncation are distinct. Existing permission checks apply to the reply
 and its task references before delivery and history display.
 
@@ -374,6 +381,28 @@ by watch identifiers without a date constraint or private customer fields.
 Photo inventory search tries exact SKU before matching all identifying terms.
 Image turns show bounded candidate cards using inline photo, title and selling
 price. Ordinary requests for a product gallery still use the gallery card.
+
+## Multiple personal tasks/events in one command
+
+For 2–8 independently requested items, finish with `personalWorkPlans` containing
+every complete plan and `personalWorkPlan=null`; single-item output remains
+backward compatible. Never convert independent items into a checklist, omit later
+lines or show a partial actionable review when an item needs clarification. Ask
+about missing facts in chat; corrections preserve unmentioned items in the
+pending `personalWorkDraft.items` batch. More than eight requires splitting the
+request explicitly, never silent truncation. Mixed business/update/code/Media
+plans are invalid.
+
+Display a flat compact review with each item's title, schedule, assignee, shares,
+Google destinations and Codex gate as applicable, plus one “Tạo N mục” button.
+One owned-conversation revision approval revalidates every item and creates all
+canonical tasks/events, checklists/shares, optional Codex runs and receipts in the
+same serializable transaction. Failure of any item rolls back the entire group.
+Concurrent/replayed approval returns all receipts without recreating or repeating
+Google sync. Receipt identity is revision + item ID, not revision alone. After
+commit, calendar sync/status is handled separately for each created item, preserving
+already-created tasks when a provider fails. Assignment notification scheduling
+remains post-commit. No new completion, publication or deployment approval is added.
 
 ## Scheduled Codex dispatch from personal task creation
 
