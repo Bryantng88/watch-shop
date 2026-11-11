@@ -31,3 +31,12 @@ export function notifyParentOfWorkspaceTransition(
     window.location.origin,
   );
 }
+
+/** A persisted edit, not unsaved form dirtiness or opening an editor. */
+export function notifyParentOfWorkspaceRefresh() {
+  if (typeof window === "undefined" || window.parent === window) return;
+  window.parent.postMessage(
+    { type: "workspace-target-modal-refresh" },
+    window.location.origin,
+  );
+}

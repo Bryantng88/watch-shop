@@ -1027,6 +1027,7 @@ export function OpenTargetAction({
   const [open, setOpen] = useState(false);
   const [targetDirty, setTargetDirty] = useState(false);
   const transitionAppliedRef = useRef(false);
+  const targetChangedRef = useRef(false);
   const targetFrameRef = useRef<HTMLIFrameElement | null>(null);
   const router = useRouter();
   const dialog = useAppDialog();
@@ -1060,11 +1061,16 @@ export function OpenTargetAction({
         return;
       }
 
-      if (event.data?.type === "workspace-target-modal-close") {
-        setTargetDirty(false);
-        setOpen(false);
+      // Persisted edits invalidate once on close; unsaved dirtiness alone does not.
+      if (event.data.type === "workspace-target-modal-refresh") {
+        targetChangedRef.current = true;
+        return;
       }
-      if (!transitionAppliedRef.current) {
+      setTargetDirty(false);
+      setOpen(false);
+      const changed = targetChangedRef.current;
+      targetChangedRef.current = false;
+      if (changed && !transitionAppliedRef.current) {
         if (onRefreshRequested) void onRefreshRequested();
         else scheduleRefresh();
       }
@@ -1078,6 +1084,7 @@ export function OpenTargetAction({
     if (!href) return;
     onActivate?.();
     transitionAppliedRef.current = false;
+    targetChangedRef.current = false;
     setTargetDirty(false);
     if (modal) setOpen(true);
     else router.push(href);
@@ -1101,7 +1108,9 @@ export function OpenTargetAction({
     if (!(await confirmTargetLeave())) return;
     setTargetDirty(false);
     setOpen(false);
-    if (!transitionAppliedRef.current) {
+    const changed = targetChangedRef.current;
+    targetChangedRef.current = false;
+    if (changed && !transitionAppliedRef.current) {
       if (onRefreshRequested) await onRefreshRequested();
       else scheduleRefresh();
     }

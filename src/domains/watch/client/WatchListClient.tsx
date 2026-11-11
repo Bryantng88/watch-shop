@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -19,6 +20,7 @@ import {
   useBusinessEntityPreview,
 } from "@/domains/shared/ui/business/BusinessEntityPreview";
 import React from "react";
+import { isWorkspaceTransitionOutcome } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 import { WatchListToolbar } from "../ui/list";
 import WatchListFilters from "../ui/list/WatchListFilters";
 import WatchListTable from "../ui/list/WatchListTable";
@@ -381,6 +383,9 @@ export default function WatchListClient(props: WatchListClientProps) {
   const [inlineRepairRow, setInlineRepairRow] = useState<WatchRow | null>(null);
   const [inlineRepairSubmitting, setInlineRepairSubmitting] = useState(false);
   const [quickMediaRow, setQuickMediaRow] = useState<WatchRow | null>(null);
+  const quickMediaFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const quickMediaChangedRef = useRef(false);
+  const quickMediaCloseRef = useRef<() => void>(() => {});
 
   /**
    * URL state and server props must be synced separately.
@@ -983,7 +988,10 @@ export default function WatchListClient(props: WatchListClientProps) {
           : `Watch đã được đưa vào Workspace ${targetLabel}.`,
       });
       await loadList(new URLSearchParams(params.toString()), { meta: "lite" });
-      if (row.hasImages) setQuickMediaRow(row);
+      if (row.hasImages) {
+        quickMediaChangedRef.current = false;
+        setQuickMediaRow(row);
+      }
     } catch (error) {
       notify.error({
         title: "Không thể đưa vào Space Media",
@@ -1655,6 +1663,24 @@ export default function WatchListClient(props: WatchListClientProps) {
   const loading = isLoading || isPending;
   const displayRows = rows;
   const duplicateView = params.get("duplicates") === "1";
+  quickMediaCloseRef.current = () => {
+    setQuickMediaRow(null);
+    const changed = quickMediaChangedRef.current;
+    quickMediaChangedRef.current = false;
+    if (changed) void loadList(new URLSearchParams(params.toString()), { meta: "lite", consistency: "source" });
+  };
+  const quickMediaProductId = quickMediaRow?.productId;
+  useEffect(() => {
+    if (!quickMediaProductId) return;
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== quickMediaFrameRef.current?.contentWindow) return;
+      if (event.data?.type === "workspace-target-modal-refresh" || isWorkspaceTransitionOutcome(event.data)) quickMediaChangedRef.current = true;
+      if (event.data?.type === "workspace-target-modal-close") quickMediaCloseRef.current();
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, [quickMediaProductId]);
+
   return (
     <BusinessListShell
       header={
@@ -1976,13 +2002,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 </a>
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuickMediaRow(null);
-                    void loadList(new URLSearchParams(params.toString()), {
-                      meta: "lite",
-                      consistency: "source",
-                    });
-                  }}
+                  onClick={() => quickMediaCloseRef.current()}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lg leading-none text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                   aria-label="Đóng"
                 >
@@ -1991,6 +2011,7 @@ export default function WatchListClient(props: WatchListClientProps) {
               </div>
             </div>
             <iframe
+              ref={quickMediaFrameRef}
               src={`/admin/watches/${quickMediaRow.productId}/edit?embedded=1&mode=media&focus=cover&entryPoint=WATCH_LIST_QUICK&returnTo=${encodeURIComponent("/admin/watches")}`}
               title={`Xử lý Media - ${quickMediaRow.title || quickMediaRow.sku || "Watch"}`}
               className="min-h-0 flex-1 border-0 bg-slate-50"
