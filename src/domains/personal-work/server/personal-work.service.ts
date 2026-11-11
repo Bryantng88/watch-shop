@@ -291,6 +291,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       return {
         id: item.id,
+        personalWorkNumber: item.personalWorkNumber,
         assignedToMe: item.assignedToUserId === userId,
         assignee: item.assignedToUser || null,
         codexRuns: item.codexRuns.map(run => ({ ...run, notBefore:run.notBefore?.toISOString()??null, createdAt: run.createdAt.toISOString(), startedAt: run.startedAt?.toISOString() ?? null, finishedAt: run.finishedAt?.toISOString() ?? null })),

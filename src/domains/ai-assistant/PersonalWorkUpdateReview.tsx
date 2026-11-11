@@ -9,7 +9,7 @@ export default function PersonalWorkUpdateReview({draft,busy,onApprove}:{draft:P
   {items.map(item=>{
    const c=personalWorkUpdateInput(item.plan);
    return <div key={item.plan.itemId} className="mt-3 border-t pt-3">
-  <p className="font-medium">{personalWorkCode(item.plan.itemId)} · {item.title}</p>
+  <p className="font-medium">{item.code ?? personalWorkCode(item.plan.itemId)} · {item.title}</p>
   {c.title!==undefined&&<p className="mt-2">Tên → {c.title}</p>}
   {c.status&&<p className="mt-2">Trạng thái → {{TODO:"Chưa làm",IN_PROGRESS:"Đang làm",DONE:"Hoàn thành",CANCELLED:"Đã hủy"}[c.status]}</p>}
   {c.dueAt!==undefined&&<p className="mt-2">Bắt đầu → {date(c.dueAt)}</p>}
