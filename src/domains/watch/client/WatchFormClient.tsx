@@ -1393,6 +1393,7 @@ export default function WatchFormClient({
       if (!workflowResult.applied) {
         throw new Error(`Workflow chua hoan tat: ${workflowResult.reason}`);
       }
+      notifyParentOfWorkspaceRefresh();
       if (workflowResult.toState !== "DONE") {
         throw new Error("Workflow chua hoan tat: INVALID_STATE");
       }
@@ -1625,6 +1626,7 @@ export default function WatchFormClient({
 
       const outcome = result.result;
       if (!outcome.applied) throw new Error(outcome.reason ?? "REOPEN_MEDIA_NOT_APPLIED");
+      notifyParentOfWorkspaceRefresh();
       if (outcome.toState !== "RETURNED") throw new Error("REOPEN_MEDIA_INVALID_STATE");
 
       setWorkspaceState("RETURNED");

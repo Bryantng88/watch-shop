@@ -1,4 +1,5 @@
 "use client";
+import { notifyParentOfWorkspaceRefresh } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 
 import { useEffect, useMemo, useState } from "react";
 import { Gem, PackagePlus } from "lucide-react";
@@ -158,6 +159,7 @@ export default function WatchSpecModal({
     setStrapMessage("");
     try {
       await installStrapFromSpecAction({ watchId, variantId: selectedStrapId });
+      notifyParentOfWorkspaceRefresh();
       const installed = availableStraps.find(
         (item) => item.variantId === selectedStrapId,
       );
