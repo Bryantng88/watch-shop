@@ -27,9 +27,9 @@ export default function AccessoryAcquisitionEntryClient({
     void listStrapColorsAction().then(setStrapColors);
   }, [strapColors.length]);
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-white">
       <div className="mx-auto max-w-[1500px] px-6 pt-6">
-        <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-violet-100 bg-gradient-to-r from-white to-violet-50 p-4 shadow-sm">
+        <section className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 py-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-violet-600">
               Phiếu nhập phụ kiện
@@ -39,18 +39,18 @@ export default function AccessoryAcquisitionEntryClient({
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+            <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1">
               <button
                 type="button"
                 onClick={() => setKind("strap")}
-                className={`inline-flex min-w-36 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${kind === "strap" ? "bg-violet-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`inline-flex min-w-20 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${kind === "strap" ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-white"}`}
               >
                 <Link2 className="h-4 w-4" /> Dây
               </button>
               <button
                 type="button"
                 onClick={() => setKind("clasp")}
-                className={`inline-flex min-w-36 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${kind === "clasp" ? "bg-violet-600 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50"}`}
+                className={`inline-flex min-w-20 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${kind === "clasp" ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-white"}`}
               >
                 <ShieldCheck className="h-4 w-4" /> Khóa
               </button>
@@ -59,7 +59,7 @@ export default function AccessoryAcquisitionEntryClient({
               <button
                 type="button"
                 onClick={onClose}
-                className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-white"
                 aria-label="Đóng"
               >
                 <X className="h-4 w-4" />

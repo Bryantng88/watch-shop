@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 import { useRouter } from "next/navigation";
 import {
-    BookOpen,
     Box,
-    CalendarDays,
-    ChevronRight,
-    ClipboardCheck,
-    FileText,
     Loader2,
     PackagePlus,
     Plus,
@@ -42,7 +38,7 @@ type Props = {
 };
 
 const FIELD_CLASS =
-    "h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
+    "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
 
 function toLocalDateTimeInputValue(date: Date) {
     return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -86,14 +82,14 @@ function SectionHeader({
     actions?: ReactNode;
 }) {
     return (
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 py-3">
             <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-500">
                     {icon}
                 </div>
                 <div className="min-w-0">
                     <div className="text-base font-semibold text-slate-950">{title}</div>
-                    <div className="mt-1 text-sm leading-5 text-slate-500">{description}</div>
+                    <div className="sr-only">{description}</div>
                 </div>
             </div>
             {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
@@ -164,7 +160,7 @@ function VendorQuickField({
                         className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700 transition hover:text-violet-800 disabled:cursor-not-allowed disabled:text-slate-300"
                     >
                         <Plus className="h-3.5 w-3.5" />
-                        Vendor moi
+                        Thêm vendor
                     </button>
                 ) : null}
             </div>
@@ -176,12 +172,13 @@ function VendorQuickField({
                     </span>
                 ) : null}
                 <select
+                    aria-label="Vendor"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     disabled={disabled || pending}
                     className={`${FIELD_CLASS} ${selected ? "pl-11" : ""}`}
                 >
-                    <option value="">Chon vendor</option>
+                    <option value="">Chọn vendor</option>
                     {vendors.map((vendor) => (
                         <option key={vendor.id} value={vendor.id}>
                             {vendor.name}
@@ -195,7 +192,7 @@ function VendorQuickField({
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px_auto_auto] md:items-end">
                         <div>
                             <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-500">
-                                Ten vendor moi
+                                Tên vendor mới
                             </label>
                             <input
                                 value={name}
@@ -207,7 +204,7 @@ function VendorQuickField({
                         </div>
                         <div>
                             <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-500">
-                                Dien thoai
+                                Điện thoại
                             </label>
                             <input
                                 value={phone}
@@ -221,7 +218,7 @@ function VendorQuickField({
                             type="button"
                             disabled={pending || !name.trim()}
                             onClick={handleCreate}
-                            className="inline-flex h-11 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                            className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
                             {pending ? "Dang them" : "Them"}
                         </button>
@@ -233,7 +230,7 @@ function VendorQuickField({
                                 setPhone("");
                                 setCreating(false);
                             }}
-                            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex h-10 w-11 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label="Dong form them vendor"
                         >
                             <X className="h-4 w-4" />
@@ -569,104 +566,20 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
     }
 
     return (
-        <div className="min-h-screen pb-24">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <nav className="flex items-center gap-2 text-sm text-slate-500">
-                    <span>Quan ly Space</span>
-                    <ChevronRight className="h-4 w-4 text-slate-300" />
-                    <span>Ky thuat Spaces</span>
-                    <ChevronRight className="h-4 w-4 text-slate-300" />
-                    <span className="font-medium text-slate-800">Tao phieu nhap watch</span>
-                </nav>
-
-                <button
-                    type="button"
-                    className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                >
-                    <BookOpen className="h-4 w-4" />
-                    Xem huong dan
-                </button>
-            </div>
-
-            <section className="mb-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.85fr)] lg:items-center">
-                    <div className="flex min-w-0 items-center gap-5">
-                        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-700 ring-1 ring-violet-100">
-                            <Box className="h-11 w-11" />
-                        </div>
-                        <div className="min-w-0">
-                            <h1 className="text-3xl font-bold text-slate-950">
-                                Tao phieu nhap watch
-                            </h1>
-                            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-                                Chon nhieu anh tu NAS roi do vao cac dong watch dang trong, tu tren xuong duoi.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-3">
-                        <div className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-md bg-violet-50 text-violet-700">
-                                    <ClipboardCheck className="h-4 w-4" />
-                                </span>
-                                <div>
-                                    <div className="text-[11px] font-bold uppercase text-slate-500">Trang thai</div>
-                                    <div className="mt-1 inline-flex rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-700">
-                                        DRAFT
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                            <div className="text-[11px] font-bold uppercase text-slate-500">Tong dong ho</div>
-                            <div className="mt-2 text-2xl font-bold text-slate-950">{validLineCount || watchLines.length}</div>
-                            <div className="mt-1 text-sm text-slate-500">item</div>
-                        </div>
-                        <div className="rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                            <div className="text-[11px] font-bold uppercase text-slate-500">Tong gia tri</div>
-                            <div className="mt-2 text-xl font-bold text-slate-950">{formatMoney(totalWatchCost, currency)}</div>
-                            <div className="mt-1 text-sm text-slate-500">Gia nhap du kien</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <AdminPageCanvas className="pb-24">
+            <AdminPageHeader eyebrow="KHO HÀNG / PHIẾU NHẬP" title="Tạo phiếu nhập đồng hồ"
+                description="Chọn vendor, thêm đồng hồ rồi lưu phiếu. Giá VND nhập theo đơn vị nghìn."
+                meta={<span className="text-sm tabular-nums text-slate-500">{validLineCount || watchLines.length} đồng hồ · <strong className="text-slate-900">{formatMoney(totalWatchCost, currency)}</strong></span>} />
+            <div className="grid gap-4">
                 <div className="space-y-4">
-                    <section className="rounded-md border border-slate-200 bg-white shadow-sm">
+                    <section className="bg-white">
                         <SectionHeader
                             icon={<Box className="h-5 w-5" />}
-                            title="Thong tin phieu"
+                            title="Thông tin phiếu"
                             description="Vendor, thoi gian tiep nhan, loai phieu va ghi chu chung."
                         />
 
-                        <div className="grid grid-cols-1 gap-5 p-5 md:grid-cols-2">
-                            <div className="md:col-span-2">
-                                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                                    Giới tính mặc định
-                                </label>
-                                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                                    {(["MEN", "WOMEN"] as const).map((segment) => (
-                                        <button
-                                            key={segment}
-                                            type="button"
-                                            disabled={submitting}
-                                            onClick={() => applyAudienceSegmentToAll(segment)}
-                                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                                                audienceSegment === segment
-                                                    ? "bg-white text-violet-700 shadow-sm"
-                                                    : "text-slate-500 hover:text-slate-800"
-                                            }`}
-                                        >
-                                            {segment === "MEN" ? "Nam" : "Nữ"}
-                                        </button>
-                                    ))}
-                                </div>
-                                <p className="mt-2 text-xs text-slate-500">
-                                    Áp dụng cho toàn bộ danh sách. Bạn vẫn có thể đổi riêng từng dòng.
-                                </p>
-                            </div>
+                        <div className="grid grid-cols-1 gap-4 py-4 md:grid-cols-3">
                             {type === "TRADE_IN" ? (
                                 <TradeInOrderField
                                     value={tradeInOrder}
@@ -692,24 +605,75 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
 
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-slate-900">
-                                    Ngay nhap <span className="text-rose-500">*</span>
+                                    Ngày nhập <span className="text-rose-500">*</span>
                                 </label>
                                 <div className="relative">
                                     <input
                                         type="datetime-local"
                                         value={createdAt}
                                         onChange={(e) => setCreatedAt(e.target.value)}
-                                        className={`${FIELD_CLASS} pr-10`}
+                                        className={FIELD_CLASS}
                                     />
-                                    <CalendarDays className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
                                 </div>
                             </div>
 
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-slate-900">
-                                    Tien te <span className="text-rose-500">*</span>
+                                    Loại phiếu <span className="text-rose-500">*</span>
                                 </label>
                                 <select
+                                    aria-label="Loại phiếu"
+                                    value={type}
+                                    onChange={(e) => {
+                                        const nextType = e.target.value;
+                                        setType(nextType);
+                                        if (nextType !== "TRADE_IN") setTradeInOrder(null);
+                                    }}
+                                    className={FIELD_CLASS}
+                                >
+                                    <option value="PURCHASE">Thu mua</option>
+                                    <option value="BUY_BACK">Mua lại</option>
+                                    <option value="TRADE_IN">Đổi đồng hồ</option>
+                                    <option value="CONSIGNMENT">Ký gửi</option>
+                                </select>
+                            </div>
+
+                        </div>
+                        <details className="pb-4 text-xs text-slate-500">
+                            <summary className="cursor-pointer py-2">Ghi chú & tùy chọn</summary>
+                            <div className="grid gap-4 py-2 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                                    Giới tính mặc định
+                                </label>
+                                <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                                    {(["MEN", "WOMEN"] as const).map((segment) => (
+                                        <button
+                                            key={segment}
+                                            type="button"
+                                            disabled={submitting}
+                                            onClick={() => applyAudienceSegmentToAll(segment)}
+                                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                                                audienceSegment === segment
+                                                    ? "bg-white text-violet-700 shadow-sm"
+                                                    : "text-slate-500 hover:text-slate-800"
+                                            }`}
+                                        >
+                                            {segment === "MEN" ? "Nam" : "Nữ"}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="mt-2 text-xs text-slate-500">
+                                    Áp dụng cho toàn bộ danh sách. Bạn vẫn có thể đổi riêng từng dòng.
+                                </p>
+                            </div>
+                            <div>
+                                <label className="mb-2 block text-sm font-semibold text-slate-900">
+                                    Tiền tệ <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    aria-label="Tiền tệ"
                                     value={currency}
                                     onChange={(e) => setCurrency(e.target.value)}
                                     className={FIELD_CLASS}
@@ -719,30 +683,10 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                 </select>
                             </div>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-slate-900">
-                                    Loai phieu <span className="text-rose-500">*</span>
-                                </label>
-                                <select
-                                    value={type}
-                                    onChange={(e) => {
-                                        const nextType = e.target.value;
-                                        setType(nextType);
-                                        if (nextType !== "TRADE_IN") setTradeInOrder(null);
-                                    }}
-                                    className={FIELD_CLASS}
-                                >
-                                    <option value="PURCHASE">PURCHASE</option>
-                                    <option value="BUY_BACK">BUY_BACK</option>
-                                    <option value="TRADE_IN">TRADE_IN</option>
-                                    <option value="CONSIGNMENT">CONSIGNMENT</option>
-                                </select>
-                            </div>
-
                             <div className="md:col-span-2">
                                 <div className="mb-2 flex items-center justify-between">
                                     <label className="block text-sm font-semibold text-slate-900">
-                                        Ghi chu
+                                        Ghi chú
                                     </label>
                                     <span className="text-xs text-slate-400">{notes.length}/500</span>
                                 </div>
@@ -751,17 +695,18 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                     maxLength={500}
                                     onChange={(e) => setNotes(e.target.value)}
                                     rows={3}
-                                    placeholder="Nhap ghi chu khong bat buoc..."
-                                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
+                                    placeholder="Nhập ghi chú..."
+                                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100"
                                 />
                             </div>
-                        </div>
+                            </div>
+                        </details>
                     </section>
 
-                    <section className="rounded-md border border-slate-200 bg-white shadow-sm">
+                    <section className="bg-white">
                         <SectionHeader
                             icon={<PackagePlus className="h-5 w-5" />}
-                            title="Danh sach watch"
+                            title="Danh sách đồng hồ"
                             description="Chon nhieu anh tu NAS, he thong se do vao cac dong dang trong truoc roi moi them dong moi."
                             actions={
                                 <>
@@ -774,20 +719,21 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                         type="button"
                                         onClick={addWatchLine}
                                         disabled={submitting}
-                                        className="inline-flex h-10 items-center gap-2 rounded-md border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="inline-flex h-10 items-center gap-2 rounded-md border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         <Plus className="h-4 w-4" />
-                                        Them dong watch
+                                        Thêm đồng hồ
                                     </button>
                                 </>
                             }
                         />
 
-                        <div className="space-y-4 p-4">
+                        <div className="divide-y divide-slate-100">
                             {watchLines.map((line, index) => (
                                 <WatchLineCard
                                     key={line.id}
                                     line={line}
+                                    currency={currency}
                                     index={index}
                                     onChange={(next) => updateLine(line.id, next)}
                                     onRemove={() => removeLine(line.id)}
@@ -797,65 +743,23 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                 />
                             ))}
 
-                            <button
-                                type="button"
-                                onClick={addWatchLine}
-                                disabled={submitting}
-                                className="flex h-12 w-full items-center justify-center gap-2 rounded-md border border-dashed border-violet-200 bg-violet-50/40 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Them dong watch
-                            </button>
+
                         </div>
                     </section>
                 </div>
 
-                <aside className="space-y-4 xl:sticky xl:top-20 xl:self-start">
-                    <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-violet-50 text-violet-700">
-                                <FileText className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <div className="text-lg font-semibold text-slate-950">Luu phieu</div>
-                                <p className="mt-3 text-sm leading-6 text-slate-500">
-                                    Phieu duoc tao o trang thai draft. Sau khi luu, he thong se hoi ban muon duyet luon hay tao phieu moi.
-                                </p>
-                            </div>
-                        </div>
 
-                        <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={submit}
-                            className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                        >
-                            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Luu phieu nhap
-                        </button>
-
-                        <button
-                            type="button"
-                            disabled={submitting}
-                            onClick={() => resetForm()}
-                            className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <PackagePlus className="h-4 w-4" />
-                            Lam moi form
-                        </button>
-                    </div>
-                </aside>
             </div>
 
-            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_28px_rgba(15,23,42,0.08)] backdrop-blur">
+            <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
                 <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
                     <button
                         type="button"
                         disabled={submitting}
                         onClick={() => router.push("/admin/acquisitions")}
-                        className="inline-flex h-11 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60"
+                        className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                     >
-                        Huy
+                        Hủy
                     </button>
 
                     <div className="flex items-center gap-2">
@@ -867,10 +771,10 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             type="button"
                             disabled={submitting}
                             onClick={submit}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-violet-700 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                         >
                             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                            Xac nhan & Tao phieu
+                            Lưu phiếu nhập
                         </button>
                     </div>
                 </div>
@@ -910,6 +814,6 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                     }
                 }}
             />
-        </div>
+        </AdminPageCanvas>
     );
 }

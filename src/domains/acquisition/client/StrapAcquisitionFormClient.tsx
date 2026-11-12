@@ -1,5 +1,7 @@
 "use client";
 
+import AcquisitionMoneyInput from "../ui/shared/AcquisitionMoneyInput";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, Plus, Save, Trash2, X } from "lucide-react";
@@ -51,7 +53,7 @@ const LEATHERS = [
   ["OTHER", "Da khác"],
 ] as const;
 const inputClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100";
+  "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100";
 
 function newLine(): Line {
   return {
@@ -341,9 +343,9 @@ export default function StrapAcquisitionFormClient({
       className="mx-auto max-w-[1500px] space-y-4 p-6 pb-28"
     >
       {!embedded ? (
-        <header className="rounded-2xl border border-violet-100 bg-gradient-to-r from-white to-violet-50 p-5">
+        <header className="border-b border-slate-100 py-4">
           <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-xl bg-violet-600 text-white">
+            <span className="grid h-10 w-11 place-items-center rounded-md bg-slate-950 text-white">
               <Link2 className="h-5 w-5" />
             </span>
             <div>
@@ -355,7 +357,7 @@ export default function StrapAcquisitionFormClient({
           </div>
         </header>
       ) : null}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+      <section className="border-b border-slate-100 bg-white py-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -381,7 +383,7 @@ export default function StrapAcquisitionFormClient({
               ))}
             </select>
             {addingVendor ? (
-              <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50/50 p-3">
+              <div className="mt-3 rounded-md border border-violet-100 bg-violet-50/50 p-3">
                 <div className="flex gap-2">
                   <input
                     className={inputClass}
@@ -399,7 +401,7 @@ export default function StrapAcquisitionFormClient({
                     type="button"
                     disabled={vendorPending}
                     onClick={addVendor}
-                    className="rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white"
+                    className="rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
                   >
                     Thêm
                   </button>
@@ -425,7 +427,7 @@ export default function StrapAcquisitionFormClient({
           </label>
         </div>
       </section>
-      <section className="rounded-2xl border border-slate-200 bg-white">
+      <section className="bg-white">
         <div className="flex items-center justify-between border-b p-5">
           <div>
             <h2 className="font-semibold">Danh sách dây</h2>
@@ -436,7 +438,7 @@ export default function StrapAcquisitionFormClient({
           <button
             type="button"
             onClick={() => setLines((current) => [...current, newLine()])}
-            className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm"
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
           >
             <Plus className="h-4 w-4" /> Thêm dòng
           </button>
@@ -445,9 +447,9 @@ export default function StrapAcquisitionFormClient({
           {lines.map((line) => (
             <div
               key={line.id}
-              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              className="overflow-hidden border-b border-slate-100 bg-white"
             >
-              <div className="flex items-center justify-between border-b border-violet-100 bg-violet-50/60 px-5 py-4">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-5 py-4">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white text-sm font-semibold text-violet-700 ring-1 ring-violet-100">
                     {lines.indexOf(line) + 1}
@@ -583,7 +585,7 @@ export default function StrapAcquisitionFormClient({
                       </label>
                     </>
                   ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
+                    <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
                       Loại da và bề mặt không áp dụng cho chất liệu này.
                     </div>
                   )}
@@ -610,7 +612,7 @@ export default function StrapAcquisitionFormClient({
                       ))}
                     </select>
                     {addingColorLineId === line.id ? (
-                      <div className="mt-2 flex gap-2 rounded-xl border border-violet-100 bg-violet-50/50 p-2">
+                      <div className="mt-2 flex gap-2 rounded-md border border-violet-100 bg-violet-50/50 p-2">
                         <input
                           autoFocus
                           className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none"
@@ -622,7 +624,7 @@ export default function StrapAcquisitionFormClient({
                           type="button"
                           disabled={colorPending || !colorName.trim()}
                           onClick={() => addColor(line.id)}
-                          className="rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white disabled:opacity-50"
+                          className="rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white disabled:opacity-50"
                         >
                           Thêm
                         </button>
@@ -644,7 +646,7 @@ export default function StrapAcquisitionFormClient({
                   </div>
                   <label className="block text-xs font-medium text-slate-600">
                     Kích thước dây
-                    <div className="mt-1.5 flex h-11 items-center overflow-hidden rounded-xl border border-slate-200 bg-white focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100">
+                    <div className="mt-1.5 flex h-10 items-center overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-violet-300 focus-within:ring-2 focus-within:ring-violet-100">
                       <input
                         className="min-w-0 flex-1 px-3 text-center text-sm outline-none"
                         type="number"
@@ -673,7 +675,7 @@ export default function StrapAcquisitionFormClient({
                       <span className="pr-3 text-xs text-slate-400">mm</span>
                     </div>
                   </label>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                     <label className="flex cursor-pointer items-center justify-between gap-3">
                       <span>
                         <span className="block text-xs font-semibold text-slate-700">
@@ -729,32 +731,12 @@ export default function StrapAcquisitionFormClient({
                     </label>
                     <label className="block text-xs font-medium text-slate-600">
                       Giá nhập
-                      <input
-                        className={`${inputClass} mt-1.5 text-right`}
-                        type="number"
-                        min={0}
-                        value={line.unitCost}
-                        onChange={(e) =>
-                          patchLine(line.id, {
-                            unitCost: Number(e.target.value),
-                          })
-                        }
-                      />
+                      <AcquisitionMoneyInput label="Giá nhập" value={line.unitCost} onChange={value => patchLine(line.id, { unitCost: value === "" ? 0 : value })} />
                     </label>
                   </div>
                   <label className="block text-xs font-medium text-slate-600">
                     Giá bán đề xuất
-                    <input
-                      className={`${inputClass} mt-1.5 text-right`}
-                      type="number"
-                      min={0}
-                      value={line.sellPrice}
-                      onChange={(e) =>
-                        patchLine(line.id, {
-                          sellPrice: Number(e.target.value),
-                        })
-                      }
-                    />
+                    <AcquisitionMoneyInput label="Giá bán đề xuất" value={line.sellPrice} onChange={value => patchLine(line.id, { sellPrice: value === "" ? 0 : value })} />
                   </label>
                 </div>
               </div>
@@ -772,7 +754,7 @@ export default function StrapAcquisitionFormClient({
           </div>
           <button
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {saving ? "Đang lưu..." : "Lưu phiếu nháp"}

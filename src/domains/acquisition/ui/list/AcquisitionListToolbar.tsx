@@ -144,7 +144,7 @@ export default function AcquisitionListToolbar({
                     ) : null}
                     <Link
                         href={strapOnly ? "/admin/acquisitions/accessories/new" : "/admin/acquisitions/new"}
-                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                     >
                         <Plus className="h-4 w-4" />
                         {strapOnly ? "Tạo phiếu phụ kiện" : "Tạo phiếu nhập"}

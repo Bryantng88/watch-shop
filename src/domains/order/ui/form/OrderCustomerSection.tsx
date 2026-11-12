@@ -5,7 +5,7 @@
 import { CheckCircle2, Loader2, UserRound } from "lucide-react";
 
 import { Input, Select } from "@/domains/shared/ui/form/fields";
-import { SectionCard } from "@/domains/shared/ui/surface/card";
+import SectionCard from "../OrderSection";
 
 import OrderFormField from "./OrderFormField";
 import {
@@ -44,7 +44,7 @@ export default function OrderCustomerSection({
             title="Khách hàng & thanh toán"
             subtitle="Loại thanh toán quyết định flow vận hành: full, deposit hoặc COD."
         >
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 <OrderFormField label="Tên khách hàng">
                     <Input
                         value={values.customerName}
@@ -80,7 +80,7 @@ export default function OrderCustomerSection({
                 </OrderFormField>
 
                 {customers.length ? (
-                    <div className="md:col-span-2">
+                    <div className="col-span-2 xl:col-span-4">
                         <div className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                             Gợi ý khách cũ
                         </div>
@@ -92,7 +92,7 @@ export default function OrderCustomerSection({
                                     type="button"
                                     onClick={() => onPickCustomer?.(customer)}
                                     disabled={disabled}
-                                    className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="rounded-md bg-slate-50 px-3 py-2 text-left transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <div className="text-sm font-semibold text-slate-900">
                                         {customer.name}

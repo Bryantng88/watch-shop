@@ -7,8 +7,7 @@ import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
 import BusinessListShell from "@/domains/shared/ui/business-list/BusinessListShell";
-import { BusinessListPageHeader } from "@/domains/shared/ui/business-list";
-import { PackagePlus } from "lucide-react";
+import { AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 
 import type { AcquisitionListClientProps } from "../ui/list";
 import {
@@ -181,12 +180,12 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
     }
 
     return (
-        <BusinessListShell
+        <BusinessListShell className="min-h-screen bg-white"
             header={
-                <BusinessListPageHeader
+                <AdminPageHeader
                     title="Phiếu nhập"
-                    icon={<PackagePlus className="h-5 w-5" />}
-                    meta={<span>Quản lý nhập kho · Duyệt phiếu và thanh toán đầu vào</span>}
+                    eyebrow="KHO HÀNG"
+                    description="Quản lý nhập kho, duyệt phiếu và thanh toán đầu vào."
                 />
             }
             filters={
@@ -201,7 +200,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
         >
 
             {selectedIds.length > 0 ? (
-                <div className="flex items-center gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-3">
+                <div className="flex items-center gap-4 border-b border-slate-100 bg-slate-50 p-2">
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} phiếu đã chọn
                     </span>

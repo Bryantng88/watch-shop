@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Pencil, Plus, X } from "lucide-react";
 
 import { Button, Input, Select, Textarea } from "@/domains/shared/ui/form/fields";
@@ -35,6 +35,25 @@ type SoldWatchOption = {
 
 export default function OrderTradeInSection({ value, customerId, customerName, customerPhone, disabled, onChange }: Props) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current;
+    panelRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Tab") {
+        const controls = panelRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)");
+        if (!controls?.length) return;
+        const first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); trigger?.focus(); };
+  }, [open]);
   const [draft, setDraft] = useState<OrderTradeInDraft>(value ?? EMPTY);
   const [error, setError] = useState("");
   const [soldWatches, setSoldWatches] = useState<SoldWatchOption[]>([]);
@@ -73,10 +92,10 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-4">
+    <section className="min-w-0 border-t border-slate-100 pt-3">
+      <div className="flex items-center justify-between gap-4 py-2">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+          <div className="flex h-8 w-8 items-center justify-center text-slate-400">
             <ArrowLeftRight className="h-4 w-4" />
           </div>
           <div>
@@ -85,14 +104,14 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
           </div>
         </div>
 
-        <Button type="button" variant="outline" disabled={disabled} onClick={() => setOpen(true)}>
+        <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className="inline-flex h-8 shrink-0 items-center rounded-md px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
           {value ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
           {value ? "Chỉnh sửa" : "Thêm trade-in"}
-        </Button>
+        </button>
       </div>
 
       {value ? (
-        <div className="flex items-center gap-4 px-5 py-4">
+        <div className="flex items-center gap-4 py-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
             <ArrowLeftRight className="h-5 w-5" />
           </div>
@@ -111,18 +130,18 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
           ) : null}
         </div>
       ) : (
-        <div className="px-5 py-4 text-sm text-slate-500">Không có đồng hồ thu vào trong Order này.</div>
+        null
       )}
 
       {open ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+          <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="order-trade-in-title" className="max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
               <div>
-                <div className="text-lg font-semibold text-slate-950">Phiếu nhập trade-in</div>
+                <div id="order-trade-in-title" className="text-lg font-semibold text-slate-950">Phiếu nhập trade-in</div>
                 <div className="mt-1 text-sm text-slate-500">Khách hàng lấy từ Order; ảnh và thông tin chi tiết sẽ bổ sung tại phiếu nhập nháp.</div>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+              <button type="button" aria-label="Đóng phiếu trade-in" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
             </div>
 
             <div className="space-y-5 px-6 py-5">

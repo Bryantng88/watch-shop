@@ -1,5 +1,7 @@
 "use client";
 
+import AcquisitionMoneyInput from "../ui/shared/AcquisitionMoneyInput";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Save, ShieldCheck, Trash2, X } from "lucide-react";
@@ -33,7 +35,7 @@ const CLASP_TYPES: Array<[ClaspType, string]> = [
   ["OTHER", "Khác"],
 ];
 const inputClass =
-  "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100";
+  "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus:border-violet-300 focus:ring-2 focus:ring-violet-100";
 const fresh = (): Line => ({
   id: crypto.randomUUID(),
   claspType: "PIN_BUCKLE",
@@ -174,9 +176,9 @@ export default function ClaspAcquisitionFormClient({
       className="mx-auto max-w-[1450px] space-y-4 p-6 pb-28"
     >
       {!embedded ? (
-        <header className="rounded-2xl border border-violet-100 bg-gradient-to-r from-white to-violet-50 p-5">
+        <header className="border-b border-slate-100 py-4">
           <div className="flex items-center gap-3">
-            <span className="grid h-11 w-11 place-items-center rounded-xl bg-violet-600 text-white">
+            <span className="grid h-10 w-11 place-items-center rounded-md bg-slate-950 text-white">
               <ShieldCheck className="h-5 w-5" />
             </span>
             <div>
@@ -188,7 +190,7 @@ export default function ClaspAcquisitionFormClient({
           </div>
         </header>
       ) : null}
-      <section className="rounded-2xl border bg-white p-5">
+      <section className="border-b border-slate-100 bg-white py-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <div className="mb-2 flex justify-between">
@@ -214,7 +216,7 @@ export default function ClaspAcquisitionFormClient({
               ))}
             </select>
             {adding ? (
-              <div className="mt-3 flex gap-2 rounded-xl bg-violet-50 p-3">
+              <div className="mt-3 flex gap-2 rounded-md bg-violet-50 p-3">
                 <input
                   className={inputClass}
                   value={vendorName}
@@ -231,7 +233,7 @@ export default function ClaspAcquisitionFormClient({
                   type="button"
                   disabled={pending}
                   onClick={addVendor}
-                  className="rounded-xl bg-violet-600 px-4 text-white"
+                  className="rounded-md bg-slate-950 px-4 text-white"
                 >
                   Thêm
                 </button>
@@ -251,7 +253,7 @@ export default function ClaspAcquisitionFormClient({
           </label>
         </div>
       </section>
-      <section className="rounded-2xl border bg-white">
+      <section className="bg-white">
         <div className="flex justify-between border-b p-5">
           <div>
             <h2 className="font-semibold">Danh sách khóa</h2>
@@ -262,7 +264,7 @@ export default function ClaspAcquisitionFormClient({
           <button
             type="button"
             onClick={() => setLines((rows) => [...rows, fresh()])}
-            className="inline-flex items-center gap-2 rounded-xl border px-3 text-sm"
+            className="inline-flex items-center gap-2 rounded-md border px-3 text-sm"
           >
             <Plus className="h-4 w-4" /> Thêm dòng
           </button>
@@ -273,7 +275,7 @@ export default function ClaspAcquisitionFormClient({
               key={line.id}
               className="overflow-hidden rounded-2xl border"
             >
-              <div className="flex justify-between border-b border-violet-100 bg-violet-50/60 px-5 py-4">
+              <div className="flex justify-between border-b border-slate-100 bg-slate-50 px-5 py-4">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-violet-500">
                     Khóa #{index + 1}
@@ -379,27 +381,11 @@ export default function ClaspAcquisitionFormClient({
                 </label>
                 <label className="text-xs font-medium text-slate-600">
                   Giá nhập
-                  <input
-                    className={`${inputClass} mt-1.5 text-right`}
-                    type="number"
-                    min={0}
-                    value={line.unitCost}
-                    onChange={(e) =>
-                      patch(line.id, { unitCost: Number(e.target.value) })
-                    }
-                  />
+                  <AcquisitionMoneyInput label="Giá nhập" value={line.unitCost} onChange={value => patch(line.id, { unitCost: value === "" ? 0 : value })} />
                 </label>
                 <label className="text-xs font-medium text-slate-600">
                   Giá bán
-                  <input
-                    className={`${inputClass} mt-1.5 text-right`}
-                    type="number"
-                    min={0}
-                    value={line.sellPrice}
-                    onChange={(e) =>
-                      patch(line.id, { sellPrice: Number(e.target.value) })
-                    }
-                  />
+                  <AcquisitionMoneyInput label="Giá bán đề xuất" value={line.sellPrice} onChange={value => patch(line.id, { sellPrice: value === "" ? 0 : value })} />
                 </label>
               </div>
             </article>
@@ -414,7 +400,7 @@ export default function ClaspAcquisitionFormClient({
           </div>
           <button
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
+            className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
           >
             <Save className="h-4 w-4" />
             {saving ? "Đang lưu..." : "Lưu phiếu nháp"}

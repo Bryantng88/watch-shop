@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Rocket, Save } from "lucide-react";
 
 import GuardNotice from "@/domains/shared/feedback/GuardNotice";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { Button } from "@/domains/shared/ui/form/fields";
+import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import OrderInventoryNotice from "@/domains/order/shared/OrderInventoryNotice";
 import OrderPageHeader from "@/domains/order/ui/OrderPageHeader";
 
@@ -417,9 +416,9 @@ export default function OrderFormClient({
   }
 
   return (
-    <div className={surface === "modal" ? "w-full space-y-5" : "mx-auto w-full max-w-[1500px] space-y-5 px-4 pt-6 lg:px-6"}>
+    <div className={surface === "modal" ? "w-full space-y-4" : `${ADMIN_UI.page} ${ADMIN_UI.pageFlow} min-w-0`}>
       {surface === "page" ? <OrderPageHeader
-        eyebrow={quickMode ? "Watch bridge" : "Order domain"}
+        eyebrow="BÁN HÀNG / ĐƠN HÀNG"
         title={
           isEdit
             ? "Chỉnh sửa đơn hàng"
@@ -427,46 +426,13 @@ export default function OrderFormClient({
               ? "Tạo đơn nhanh từ Watch"
               : "Tạo đơn hàng"
         }
-        description={
-          quickMode
-            ? `Quick order từ watch · ${quickProduct?.sku ? `SKU ${quickProduct.sku} · ` : ""
-            }Order sẽ đồng bộ HOLD/SOLD cho watch liên quan.`
-            : "Form order đã tách UI theo section, nhẹ hơn và đồng bộ với kiến trúc watch."
-        }
+        description={quickMode ? `Tạo đơn cho ${quickProduct?.sku || "đồng hồ đã chọn"}.` : "Khách hàng, sản phẩm và thông tin giao nhận."}
         backHref={backHref}
         backLabel={backLabel}
-        actions={
-          <div className="flex items-center gap-2">
-            {!isEdit ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => submit("DRAFT")}
-                disabled={submitting || !canEdit}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Lưu nháp
-              </Button>
-            ) : null}
-
-            <Button
-              type="button"
-              onClick={() => submit(isEdit ? "DRAFT" : "POSTED")}
-              disabled={submitting || !canEdit}
-            >
-              {isEdit ? (
-                <Save className="mr-2 h-4 w-4" />
-              ) : (
-                <Rocket className="mr-2 h-4 w-4" />
-              )}
-              {submitting ? "Đang lưu..." : isEdit ? "Lưu đơn" : "Tạo & post"}
-            </Button>
-          </div>
-        }
       /> : null}
 
       {initialData?.status ? (
-        <OrderInventoryNotice status={initialData.status} />
+        <OrderInventoryNotice status={initialData.status} compact />
       ) : null}
 
       {!canEdit ? (
@@ -478,8 +444,8 @@ export default function OrderFormClient({
         />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_380px]">
-        <div className="space-y-5">
+      <div className="min-w-0">
+        <div className="space-y-4">
           <OrderCustomerSection
             values={values}
             customers={customerResults}
@@ -538,12 +504,16 @@ export default function OrderFormClient({
             onChange={(tradeIn) => patchValues({ tradeIn })}
           />
 
+          <details open={Boolean(initialData?.notes)} className="border-t border-slate-100 py-3 text-xs text-slate-500"><summary className="cursor-pointer">Ghi chú nội bộ</summary>
           <OrderNotesSection
             value={values.notes}
             disabled={!canEdit}
             onChange={(notes) => patchValues({ notes })}
           />
+          </details>
         </div>
+
+      </div>
 
         <OrderSummarySidebar
           itemsCount={values.items.length}
@@ -555,10 +525,10 @@ export default function OrderFormClient({
           backHref={backHref}
           onCancel={onCancel}
           submitLabel={!isEdit && createSubmitAs === "DRAFT" ? "Lưu đơn nháp" : undefined}
+          onSaveDraft={!isEdit && surface === "page" && createSubmitAs !== "DRAFT" ? () => submit("DRAFT") : undefined}
           onSubmit={() => submit(isEdit ? "DRAFT" : createSubmitAs)}
         />
 
-      </div>
     </div>
   );
 }

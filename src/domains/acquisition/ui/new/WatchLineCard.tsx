@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
 import { Expand, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
@@ -13,21 +14,9 @@ type Props = {
     onRemove: () => void;
     canRemove?: boolean;
     tradeIn?: boolean;
+    currency?: string;
     purchasedWatches?: AcquisitionPurchasedWatch[];
 };
-
-function formatMoneyDisplay(value: string | number | null | undefined) {
-    if (value === "" || value == null) return "";
-    const num = Number(value);
-    if (!Number.isFinite(num) || num < 0) return "";
-    return new Intl.NumberFormat("vi-VN").format(num);
-}
-
-function parseMoneyInput(raw: string) {
-    const digits = raw.replace(/[^\d]/g, "");
-    if (!digits) return "";
-    return Number(digits);
-}
 
 function getPreviewSrc(line: AcquisitionWatchLine) {
     if (line.imageUrl) return line.imageUrl;
@@ -45,13 +34,12 @@ export default function WatchLineCard({
     canRemove = true,
     tradeIn = false,
     purchasedWatches = [],
+    currency = "VND",
 }: Props) {
     const notify = useNotify();
     const [previewOpen, setPreviewOpen] = useState(false);
 
     const previewSrc = useMemo(() => getPreviewSrc(line), [line]);
-    const formattedCost = formatMoneyDisplay(line.cost);
-    const formattedSalePrice = formatMoneyDisplay(line.salePrice);
 
     const setField = <K extends keyof AcquisitionWatchLine>(
         key: K,
@@ -78,17 +66,9 @@ export default function WatchLineCard({
         });
     }
 
-    const handleCostChange = (raw: string) => {
-        setField("cost", parseMoneyInput(raw) as AcquisitionWatchLine["cost"]);
-    };
-
-    const handleSalePriceChange = (raw: string) => {
-        setField("salePrice", parseMoneyInput(raw) as AcquisitionWatchLine["salePrice"]);
-    };
-
     return (
         <>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div className="border-b border-slate-100 bg-white py-4">
                 <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="rounded-full border border-slate-200 px-3 py-1 text-sm font-medium text-slate-700">
@@ -130,7 +110,7 @@ export default function WatchLineCard({
                 </div>
 
                 {tradeIn ? (
-                    <div className="mb-4 grid gap-3 rounded-xl border border-violet-100 bg-violet-50/50 p-3 md:grid-cols-2">
+                    <div className="mb-4 grid gap-3 rounded-md border border-violet-100 bg-violet-50/50 p-3 md:grid-cols-2">
                         <label className="text-xs font-semibold text-slate-700">
                             Nguồn đồng hồ
                             <select
@@ -177,9 +157,9 @@ export default function WatchLineCard({
                     </div>
                 ) : null}
 
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[72px_minmax(210px,1.35fr)_minmax(170px,1fr)_104px_114px] xl:items-start">
-                    <div className="space-y-1">
-                        <div className="flex h-7 items-end text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-[72px_minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[72px_minmax(210px,1.35fr)_minmax(170px,1fr)_160px_160px] xl:items-start">
+                    <div className="row-span-2 min-w-0 space-y-1 xl:row-span-1">
+                        <div className="flex h-7 items-end text-xs font-medium text-slate-500">
                             Ảnh
                         </div>
 
@@ -192,14 +172,14 @@ export default function WatchLineCard({
                                 profile="inline"
                                 audienceSegment={line.audienceSegment}
                                 compact
-                                className="h-[72px] w-[72px] rounded-xl"
+                                className="h-[72px] w-[72px] rounded-md"
                             />
 
                             {previewSrc ? (
                                 <button
                                     type="button"
                                     onClick={() => setPreviewOpen(true)}
-                                    className="absolute inset-0 flex items-end justify-center rounded-xl bg-black/0 transition hover:bg-black/10"
+                                    className="absolute inset-0 flex items-end justify-center rounded-md bg-black/0 transition hover:bg-black/10"
                                     title="Xem ảnh lớn"
                                 >
                                     <span className="mb-1 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">
@@ -210,59 +190,45 @@ export default function WatchLineCard({
                         </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <div className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <div className="min-w-0 space-y-1">
+                        <div className="flex h-7 items-end whitespace-nowrap text-xs font-medium text-slate-500">
                             Mô tả nhanh / tên đồng hồ
                         </div>
                         <input
                             value={line.quickInput}
                             onChange={(e) => setField("quickInput", e.target.value)}
                             placeholder="VD: seiko tự động"
-                            className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                            className="h-[42px] w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <div className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <div className="min-w-0 space-y-1">
+                        <div className="flex h-7 items-end whitespace-nowrap text-xs font-medium text-slate-500">
                             Gợi ý thêm cho AI
                         </div>
                         <input
                             value={line.aiHint}
                             onChange={(e) => setField("aiHint", e.target.value)}
                             placeholder="VD: niềng 18K"
-                            className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                            className="h-[42px] w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <div className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                    <div className="min-w-0 space-y-1">
+                        <div className="flex h-7 items-end whitespace-nowrap text-xs font-medium text-slate-500">
                             Giá nhập
                         </div>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={formattedCost}
-                            onChange={(e) => handleCostChange(e.target.value)}
-                            placeholder="0"
-                            className="h-[42px] w-full rounded-xl border border-slate-200 px-3 text-right text-sm font-medium tabular-nums outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                        />
+                        <AcquisitionMoneyInput key={currency} label={`Giá nhập đồng hồ ${index + 1}`} value={line.cost} currency={currency} onChange={value => setField("cost", value)} />
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="min-w-0 space-y-1">
                         <div
-                            className="flex h-7 items-end whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500"
+                            className="flex h-7 items-end whitespace-nowrap text-xs font-medium text-slate-500"
                             title="Không bắt buộc"
                         >
                             Giá bán đề xuất
                         </div>
-                        <input
-                            type="text"
-                            inputMode="numeric"
-                            value={formattedSalePrice}
-                            onChange={(e) => handleSalePriceChange(e.target.value)}
-                            placeholder="Để trống"
-                            className="h-[42px] w-full rounded-xl border border-emerald-200 bg-emerald-50/30 px-3 text-right text-sm font-semibold tabular-nums text-emerald-800 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
-                        />
+                        <AcquisitionMoneyInput key={currency} label={`Giá bán đồng hồ ${index + 1}`} value={line.salePrice} currency={currency} placeholder="Tùy chọn" onChange={value => setField("salePrice", value)} />
                     </div>
 
                 </div>

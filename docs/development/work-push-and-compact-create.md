@@ -90,3 +90,18 @@ The compact list now uses the accepted two-line layout. “Có cập nhật” s
 small hover/focus tooltip containing only a one-line latest change and relative
 time. Touch toggles it, outside tap/blur/Escape closes it. Full history remains in
 work detail. The entry share icon opens a compact recipient/permission picker.
+
+## Push settings visibility
+
+The full-page Ben header always shows the notification bell, including when VAPID
+is missing or the initial API call fails. Open it to see the current device state:
+checking, not enabled, enabled, permission blocked, server not configured, unsupported
+browser, iOS install required, service worker not ready, or request failure. Retry
+is explicit; a controller-change event also rechecks readiness without requesting
+permission. The browser permission prompt is only invoked by clicking Enable after
+the server and worker are ready. The panel closes with outside click or Escape and
+restores focus on explicit close. No permanent settings row is added to chat.
+
+Run `scripts/smoke-ben-push-controls.cjs` with Playwright to test these states with
+synthetic Push APIs and intercepted HTTP requests. It does not send a real push.
+Use `BEN_PUSH_SCREENSHOT` and `BEN_PUSH_PREVIEW_CSS` for a styled local capture.

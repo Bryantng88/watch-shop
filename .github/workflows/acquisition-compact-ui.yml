@@ -1,0 +1,28 @@
+name: Acquisition compact UI
+on:
+  pull_request:
+    paths:
+      - 'src/domains/acquisition/**'
+      - 'src/app/(admin)/admin/acquisitions/new/page.tsx'
+      - 'src/domains/personal-work/ui/PersonalChecklistShare.tsx'
+      - 'src/domains/shared/ui/business-list/BusinessListShell.tsx'
+      - 'scripts/smoke-acquisition-compact-ui.cjs'
+      - '.github/workflows/acquisition-compact-ui.yml'
+permissions:
+  contents: read
+jobs:
+  acquisition-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint src/domains/acquisition/client/AcquisitionFormClient.tsx src/domains/acquisition/client/AcquisitionListClient.tsx src/domains/acquisition/client/StrapAcquisitionFormClient.tsx src/domains/acquisition/client/ClaspAcquisitionFormClient.tsx src/domains/acquisition/client/AccessoryAcquisitionEntryClient.tsx src/domains/acquisition/ui/shared/AcquisitionMoneyInput.tsx src/domains/acquisition/ui/new/WatchLineCard.tsx src/domains/acquisition/ui/edit/AcquisitionEditModal.tsx src/domains/acquisition/ui/list/AcquisitionListTable.tsx src/domains/acquisition/ui/list/AcquisitionListToolbar.tsx src/domains/personal-work/ui/PersonalChecklistShare.tsx src/domains/shared/ui/business-list/BusinessListShell.tsx 'src/app/(admin)/admin/acquisitions/new/page.tsx'
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/acquisition-ui.css --minify
+      - run: npm install --prefix /tmp/acquisition-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/acquisition-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/acquisition-browser/node_modules/playwright ACQUISITION_PREVIEW_CSS=/tmp/acquisition-ui.css node scripts/smoke-acquisition-compact-ui.cjs

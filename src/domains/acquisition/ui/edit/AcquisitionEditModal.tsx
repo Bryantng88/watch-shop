@@ -1,5 +1,6 @@
 "use client";
 
+import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
 import { useEffect, useMemo, useState } from "react";
 import { Box, ImageIcon, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 
@@ -7,7 +8,7 @@ import MediaPickerInline from "@/components/media/MediaPickerInline";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
-import { Button, FieldLabel, Input, Textarea, moneyPreview } from "@/domains/shared/ui/form/fields";
+import { Button, FieldLabel, Input, Textarea } from "@/domains/shared/ui/form/fields";
 import AcquisitionBulkImagePicker from "@/domains/acquisition/ui/new/AcquisitionBulkImagePicker";
 import type { AcquisitionPreparedImage } from "@/domains/acquisition/client/form/acquisition-form.types";
 import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
@@ -51,13 +52,6 @@ type Props = {
 function uid() {
     if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
     return Math.random().toString(36).slice(2, 10);
-}
-
-function parseMoney(raw: string) {
-    const digits = String(raw ?? "").replace(/[^\d]/g, "");
-    if (!digits) return "";
-    const n = Number(digits);
-    return Number.isFinite(n) ? n : "";
 }
 
 function fmtMoney(value: unknown, currency = "VND") {
@@ -120,11 +114,11 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                 setDetail(json);
                 setItems(Array.isArray(json?.items) ? json.items : []);
                 setNotes(String(json?.notes ?? ""));
-            } catch (error: any) {
+            } catch (error: unknown) {
                 if (!mounted) return;
                 notify.error({
                     title: "Không thể tải phiếu nhập",
-                    message: error?.message || "Có lỗi xảy ra.",
+                    message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
                 });
                 onClose();
             } finally {
@@ -260,10 +254,10 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
 
             onUpdated?.();
             onClose();
-        } catch (error: any) {
+        } catch (error: unknown) {
             notify.error({
                 title: "Lưu thất bại",
-                message: error?.message || "Có lỗi xảy ra.",
+                message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
             });
         } finally {
             setSubmitting(false);
@@ -273,7 +267,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
 
     return (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/40 p-4">
-            <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl">
+            <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
                 <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -316,14 +310,14 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                 ["Tổng mới", fmtMoney(total, currency)],
                                 ["Payment", `${fmtMoney(detail?.paidAmount, currency)} paid · ${fmtMoney(detail?.unpaidAmount, currency)} unpaid`],
                             ].map(([label, value]) => (
-                                <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                    <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</div>
+                                <div key={label} className="min-w-0 py-2">
+                                    <div className="text-xs font-medium text-slate-400">{label}</div>
                                     <div className="mt-1 truncate text-sm font-semibold text-slate-900">{value}</div>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="mt-5 rounded-3xl border border-slate-200 bg-white">
+                        <div className="mt-5">
                             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
                                 <div>
                                     <div className="text-base font-semibold text-slate-950">Danh sách watch</div>
@@ -347,11 +341,11 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                 ) : null}
                             </div>
 
-                            <div className="space-y-3 p-5">
+                            <div className="divide-y divide-slate-100">
                                 {items.map((item, index) => {
                                     const src = previewSrc(item);
                                     return (
-                                        <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                        <div key={item.id} className="py-4">
                                             <div className="mb-3 flex items-center justify-between gap-3">
                                                 <div className="flex items-center gap-2">
                                                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -376,7 +370,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                 ) : null}
                                             </div>
 
-                                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[92px_minmax(0,1fr)_110px_180px] lg:items-start">
+                                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[80px_minmax(0,1fr)_80px_190px] lg:items-start">
                                                 <div>
                                                     <FieldLabel>Ảnh</FieldLabel>
                                                     {draft ? (
@@ -444,16 +438,8 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
 
                                                 <div>
                                                     <FieldLabel>Giá nhập</FieldLabel>
-                                                    <Input
-                                                        value={item.unitCost === "" ? "" : new Intl.NumberFormat("vi-VN").format(Number(item.unitCost || 0))}
-                                                        onChange={(event) => updateItem(item.id, { unitCost: parseMoney(event.target.value) })}
-                                                        disabled={submitting}
-                                                        inputMode="numeric"
-                                                        className="text-right font-semibold tabular-nums"
-                                                    />
-                                                    <div className="mt-1 text-right text-xs text-slate-400">
-                                                        {moneyPreview(String(item.unitCost || ""))}
-                                                    </div>
+                                                    <AcquisitionMoneyInput label={`Giá nhập ${item.title || "sản phẩm"}`} value={item.unitCost} currency={currency}
+                                                        onChange={value => updateItem(item.id, { unitCost: value })} disabled={submitting} />
                                                 </div>
 
                                             </div>
@@ -464,7 +450,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                         </div>
 
                         {draft ? (
-                            <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-5">
+                            <div className="mt-5 border-t border-slate-100 pt-4">
                                 <FieldLabel>Ghi chú</FieldLabel>
                                 <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
                             </div>
