@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/domains/ai-assistant/**'
       - 'src/domains/media-post/**'
+      - 'src/domains/order/server/write/order-service-append.ts'
       - 'src/app/api/admin/customer-assistant/route.ts'
       - 'src/domains/personal-work/**'
       - 'prisma/schema.prisma'
@@ -36,7 +37,7 @@ jobs:
       - run: npm ci
       - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
       - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
-      - run: npx eslint src/domains/ai-assistant scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
+      - run: npx eslint src/domains/ai-assistant src/domains/order/server/write/order-service-append.ts scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit
       - run: npm run build
   calendar-integration:
@@ -73,4 +74,5 @@ jobs:
       - run: npm ci
       - run: npx prisma db push --skip-generate
       - run: node --import tsx scripts/smoke-ben-auto-calendar.ts
+      - run: timeout 120s node --import tsx scripts/smoke-ben-order-services.ts
       - run: npm run build

@@ -173,3 +173,17 @@ test('overdue lookup is separate from the zero-argument today lookup',()=>{
  assert.deepEqual(validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.overdue',reply:null}).lookup,{tool:'personalWork.overdue'});
  assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'personalWork.overdue',reply:null,query:'today'}));
 });
+
+test('service-order tools are bounded reads/proposals and reject mixed write outputs',()=>{
+ for(const [tool,query] of [['serviceOrders.search',JSON.stringify({customerName:'Nam',brand:'Tissot',service:'thay pin',watchCountHint:2})],['serviceOrders.detail','order-id'],['services.catalog','spa'],['serviceOrders.propose',JSON.stringify({sourceMessageId:'00000000-0000-4000-8000-000000000001'})]]){
+  const turn={...finish,type:'lookup',tool,query,reply:null};assert.deepEqual(validateCustomerTurn(turn).lookup,{tool,query});
+  assert.throws(()=>validateCustomerTurn({...turn,orderPlan:{}}));
+ }
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'serviceOrders.propose',query:'x'.repeat(10001),reply:null}));
+ assert.throws(()=>validateCustomerTurn({...finish,type:'lookup',tool:'serviceOrders.search',query:'not-json',reply:null}));
+});
+test('order-service proposal must name this current user message before reaching API',async()=>{
+ let calls=0;
+ await assert.rejects(runCustomerConversation({id:'fixture',text:JSON.stringify({currentUserMessage:{id:'00000000-0000-4000-8000-000000000001'}})},{execute:async()=>({...finish,type:'lookup',tool:'serviceOrders.propose',query:JSON.stringify({sourceMessageId:'00000000-0000-4000-8000-000000000002'}),reply:null}),api:async()=>{calls++;return {accepted:true};}}),/INVALID_CUSTOMER_ORDER_SERVICE_SOURCE/);
+ assert.equal(calls,0);
+});

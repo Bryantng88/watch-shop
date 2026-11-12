@@ -1,7 +1,7 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
-import { approveAssistantMediaPost, approveAssistantPersonalWorkUpdate, approveAssistantPersonalWork, approveAssistantOrder, approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
+import { approveAssistantOrderServices, approveAssistantMediaPost, approveAssistantPersonalWorkUpdate, approveAssistantPersonalWork, approveAssistantOrder, approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
 import { notifyBenAssignment, benPushPublicKey, saveBenPush, hasBenPush, removeBenPush, pushEndpoint, pushSubscription } from "@/domains/ai-assistant/server/ben-push";
 import { AssistantError } from "@/domains/ai-assistant/server/access";
 import {screenPathForMessage} from "@/domains/ai-assistant/server/current-screen";
@@ -18,6 +18,7 @@ const command=z.discriminatedUnion("action",[
  z.object({action:z.literal("update-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-media-post"),id:uuid,revision:z.number().int().min(1)}).strict(),
+ z.object({action:z.literal("approve-order-services"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-order"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("outcome"),id:uuid,conditionId:z.string().min(1).max(30),requestRevision:z.number().int().min(1).optional(),outcome:z.enum(["Chưa xác minh","Đạt","Không đạt","Cần khách xác nhận"]),result:z.string().max(1500)}).strict(),
@@ -57,6 +58,7 @@ async function handle(req:NextRequest){try{
  if(c.action==="update-personal-work")return NextResponse.json(await approveAssistantPersonalWorkUpdate(user.id,c.id,c.revision));
  if(c.action==="approve-media-post")return NextResponse.json(await approveAssistantMediaPost(user.id,c.id,c.revision));
  if(c.action==="approve-personal-work")return NextResponse.json(await approveAssistantPersonalWork(user.id,c.id,c.revision,work=>after(work)));
+ if(c.action==="approve-order-services")return NextResponse.json(await approveAssistantOrderServices(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="approve-order")return NextResponse.json(await approveAssistantOrder(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="approve")return NextResponse.json(await approveAssistant(user.id,c.id,c.revision,work=>after(work)));
  return NextResponse.json(await recordConditionOutcome(user.id,c.id,c.conditionId,c.outcome,c.result,c.requestRevision));

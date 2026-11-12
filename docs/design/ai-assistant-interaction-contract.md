@@ -377,7 +377,7 @@ creating a completion/end time in Watch Shop. Existing midnight date-only task
 encoding and end-of-day all-day encoding remain date-only for compatibility.
 
 Customer repair progress uses customerRepairs.search under SERVICE_VIEW. The
-lookup searches active and completed-but-not-delivered CUSTOMER_OWNED tickets
+lookup searches CUSTOMER_OWNED tickets in all statuses
 by watch identifiers without a date constraint or private customer fields.
 Photo inventory search tries exact SKU before matching all identifying terms.
 Image turns show bounded candidate cards using inline photo, title and selling
@@ -497,3 +497,62 @@ for a newly approved task assigned to another user through Ben. Notifications
 carry a fixed message and open /admin/ben. They contain no task or customer
 details. Expired browser subscriptions are removed. Existing approval and
 authorization checks remain in effect.
+
+
+## Existing customer service orders
+
+`serviceOrders.search` accepts a strict JSON query with customerName, brand,
+service, reference and soft watchCountHint. It searches service orders and linked
+repair identifiers without a hidden date/status limit. CUSTOMER_VIEW is required
+for customer-name filtering; ORDER_VIEW + SERVICE_VIEW + CUSTOMER_VIEW gate order search/detail.
+No contacts, costs or free-form notes leave this tool. Empty results may retry
+name+brand or name+service, explicitly marked relaxed; never silently select the
+first result. Exact reference searches can disambiguate a user's choice.
+`serviceOrders.detail(query=id)` returns the source version, bounded line IDs and
+eligibility. `services.catalog` reads active services and reference selling prices,
+never costs. Reference prices are not an agreed amount: ask for a price or explicit
+adoption before preparing an amendment. No stock tool substitutes for this lookup.
+
+For a current explicit request to add services to an existing order, use
+`serviceOrders.propose` with strict JSON {sourceMessageId,orderId,expectedVersion,
+additions:[{parentOrderItemId,serviceCatalogId,unitPriceAgreed}]}. Bind the current
+owned message/active lease. Require fresh uniquely resolved non-relaxed order
+search, exact detail/version and unique catalog evidence. Up to twelve positive
+VND additions; each targets one identified single-watch root line. Ambiguity,
+quotes, questions about capabilities and cancellations produce chat only. Corrections
+preserve unmentioned items but fetch fresh evidence, never infer approval.
+
+Only pure CUSTOMER_OWNED service orders in DRAFT/RESERVED/POSTED/PROCESSING,
+unpaid with no settled payment, shipment or invoice, are eligible. Mixed sale,
+terminal, delivered-watch and already-added service cases require the order UI.
+ORDER_VIEW + ORDER_UPDATE + SERVICE_VIEW + SERVICE_CREATE + CUSTOMER_VIEW are
+required for this narrow command; no rights are granted by Ben. It appends linked
+service lines and recomputes subtotal, preserving all existing identities, notes,
+prices, payments, inventory and customer data. Posted/processing orders create
+service intake through the canonical service pipeline. Draft/reserved orders wait
+for posting. Existing business events are recorded in the same transaction.
+
+One compact review names the order, watch rows, services, agreed prices, added
+charge and resulting subtotal. The sole write is the dedicated
+`approve-order-services` click with conversation/revision. Chat acknowledgment,
+history, reload and worker completion never execute an amendment. Serializable
+approval locks the order, rechecks active authority, inherited scope, order and
+catalog versions, and commits additions/intake/events plus a durable receipt
+atomically. Concurrent/replayed clicks return that receipt without duplication.
+Stale source/review returns 409; lost authority/scope returns 403; failed checks
+roll back the entire amendment and ask for a fresh review. No partial success or
+payment collection is claimed. Results are links in the assigned-request view.
+
+Validation: `scripts/smoke-ben-order-services.ts` runs with synthetic PostgreSQL
+fixtures in the existing Ben CI job. It exercises approval, replay, concurrency,
+rollback and financial remaining amounts without external calls. Existing unpaid
+payment rows are preserved: the extra charge increases remaining/available-to-create
+in the canonical Payment summary, and still requires the normal Payment UI to
+record collection. No new paid receipt is inferred from adding a service.
+`tests/fixtures/ben-order-service-intents.json` and the gated
+`scripts/smoke-ben-order-services-real.ts` exercise Vietnamese/English searches,
+additions, capability questions, negation, quotation and missing-price ambiguity
+against an actual connected customer worker in isolated `personal_codex_test`.
+Run the latter only with `BEN_REAL_ORDER_SERVICES_EVAL=1`; it never approves drafts.
+Scripted CI does not establish real-model semantic acceptance. App and customer
+worker must use the same protocol version before using these tools.
