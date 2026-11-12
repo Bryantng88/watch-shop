@@ -631,8 +631,11 @@ existing semantics, including post-commit Google failures. No worker gets a writ
 tool and no model claim establishes consent or success. Missing/unsupported
 confirmation text follows normal chat. History/record instructions never approve.
 
-Use the supplied visual direction: restrained violet accents, clear two-tab
-navigation, compact screen hint, light user bubbles and readable assistant text.
+Use a restrained Graphite palette by default, clear two-tab navigation, compact
+screen hint, distinct user bubbles and readable assistant text. A compact header
+selector offers Graphite, Midnight and light Steel tones. Save only the validated
+tone identifier in browser storage scoped to the signed-in user; blocked storage
+keeps the choice in memory. Appearance changes never send a chat or approve work.
 One complete review has one approval and a “Chỉnh lại” action that focuses chat;
 no business form. Display the signed-in user's profile avatar (initials fallback)
 next to user messages, never an identity claimed in chat. Keep Ben's avatar,
