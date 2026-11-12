@@ -1,5 +1,7 @@
+import { queueWorkNotification } from "@/domains/notification/server/work-push.service";
+import { workRoute } from "@/domains/notification/server/work-push-policy";
 import { AppTagOwnerType, AppTagTargetType, TaskStatus } from "@prisma/client";
-import { dbOrTx, type DB } from "@/server/db/client";
+import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
 import type {
   CreateTaskItemChecklistInput,
   CreateTaskItemInput,
@@ -10,6 +12,9 @@ import { TASK_ITEM_INCLUDE, toDate } from "./task.repo.shared";
 import { setTargetTagsRepo } from "../tag/task-tag.repo";
 
 export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
+  return withDbTransaction(db, tx => createTaskItemInTransaction(tx,input));
+}
+async function createTaskItemInTransaction(db: DB, input: CreateTaskItemInput) {
   const client = dbOrTx(db);
 
   const last = await client.taskItem.findFirst({
@@ -45,6 +50,8 @@ export async function createTaskItemRepo(db: DB, input: CreateTaskItemInput) {
     });
   }
 
+  if(item.assignedToUserId) await queueWorkNotification(client,{key:`work:created:${item.id}:${item.assignedToUserId}`,userId:item.assignedToUserId,actorId:input.ownerUserId,
+    taskItemId:item.id,kind:"ASSIGNED",title:item.title,route:workRoute(item.id,false)});
   return { ...item, taskId: input.taskId };
 }
 
@@ -52,9 +59,10 @@ export async function updateTaskItemRepo(
   db: DB,
   itemId: string,
   input: UpdateTaskItemInput,
+  actorId?: string | null,
 ) {
-  const client = dbOrTx(db);
-
+  return withDbTransaction(db, async client => {
+  const previous = await client.taskItem.findUniqueOrThrow({where:{id:itemId}});
   const item = await client.taskItem.update({
     where: { id: itemId },
     data: {
@@ -81,7 +89,10 @@ export async function updateTaskItemRepo(
     });
   }
 
+  if(item.assignedToUserId && item.assignedToUserId!==previous.assignedToUserId) await queueWorkNotification(client,{key:`work:assigned:${item.id}:${item.updatedAt.toISOString()}`,userId:item.assignedToUserId,actorId,
+    taskItemId:item.id,kind:"ASSIGNED",title:item.title,route:workRoute(item.id,false)});
   return item;
+  });
 }
 
 export async function moveTaskItemRepo(

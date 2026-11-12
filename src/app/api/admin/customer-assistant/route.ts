@@ -2,12 +2,13 @@ import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
 import { approveAssistantMediaPost, approveAssistantPersonalWorkUpdate, approveAssistantPersonalWork, approveAssistantOrder, approvePermissionSupport, approveAssistant, cancelAssistant, listAssistant, recordConditionOutcome, sendAssistant } from "@/domains/ai-assistant/server/service";
-import { benPushPublicKey, saveBenPush, hasBenPush, removeBenPush, pushEndpoint, pushSubscription } from "@/domains/ai-assistant/server/ben-push";
+import { notifyBenAssignment, benPushPublicKey, saveBenPush, hasBenPush, removeBenPush, pushEndpoint, pushSubscription } from "@/domains/ai-assistant/server/ben-push";
 import { AssistantError } from "@/domains/ai-assistant/server/access";
 import {screenPathForMessage} from "@/domains/ai-assistant/server/current-screen";
 import { MAX_BEN_IMAGE_BASE64 } from "@/domains/ai-assistant/image-search";
 const uuid=z.string().uuid();
 const command=z.discriminatedUnion("action",[
+ z.object({action:z.literal("test-push")}).strict(),
  z.object({action:z.literal("push-status"),endpoint:pushEndpoint}).strict(),
  z.object({action:z.literal("subscribe-push"),subscription:pushSubscription}).strict(),
  z.object({action:z.literal("unsubscribe-push"),endpoint:pushEndpoint}).strict(),
@@ -46,8 +47,9 @@ async function handle(req:NextRequest){try{
  const raw=await readBody(req,imageEnabled?MAX_BEN_IMAGE_BASE64+20000:20000);
  const c=command.parse(JSON.parse(raw));
  if(raw.length>20000 && !(c.action==="send"&&c.imageBase64))throw new AssistantError("Yêu cầu quá dài.",413);
+ if(c.action==="test-push"){await notifyBenAssignment(user.id);return NextResponse.json({ok:true});}
  if(c.action==="push-status")return NextResponse.json({enabled:await hasBenPush(user.id,c.endpoint)},{headers:{"Cache-Control":"no-store"}});
- if(c.action==="subscribe-push"){await saveBenPush(user.id,c.subscription);return NextResponse.json({ok:true});}
+ if(c.action==="subscribe-push"){await saveBenPush(user.id,c.subscription);const response=NextResponse.json({ok:true});response.cookies.set("ben_push_endpoint",c.subscription.endpoint,{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:365*86400});return response;}
  if(c.action==="unsubscribe-push"){await removeBenPush(user.id,c.endpoint);return NextResponse.json({ok:true});}
  if(c.action==="send")return NextResponse.json(await sendAssistant(user.id,{...c,screenPath:screenPathForMessage(c.screenPath,req.headers.get("referer"),process.env.APP_URL)},work=>after(work)));
  if(c.action==="cancel")return NextResponse.json(await cancelAssistant(user.id,c.id));

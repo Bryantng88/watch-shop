@@ -555,6 +555,20 @@
                   "type": "null"
                 }
               ]
+            },
+            "reminderMinutes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "enum": [
+                null,
+                0,
+                10,
+                15,
+                30,
+                60
+              ]
             }
           },
           "required": [
@@ -879,6 +893,20 @@
                   {
                     "type": "null"
                   }
+                ]
+              },
+              "reminderMinutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "enum": [
+                  null,
+                  0,
+                  10,
+                  15,
+                  30,
+                  60
                 ]
               }
             },

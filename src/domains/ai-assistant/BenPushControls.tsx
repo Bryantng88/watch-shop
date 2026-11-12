@@ -54,7 +54,7 @@ export default function BenPushControls() {
         return;
       }
       const registration = await navigator.serviceWorker.getRegistration("/admin/ben");
-      if (!registration?.active) throw new Error("Ben chưa sẵn sàng. Tải lại trang rồi thử lại.");
+      if (!registration?.active) throw new Error("Ben đang chuẩn bị thông báo. Chờ một chút rồi thử lại.");
       const current = await registration.pushManager.getSubscription();
       const next = current ?? await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key});
       const {endpoint, keys} = next.toJSON();
@@ -72,6 +72,10 @@ export default function BenPushControls() {
     <button type="button" disabled={busy} onClick={() => void toggle()} className="min-h-10 font-medium text-blue-700 disabled:opacity-50">
       {subscription ? "Tắt thông báo" : "Bật thông báo"}
     </button>
+    {subscription && <button type="button" disabled={busy} className="min-h-10 text-slate-600 disabled:opacity-50" onClick={async () => {
+      setBusy(true); try { await updateSubscription({action:"test-push"}); setNotice("Đã gửi yêu cầu thử. Kiểm tra thông báo trên thiết bị nhé."); }
+      catch { setNotice("Chưa gửi được thông báo thử."); } finally { setBusy(false); }
+    }}>Gửi thử</button>}
     {notice && <p role="status" className="text-slate-600">{notice}</p>}
   </div>;
 }

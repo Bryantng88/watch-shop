@@ -25,6 +25,20 @@ services:
     init: true
     stop_grace_period: 30s
 
+  notifications:
+    image: watch-shop:${IMAGE_TAG:-local}
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+    environment:
+      WORK_PUSH_APP_URL: http://app:3000
+    command: ["node", "ops/notifications/worker.mjs"]
+    depends_on:
+      - app
+    restart: unless-stopped
+    init: true
+    healthcheck:
+      disable: true
+
   migrate:
     image: watch-shop-ops:${IMAGE_TAG:-local}
     build:

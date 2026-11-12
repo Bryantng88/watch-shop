@@ -53,6 +53,7 @@ function refresh() {
 }
 
 export async function createPersonalWorkAction(input: {
+  reminderMinutes?: number | null;
   title: string;
   note?: string | null;
   dueAt?: string | null;
@@ -88,6 +89,7 @@ export async function searchPersonalWorkTargetsAction(input: { type: PersonalWor
 }
 
 export async function updatePersonalWorkAction(input: {
+  reminderMinutes?: number | null;
   id: string;
   title?: string;
   note?: string | null;

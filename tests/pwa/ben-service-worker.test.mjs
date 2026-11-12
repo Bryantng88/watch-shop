@@ -37,17 +37,25 @@ test('Ben requests its protected manifest with browser credentials', () => {
  assert.match(page, /<link rel="manifest" href="\/ben\.webmanifest" crossOrigin="use-credentials"/);
 });
 
-test('Ben push shows generic copy and opens only the Ben page', async () => {
+test('Ben push ignores malformed payload and opens only a validated internal destination', async () => {
  const shown=[];const opened=[];
  const events=worker(undefined,{
   registration:{showNotification:async (title,options)=>shown.push({title,body:options.body})},
   clients:{matchAll:async()=>[],openWindow:async path=>opened.push(path)},
  });
  let work;
- events.push({data:{json(){assert.fail('Do not read private payload');}},waitUntil(p){work=p;}});
+ events.push({data:{json(){throw Error('malformed');}},waitUntil(p){work=p;}});
  await work;
  assert.deepEqual(shown,[{title:'Ben',body:'Bạn có công việc mới'}]);
  events.notificationclick({notification:{close(){}},waitUntil(p){work=p;}});
  await work;
  assert.deepEqual(opened,['/admin/ben']);
+});
+
+for (const [route,expected] of [["/admin/personal-work?item=fixture","/admin/personal-work?item=fixture"],["https://evil.invalid","/admin/ben"],["/admin/ben/work/fixture","/admin/ben/work/fixture"]]) test(`push click validates ${route}`,async()=>{
+ let work;const opened=[];const shown=[];
+ const events=worker(undefined,{registration:{showNotification:async(t,o)=>shown.push(o)},clients:{matchAll:async()=>[],openWindow:async p=>opened.push(p)}});
+ events.push({data:{json:()=>({kind:"REMINDER",route,tag:"stable",title:"private customer data"})},waitUntil(p){work=p;}});await work;
+ assert.equal(shown[0].body,"Bạn có lịch công việc hoặc sự kiện cần nhắc");assert.equal(shown[0].tag,"stable");assert.ok(!JSON.stringify(shown).includes("private customer data"));
+ events.notificationclick({notification:{data:shown[0].data,close(){}},waitUntil(p){work=p;}});await work;assert.deepEqual(opened,[expected]);
 });

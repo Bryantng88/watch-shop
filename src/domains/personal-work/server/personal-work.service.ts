@@ -1,3 +1,5 @@
+import { queueWorkNotification, queuePersonalChange } from "@/domains/notification/server/work-push.service";
+import { workRoute, newShareRecipients } from "@/domains/notification/server/work-push-policy";
 import {isPersonalEvent} from "../shared/personal-event";
 import { publicRunSelect } from "./codex/personal-codex.service";
 import { codexExecutionReadiness } from "./codex/codex-config";
@@ -30,6 +32,7 @@ import {
 const domainKeys = new Set<string>(PERSONAL_WORK_DOMAINS.map((item) => item.key));
 
 type PersonalWorkInput = {
+  reminderMinutes?: number | null;
   title: string;
   note?: string | null;
   dueAt?: string | null;
@@ -302,6 +305,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         priority: item.priority,
         dueAt: item.dueAt?.toISOString() ?? null,
         scheduledEndAt: item.scheduledEndAt?.toISOString() ?? null,
+        reminderMinutes: item.reminderMinutes,
         estimatedDays: item.estimatedDays,
         completedAt: item.completedAt?.toISOString() ?? null,
         domain,
@@ -356,6 +360,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   if (!userId) throw new Error("Không xác định được người dùng");
   const title = input.title.trim();
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
+  if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const schedule = validatePersonalSchedule(input.dueAt, input.scheduledEndAt);
   const category = await resolvePersonalCategory(userId, input.categoryKey || normalizePersonalDomain(input.domain));
   const domain = category.domain;
@@ -375,6 +380,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   return withDbTransaction(db, async (tx) => {
     const item = await tx.taskItem.create({
       data: {
+        reminderMinutes: input.reminderMinutes,
         title, note: input.note?.trim() || null,
         personalOwnerUserId: userId, assignedToUserId: userId,
         priority: input.priority || "MEDIUM", workTypeId: workType,
@@ -486,6 +492,7 @@ export async function searchPersonalWorkTargets(input: {
 
 export async function updatePersonalWorkItem(
   input: {
+    reminderMinutes?: number | null;
     id: string;
     title?: string;
     note?: string | null;
@@ -506,6 +513,7 @@ export async function updatePersonalWorkItem(
   auth: unknown,
   db: DB = prisma,
 ) {
+  if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
   const event = isPersonalEvent(current.workTypeId);
   if(input.workType!==undefined && isPersonalEvent(input.workType)!==event)throw new Error("Không đổi qua lại giữa công việc và sự kiện; hãy tạo mục mới.");
@@ -553,6 +561,7 @@ export async function updatePersonalWorkItem(
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
+      ...(input.reminderMinutes !== undefined ? {reminderMinutes:input.reminderMinutes} : {}),
       ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
       ...(category ? { personalCategoryId: category.id } : {}),
       ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
@@ -633,6 +642,7 @@ export async function updatePersonalWorkItem(
         });
       }
     }
+    if (scheduleChanged || status === TaskStatus.CANCELLED) await queuePersonalChange(tx, input.id, current.userId, status === TaskStatus.CANCELLED ? "CANCELLED" : "CHANGED");
     if (input.domain || input.tags || category) {
       await setTargetTagsRepo(tx, {
         ...personalWorkTagOwner(current),
@@ -771,6 +781,9 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
   });
   if (users.length !== unique.size) throw new Error("Có người nhận không còn hoạt động hoặc không tồn tại");
   await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const previous = await tx.personalTaskShare.findMany({where:{taskItemId},select:{userId:true}});
+    const item = await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId}});
     await tx.personalTaskShare.deleteMany({ where: { taskItemId } });
     if (unique.size) {
       await tx.personalTaskShare.createMany({
@@ -781,6 +794,10 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
           sharedByUserId: current.userId,
         })),
       });
+    }
+    for (const userId of newShareRecipients(previous.map(s=>s.userId), [...unique.keys()], current.userId)) {
+      await queueWorkNotification(tx, {key:`work:share:${taskItemId}:${userId}:${crypto.randomUUID()}`, userId, actorId:current.userId,
+        taskItemId,kind:"SHARED",title:item.title,route:workRoute(taskItemId,true)});
     }
   });
 }

@@ -1,3 +1,5 @@
+import { queueWorkNotification } from "@/domains/notification/server/work-push.service";
+import { workRoute } from "@/domains/notification/server/work-push-policy";
 import {personalWorkToday} from "./personal-work-today";
 import {personalWorkPlansSchema,personalWorkDraftItems,type PersonalWorkDraftItem,type CreatedPersonalWork} from "../personal-work-contract";
 import {requestPersonalCodexRun} from "@/domains/personal-work/server/codex/personal-codex.service";
@@ -426,7 +428,6 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
    }
    const open=await executeIntakeLookup(tx,{tool:"work.open",productId:plan.productId,customerId:plan.customerId});if(open.truncated||(open.openWatchWork as unknown[]).length||await tx.technicalIssue.count({where:{serviceRequest:{productId:plan.productId},executionStatus:{notIn:["DONE","CANCELED"]}}}))throw new AssistantError("Watch đã có việc hoặc phiếu kỹ thuật đang mở. Cần đối chiếu trước khi giao thêm.",409);
    const work:(()=>Promise<void>)[]=[];const register=(fn:()=>Promise<void>)=>work.push(fn);const r=await requestFromPlan(tx,row,plan);r.status="TRACKING";r.reference=`YC-${row.id.slice(0,8).toUpperCase()}-${revision}`;
-   const pushRecipients=new Set<string>();
    const space=plan.conditions.some(c=>c.kind==="TASK")?await resolveOperationSpace(tx,{context:"OPERATION"}):null;
    if(plan.conditions.some(c=>c.kind==="TASK")&&!space)throw new AssistantError("Chưa có không gian Vận hành cho task. Quản trị cần khởi tạo qua luồng hiện có.",409);
    for(const [i,c] of plan.conditions.entries()){
@@ -441,15 +442,13 @@ export async function approveAssistant(userId:string,id:string,revision:number,d
        r.conditions[i].linkedRef=issue.id;r.conditions[i].progress=issue.executionStatus;
        await tx.notification.create({data:{userId:person.id,type:`CUSTOMER_AI_${id}_${revision}_${c.key}`,title:"Yêu cầu kỹ thuật từ khách hàng",message:c.requirement,metadata:{customerAssistantId:id,technicalIssueId:issue.id,route:`/admin/services/issues-board?serviceRequestId=${serviceId}`}}});
      }else if(space){
-       if(person.id!==userId)pushRecipients.add(person.id);
        const item=await tx.taskItem.create({data:{taskId:space.task.id,title:c.requirement,note:["workTypeKey: ad-hoc-work","blueprintKey: ad-hoc-work","blueprintSource: REGISTRY","workspaceKind: STANDALONE_WORKSPACE","operationWorkspaceRole: AD_HOC_WORK","ownerType: USER","workspaceType: ad-hoc-work","shareGroupKey: operation","itemLabel: Việc phát sinh","defaultView: items","identityTargetType: WATCH",`requestDetail: ${c.expected.replace(/[\r\n]/g," ")}`,note].join("\n"),userId,assignedToUserId:person.id,workTypeId:"ad-hoc-work"}});
        await ensureTaskItemReferenceBinding(tx,{taskId:space.task.id,taskItemId:item.id,targetType:"WATCH",targetId:plan.productId,actionType:"LINKED",createdByUserId:userId,metadataJson:{source:"CUSTOMER_AI",customerAssistantId:id,customerId:plan.customerId,workTypeKey:"ad-hoc-work",targetTitle:String(now.title||r.watch),targetRef:r.watch,targetHref:`/admin/watches/${plan.productId}`,intakeNote:c.expected}});
        await tx.taskItemActivity.create({data:{taskItemId:item.id,actorUserId:userId,sourceType:"SYSTEM",sourceId:id,title:"Giao việc sau khi duyệt yêu cầu khách hàng",body:c.expected}});
        await recordBusinessEvent(tx,{eventKey:"task.item.created",targetType:"TASK_ITEM",targetId:item.id,actorUserId:userId,payload:{taskId:space.task.id,taskItemId:item.id,taskItemTitle:item.title,assignedToUserId:person.id,workspaceKind:"STANDALONE_WORKSPACE",operationWorkspaceRole:"AD_HOC_WORK",workTypeKey:"ad-hoc-work"}},{deferConsumers:register});
-       await tx.notification.create({data:{userId:person.id,taskId:space.task.id,type:`CUSTOMER_AI_${id}_${revision}_${c.key}`,title:"Công việc từ yêu cầu khách hàng",message:c.requirement,metadata:{customerAssistantId:id,taskItemId:item.id,route:"/admin/coordination/operation?view=ad-hoc-work"}}});r.conditions[i].linkedRef=item.id;r.conditions[i].progress=item.status;
+       await queueWorkNotification(tx,{key:`work:created:${item.id}:${person.id}`,userId:person.id,actorId:userId,taskItemId:item.id,kind:"ASSIGNED",title:item.title,route:workRoute(item.id,false)});r.conditions[i].linkedRef=item.id;r.conditions[i].progress=item.status;
      }
    }
-   for(const recipient of pushRecipients)register(()=>notifyBenAssignment(recipient));
    const next=archiveApproved({...state(row),customerRequest:r,approved:true},revision);const updated=await tx.customerAssistantConversation.update({where:{id},data:{approvedAt:new Date(),approvedRevision:revision,status:"APPLIED",state:json(message(next,"Đã giao các phiếu/task theo bản bạn duyệt. Bạn có thể mở công việc liên quan để theo dõi."))}});return {row:updated,work};
  });for(const fn of completed.work)defer(fn);return dto(completed.row);
 }
@@ -583,6 +582,7 @@ export async function approveAssistantPersonalWork(
       const item = await createPersonalWorkItem(
         {
           title: p.title,
+          reminderMinutes: p.reminderMinutes,
           note: p.note,
           dueAt: p.dueAt,
           scheduledEndAt: p.scheduledEndAt,
@@ -646,6 +646,10 @@ export async function approveAssistantPersonalWork(
               sharedByUserId: userId,
             })),
         });
+      for (const person of [...(draft.assignee ? [draft.assignee] : []), ...draft.shares.filter(p=>p.id!==draft.assignee?.id)]) {
+        await queueWorkNotification(tx, {key:`work:created:${item.id}:${person.id}`,userId:person.id,actorId:userId,taskItemId:item.id,
+          kind:person.id===draft.assignee?.id?"ASSIGNED":"SHARED",title:item.title,route:workRoute(item.id,true)});
+      }
       const codex = p.codex
         ? await requestPersonalCodexRun(item.id, actor, false, {
             notBefore: p.codex.startAt,

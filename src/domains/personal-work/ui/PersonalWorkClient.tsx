@@ -177,6 +177,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const [calendarCategoryKey, setCalendarCategoryKey] = useState("GENERAL");
   const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [reminderMinutes,setReminderMinutes] = useState<number|null>(0);
   const [newTags, setNewTags] = useState("");
   const [editTags, setEditTags] = useState("");
   const [calendarTags, setCalendarTags] = useState("");
@@ -231,6 +232,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
     if (domain !== "ALL" && !data.categories.some(c => c.key === domain) && !workItems.some(item => item.category.key === domain)) setDomain("ALL");
   }, [data.categories, workItems, domain]);
   const [editTitle, setEditTitle] = useState("");
+  const [editReminder,setEditReminder]=useState<number|null>(0);
   const [editNote, setEditNote] = useState("");
   const editNoteRef = useRef<HTMLTextAreaElement>(null);
   const [editUpdateBody, setEditUpdateBody] = useState("");
@@ -389,6 +391,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const openTaskEdit = useCallback((item: PersonalWorkItem) => {
     setEditingItem(item);
     setEditTitle(item.title);
+    setEditReminder(item.reminderMinutes === undefined ? 0 : item.reminderMinutes);
     setEditTags(item.tags.join(", "));
     setEditNote(item.note || "");
     setEditUpdateBody("");
@@ -462,6 +465,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               async () => {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
+                  reminderMinutes,
                   tags: parsePersonalWorkTags(newTags),
                   domain: creatingEvent ? "GENERAL" : newDomain,
                   categoryKey: creatingEvent ? "GENERAL" : newCategoryKey,
@@ -527,6 +531,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm"
             />
 
+            <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
             <button
               type="submit"
               disabled={pending}
@@ -535,18 +540,22 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               {creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </button>
           </AdminFlatToolbar>
-          {creatingEvent && <div className="mt-2"><PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} /></div>}
           <details className="mt-2 text-sm">
-            <summary className="cursor-pointer text-slate-600">{creatingEvent ? "Thẻ và thời lượng" : "Giờ và thẻ"}</summary>
-            <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              {!creatingEvent && <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />}
+            <summary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</summary>
+            <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
               <label className="flex items-center gap-2 text-xs text-slate-600">
                 Số ngày dự kiến
                 <input type="number" min={1} max={365} value={estimatedDays}
                   onChange={event => setEstimatedDays(Number(event.target.value) || 1)}
                   className="h-9 w-20 rounded-lg border border-slate-200 px-2" />
               </label>
-              <PersonalWorkTagsField allowCodex={false} value={newTags} onChange={setNewTags} configuration={data.codex} />
+              <label className="flex items-center gap-2 text-xs text-slate-600">Nhắc lịch
+                <select aria-label="Nhắc lịch" className="h-9 rounded-lg border border-slate-200 px-2" value={reminderMinutes === null ? "off" : reminderMinutes} onChange={e=>setReminderMinutes(e.target.value==="off"?null:Number(e.target.value))}>
+                  <option value="off">Không nhắc</option><option value="0">Đúng giờ</option>
+                  {[10,15,30,60].map(m=><option key={m} value={m}>Trước {m} phút</option>)}
+                </select>
+              </label>
+              <PersonalWorkTagsField allowCodex={!creatingEvent} value={newTags} onChange={setNewTags} configuration={data.codex} />
             </div>
           </details>
           {!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
@@ -1003,12 +1012,14 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ))}
-                      <p
-                        className={`mt-1 flex items-center gap-1 text-xs ${late ? "font-semibold text-amber-700" : "text-slate-500"}`}
-                      >
-                        <Clock3 className="h-3.5 w-3.5" />
-                        {isPersonalEvent(item.workType)?personalEventLabel(item.dueAt,item.scheduledEndAt,now,item.estimatedDays)+" · ":late ? "Quá hạn · " : ""}
-                        {dueLabel(item.dueAt, personalEventTiming(item).timed)} · {item.estimatedDays === 1 ? "trong ngày" : `dự kiến ${item.estimatedDays} ngày`}
+                      <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold tabular-nums ${late ? "bg-amber-50 text-amber-800" : isPersonalEvent(item.workType) ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800"}`}>
+                          {isPersonalEvent(item.workType) ? <CalendarDays className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
+                          {personalEventTiming(item).timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa đặt giờ"}
+                        </span>
+                        {late && <span className="text-amber-700">Quá hạn</span>}
+                        {view !== "TODAY" && item.dueAt && <span>{dueLabel(item.dueAt)}</span>}
+                        {item.estimatedDays > 1 && <span>· {item.estimatedDays} ngày</span>}
                       </p>
                       {item.access === "OWNER" && item.sharedWith.length > 0 && (
                         <div
@@ -1097,6 +1108,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   await updatePersonalWorkAction({
                     id: editingItem.id,
                     title: nextTitle,
+                    reminderMinutes: editReminder,
                     note: editNote,
                     domain: editDomain,
                     categoryKey: editCategoryKey,
@@ -1390,6 +1402,11 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </select>
                 </label>
               )}
+              <label className="flex items-center gap-2 text-xs text-slate-600">Nhắc lịch
+                <select aria-label="Nhắc lịch" disabled={editingItem.access === "VIEWER"} value={editReminder === null ? "off" : editReminder} onChange={e=>setEditReminder(e.target.value==="off"?null:Number(e.target.value))} className="h-9 rounded-lg border border-slate-200 px-2">
+                  <option value="off">Không nhắc</option><option value="0">Đúng giờ</option>{[10,15,30,60].map(m=><option key={m} value={m}>Trước {m} phút</option>)}
+                </select>
+              </label>
               <PersonalWorkTimeFields endOptional start={editStartTime} end={editEndTime} disabled={editingItem.access === "VIEWER"} onChange={(start, end) => { setEditStartTime(start); setEditEndTime(end); }} />
               {editScheduleError && <p role="alert" className="text-xs text-rose-600">{editScheduleError}</p>}
               <div className="grid gap-3 sm:grid-cols-2">

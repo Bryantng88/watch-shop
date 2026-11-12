@@ -15,17 +15,17 @@ export const pushSubscription = z.object({
   keys: z.object({ p256dh: z.string().regex(/^[\w-]{87}$/), auth: z.string().regex(/^[\w-]{22}$/) }).strict(),
 }).strict();
 
-function vapidDetails() {
+export function benPushVapid() {
   const { BEN_PUSH_PUBLIC_KEY: publicKey, BEN_PUSH_PRIVATE_KEY: privateKey, BEN_PUSH_SUBJECT: subject } = process.env;
   return publicKey && privateKey && subject ? { publicKey, privateKey, subject } : null;
 }
 
 export function benPushPublicKey() {
-  return vapidDetails()?.publicKey ?? null;
+  return benPushVapid()?.publicKey ?? null;
 }
 
 export async function saveBenPush(userId: string, subscription: z.infer<typeof pushSubscription>) {
-  if (!vapidDetails()) throw new AssistantError("Thông báo Ben chưa được cấu hình.", 503);
+  if (!benPushVapid()) throw new AssistantError("Thông báo Ben chưa được cấu hình.", 503);
   const { endpoint, keys } = subscription;
   await prisma.benPushSubscription.upsert({
     where: { endpoint },
@@ -43,7 +43,7 @@ export async function removeBenPush(userId: string, endpoint: string) {
 }
 
 export async function notifyBenAssignment(userId: string) {
-  const vapid = vapidDetails();
+  const vapid = benPushVapid();
   if (!vapid) return;
   try {
     const subscriptions = await prisma.benPushSubscription.findMany({

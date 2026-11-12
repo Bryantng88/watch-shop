@@ -84,6 +84,7 @@ export type PersonalCodexRun = {
 };
 
 export type PersonalWorkItem = {
+  reminderMinutes?: number | null;
   personalWorkNumber?: number | null;
   assignedToMe?: boolean;
   assignee?: { id: string; name: string | null } | null;

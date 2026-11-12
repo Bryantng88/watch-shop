@@ -332,6 +332,7 @@ model MechanicalPartCatalog {
 }
 
 model Notification {
+  dedupeKey String? @unique
   id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   type      String
   title     String
@@ -2812,6 +2813,7 @@ model Task {
 }
 
 model TaskItem {
+  reminderMinutes Int? @default(0)
   personalWorkNumber Int? @unique
   codexRuns PersonalCodexRun[]
   id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
@@ -4098,4 +4100,23 @@ model BenPushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([userId, updatedAt])
+}
+
+// Transactional inbox and Web Push delivery. No business data is cached on device.
+model WorkPushDelivery {
+  id String @id @default(cuid())
+  notificationKey String
+  userId String
+  taskItemId String?
+  kind String
+  route String
+  endpoint String
+  subscriptionVersion DateTime
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  leaseUntil DateTime?
+  deliveredAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([notificationKey, endpoint])
+  @@index([deliveredAt, availableAt, leaseUntil])
 }
