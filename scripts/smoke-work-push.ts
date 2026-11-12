@@ -1,3 +1,4 @@
+import {renamePersonalWorkChecklistItem} from "../src/domains/personal-work/server/personal-work.service";
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import type {sendNotification} from 'web-push';
@@ -20,6 +21,18 @@ async function main(){
  const fakeSend:typeof sendNotification=async (_subscription,payload)=>{calls++;assert.ok(!String(payload).includes('Synthetic work'));if(failure)throw Object.assign(new Error('synthetic'),{statusCode:failure});return {statusCode:201,body:'',headers:{}};};
  const queue=(key:string)=>({key,userId:recipient.id,actorId:owner.id,taskItemId:item.id,kind:'SHARED' as const,title:item.title,route:workRoute(item.id,true)});
  try{
+  console.log('push fixture: checklist rename permissions and completion preservation');
+  const entry=await prisma.taskItemChecklist.create({data:{taskItemId:item.id,title:"Original step",isDone:true,doneAt:new Date()}});
+  await renamePersonalWorkChecklistItem(item.id,entry.id,"  Renamed step  ",{userId:owner.id});
+  const renamed=await prisma.taskItemChecklist.findUniqueOrThrow({where:{id:entry.id}});
+  assert.equal(renamed.title,"Renamed step");assert.equal(renamed.isDone,true);assert.equal(renamed.doneAt?.getTime(),entry.doneAt?.getTime());
+  await assert.rejects(renamePersonalWorkChecklistItem(item.id,entry.id,"Viewer edit",{userId:recipient.id}));
+  await assert.rejects(renamePersonalWorkChecklistItem(item.id,randomUUID(),"Wrong checklist",{userId:owner.id}));
+  await assert.rejects(renamePersonalWorkChecklistItem(item.id,entry.id," ",{userId:owner.id}));
+  await prisma.taskItem.update({where:{id:item.id},data:{checklistLockedAt:new Date()}});
+  await assert.rejects(renamePersonalWorkChecklistItem(item.id,entry.id,"Locked edit",{userId:owner.id}));
+  await prisma.taskItem.update({where:{id:item.id},data:{checklistLockedAt:null}});
+  assert.equal(await prisma.taskItemActivity.count({where:{taskItemId:item.id,title:"Sửa đầu việc"}}),1);
   console.log('push fixture: transaction rollback');
   await assert.rejects(prisma.$transaction(async tx=>{await queueWorkNotification(tx,queue('rollback-'+suffix));throw Error('rollback');}));
   assert.equal(await prisma.notification.count({where:{dedupeKey:'rollback-'+suffix}}),0);assert.equal(await prisma.workPushDelivery.count(),0);

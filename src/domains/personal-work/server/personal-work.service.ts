@@ -300,6 +300,8 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         codexRuns: item.codexRuns.map(run => ({ ...run, notBefore:run.notBefore?.toISOString()??null, createdAt: run.createdAt.toISOString(), startedAt: run.startedAt?.toISOString() ?? null, finishedAt: run.finishedAt?.toISOString() ?? null })),
         codexRun: item.codexRuns[0] ? { ...item.codexRuns[0], notBefore:item.codexRuns[0].notBefore?.toISOString()??null, createdAt: item.codexRuns[0].createdAt.toISOString(), startedAt: item.codexRuns[0].startedAt?.toISOString() ?? null, finishedAt: item.codexRuns[0].finishedAt?.toISOString() ?? null } : null,
         title: item.title,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
         note: item.note,
         status: item.status,
         priority: item.priority,
@@ -702,7 +704,25 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
       data: { taskItemId, title: normalizedTitle, sortOrder: (last?.sortOrder || 0) + 1 },
     });
     await updateChecklistProgress(tx, taskItemId);
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Thêm đầu việc",body:normalizedTitle}});
     return checklist;
+  });
+}
+
+export async function renamePersonalWorkChecklistItem(taskItemId: string, checklistItemId: string, title: string, auth: unknown) {
+  const normalized = title.trim();
+  if (!normalized || normalized.length > 500) throw new Error("Tên đầu việc cần từ 1 đến 500 ký tự");
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx);
+    assertChecklistOpen(current);
+    const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
+    if (!entry) throw new Error("Không tìm thấy đầu việc");
+    if (entry.title === normalized) return entry;
+    const updated = await tx.taskItemChecklist.update({where:{id:entry.id},data:{title:normalized}});
+    await tx.taskItem.update({where:{id:taskItemId},data:{updatedAt:new Date()}});
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Sửa đầu việc",body:`${entry.title} → ${normalized}`}});
+    return updated;
   });
 }
 
@@ -720,6 +740,8 @@ export async function setPersonalWorkChecklistItemDone(
       data: { isDone, doneAt: isDone ? new Date() : null },
     });
     if (!result.count) throw new Error("Không tìm thấy đầu việc");
+    const entry = await tx.taskItemChecklist.findUniqueOrThrow({where:{id:checklistItemId}});
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:isDone?"Hoàn thành đầu việc":"Mở lại đầu việc",body:entry.title}});
     return updateChecklistProgress(tx, taskItemId);
   });
 }
@@ -728,7 +750,10 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
+    if (!entry) throw new Error("Không tìm thấy đầu việc");
     const result = await tx.taskItemChecklist.deleteMany({ where: { id: checklistItemId, taskItemId } });
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Xóa đầu việc",body:entry.title}});
     if (!result.count) throw new Error("Không tìm thấy đầu việc");
     return updateChecklistProgress(tx, taskItemId);
   });

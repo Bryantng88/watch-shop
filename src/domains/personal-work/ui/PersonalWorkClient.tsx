@@ -1,4 +1,6 @@
 "use client";
+import {PersonalChecklistTitle} from "./PersonalChecklistTitle";
+import {personalWorkUpdateLabel} from "../shared/personal-work-update-label";
 import { personalWorkCode } from "../shared/personal-work-code";
 import {PersonalWorkKindField} from "./PersonalWorkKindField";
 import {isPersonalEvent,personalEventLabel,personalItemScheduleInput,personalEventTiming} from "../shared/personal-event";
@@ -20,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  History,
   CalendarDays,
   Check,
   ChevronDown,
@@ -46,6 +49,7 @@ import {
   ProgressMetric,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
+  renamePersonalWorkChecklistItemAction,
   addPersonalWorkChecklistItemAction,
   createPersonalWorkAction,
   deletePersonalWorkChecklistItemAction,
@@ -948,6 +952,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
           <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">
             {items.length ? (
               items.map((item) => {
+                const update = personalWorkUpdateLabel(item,now);
                 const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
                 return (
                   <div
@@ -1017,6 +1022,11 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           {isPersonalEvent(item.workType) ? <CalendarDays className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
                           {personalEventTiming(item).timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa đặt giờ"}
                         </span>
+                        {!isPersonalEvent(item.workType) && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && <span role="progressbar" aria-label={`Tiến độ ${item.title}`} aria-valuenow={item.progressPercent} aria-valuemin={0} aria-valuemax={100} className="inline-flex shrink-0 items-center gap-1.5" title={`${item.checklist.filter(e=>e.isDone).length}/${item.checklist.length} đầu việc · ${item.progressPercent}%`}>
+                          <span className="h-1.5 w-12 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-blue-600" style={{width:`${item.progressPercent}%`}}/></span>
+                          <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums text-slate-600">{item.checklist.filter(e=>e.isDone).length}/{item.checklist.length} · {item.progressPercent}%</span>
+                        </span>}
+                        {update && <span className="inline-flex items-center gap-1 text-[10px] text-blue-700" title={`${update.detail} · ${new Date(update.at).toLocaleString("vi-VN",{timeZone:"Asia/Bangkok"})}`}><History className="h-3 w-3"/><time dateTime={update.at}>{update.label}</time></span>}
                         {late && <span className="text-amber-700">Quá hạn</span>}
                         {view !== "TODAY" && item.dueAt && <span>{dueLabel(item.dueAt)}</span>}
                         {item.estimatedDays > 1 && <span>· {item.estimatedDays} ngày</span>}
@@ -1052,16 +1062,6 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       )}
                     </div>
                     <div className="flex items-center justify-end gap-3">
-                      {!isPersonalEvent(item.workType) && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && (
-                        <ProgressMetric
-                          value={item.progressPercent}
-                          numerator={item.checklist.filter((entry) => entry.isDone).length}
-                          denominator={item.checklist.length}
-                          layout="inline"
-                          className="max-w-[210px]"
-                          label={`Tiến độ ${item.title}: ${item.progressPercent}%`}
-                        />
-                      )}
                       <ChevronRight className="h-4 w-4 text-slate-300" />
                     </div>
                   </div>
@@ -1225,9 +1225,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                             <Check className="h-3.5 w-3.5" />
                           )}
                         </button>
-                        <span className={`min-w-0 flex-1 text-sm ${entry.isDone ? "text-slate-400 line-through" : "text-slate-700"}`}>
-                          {entry.title}
-                        </span>
+                        <PersonalChecklistTitle title={entry.title} done={entry.isDone}
+                          disabled={editingItem.access === "VIEWER" || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
+                          onSave={async title=>{
+                            await renamePersonalWorkChecklistItemAction({taskItemId:editingItem.id,checklistItemId:entry.id,title});
+                            setEditingItem(current=>current&&current.id===editingItem.id?{...current,checklist:current.checklist.map(item=>item.id===entry.id?{...item,title}:item)}:current);
+                            router.refresh();
+                          }}/>
                         {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
                           <button
                             type="button"
@@ -1529,23 +1533,23 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
             </div>
             <PersonalCodexPanel item={editingItem} configuration={data.codex} />
-            {editingItem.activities.some((activity) => activity.body) && (
+            {editingItem.activities.length > 0 && (
               <section className="mt-4 border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Lịch sử cập nhật
                   </h3>
                   <span className="text-[11px] text-slate-400">
-                    {editingItem.activities.filter((activity) => activity.body).length} mốc
+                    {editingItem.activities.length} mốc
                   </span>
                 </div>
                 <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
                   {editingItem.activities
-                    .filter((activity) => activity.body)
                     .slice(0, 8)
                     .map((activity) => (
                       <article key={activity.id} className="rounded-lg bg-slate-50 px-3 py-2">
-                        <p className="whitespace-pre-wrap text-sm leading-5 text-slate-700">{activity.body}</p>
+                        <p className="text-xs font-semibold text-slate-700">{activity.title}</p>
+                        {activity.body && <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-slate-700">{activity.body}</p>}
                         <p className="mt-1 text-[11px] text-slate-400">
                           {activity.actor?.name || activity.actor?.email || "Hệ thống"}
                           {" · "}

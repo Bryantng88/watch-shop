@@ -84,6 +84,8 @@ export type PersonalCodexRun = {
 };
 
 export type PersonalWorkItem = {
+  createdAt?: string;
+  updatedAt?: string;
   reminderMinutes?: number | null;
   personalWorkNumber?: number | null;
   assignedToMe?: boolean;

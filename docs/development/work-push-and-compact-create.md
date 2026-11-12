@@ -54,3 +54,18 @@ TypeScript and production build. On physical devices verify Android Chrome and
 an installed iOS 16.4+ Safari PWA: grant permission, use Gửi thử, assign/share from
 another account, close PWA, receive notification, open correct work, sign out and
 confirm no further delivery. Permission is requested only after a user click.
+
+## Personal-work follow-up
+
+Checklist titles can be renamed inline with Enter/save and cancelled with Escape.
+The server checks current owner/editor access, item membership and checklist lock
+inside the transaction; renaming preserves completion and progress. Checklist
+add/toggle/rename/delete actions record activity. List metadata carries a compact
+progress indicator and last-update cue, so long titles never displace progress.
+Update history includes state-only entries as well as text comments.
+
+The Ben worker distinguishes aggregate goals from record links: “target 3 watch
+cho Vintic, 1 watch cho Gent” stays in the work note. It becomes checklist steps
+only when explicitly requested, and never selects unidentified watch IDs. Deploy
+the updated customer-assistant worker protocol along with the application to use
+this instruction in live conversations.
