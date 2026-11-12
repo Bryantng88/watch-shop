@@ -7,7 +7,36 @@ import { getOrderInventoryEffect, getOrderStatusLabel } from "@/domains/order/sh
 
 export { cx, fmtDate, fmtMoney };
 
-export { default as SectionCard } from "../OrderSection";
+export function SectionCard({
+  icon,
+  title,
+  subtitle,
+  children,
+  actions,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  actions?: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="text-violet-600">{icon}</span>
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-slate-950">{title}</h2>
+            {subtitle ? <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p> : null}
+          </div>
+        </div>
+        {actions}
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
 
 export type OrderDetailItem = {
   id: string;
@@ -120,8 +149,8 @@ export function OrderStateBadge({ status }: { status?: string | null }) {
 
 export function DetailText({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) {
   return (
-    <div className="space-y-1">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
+    <div className="space-y-1.5">
+      <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">{label}</div>
       <div className={cx("text-sm leading-6 text-slate-900", mono && "font-mono text-[13px]")}>{value || "-"}</div>
     </div>
   );
@@ -129,8 +158,8 @@ export function DetailText({ label, value, mono = false }: { label: string; valu
 
 export function SoftMetric({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
   return (
-    <div className="min-w-0 py-2">
-      <div className="text-xs text-slate-500">{label}</div>
+    <div className="rounded-lg bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200/70">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</div>
       <div className="mt-1 text-sm font-semibold text-slate-950">{value || "-"}</div>
       {hint ? <div className="mt-0.5 text-xs text-slate-500">{hint}</div> : null}
     </div>
@@ -139,7 +168,7 @@ export function SoftMetric({ label, value, hint }: { label: string; value: React
 
 export function EmptyState({ text }: { text: string }) {
   return (
-    <div className="py-6 text-center text-sm text-slate-500">
+    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
       {text}
     </div>
   );

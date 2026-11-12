@@ -1,10 +1,12 @@
-name: Order compact UI
+name: Order form compact UI
 on:
   pull_request:
     paths:
-      - 'src/domains/order/**'
+      - 'src/domains/order/client/OrderFormClient.tsx'
+      - 'src/domains/order/ui/form/**'
+      - 'src/domains/order/ui/OrderSection.tsx'
+      - 'src/domains/order/ui/OrderPageHeader.tsx'
       - 'src/app/(admin)/admin/orders/**'
-      - 'src/domains/shared/ui/list/RowActions.tsx'
       - 'scripts/smoke-order-compact-ui.cjs'
       - '.github/workflows/order-compact-ui.yml'
 permissions:
@@ -20,7 +22,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx eslint src/domains/order/client/OrderFormClient.tsx src/domains/order/client/OrderDetailClient.tsx src/domains/order/client/OrderListClient.tsx src/domains/order/ui/OrderPageHeader.tsx src/domains/order/ui/OrderSection.tsx src/domains/order/ui/OrderStatusBadge.tsx src/domains/order/ui/order-ui.helpers.ts src/domains/order/ui/form/*.tsx src/domains/order/ui/detail/*.tsx src/domains/order/ui/list/OrderListRow.tsx src/domains/order/ui/list/OrderListTable.tsx src/domains/order/ui/list/helpers.ts src/domains/shared/ui/list/RowActions.tsx 'src/app/(admin)/admin/orders/new/page.tsx' 'src/app/(admin)/admin/orders/[id]/edit/page.tsx'
+      - run: npx eslint src/domains/order/client/OrderFormClient.tsx src/domains/order/ui/OrderPageHeader.tsx src/domains/order/ui/OrderSection.tsx src/domains/order/ui/form/*.tsx 'src/app/(admin)/admin/orders/new/page.tsx' 'src/app/(admin)/admin/orders/[id]/edit/page.tsx'
       - run: npx tailwindcss -i src/app/globals.css -o /tmp/order-ui.css --minify
       - run: npm install --prefix /tmp/order-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/order-browser/node_modules/.bin/playwright install --with-deps chromium

@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
-import { Plus } from "lucide-react";
+import { Plus, ShoppingCart } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
@@ -21,6 +20,7 @@ import {
   OrderListTable,
 } from "../ui/list";
 import {
+  BusinessListPageHeader,
   BusinessListShell,
 } from "@/domains/shared/ui/business-list";
 import type {
@@ -207,10 +207,10 @@ export default function OrderListClient({
       });
 
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       notify.error({
         title: "Không thể cập nhật đơn hàng",
-        message: error instanceof Error ? error.message : "Có lỗi xảy ra.",
+        message: error?.message || "Có lỗi xảy ra.",
       });
     } finally {
       progress.hide();
@@ -259,10 +259,10 @@ export default function OrderListClient({
       });
 
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       notify.error({
         title: "Không thể hủy payment",
-        message: error instanceof Error ? error.message : "Thao tác thất bại.",
+        message: error?.message || "Thao tác thất bại.",
       });
       throw error;
     } finally {
@@ -319,8 +319,8 @@ export default function OrderListClient({
       notify.success({ title: "Đã post đơn", message: "Order đã vào luồng vận hành." });
       setSelectedIds([]);
       router.refresh();
-    } catch (error: unknown) {
-      notify.error({ title: "Không thể post đơn", message: error instanceof Error ? error.message : "Thao tác thất bại" });
+    } catch (error: any) {
+      notify.error({ title: "Không thể post đơn", message: error?.message || "Thao tác thất bại" });
     } finally {
       progress.hide();
     }
@@ -362,8 +362,8 @@ export default function OrderListClient({
 
       // Keep the manage modal open so user can continue tracking/finishing other payments.
       router.refresh();
-    } catch (error: unknown) {
-      notify.error({ title: "Không thể tạo payment", message: error instanceof Error ? error.message : "Thao tác thất bại." });
+    } catch (error: any) {
+      notify.error({ title: "Không thể tạo payment", message: error?.message || "Thao tác thất bại." });
       throw error;
     } finally {
       progress.hide();
@@ -414,10 +414,10 @@ export default function OrderListClient({
 
       setPaymentManageOrder(null);
       router.refresh();
-    } catch (error: unknown) {
+    } catch (error: any) {
       notify.error({
         title: "Không thể chốt order",
-        message: error instanceof Error ? error.message : "Thao tác thất bại.",
+        message: error?.message || "Thao tác thất bại.",
       });
       throw error;
     } finally {
@@ -451,8 +451,8 @@ export default function OrderListClient({
       notify.success({ title: "Đã hoàn tất payment", message: "Order đã được tính lại trạng thái thanh toán." });
       // Keep the manage modal open so user can continue tracking/finishing other payments.
       router.refresh();
-    } catch (error: unknown) {
-      notify.error({ title: "Không thể hoàn tất payment", message: error instanceof Error ? error.message : "Thao tác thất bại." });
+    } catch (error: any) {
+      notify.error({ title: "Không thể hoàn tất payment", message: error?.message || "Thao tác thất bại." });
       throw error;
     } finally {
       progress.hide();
@@ -479,17 +479,17 @@ export default function OrderListClient({
     setWorkCaseSource(buildOrderWorkCaseSource(row));
   }
   return (
-    <BusinessListShell className="min-h-screen bg-white"
+    <BusinessListShell
       header={
-        <AdminPageHeader
+        <BusinessListPageHeader
           title="Đơn hàng"
-          eyebrow="BÁN HÀNG"
-          description="Theo dõi đơn hàng, thanh toán và giao nhận."
-          meta={
+          icon={<ShoppingCart className="h-5 w-5" />}
+          meta={<span>Quản lý bán hàng · Thanh toán · Giao nhận</span>}
+          actions={
             <div className="flex items-center gap-2">
               <Link
                 href="/admin/orders/new"
-                className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
               >
                 <Plus className="h-4 w-4" />
                 Tạo đơn hàng

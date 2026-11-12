@@ -36,16 +36,23 @@ export default function OrderListTable(props: Props) {
     selectableIds.some((id) => props.selectedIds.includes(id)) && !allChecked;
 
   return (
-    <div className="relative min-w-0 max-w-full overflow-hidden bg-white">
+    <div className="relative max-w-full overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
       <div className="relative w-full overflow-x-auto">
-        <table aria-label="Danh sách đơn hàng" className="w-full min-w-[1120px] table-fixed text-sm">
+        <table className="w-full min-w-[1460px] table-fixed text-sm">
           <colgroup>
-            <col className="w-[40px]" /><col className="w-[290px]" /><col className="w-[180px]" />
-            <col className="w-[160px]" /><col className="w-[210px]" /><col className="w-[170px]" /><col className="w-[60px]" />
+            <col className="w-[48px]" />
+            <col className="w-[360px]" />
+            <col className="w-[190px]" />
+            <col className="w-[180px]" />
+            <col className="w-[210px]" />
+            <col className="w-[220px]" />
+            <col className="w-[160px]" />
+            <col className="w-[140px]" />
+            <col className="w-[80px]" />
           </colgroup>
-          <thead className="bg-slate-50/80 text-left text-xs font-medium text-slate-500">
+          <thead className="bg-slate-50/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              <th scope="col" className="px-4 py-3">
+              <th className="px-4 py-3">
                 <input
                   type="checkbox"
                   checked={allChecked}
@@ -57,12 +64,14 @@ export default function OrderListTable(props: Props) {
                   className="h-4 w-4 rounded border-slate-300"
                 />
               </th>
-              <th scope="col" className="px-4 py-3">Đơn hàng</th>
-              <th scope="col" className="px-4 py-3">Khách hàng</th>
-              <th scope="col" className="px-4 py-3">Thanh toán</th>
-              <th scope="col" className="px-4 py-3">Giao hàng</th>
-              <th scope="col" className="px-4 py-3 text-right">Tổng tiền</th>
-              <th scope="col" className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Thao tác</th>
+              <th className="px-4 py-3">Đơn hàng</th>
+              <th className="px-4 py-3">Khách hàng</th>
+              <th className="px-4 py-3">Thanh toán</th>
+              <th className="px-4 py-3">Giao hàng</th>
+              <th className="px-4 py-3">Ghi chú</th>
+              <th className="px-4 py-3 text-right">Tổng tiền</th>
+              <th className="px-4 py-3">Cập nhật</th>
+              <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -84,7 +93,7 @@ export default function OrderListTable(props: Props) {
               />
             )) : (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-slate-500">
+                <td colSpan={9} className="px-4 py-12 text-center text-sm text-slate-500">
                   Chưa có đơn hàng nào khớp bộ lọc hiện tại.
                 </td>
               </tr>

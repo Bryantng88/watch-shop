@@ -11,16 +11,16 @@ export default function OrderStatusPanel({ data }: { data: OrderDetailData }) {
   return (
     <SectionCard icon={<ShieldCheck className="h-5 w-5" />} title="Trạng thái" subtitle="Nguồn đơn và tác động tồn kho">
       <div className="space-y-5">
-        <div className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-          <DetailText label="Đơn hàng" value={<OrderStateBadge status={data.status} />} />
-          <DetailText label="Tồn kho" value={<InventoryEffectBadge status={data.status} />} />
+        <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-1">
+          <DetailText label="Order status" value={<OrderStateBadge status={data.status} />} />
+          <DetailText label="Inventory effect" value={<InventoryEffectBadge status={data.status} />} />
           <DetailText label="Nguồn" value={sourceLabel(data.source)} />
           <DetailText label="Xác minh" value={verificationLabel(data.verificationStatus)} />
           <DetailText label="Tạo lúc" value={fmtDate(data.createdAt)} />
           <DetailText label="Cập nhật" value={fmtDate(data.updatedAt)} />
         </div>
 
-        <div className="text-xs leading-5 text-slate-500">
+        <div className="rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600 ring-1 ring-slate-200/70">
           {effect === "HOLD"
             ? "Order này đang giữ watch và sẽ chặn quick order khác cho cùng sản phẩm."
             : effect === "SOLD"
