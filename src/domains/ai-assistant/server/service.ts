@@ -565,6 +565,7 @@ export async function approveAssistantPersonalWork(
   id: string,
   revision: number,
   defer?: (work: () => Promise<void>) => void,
+  includeUpdates=false,
 ) {
   const outcomes = await transaction(async (tx) => {
     await lock(tx, id);
@@ -592,6 +593,7 @@ export async function approveAssistantPersonalWork(
       ["QUEUED", "RUNNING"].includes(row.status)
     )
       throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem lại.", 409);
+    if(pending.updates&&!includeUpdates)throw new AssistantError("Bản duyệt gồm cả tạo mới và cập nhật. Tải lại Ben để xem và duyệt đầy đủ.",409);
     const drafts: PersonalWorkDraftItem[] = [];
     for (const entry of personalWorkDraftItems(pending)) {
       if (

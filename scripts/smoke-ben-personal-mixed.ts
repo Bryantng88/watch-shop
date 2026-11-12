@@ -221,6 +221,7 @@ async function main() {
       review.id,
       review.revision!,
       () => {},
+      true,
     );
   const checkUnchanged = async (
     target: Awaited<ReturnType<typeof makeExisting>>,
@@ -258,6 +259,17 @@ async function main() {
         () => {},
       ),
     );
+    await assert.rejects(
+      approveAssistantPersonalWork(
+        owner.id,
+        review.id,
+        review.revision!,
+        () => {},
+      ),
+      /duyệt đầy đủ/,
+    );
+    assert.equal(await prisma.taskItem.count(), before);
+    await checkUnchanged(target);
     const clicks = await Promise.allSettled([approve(review), approve(review)]);
     for (const click of clicks)
       assert.equal(

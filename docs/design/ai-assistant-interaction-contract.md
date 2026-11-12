@@ -576,7 +576,9 @@ updates inside personalWorkDraft.updates; one compact card shows every update
 and creation and one explicit “Tạo N và cập nhật M việc” button. Chat agreement
 alone cannot approve a mixed mutation. Corrections must re-read both sides.
 
-The existing approve-personal-work action validates the owned revision, active
+The existing approve-personal-work action requires includeUpdates=true for a mixed
+draft, rejecting old/partial browser approvals without mutating either side. It
+validates the owned revision, active
 permissions, inherited read/task scope, current edit access, exact update versions,
 category/recipients, schedule/checklist/Codex rules, then saves all canonical edits,
 creations, notifications and both receipt sets in one serializable transaction.
