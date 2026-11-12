@@ -1,10 +1,9 @@
 "use client";
 
-import { Package, Plus } from "lucide-react";
+import { Package } from "lucide-react";
 
 import InlineNotice from "@/domains/shared/feedback/InlineNotice";
-import { Button } from "@/domains/shared/ui/form/fields";
-import { SectionCard } from "@/domains/shared/ui/surface/card";
+import SectionCard from "../OrderSection";
 
 import OrderItemCard from "./OrderItemCard";
 import OrderProductSearchPanel from "./OrderProductSearchPanel";
@@ -52,12 +51,13 @@ export default function OrderItemsSection({
             title="Sản phẩm / dịch vụ"
             subtitle={
                 quickMode
-                    ? "Sản phẩm watch đã được nạp từ bridge, có thể thêm dịch vụ kèm theo."
+                    ? "Đồng hồ đã được thêm; bạn có thể bổ sung dịch vụ."
                     : "Thêm watch, sản phẩm hoặc dịch vụ vào đơn."
             }
         >
             <div className="space-y-4">
-                <OrderProductSearchPanel
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1"><OrderProductSearchPanel
                     query={productQuery}
                     results={productResults}
                     searching={searching}
@@ -65,38 +65,27 @@ export default function OrderItemsSection({
                     onQueryChange={onProductQueryChange}
                     onSearch={onSearchProduct}
                     onAddProduct={onAddProduct}
-                />
+                /></div>
 
-                {services.length ? (
-                    <div className="flex flex-wrap gap-2">
-                        {services
-                            .filter((service) => service.isActive !== false)
-                            .map((service) => (
-                                <Button
-                                    key={service.id}
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => onAddService(service)}
-                                    disabled={disabled}
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    {service.name}
-                                </Button>
-                            ))}
-                    </div>
-                ) : null}
+                {services.some(service => service.isActive !== false) && <select aria-label="Thêm dịch vụ" value="" disabled={disabled}
+                    onChange={event => { const service = services.find(item => item.id === event.target.value); if (service) onAddService(service); }}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 lg:w-56">
+                    <option value="">+ Thêm dịch vụ</option>
+                    {services.filter(service => service.isActive !== false).map(service => <option key={service.id} value={service.id}>{service.name}</option>)}
+                </select>}
 
-                <div className="space-y-3">
+                </div>
+                <div className="divide-y divide-slate-100">
                     {!items.length ? (
                         <InlineNotice
                             tone="warning"
                             title="Chưa có dòng hàng"
-                            description="Thêm sản phẩm từ watch bridge hoặc tìm sản phẩm để tạo đơn."
+                            description="Tìm sản phẩm hoặc chọn dịch vụ để thêm vào đơn."
                         />
                     ) : (
                         items.map((item, index) => (
                             <OrderItemCard
-                                key={`${item.kind}-${item.productId || item.serviceCatalogId || index}`}
+                                key={`${item.kind}-${item.id || item.productId || item.serviceCatalogId || "new"}-${index}`}
                                 item={item}
                                 disabled={disabled}
                                 onChange={(patch) => onUpdateItem(index, patch)}

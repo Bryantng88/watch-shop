@@ -65,20 +65,9 @@ export default function AcquisitionListTable({
         selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
     return (
-        <div className="overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-                <div className="flex items-center gap-2">
-                    <h2 className="text-base font-semibold text-slate-950">
-                        Danh sách dữ liệu
-                    </h2>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                        {total} phiếu
-                    </span>
-                </div>
-            </div>
-
+        <div className="overflow-hidden bg-white">
             <div className="w-full overflow-x-auto">
-                <table className="w-full table-fixed text-sm">
+                <table className="w-full min-w-[960px] table-fixed text-sm">
                     <colgroup>
                         <col className="w-[3%]" />
                         <col className="w-[23%]" />
@@ -91,9 +80,9 @@ export default function AcquisitionListTable({
                         <col className="w-[7%]" />
                     </colgroup>
 
-                    <thead className="bg-slate-50 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+                    <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                         <tr>
-                            <th className="px-4 py-4">
+                            <th className="px-4 py-3">
                                 <input
                                     type="checkbox"
                                     checked={allChecked}
@@ -104,14 +93,14 @@ export default function AcquisitionListTable({
                                     onChange={(event) => onToggleAll(event.target.checked)}
                                 />
                             </th>
-                            <th className="px-3 py-4">Sản phẩm</th>
-                            <th className="px-4 py-4">Phiếu nhập</th>
-                            <th className="px-4 py-4">Trạng thái phiếu</th>
-                            <th className={canViewFinancials ? "px-4 py-4" : "hidden"}>Thanh toán</th>
-                            <th className="px-4 py-4">Vendor</th>
-                            <th className={canViewFinancials ? "px-4 py-4 text-right" : "hidden"}>Tổng tiền</th>
-                            <th className="px-4 py-4">Cập nhật</th>
-                            <th className="sticky right-0 z-10 bg-slate-50 px-3 py-4 text-right">Action</th>
+                            <th className="px-3 py-3">Sản phẩm</th>
+                            <th className="px-4 py-3">Phiếu nhập</th>
+                            <th className="px-4 py-3">Trạng thái phiếu</th>
+                            <th className={canViewFinancials ? "px-4 py-3" : "hidden"}>Thanh toán</th>
+                            <th className="px-4 py-3">Vendor</th>
+                            <th className={canViewFinancials ? "px-4 py-3 text-right" : "hidden"}>Tổng tiền</th>
+                            <th className="px-4 py-3">Cập nhật</th>
+                            <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Thao tác</th>
                         </tr>
                     </thead>
 
@@ -139,7 +128,7 @@ export default function AcquisitionListTable({
                 </table>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-sm text-slate-500">
                 <div>
                     Tổng: <b className="text-slate-900">{total}</b> phiếu · Trang {page}/
                     {totalPages}

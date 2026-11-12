@@ -25,7 +25,7 @@ export default async function EditOrderPage({
     if (!draft) notFound();
 
     return (
-        <div className="mx-auto w-full max-w-[1500px] px-4 pt-6 lg:px-6">
+        <div className="min-w-0 bg-white">
             <OrderFormClient
                 key={id}
                 mode="edit"
