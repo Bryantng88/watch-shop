@@ -58,7 +58,7 @@ test("one compact review shows every item and one approval; saved single-item dr
   assert.ok(html.includes(first.title));
   assert.ok(html.includes(second.title));
   assert.equal((html.match(/<button/g) || []).length, 1);
-  assert.ok(html.includes("Tạo 2 mục"));
+  assert.ok(html.includes("Duyệt 2 thay đổi"));
   assert.equal(personalWorkDraftItems(items[0]).length, 1);
 });
 
@@ -106,6 +106,6 @@ test("combined move-and-create review shows both operations with one approval", 
   assert.ok(html.includes("13:30"));
   assert.ok(html.includes("16:30"));
   assert.equal((html.match(/<button/g) || []).length, 1);
-  assert.ok(html.includes("Tạo 1 và cập nhật 1 việc"));
+  assert.ok(html.includes("Duyệt 2 thay đổi"));
   assert.equal(approvals, 0);
 });

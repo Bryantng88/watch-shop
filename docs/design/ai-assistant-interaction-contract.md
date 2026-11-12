@@ -596,3 +596,47 @@ screenshot's multi-turn CV-code/clarification/“ok bạn” flow and explicit r
 using tests/fixtures/ben-personal-mixed-intents.json. It never approves a draft.
 Run semantic acceptance with a connected real worker before rollout; deterministic
 protocol/database tests alone do not prove the model will retain every request.
+
+## Explicit text review commands and compact Ben UI
+
+The user's requested approval surface permits either the review button or a
+standalone confirmation command (duyệt, ok, ok bạn, đồng ý, xác nhận and their
+listed equivalents). This extends the earlier personal-only acknowledgment rule
+and replaces button-only requirements for the supported business reviews below.
+These are explicit review commands, not keyword-based inference of business
+intent. Negation, quotes, questions, conditions, corrections and partial references
+are ordinary chat. A numeric “duyệt N thay đổi” must match the complete review count.
+
+The server returns pendingReview {kind,revision,token,operations,label} only for
+one current, visible, actionable review. Supported kinds: personal creation/mixed
+creation-update, personal update, draft order, service additions, business task/
+technical assignment, Media post draft, permission support and an enabled pinned
+repository code draft for verified Long. The token hashes
+the canonical review snapshot. The originating client echoes kind/revision/token
+with the new owned requestKey and text. A command without this binding, changed
+review, or mismatched count returns 409 without a write. Ambiguous multiple reviews
+cannot be approved by text. Images cannot approve a review. Code-draft approval only queues the existing permitted worker; it grants no merge
+or deployment consent. Merge/deploy/release and inline editor application retain
+their dedicated controls.
+
+send is the sole text-command entry. It locks the conversation, binds the current
+user message to the exact review and records a private retry marker; then calls
+the same canonical approval as the button with current permission, scope, source,
+version and idempotency checks. A mixed approval explicitly includes both sides.
+Retries of the same requestKey resume that authorized approval or return its
+receipt; a different text under that key is invalid. The marker grants no rights,
+is never exposed in DTO/worker input, and never executes from polling, history,
+reload or a later model response. Side effects and result failures keep their
+existing semantics, including post-commit Google failures. No worker gets a write
+tool and no model claim establishes consent or success. Missing/unsupported
+confirmation text follows normal chat. History/record instructions never approve.
+
+Use the supplied visual direction: restrained violet accents, clear two-tab
+navigation, compact screen hint, light user bubbles and readable assistant text.
+One complete review has one approval and a “Chỉnh lại” action that focuses chat;
+no business form. Display the signed-in user's profile avatar (initials fallback)
+next to user messages, never an identity claimed in chat. Keep Ben's avatar,
+keyboard/focus behavior, mobile safe areas, viewport handling, session isolation,
+server-authorized links and the separate assigned-work history. Show a concise
+“Duyệt hoặc nhắn ok” hint only for eligible reviews. Backend confirmation guards
+remain identical regardless of visual layout.

@@ -13,7 +13,7 @@ export default function MediaPostDraftReview({
 }) {
   const prices = draft.watches.map((w) => Number(w.price));
   return (
-    <section
+    <section data-ben-review
       aria-label="Duyệt post Media"
       className="mt-4 rounded-2xl border border-blue-200 bg-white p-4 text-sm"
     >
@@ -58,6 +58,7 @@ export default function MediaPostDraftReview({
         nội dung hoặc lựa chọn bằng tin nhắn trước khi duyệt.
       </p>
       <button
+        data-ben-approve
         type="button"
         disabled={busy}
         onClick={onApprove}

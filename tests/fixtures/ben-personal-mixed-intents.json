@@ -1,6 +1,6 @@
 [
   {"text":"dời CV{{number}} sang chiều ngày mai nhé. Mở thêm 1 CV mới vào sáng mai: thêm trang quản lý khách hàng + vendor, nhóm WatchShop, 9h","expected":"complete-or-clarify"},
   {"text":"CV-{{number}} có rồi mà ta. Giữ khung 13:30–16:30 chiều mai nhé","expected":"mixed"},
-  {"text":"ok bạn","expected":"mixed"},
+  {"text":"ok bạn, nhưng mình muốn xem lại đầy đủ trước khi duyệt","expected":"mixed"},
   {"text":"Bỏ riêng việc mới về khách hàng và vendor, chỉ giữ yêu cầu dời CV{{number}} thôi","expected":"update-only"}
 ]

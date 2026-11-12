@@ -242,12 +242,15 @@ async function main() {
     await checkUnchanged(target);
     assert.equal(googleCalls, 0);
     // Chat acknowledgment must not execute just the creation side of a mixed draft.
-    await sendAssistant(owner.id, {
-      id: review.id,
-      requestKey: randomUUID(),
-      text: "ok",
-      personalWorkApprovalRevision: review.revision,
-    });
+    await assert.rejects(
+      sendAssistant(owner.id, {
+        id: review.id,
+        requestKey: randomUUID(),
+        text: "ok",
+        personalWorkApprovalRevision: review.revision,
+      }),
+      /Bản đề xuất/,
+    );
     assert.equal(await prisma.taskItem.count(), before);
     await checkUnchanged(target);
     assert.equal(googleCalls, 0);

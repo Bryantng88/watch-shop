@@ -1,3 +1,4 @@
+import {reviewBindingSchema} from "@/domains/ai-assistant/review-approval";
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
@@ -12,7 +13,7 @@ const command=z.discriminatedUnion("action",[
  z.object({action:z.literal("push-status"),endpoint:pushEndpoint}).strict(),
  z.object({action:z.literal("subscribe-push"),subscription:pushSubscription}).strict(),
  z.object({action:z.literal("unsubscribe-push"),endpoint:pushEndpoint}).strict(),
- z.object({action:z.literal("send"),id:uuid.optional(),personalWorkApprovalRevision:z.number().int().positive().optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
+ z.object({action:z.literal("send"),id:uuid.optional(),reviewApproval:reviewBindingSchema.optional(),personalWorkApprovalRevision:z.number().int().positive().optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
  z.object({action:z.literal("cancel"),id:uuid}).strict(),
  z.object({action:z.literal("permission-support"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("update-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),

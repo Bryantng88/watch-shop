@@ -1,3 +1,6 @@
+import {codeCommand} from "./code-jobs";
+import {currentReview,sameReview} from "./review-approval";
+import {reviewConfirmation,reviewBindingSchema,type ReviewBinding} from "../review-approval";
 import {personalWorkCode} from "@/domains/personal-work/shared/personal-work-code";
 import {applyPersonalUpdates,personalUpdateIds} from "./personal-work-mutation";
 import type {PersonalWorkUpdateDraft} from "../personal-work-update";
@@ -124,7 +127,7 @@ async function linkedRequest(db:DB,r:CustomerRequest,actor:Actor){
 }
 async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<ReturnType<typeof assistantActor>>){
  const actor=requestActor?.id===row.ownerId?requestActor:await assistantActor(prisma,row.ownerId),s=structuredClone(state(row));
- delete s.pendingImage;delete s.turnRepositoryAccess;if(!canReadRepository(actor)){delete s.repositorySnapshot;delete s.codeDraft;delete s.codeJob;s.codeJobHistory=[];}else{if(s.codeJob)s.codeJob=publicCodeJob(s.codeJob);s.codeJobHistory=s.codeJobHistory?.map(publicCodeJob);}
+ delete s.pendingImage;delete s.textApprovals;delete s.turnRepositoryAccess;if(!canReadRepository(actor)){delete s.repositorySnapshot;delete s.codeDraft;delete s.codeJob;s.codeJobHistory=[];}else{if(s.codeJob)s.codeJob=publicCodeJob(s.codeJob);s.codeJobHistory=s.codeJobHistory?.map(publicCodeJob);}
  if(s.personalWorkUpdateDraft){
   const draft=s.personalWorkUpdateDraft;
   if(draft.revision!==row.revision||!hasAssistantPermission(actor,"TASK_VIEW")||(draft.requiredPermissions||[]).some(p=>!hasAssistantPermission(actor,p))||!await prisma.taskItem.count({where:{id:{in:[draft.plan.itemId,...(draft.additional||[]).map(item=>item.plan.itemId)]},...personalWorkEditAccessWhere(actor.id)}}).then(count=>count===1+(draft.additional?.length||0)))delete s.personalWorkUpdateDraft;
@@ -149,10 +152,13 @@ async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<Retur
  const cards=hasAssistantPermission(actor,"PRODUCT_VIEW")?await assistantProductCards(prisma,s.messages.flatMap(m=>m.imageProductIds||[]),s.messages.flatMap(m=>m.compactProductCards?m.imageProductIds||[]:[])):[];
  delete s.screenHint;
  for(const m of s.messages){delete m.navigation;if(m.role==="assistant"&&m.navigationKey){const target=navigationTarget(m.navigationKey,actor);if(target)m.navigation=target;}delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
+ const rawReview=currentReview(state(row),row.revision,row.status,!!row.approvedAt,row.plan);
+ const visibleReview=currentReview(s,row.revision,row.status,!!row.approvedAt,row.plan);
+ if(rawReview&&visibleReview&&rawReview.kind===visibleReview.kind&&!(rawReview.kind==="code"&&!codeEnabled(actor))&&!(rawReview.kind==="order"&&s.orderDraft&&orderDeniedPermission(actor,s.orderDraft.plan)))s.pendingReview=rawReview;else delete s.pendingReview;
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
 export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor)))};}
-export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string;personalWorkApprovalRevision?:number},defer?: (work:()=>Promise<void>)=>void){
+export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string;personalWorkApprovalRevision?:number;reviewApproval?:ReviewBinding},defer?: (work:()=>Promise<void>)=>void){
  const sender=await assistantActor(prisma,userId);
  if(input.imageBase64!==undefined&&(process.env.BEN_IMAGE_SEARCH_ENABLED!=="1"||!hasAssistantPermission(sender,"PRODUCT_VIEW")))
    throw new AssistantError("Tài khoản chưa được phép tìm đồng hồ bằng ảnh.",403);
@@ -161,20 +167,22 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
  const screenPath=screenPathSchema.safeParse(input.screenPath);const screenHint=screenPath.success?{pathname:screenPath.data,requestKey:input.requestKey,receivedAt:new Date().toISOString()}:null;
  const result=await transaction(async tx=>{
    let row=input.id?await owned(tx,input.id,userId):await tx.customerAssistantConversation.findUnique({where:{firstRequestKey:input.requestKey}});
-   if(row){await lock(tx,row.id);row=await owned(tx,row.id,userId);let s=state(row);if(s.messages.some(m=>m.id===input.requestKey)){if(s.messages.find(m=>m.id===input.requestKey)?.text!==input.text)throw new AssistantError("Mã tin nhắn đã được dùng với nội dung khác.",409);return {id:row.id};}
+   if(row){await lock(tx,row.id);row=await owned(tx,row.id,userId);let s=state(row);if(s.messages.some(m=>m.id===input.requestKey)){if(s.messages.find(m=>m.id===input.requestKey)?.text!==input.text)throw new AssistantError("Mã tin nhắn đã được dùng với nội dung khác.",409);return {id:row.id,approval:s.textApprovals?.[input.requestKey]};}
      if(["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Đang xử lý tin trước. Bạn có thể hủy hoặc đợi kết quả.",409);
      await quota(tx,userId);
      if(row.approvedAt){s=archiveApproved(s,row.approvedRevision);delete s.customerRequest;s.approved=false;}
      let next:State={...withoutImage(s),...(image?{pendingImage:image}:{}),screenHint,permissionDenied:false,pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null,messages:[...s.messages,{id:input.requestKey,role:"user",text:input.text}],turnKeys:[],turnTimes:[...(s.turnTimes||[]).filter(t=>new Date(t).getTime()>Date.now()-3600000),new Date().toISOString()]};
-     const acknowledgment=input.text.normalize("NFD").replace(/\p{M}/gu,"").trim().toLowerCase().replace(/[.!]+$/,"").trim();
-     if(!image&&input.personalWorkApprovalRevision!==undefined&&/^(?:ok(?: duyet)?|duyet|dong y|xac nhan)$/.test(acknowledgment.replace(/đ/g,"d").replace(/\s+/g," "))){
-       if(input.personalWorkApprovalRevision!==row.revision||s.personalWorkDraft?.revision!==row.revision)throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem lại.",409);
-       const schedulesCodex=personalWorkDraftItems(s.personalWorkDraft).some(item=>!!item.plan.codex);
-       const mixedUpdates=!!s.personalWorkDraft.updates;
-       if(mixedUpdates)next=message(next,"Bản duyệt gồm cả tạo mới và cập nhật việc hiện có. Bấm nút trên thẻ để duyệt toàn bộ một lần nhé.",["TASK_VIEW"]);
-       else if(schedulesCodex)next=message(next,"Bản nháp có yêu cầu giao Codex chạy. Bấm nút trên thẻ để xác nhận cả việc tạo và giao chạy.",["TASK_VIEW"]);
-       await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next)}});
-       return {id:row.id,approveRevision:schedulesCodex||mixedUpdates?undefined:row.revision};
+     const confirmation=!image&&reviewConfirmation(input.text);
+     if(confirmation){
+       const pending=currentReview(s,row.revision,row.status,!!row.approvedAt,row.plan);
+       if(input.reviewApproval||pending){
+         const binding=input.reviewApproval&&reviewBindingSchema.parse(input.reviewApproval);
+         if(!pending||!binding||!sameReview(pending,binding))throw new AssistantError("Bản đề xuất đã thay đổi hoặc đã được duyệt. Tải lại Ben để xem đúng bản trước khi xác nhận.",409);
+         if(confirmation.count!==null&&confirmation.count!==pending.operations)throw new AssistantError("Số mục xác nhận chưa khớp bản đề xuất. Hãy chỉnh lại qua chat hoặc duyệt toàn bộ bản đang hiển thị.",409);
+         next.textApprovals=Object.fromEntries([...Object.entries(s.textApprovals||{}).slice(-19),[input.requestKey,binding]]);
+         await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next)}});
+         return {id:row.id,approval:binding};
+       }
      }
      if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
      await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return {id:row.id};
@@ -185,7 +193,7 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
    let s=newConversation(null);s.messages=[{id:input.requestKey,role:"user",text:input.text}];s.title=input.text.slice(0,65);if(identityQuestion){const actor=await assistantActor(tx,userId);delete s.orderDraft;delete s.permissionRequest;s=message(s,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
    const created=await tx.customerAssistantConversation.create({data:{id:s.id,ownerId:userId,firstRequestKey:input.requestKey,...(identityQuestion?{status:"NEEDS_INFO"}:{}),state:json({...s,...(image?{pendingImage:image}:{}),screenHint,turnKeys:[input.requestKey],turnTimes:[new Date().toISOString()],pinnedProductId:hasAssistantPermission(sender,"PRODUCT_VIEW")?input.productId||null:null})}});return {id:created.id};
  });
- if(result.approveRevision!==undefined)return approveAssistantPersonalWork(userId,result.id,result.approveRevision,defer);
+ if(result.approval)return approveTextReview(userId,result.id,result.approval,defer);
  return dto(await owned(prisma,result.id,userId));
 }
 export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(withoutImage(state(row)),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
@@ -957,7 +965,7 @@ export async function approveAssistantOrderServices(userId:string,id:string,revi
    if(!orderServicesPermissions.every(p=>hasAssistantPermission(actor,p)))throw new AssistantError("Quyền cập nhật đơn đã thay đổi.",403);
    if(s.updatedServiceOrders?.some(r=>r.revision===revision))return {row,work:[]};
    const draft=s.orderServicesDraft;
-   if(row.revision!==revision||row.status!=="DRAFT"||draft?.revision!==revision||draft.sourceMessageId!==s.messages.filter(m=>m.role==="user").at(-1)?.id)throw new AssistantError("Bản duyệt đã thay đổi. Nhờ Ben chuẩn bị lại.",409);
+   if(row.revision!==revision||row.status!=="DRAFT"||draft?.revision!==revision||(draft.sourceMessageId!==s.messages.filter(m=>m.role==="user").at(-1)?.id&&!hasCurrentTextApproval(s,row,"order-services")))throw new AssistantError("Bản duyệt đã thay đổi. Nhờ Ben chuẩn bị lại.",409);
    if(!await readableOrderServices(tx,draft,actor))throw new AssistantError("Quyền đọc bản duyệt đã thay đổi.",403);
    const fresh=await prepareOrderServices(tx,JSON.stringify(draft.plan),revision,draft.sourceMessageId,evidence(row));
    if(!isDeepStrictEqual(fresh.rows,draft.rows)||fresh.afterSubtotal!==draft.afterSubtotal)throw new AssistantError("Nội dung hoặc giá đã thay đổi. Hãy duyệt bản mới.",409);
@@ -970,4 +978,23 @@ export async function approveAssistantOrderServices(userId:string,id:string,revi
  });
  for(const fn of completed.work)defer(fn);
  return dto(completed.row);
+}
+
+async function approveTextReview(userId:string,id:string,review:ReviewBinding,defer?: (work:()=>Promise<void>)=>void){
+ const dispatch=defer||(()=>{});
+ switch(review.kind){
+  case "personal-work":return approveAssistantPersonalWork(userId,id,review.revision,defer,true);
+  case "personal-update":return approveAssistantPersonalWorkUpdate(userId,id,review.revision);
+  case "order":return approveAssistantOrder(userId,id,review.revision,dispatch);
+  case "order-services":return approveAssistantOrderServices(userId,id,review.revision,dispatch);
+  case "business":return approveAssistant(userId,id,review.revision,dispatch);
+  case "permission-support":return approvePermissionSupport(userId,id,review.revision,dispatch);
+  case "code":await codeCommand(userId,id,"approve",{revision:review.revision});return dto(await owned(prisma,id,userId));
+  case "media-post":await approveAssistantMediaPost(userId,id,review.revision);return dto(await owned(prisma,id,userId));
+ }
+}
+
+function hasCurrentTextApproval(s:State,row:CustomerAssistantConversation,kind:ReviewBinding["kind"]){
+ const latest=s.messages.filter(m=>m.role==="user").at(-1),binding=latest&&s.textApprovals?.[latest.id],current=currentReview(s,row.revision,row.status,!!row.approvedAt,row.plan);
+ return !!(latest&&reviewConfirmation(latest.text)&&binding&&binding.kind===kind&&current&&sameReview(binding,current));
 }
