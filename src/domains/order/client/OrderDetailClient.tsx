@@ -90,8 +90,8 @@ export default function OrderDetailClient({ data, codexEnabled = false }: { data
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-16 text-slate-900">
-    <div className={`${ADMIN_DETAIL_CONTENT_CLASS} max-w-[1500px] space-y-4`}>
+    <main className="min-h-screen bg-white pb-8 text-slate-900">
+    <div className={`${ADMIN_DETAIL_CONTENT_CLASS} space-y-4`}>
       <OrderHeader data={data} />
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
@@ -99,14 +99,14 @@ export default function OrderDetailClient({ data, codexEnabled = false }: { data
           <OrderItemsPanel data={data} />
           {codexEnabled && <OrderCodexPanel orderId={data.id} />}
           <OrderCustomerPanel data={data} />
-          <OrderTimelinePanel data={data} />
+          <details className="border-t border-slate-100 py-3 text-xs text-slate-500"><summary className="cursor-pointer">Lịch sử cập nhật</summary><OrderTimelinePanel data={data} /></details>
           <OrderNotesPanel data={data} />
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-[76px] xl:self-start">
+        <aside className="space-y-4 border-slate-100 xl:border-l xl:pl-5 xl:sticky xl:top-[76px] xl:self-start">
           <OrderOpsPanel data={data} busyAction={busyAction} onAction={runAction} />
           <OrderFinancialPanel data={data} />
-          <OrderStatusPanel data={data} />
+          <details className="border-t border-slate-100 py-3 text-xs text-slate-500"><summary className="cursor-pointer">Thông tin đơn hàng</summary><OrderStatusPanel data={data} /></details>
         </aside>
       </div>
     </div>

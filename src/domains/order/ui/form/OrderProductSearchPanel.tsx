@@ -27,8 +27,8 @@ export default function OrderProductSearchPanel({
     onAddProduct,
 }: Props) {
     return (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto]">
+        <div className="rounded-lg border border-slate-200/80 bg-slate-50/60 p-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
                 <Input
                     value={query}
                     onChange={(event) => onQueryChange(event.target.value)}

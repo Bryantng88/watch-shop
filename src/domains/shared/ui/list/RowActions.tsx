@@ -20,12 +20,14 @@ type Props<T> = {
     row: T;
     actions: Array<RowAction<T> | null | false | undefined>;
     align?: "left" | "right";
+    triggerLabel?: string;
 };
 
 export default function RowActions<T>({
     row,
     actions,
     align = "right",
+    triggerLabel = "Thao tác",
 }: Props<T>) {
     const [open, setOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState<{
@@ -116,6 +118,8 @@ export default function RowActions<T>({
         <div ref={rootRef} className="relative flex justify-end">
             <button
                 ref={buttonRef}
+                aria-label={triggerLabel}
+                aria-expanded={open}
                 type="button"
                 onClick={() => setOpen((value) => !value)}
                 className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"

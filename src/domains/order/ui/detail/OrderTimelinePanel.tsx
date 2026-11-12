@@ -5,12 +5,12 @@ import { fmtDate, SectionCard, type OrderDetailData } from "./shared";
 
 export default function OrderTimelinePanel({ data }: { data: OrderDetailData }) {
   const events = [
-    { label: "Order created", time: data.createdAt, description: "Đơn hàng được tạo trong hệ thống." },
-    { label: "Latest update", time: data.updatedAt, description: "Lần cập nhật dữ liệu gần nhất." },
+    { label: "Tạo đơn", time: data.createdAt, description: "Đơn hàng được tạo trong hệ thống." },
+    { label: "Cập nhật gần nhất", time: data.updatedAt, description: "Lần cập nhật dữ liệu gần nhất." },
   ];
 
   return (
-    <SectionCard icon={<Clock3 className="h-5 w-5" />} title="Timeline" subtitle="Dòng thời gian vận hành">
+    <SectionCard icon={<Clock3 className="h-5 w-5" />} title="Lịch sử" subtitle="Dòng thời gian vận hành">
       <div className="space-y-4">
         {events.map((event, index) => (
           <div key={event.label} className="flex gap-3">

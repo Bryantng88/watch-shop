@@ -1,0 +1,27 @@
+name: Order compact UI
+on:
+  pull_request:
+    paths:
+      - 'src/domains/order/**'
+      - 'src/app/(admin)/admin/orders/**'
+      - 'src/domains/shared/ui/list/RowActions.tsx'
+      - 'scripts/smoke-order-compact-ui.cjs'
+      - '.github/workflows/order-compact-ui.yml'
+permissions:
+  contents: read
+jobs:
+  order-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint src/domains/order/client/OrderFormClient.tsx src/domains/order/client/OrderDetailClient.tsx src/domains/order/client/OrderListClient.tsx src/domains/order/ui/OrderPageHeader.tsx src/domains/order/ui/OrderSection.tsx src/domains/order/ui/OrderStatusBadge.tsx src/domains/order/ui/order-ui.helpers.ts src/domains/order/ui/form/*.tsx src/domains/order/ui/detail/*.tsx src/domains/order/ui/list/OrderListRow.tsx src/domains/order/ui/list/OrderListTable.tsx src/domains/order/ui/list/helpers.ts src/domains/shared/ui/list/RowActions.tsx 'src/app/(admin)/admin/orders/new/page.tsx' 'src/app/(admin)/admin/orders/[id]/edit/page.tsx'
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/order-ui.css --minify
+      - run: npm install --prefix /tmp/order-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/order-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/order-browser/node_modules/playwright ORDER_UI_CSS=/tmp/order-ui.css node scripts/smoke-order-compact-ui.cjs

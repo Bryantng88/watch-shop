@@ -9,7 +9,7 @@ export default function OrderFormField({
 }) {
     return (
         <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            <span className="mb-1 block text-xs font-medium text-slate-500">
                 {label}
             </span>
             {children}
