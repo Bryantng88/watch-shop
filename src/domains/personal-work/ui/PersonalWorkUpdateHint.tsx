@@ -12,7 +12,7 @@ export function PersonalWorkUpdateHint({text,time}:{text:string;time:string}) {
       onClick={()=>setOpen(v=>!v)} className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium text-blue-700 hover:bg-blue-50">
       <History className="h-3 w-3"/><span className="hidden sm:inline">Có cập nhật</span>
     </button>
-    {open&&<span id={id} role="tooltip" className="absolute right-0 top-full z-40 mt-1 w-56 max-w-[70vw] rounded bg-slate-900 px-2 py-1.5 text-left text-white shadow-sm">
+    {open&&<span id={id} role="tooltip" className="absolute right-0 top-full z-40 mt-1 w-40 max-w-[70vw] sm:w-56 rounded bg-slate-900 px-2 py-1.5 text-left text-white shadow-sm">
       <span className="block truncate text-[11px] leading-4">{text}</span>
       <span className="block text-[10px] leading-4 text-slate-300">{time}</span>
     </span>}
