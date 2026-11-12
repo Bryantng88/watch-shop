@@ -1,3 +1,4 @@
+import {reviewBindingSchema} from "@/domains/ai-assistant/review-approval";
 import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
@@ -12,11 +13,11 @@ const command=z.discriminatedUnion("action",[
  z.object({action:z.literal("push-status"),endpoint:pushEndpoint}).strict(),
  z.object({action:z.literal("subscribe-push"),subscription:pushSubscription}).strict(),
  z.object({action:z.literal("unsubscribe-push"),endpoint:pushEndpoint}).strict(),
- z.object({action:z.literal("send"),id:uuid.optional(),personalWorkApprovalRevision:z.number().int().positive().optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
+ z.object({action:z.literal("send"),id:uuid.optional(),reviewApproval:reviewBindingSchema.optional(),personalWorkApprovalRevision:z.number().int().positive().optional(),requestKey:uuid,imageBase64:z.string().max(MAX_BEN_IMAGE_BASE64).optional(),text:z.string().trim().min(1).max(4000),productId:z.string().min(1).max(100).nullable().optional(),screenPath:z.string().max(2048).nullable().optional()}).strict(),
  z.object({action:z.literal("cancel"),id:uuid}).strict(),
  z.object({action:z.literal("permission-support"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("update-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),
- z.object({action:z.literal("approve-personal-work"),id:uuid,revision:z.number().int().min(1)}).strict(),
+ z.object({action:z.literal("approve-personal-work"),id:uuid,revision:z.number().int().min(1),includeUpdates:z.boolean().optional()}).strict(),
  z.object({action:z.literal("approve-media-post"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-order-services"),id:uuid,revision:z.number().int().min(1)}).strict(),
  z.object({action:z.literal("approve-order"),id:uuid,revision:z.number().int().min(1)}).strict(),
@@ -57,7 +58,7 @@ async function handle(req:NextRequest){try{
  if(c.action==="permission-support")return NextResponse.json(await approvePermissionSupport(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="update-personal-work")return NextResponse.json(await approveAssistantPersonalWorkUpdate(user.id,c.id,c.revision));
  if(c.action==="approve-media-post")return NextResponse.json(await approveAssistantMediaPost(user.id,c.id,c.revision));
- if(c.action==="approve-personal-work")return NextResponse.json(await approveAssistantPersonalWork(user.id,c.id,c.revision,work=>after(work)));
+ if(c.action==="approve-personal-work")return NextResponse.json(await approveAssistantPersonalWork(user.id,c.id,c.revision,work=>after(work),c.includeUpdates===true));
  if(c.action==="approve-order-services")return NextResponse.json(await approveAssistantOrderServices(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="approve-order")return NextResponse.json(await approveAssistantOrder(user.id,c.id,c.revision,work=>after(work)));
  if(c.action==="approve")return NextResponse.json(await approveAssistant(user.id,c.id,c.revision,work=>after(work)));

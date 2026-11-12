@@ -495,6 +495,27 @@ async function main() {
         `DROP FUNCTION ben_order_fixture_reject()`,
       );
     }
+    const textOrder = await makeOrder(),
+      textReview = await prepare(textOrder);
+    assert.equal(textReview.pendingReview?.kind, "order-services");
+    const textKey = randomUUID(),
+      textInput = {
+        id: textReview.id,
+        requestKey: textKey,
+        text: "ok bạn",
+        reviewApproval: {
+          kind: textReview.pendingReview!.kind,
+          revision: textReview.pendingReview!.revision,
+          token: textReview.pendingReview!.token,
+        },
+      };
+    await sendAssistant(owner.id, textInput, () => {});
+    await sendAssistant(owner.id, textInput, () => {});
+    assert.equal(
+      await prisma.orderItem.count({ where: { orderId: textOrder.id } }),
+      6,
+      "Text acknowledgment must preserve the original source binding and append once",
+    );
     const revoked = await makeOrder(),
       revokedReview = await prepare(revoked);
     await prisma.role.update({

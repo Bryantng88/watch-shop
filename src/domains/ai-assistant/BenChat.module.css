@@ -1,0 +1,42 @@
+.panel {
+  --ben-accent: #7c3aed;
+  --ben-line: #ede7f5;
+  color: #272333;
+  background: linear-gradient(145deg, #fffeff 0%, #fdfbff 65%, #fff 100%);
+}
+.header { padding: 18px 20px 12px; }
+.header h2 { font-size: 21px; letter-spacing: -.035em; }
+.header > div:first-child img { width: 44px; height: 44px; }
+.header button, .icon { color: #655e71; border-radius: 12px; }
+.header button:hover, .icon:hover { background: #f4effb; }
+.tabs { display: flex; align-items: center; margin: 0 20px 8px; border-bottom: 1px solid var(--ben-line); }
+.tabs > button { flex: 1; min-height: 44px; padding: 10px 8px; color: #6b6576; border-bottom: 3px solid transparent; font-size: 14px; }
+.tabs > button[aria-pressed="true"] { color: var(--ben-accent); border-bottom-color: #8b5cf6; font-weight: 650; }
+.tabs > button:last-child { flex: 0 0 36px; }
+.badge { margin-left: 5px; border-radius: 999px; background: #ede5fa; color: #7242bb; padding: 2px 7px; font-size: 11px; }
+.scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 20px 24px; scroll-padding-bottom: 20px; }
+.panel [data-ben-review] { margin-top: 20px; border: 1px solid #e6def0; border-radius: 18px; background: rgba(255,255,255,.9); padding: 18px; box-shadow: 0 6px 24px #56398006; }
+.panel [data-ben-approve] { display: block; width: 100%; min-height: 44px; margin-top: 18px; border-radius: 12px; background: linear-gradient(110deg,#9164d6,#8154d4); color: white; font-weight: 600; padding: 11px 14px; }
+.panel [data-ben-approve]:hover { filter: brightness(.96); }
+.panel [data-ben-approve]:disabled { opacity: .5; cursor: wait; }
+.reviewHint { display: flex; align-items: center; gap: 6px; margin: 12px 0 0 38px; color: #837b8e; font-size: 11px; line-height: 1.5; }
+.footer { flex-shrink: 0; padding: 12px 18px max(10px,env(safe-area-inset-bottom)); background: #fffeffed; }
+.shortcuts { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; }
+.shortcuts button { display: flex; align-items: center; gap: 6px; flex-shrink: 0; border: 1px solid #eee5fb; border-radius: 999px; background: #f7f2fd; padding: 7px 12px; color: #625271; font-size: 12px; }
+.shortcuts button svg { color: #9669d8; width: 15px; height: 15px; }
+.composer { display: grid; grid-template-columns: 36px 36px 1fr 42px; align-items: end; gap: 4px; border: 1px solid #d7c3f3; border-radius: 18px; padding: 9px; background: white; box-shadow: 0 2px 7px #7543b504; }
+.composer:focus-within { outline: 2px solid #eae0f8; outline-offset: 1px; }
+.composer textarea { grid-column: 1 / -1; grid-row: 1; width: 100%; min-width: 0; min-height: 42px; max-height: 120px; resize: none; border: 0; background: transparent; padding: 7px 9px; outline: none; font-size: 14px; line-height: 1.6; }
+.composer > button[type="submit"], .composer > button[aria-label="Hủy lượt trả lời"] { grid-column: 4; grid-row: 2; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #9668dc; color: white; padding: 10px; }
+.composer > button:disabled { opacity: .45; }
+.icon { display: inline-flex; align-items: center; justify-content: center; height: 36px; min-width: 36px; padding: 7px; grid-row: 2; }
+.caption { margin: 7px 4px 0; color: #8a8194; font-size: 11px; }
+@media (max-width: 639px) {
+ .header { padding: 12px 14px 9px; }
+ .tabs { margin-inline: 14px; margin-bottom: 0; }
+ .scroll { padding: 16px 14px 20px; }
+ .footer { padding: 9px 12px max(8px,env(safe-area-inset-bottom)); }
+ .panel [data-ben-review] { padding: 14px; }
+ .shortcuts { margin-bottom: 8px; }
+ .composer textarea { font-size: 16px; }
+}

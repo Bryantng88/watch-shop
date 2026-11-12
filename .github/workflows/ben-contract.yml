@@ -60,6 +60,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/personal_codex_test
       DIRECT_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/personal_codex_test
+      S3_BUCKET: synthetic-text-review-media
       APP_URL: http://127.0.0.1:3015
       CUSTOMER_AI_ENABLED: '1'
       PERSONAL_CODEX_ENABLED: '1'
@@ -74,5 +75,7 @@ jobs:
       - run: npm ci
       - run: npx prisma db push --skip-generate
       - run: node --import tsx scripts/smoke-ben-auto-calendar.ts
+      - run: timeout 120s node --import tsx scripts/smoke-ben-personal-mixed.ts
+      - run: timeout 120s node --import tsx scripts/smoke-ben-text-approval.ts
       - run: timeout 120s node --import tsx scripts/smoke-ben-order-services.ts
       - run: npm run build

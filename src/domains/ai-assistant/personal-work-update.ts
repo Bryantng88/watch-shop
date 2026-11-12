@@ -19,6 +19,6 @@ export type PersonalWorkUpdateDraft=PersonalWorkUpdateItem & {
   requiredTaskIds:string[];
   additional?:PersonalWorkUpdateItem[];
 };
-export type UpdatedPersonalWork={revision:number;id:string;title:string;kind:"TASK"|"EVENT"};
+export type UpdatedPersonalWork={code?:string;revision:number;id:string;title:string;kind:"TASK"|"EVENT"};
 
 export function personalWorkUpdateInput(plan:PersonalWorkUpdate){const c=plan.changes;return {...(plan.fields.includes("title")?{title:c.title!}:{}),...(plan.fields.includes("status")?{status:c.status!}:{}),...(plan.fields.includes("note")?{note:c.note}:{}),...(plan.fields.includes("dueAt")?{dueAt:c.dueAt}:{}),...(plan.fields.includes("scheduledEndAt")?{scheduledEndAt:c.scheduledEndAt}:{})};}

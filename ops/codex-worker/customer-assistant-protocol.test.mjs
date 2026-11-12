@@ -187,3 +187,17 @@ test('order-service proposal must name this current user message before reaching
  await assert.rejects(runCustomerConversation({id:'fixture',text:JSON.stringify({currentUserMessage:{id:'00000000-0000-4000-8000-000000000001'}})},{execute:async()=>({...finish,type:'lookup',tool:'serviceOrders.propose',query:JSON.stringify({sourceMessageId:'00000000-0000-4000-8000-000000000002'}),reply:null}),api:async()=>{calls++;return {accepted:true};}}),/INVALID_CUSTOMER_ORDER_SERVICE_SOURCE/);
  assert.equal(calls,0);
 });
+
+test('one current personal request can preserve an existing-item update and a new item together',async()=>{
+ const personalWorkPlan={kind:'TASK',title:'Thêm trang quản lý khách hàng + vendor',note:null,categoryKey:'WATCHSHOP',workType:null,dueAt:'2026-11-13T09:00:00+07:00',scheduledEndAt:null,tags:[],shares:[],priority:'MEDIUM',checklist:[],syncGoogle:false};
+ const personalWorkUpdatePlan={itemId:'cv25',expectedUpdatedAt:'2026-11-12T12:00:00+07:00',fields:['dueAt','scheduledEndAt'],changes:{title:null,note:null,status:null,dueAt:'2026-11-13T13:30:00+07:00',scheduledEndAt:'2026-11-13T16:30:00+07:00'}};
+ const mixed={...finish,reply:'Tạo việc mới và dời CV-25 trong một bản duyệt.',personalWorkPlan,personalWorkUpdatePlan};
+ assert.deepEqual(validateCustomerTurn(mixed).personalWorkUpdatePlan,personalWorkUpdatePlan);
+ assert.deepEqual(validateCustomerTurn(mixed).personalWorkPlan,personalWorkPlan);
+ const multi={...mixed,personalWorkPlan:null,personalWorkPlans:[personalWorkPlan,{...personalWorkPlan,title:'Another new task'}]};assert.equal(validateCustomerTurn(multi).personalWorkPlans.length,2);
+ for(const extra of [{orderPlan:{}},{plan:{}},{permissionRequest:'cannot mix'},{codePlan:{title:'Change code please',request:'Edit a source file and run its tests'}}])assert.throws(()=>validateCustomerTurn({...mixed,...extra}));
+ assert.throws(()=>validateCustomerTurn({...mixed,personalWorkPlan:null,personalWorkPlans:Array(8).fill(personalWorkPlan)}),/INVALID_PERSONAL_WORK_BATCH/);
+ let saved;
+ await runCustomerConversation({id:'fixture',text:'synthetic complete mixed personal request'},{execute:async()=>mixed,api:async(op,body)=>{assert.equal(op,'finish');saved=body;return {accepted:true};}});
+ assert.deepEqual(saved.personalWorkPlan,personalWorkPlan);assert.deepEqual(saved.personalWorkUpdatePlan,personalWorkUpdatePlan);
+});

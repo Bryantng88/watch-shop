@@ -162,8 +162,7 @@ function monthCells(cursor: Date) {
   });
 }
 
-export function PersonalWorkClient({ data, localCalendar = false }: { data: PersonalWorkPageData; localCalendar?: boolean }) {
-  const calendarAvailable = data.calendar.connected || localCalendar;
+export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const router = useRouter();
   const requestedItem=useSearchParams().get("item");
   const openedItem=useRef<string|null>(null);
@@ -199,7 +198,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const [quickEndTime, setQuickEndTime] = useState("10:00");
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
-  const [calendarOpen, setCalendarOpen] = useState(calendarAvailable);
+  const [calendarOpen, setCalendarOpen] = useState(true);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
@@ -665,7 +664,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             type="button"
             aria-expanded={calendarOpen}
             aria-controls="personal-google-calendar-agenda"
-            onClick={() => calendarAvailable && setCalendarOpen((open) => !open)}
+            onClick={() => setCalendarOpen((open) => !open)}
             className="flex w-full items-start justify-between gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           >
             <div className="flex gap-3">
@@ -673,13 +672,11 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 <CalendarDays className="h-5 w-5" />
               </span>
               <div>
-                <h2 className="font-semibold text-slate-950">{localCalendar && !data.calendar.connected ? "Lịch công việc" : "Google Calendar"}</h2>
+                <h2 className="font-semibold text-slate-950">Lịch công việc</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {localCalendar && !data.calendar.connected ? "Theo dõi công việc trên lịch" : data.calendar.connected
-                    ? data.calendar.accountEmail || "Đã kết nối"
-                    : data.calendar.configured
-                      ? "Chưa kết nối tài khoản"
-                      : data.calendar.configurationIssue || "Chưa cấu hình OAuth"}
+                  {data.calendar.connected
+                    ? data.calendar.accountEmail || "Đã kết nối Google Calendar"
+                    : "Lịch nội bộ · Chưa kết nối Google Calendar"}
                 </p>
               </div>
             </div>
@@ -689,14 +686,12 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   ĐÃ KẾT NỐI
                 </span>
               )}
-              {calendarAvailable && (
-                <ChevronDown
-                  className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
-                />
-              )}
+              <ChevronDown
+                className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
+              />
             </div>
           </button>
-          {(!localCalendar || data.calendar.connected) && <AsyncActionButton
+          <AsyncActionButton
             pending={data.calendar.connected ? calendar.loading : pending}
             title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
             pendingLabel={data.calendar.connected ? "Đang tải lịch…" : "Đang kết nối…"}
@@ -720,7 +715,10 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 <ExternalLink className="h-4 w-4" /> Kết nối Google Calendar
               </>
             )}
-          </AsyncActionButton>}
+          </AsyncActionButton>
+          {!data.calendar.connected && !data.calendar.configured && (
+            <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
+          )}
         </aside>
       </section>
 
@@ -735,13 +733,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
       ))}
 
       <div
-        className={`grid items-start gap-5 ${calendarAvailable && calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
+        className={`grid items-start gap-5 ${calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
       >
-        {calendarAvailable && calendarOpen && (
+        {calendarOpen && (
           <section id="personal-google-calendar-agenda" className="min-w-0 overflow-hidden bg-white">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-950">{data.calendar.connected ? "Lịch Google của tôi" : "Lịch công việc"}</h2>
+                <h2 className="text-sm font-semibold text-slate-950">Lịch công việc</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Màu nền theo nhóm · Sọc cam: quá hạn · Gạch ngang: đã xong.
                 </p>
