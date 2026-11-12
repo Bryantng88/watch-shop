@@ -1,17 +1,18 @@
+import {literalTerm} from "./service-order-search";
 import type { DB } from "@/server/db/client";
 
 export async function findCustomerRepairs(db: DB, query: string) {
-  const terms = query.trim().split(/\s+/).slice(0, 6);
+  const terms = query.trim().split(/\s+/).slice(0, 6).map(literalTerm);
   const rows = await db.serviceRequest.findMany({
     where: {
       scope: "CUSTOMER_OWNED",
-      status: { in: ["DRAFT", "DIAGNOSING", "WAIT_APPROVAL", "IN_PROGRESS", "COMPLETED"] },
       AND: terms.map(term => ({
         OR: [
           { brandSnapshot: { contains: term, mode: "insensitive" } },
           { modelSnapshot: { contains: term, mode: "insensitive" } },
           { refSnapshot: { contains: term, mode: "insensitive" } },
           { refNo: { equals: term, mode: "insensitive" } },
+          { orderItem: { OR: [{title:{contains:term,mode:"insensitive"}},{customerItemNote:{contains:term,mode:"insensitive"}},{serviceCatalog:{name:{contains:term,mode:"insensitive"}}}] } },
         ],
       })),
     },

@@ -1,0 +1,12 @@
+[
+  {"text":"Có đơn thay pin hai chiếc Tissot của khách {{customer}}, tra giúp mình","kind":"search"},
+  {"text":"tim don thay pin 2 chiec tissot cua {{customer}}","kind":"search"},
+  {"text":"Find the battery replacement order for {{customer}}'s two Tissot watches","kind":"search"},
+  {"text":"Thêm {{spa}} và {{glass}} cho cả hai chiếc trong đơn {{reference}}, mỗi dịch vụ 100000đ/chiếc. Chuẩn bị bản duyệt nhé.","kind":"propose"},
+  {"text":"Đơn {{reference}} hiện có thêm spa và kính bằng Ben được không?","kind":"none"},
+  {"text":"Đừng thêm dịch vụ vào đơn {{reference}} nhé","kind":"none"},
+  {"text":"Ví dụ nếu nói 'thêm spa vào đơn {{reference}}' thì Ben sẽ làm gì?","kind":"none"},
+  {"text":"Khách nhắn 'thêm spa và kính vào đơn {{reference}}', mình chỉ kể lại thôi, chưa yêu cầu sửa","kind":"none"},
+  {"text":"Thêm spa cho đơn {{reference}}","kind":"clarify"},
+  {"text":"Thêm {{spa}} cho cả hai chiếc của đơn {{reference}}, chưa biết giá","kind":"clarify"}
+]

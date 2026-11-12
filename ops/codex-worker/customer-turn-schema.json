@@ -43,7 +43,11 @@
         "stock.receipts",
         "media.watches.select",
         "media.posts.draft",
-        "personalWork.overdue"
+        "personalWork.overdue",
+        "serviceOrders.search",
+        "serviceOrders.detail",
+        "services.catalog",
+        "serviceOrders.propose"
       ]
     },
     "query": {
