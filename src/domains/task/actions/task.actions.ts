@@ -1,11 +1,13 @@
 "use server";
+import { queueWorkNotification } from "@/domains/notification/server/work-push.service";
+import { workRoute, newShareRecipients } from "@/domains/notification/server/work-push-policy";
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { Prisma, TaskExecutionActionType, TaskExecutionTargetType, TaskStatus, TaskPriority, TaskKind } from "@prisma/client";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
-import { prisma } from "@/server/db/client";
+import { prisma, withDbTransaction } from "@/server/db/client";
 import { upsertTaskNotification } from "@/domains/notification/notification.repo";
 import {
   changeTaskStatus,
@@ -606,13 +608,13 @@ export async function updateTaskItemAction(
   itemId: string,
   input: UpdateTaskItemInput,
 ) {
-  await getTaskAuth();
+  const mutationAuth = await getTaskAuth();
 
   const cleanItemId = String(itemId || "").trim();
   if (!cleanItemId) throw new Error("Missing checklist item id");
 
   const scope = await requireWorkspaceTaskItem(prisma, cleanItemId);
-  const item = await updateTaskItemRepo(prisma, cleanItemId, input);
+  const item = await updateTaskItemRepo(prisma, cleanItemId, input, getAuthUserId(mutationAuth));
 
   let tags: Awaited<ReturnType<typeof setTargetTagsRepo>> = [];
 
@@ -726,11 +728,13 @@ export async function updateTaskItemSharingAction(input: {
     throw new Error("Bạn không có quyền chia sẻ phiếu xử lý này.");
   }
 
-  await prisma.taskItem.update({
-    where: { id: item.id },
-    data: {
-      note: setShareUserIdsInNote(item.note, "sharedUserIds", validIds),
-    },
+  await withDbTransaction(prisma, async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${item.id} FOR UPDATE`;
+    const current = await tx.taskItem.findUniqueOrThrow({where:{id:item.id}});
+    const previous = String(current.note ?? "").split(/\r?\n/).find(line=>line.startsWith("sharedUserIds:"))?.slice(14).split(",").map(v=>v.trim()) ?? [];
+    await tx.taskItem.update({where:{id:item.id},data:{note:setShareUserIdsInNote(current.note,"sharedUserIds",validIds)}});
+    for (const userId of newShareRecipients(previous,validIds,actorUserId || "")) await queueWorkNotification(tx,{
+      key:`work:share:${item.id}:${userId}:${crypto.randomUUID()}`,userId,actorId:actorUserId,taskItemId:item.id,kind:"SHARED",title:current.title,route:workRoute(item.id,false)});
   });
 
   revalidatePath("/admin/coordination/operation");

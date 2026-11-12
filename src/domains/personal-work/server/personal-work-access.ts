@@ -37,3 +37,8 @@ export function personalWorkEditAccessWhere(userId: string): Prisma.TaskItemWher
   };
 }
 
+
+// Scoped entry shares never enter full-work policies used by Ben/calendar writes.
+export function personalWorkListAccessWhere(userId:string):Prisma.TaskItemWhereInput {
+  return {AND:[personalWorkScopeWhere,{OR:[personalWorkViewAccessWhere(userId),{checklists:{some:{personalShares:{some:{userId}}}}}]}]};
+}

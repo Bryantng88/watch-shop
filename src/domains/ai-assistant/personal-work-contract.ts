@@ -6,6 +6,7 @@ import type {
 const time = z.string().datetime({ offset: true });
 export const personalWorkPlanSchema = z
   .object({
+    reminderMinutes: z.union([z.literal(0),z.literal(10),z.literal(15),z.literal(30),z.literal(60)]).nullable().optional(),
     assigneeUserId: z.string().min(1).max(100).nullable().optional(),
     codex: z
       .object({ startAt: time.nullable() })

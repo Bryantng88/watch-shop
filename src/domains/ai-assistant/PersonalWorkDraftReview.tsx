@@ -51,6 +51,7 @@ export default function PersonalWorkDraftReview({
                 {p.dueAt ? date(p.dueAt) : "Chưa đặt lịch"}
                 {p.scheduledEndAt ? " → " + date(p.scheduledEndAt) : ""}
               </p>
+              {p.dueAt && p.reminderMinutes !== undefined && <p className="text-xs text-slate-500">{p.reminderMinutes === null ? "Không nhắc lịch" : p.reminderMinutes === 0 ? "Nhắc đúng giờ" : `Nhắc trước ${p.reminderMinutes} phút`}</p>}
               {p.priority !== "MEDIUM" && (
                 <p className="mt-2 text-xs text-slate-500">
                   Ưu tiên:{" "}

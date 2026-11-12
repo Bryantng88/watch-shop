@@ -1,5 +1,5 @@
 import { z } from "zod";
-import webpush from "web-push";
+import { sendNotification } from "web-push";
 import { prisma } from "@/server/db/client";
 import { AssistantError } from "./access";
 
@@ -15,17 +15,17 @@ export const pushSubscription = z.object({
   keys: z.object({ p256dh: z.string().regex(/^[\w-]{87}$/), auth: z.string().regex(/^[\w-]{22}$/) }).strict(),
 }).strict();
 
-function vapidDetails() {
+export function benPushVapid() {
   const { BEN_PUSH_PUBLIC_KEY: publicKey, BEN_PUSH_PRIVATE_KEY: privateKey, BEN_PUSH_SUBJECT: subject } = process.env;
   return publicKey && privateKey && subject ? { publicKey, privateKey, subject } : null;
 }
 
 export function benPushPublicKey() {
-  return vapidDetails()?.publicKey ?? null;
+  return benPushVapid()?.publicKey ?? null;
 }
 
 export async function saveBenPush(userId: string, subscription: z.infer<typeof pushSubscription>) {
-  if (!vapidDetails()) throw new AssistantError("Thông báo Ben chưa được cấu hình.", 503);
+  if (!benPushVapid()) throw new AssistantError("Thông báo Ben chưa được cấu hình.", 503);
   const { endpoint, keys } = subscription;
   await prisma.benPushSubscription.upsert({
     where: { endpoint },
@@ -43,7 +43,7 @@ export async function removeBenPush(userId: string, endpoint: string) {
 }
 
 export async function notifyBenAssignment(userId: string) {
-  const vapid = vapidDetails();
+  const vapid = benPushVapid();
   if (!vapid) return;
   try {
     const subscriptions = await prisma.benPushSubscription.findMany({
@@ -54,7 +54,7 @@ export async function notifyBenAssignment(userId: string) {
     await Promise.allSettled(subscriptions.map(async row => {
       if (!pushEndpoint.safeParse(row.endpoint).success) return;
       try {
-        await webpush.sendNotification(
+        await sendNotification(
           { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
           JSON.stringify({ type: "assignment" }),
           { vapidDetails: vapid, TTL: 3600, timeout: 5000 },

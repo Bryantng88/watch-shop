@@ -1,3 +1,6 @@
+import {checklistOnlyWork} from "../shared/checklist-share-projection";
+import { queueWorkNotification, queuePersonalChange } from "@/domains/notification/server/work-push.service";
+import { workRoute, newShareRecipients } from "@/domains/notification/server/work-push-policy";
 import {isPersonalEvent} from "../shared/personal-event";
 import { publicRunSelect } from "./codex/personal-codex.service";
 import { codexExecutionReadiness } from "./codex/codex-config";
@@ -13,7 +16,7 @@ import {
 import { prisma, withDbTransaction, type DB } from "@/server/db/client";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { hydrateTaskItemsWithTagsRepo, setTargetTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
-import { personalWorkScopeWhere, personalWorkViewAccessWhere, isPersonalWorkOwner, personalWorkTagOwner } from "./personal-work-access";
+import { personalWorkScopeWhere, personalWorkListAccessWhere, isPersonalWorkOwner, personalWorkTagOwner } from "./personal-work-access";
 import { isGoogleCalendarConfigured } from "./google-calendar.service";
 import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
 import { validatePersonalSchedule } from "../shared/personal-work-schedule";
@@ -21,6 +24,7 @@ import { categoryFromRow, listPersonalCategories, resolvePersonalCategory, defau
 import {
   PERSONAL_WORK_DOMAINS,
   PERSONAL_WORK_TYPES,
+  type PersonalWorkItem,
   type PersonalWorkDomain,
   type PersonalWorkPageData,
   type PersonalWorkTarget,
@@ -30,6 +34,7 @@ import {
 const domainKeys = new Set<string>(PERSONAL_WORK_DOMAINS.map((item) => item.key));
 
 type PersonalWorkInput = {
+  reminderMinutes?: number | null;
   title: string;
   note?: string | null;
   dueAt?: string | null;
@@ -229,7 +234,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
-        ...personalWorkViewAccessWhere(userId),
+        ...personalWorkListAccessWhere(userId),
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
@@ -261,7 +266,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           orderBy: { occurredAt: "desc" },
           take: 20,
         },
-        checklists: { orderBy: { sortOrder: "asc" } },
+        checklists: { orderBy: { sortOrder: "asc" },include:{personalShares:{include:{user:{select:{id:true,name:true,email:true,avatarUrl:true}}}}} },
       },
       orderBy: [{ isDone: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
     }),
@@ -289,7 +294,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       const share = item.personalShares.find((entry) => entry.userId === userId);
       const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
-      return {
+      const result: PersonalWorkItem = {
         id: item.id,
         personalWorkNumber: item.personalWorkNumber,
         assignedToMe: item.assignedToUserId === userId,
@@ -297,11 +302,14 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         codexRuns: item.codexRuns.map(run => ({ ...run, notBefore:run.notBefore?.toISOString()??null, createdAt: run.createdAt.toISOString(), startedAt: run.startedAt?.toISOString() ?? null, finishedAt: run.finishedAt?.toISOString() ?? null })),
         codexRun: item.codexRuns[0] ? { ...item.codexRuns[0], notBefore:item.codexRuns[0].notBefore?.toISOString()??null, createdAt: item.codexRuns[0].createdAt.toISOString(), startedAt: item.codexRuns[0].startedAt?.toISOString() ?? null, finishedAt: item.codexRuns[0].finishedAt?.toISOString() ?? null } : null,
         title: item.title,
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
         note: item.note,
         status: item.status,
         priority: item.priority,
         dueAt: item.dueAt?.toISOString() ?? null,
         scheduledEndAt: item.scheduledEndAt?.toISOString() ?? null,
+        reminderMinutes: item.reminderMinutes,
         estimatedDays: item.estimatedDays,
         completedAt: item.completedAt?.toISOString() ?? null,
         domain,
@@ -320,7 +328,10 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           occurredAt: activity.occurredAt.toISOString(),
           actor: activity.actorUser,
         })),
-        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone })),
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone,
+          access:owned?"OWNER":share?.accessLevel === "EDITOR"?"EDITOR":entry.personalShares.find(s=>s.userId===userId)?.accessLevel??"VIEWER",
+          sharedWith:owned?entry.personalShares.map(s=>({user:s.user,accessLevel:s.accessLevel})):[],
+        })),
         tags: names.filter((name) => !domainKeys.has(name.toUpperCase())),
         calendar: {
           synced: Boolean(calendar),
@@ -335,6 +346,12 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         owner,
         sharedWith: item.personalShares.map((entry) => ({ user: entry.user, accessLevel: entry.accessLevel })),
       };
+      if (!owned && !share) {
+        const visibleIds=new Set(item.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).map(e=>e.id));
+        const updated=item.checklists.filter(e=>visibleIds.has(e.id)).reduce((latest,e)=>e.updatedAt>latest?e.updatedAt:latest,item.createdAt);
+        return checklistOnlyWork(result,result.checklist.filter(e=>visibleIds.has(e.id)),updated.toISOString());
+      }
+      return result;
     }),
     codex: { ...codexExecutionReadiness(), canDispatch: Boolean(await prisma.user.findFirst({ where: { id: userId, isActive: true, roles: { some: { name: "ADMIN" } } }, select: { id: true } })) },
     currentUserId: userId,
@@ -356,6 +373,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   if (!userId) throw new Error("Không xác định được người dùng");
   const title = input.title.trim();
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
+  if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const schedule = validatePersonalSchedule(input.dueAt, input.scheduledEndAt);
   const category = await resolvePersonalCategory(userId, input.categoryKey || normalizePersonalDomain(input.domain));
   const domain = category.domain;
@@ -375,6 +393,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   return withDbTransaction(db, async (tx) => {
     const item = await tx.taskItem.create({
       data: {
+        reminderMinutes: input.reminderMinutes,
         title, note: input.note?.trim() || null,
         personalOwnerUserId: userId, assignedToUserId: userId,
         priority: input.priority || "MEDIUM", workTypeId: workType,
@@ -486,6 +505,7 @@ export async function searchPersonalWorkTargets(input: {
 
 export async function updatePersonalWorkItem(
   input: {
+    reminderMinutes?: number | null;
     id: string;
     title?: string;
     note?: string | null;
@@ -506,6 +526,7 @@ export async function updatePersonalWorkItem(
   auth: unknown,
   db: DB = prisma,
 ) {
+  if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
   const event = isPersonalEvent(current.workTypeId);
   if(input.workType!==undefined && isPersonalEvent(input.workType)!==event)throw new Error("Không đổi qua lại giữa công việc và sự kiện; hãy tạo mục mới.");
@@ -553,6 +574,7 @@ export async function updatePersonalWorkItem(
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
+      ...(input.reminderMinutes !== undefined ? {reminderMinutes:input.reminderMinutes} : {}),
       ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
       ...(category ? { personalCategoryId: category.id } : {}),
       ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
@@ -633,6 +655,7 @@ export async function updatePersonalWorkItem(
         });
       }
     }
+    if (scheduleChanged || status === TaskStatus.CANCELLED) await queuePersonalChange(tx, input.id, current.userId, status === TaskStatus.CANCELLED ? "CANCELLED" : "CHANGED");
     if (input.domain || input.tags || category) {
       await setTargetTagsRepo(tx, {
         ...personalWorkTagOwner(current),
@@ -692,7 +715,53 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
       data: { taskItemId, title: normalizedTitle, sortOrder: (last?.sortOrder || 0) + 1 },
     });
     await updateChecklistProgress(tx, taskItemId);
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Thêm đầu việc",body:normalizedTitle}});
     return checklist;
+  });
+}
+
+async function assertPersonalChecklistEdit(taskItemId:string,checklistItemId:string,auth:unknown,db:DB=prisma) {
+  const userId=getAuthUserId(auth);
+  if(!userId)throw new Error("Không xác định được người dùng");
+  const item=await db.taskItem.findFirst({where:{id:taskItemId,...personalWorkScopeWhere},include:{task:true,personalShares:{where:{userId}},checklists:{where:{id:checklistItemId},include:{personalShares:{where:{userId}}}}}});
+  if(!item || !item.checklists.length)throw new Error("Không tìm thấy đầu việc");
+  const allowed=isPersonalWorkOwner(item,userId)||item.personalShares.some(s=>s.accessLevel==="EDITOR")||item.checklists[0].personalShares.some(s=>s.accessLevel==="EDITOR");
+  if(!allowed)throw new Error("Bạn không có quyền cập nhật đầu việc này");
+  return {...item,userId};
+}
+
+export async function replacePersonalChecklistShares(taskItemId:string,checklistItemId:string,shares:ShareInput[],auth:unknown) {
+  return prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current=await assertPersonalWorkAccess(taskItemId,auth,"OWNER",tx);
+    const entry=await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId},include:{personalShares:true}});
+    if(!entry)throw new Error("Không tìm thấy đầu việc");
+    const unique=new Map(shares.filter(s=>s.userId!==current.userId).map(s=>[s.userId,s.accessLevel]));
+    if(unique.size>20||[...unique.values()].some(v=>!["VIEWER","EDITOR"].includes(v)))throw new Error("Danh sách chia sẻ không hợp lệ");
+    const users=await tx.user.findMany({where:{id:{in:[...unique.keys()]},isActive:true},select:{id:true}});
+    if(users.length!==unique.size)throw new Error("Người nhận không còn hoạt động hoặc không tồn tại");
+    await tx.personalChecklistShare.deleteMany({where:{checklistItemId,userId:{notIn:[...unique.keys()]}}});
+    for(const [userId,accessLevel] of unique)await tx.personalChecklistShare.upsert({where:{checklistItemId_userId:{checklistItemId,userId}},create:{checklistItemId,userId,accessLevel,sharedByUserId:current.userId},update:{accessLevel}});
+    const task=await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId},select:{title:true}});
+    for(const userId of newShareRecipients(entry.personalShares.map(s=>s.userId),[...unique.keys()],current.userId))await queueWorkNotification(tx,{
+      key:`work:checklist-share:${checklistItemId}:${userId}:${crypto.randomUUID()}`,userId,actorId:current.userId,taskItemId,checklistItemId,kind:"SHARED",title:`${task.title} · ${entry.title}`,route:workRoute(taskItemId,true)});
+  });
+}
+
+export async function renamePersonalWorkChecklistItem(taskItemId: string, checklistItemId: string, title: string, auth: unknown) {
+  const normalized = title.trim();
+  if (!normalized || normalized.length > 500) throw new Error("Tên đầu việc cần từ 1 đến 500 ký tự");
+  return prisma.$transaction(async tx => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current = await assertPersonalChecklistEdit(taskItemId, checklistItemId, auth, tx);
+    assertChecklistOpen(current);
+    const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
+    if (!entry) throw new Error("Không tìm thấy đầu việc");
+    if (entry.title === normalized) return entry;
+    const updated = await tx.taskItemChecklist.update({where:{id:entry.id},data:{title:normalized}});
+    await tx.taskItem.update({where:{id:taskItemId},data:{updatedAt:new Date()}});
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Sửa đầu việc",body:`${entry.title} → ${normalized}`}});
+    return updated;
   });
 }
 
@@ -702,14 +771,17 @@ export async function setPersonalWorkChecklistItemDone(
   isDone: boolean,
   auth: unknown,
 ) {
-  const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
-  assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current = await assertPersonalChecklistEdit(taskItemId,checklistItemId,auth,tx);
+    assertChecklistOpen(current);
     const result = await tx.taskItemChecklist.updateMany({
       where: { id: checklistItemId, taskItemId },
       data: { isDone, doneAt: isDone ? new Date() : null },
     });
     if (!result.count) throw new Error("Không tìm thấy đầu việc");
+    const entry = await tx.taskItemChecklist.findUniqueOrThrow({where:{id:checklistItemId}});
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:isDone?"Hoàn thành đầu việc":"Mở lại đầu việc",body:entry.title}});
     return updateChecklistProgress(tx, taskItemId);
   });
 }
@@ -718,7 +790,10 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
+    if (!entry) throw new Error("Không tìm thấy đầu việc");
     const result = await tx.taskItemChecklist.deleteMany({ where: { id: checklistItemId, taskItemId } });
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Xóa đầu việc",body:entry.title}});
     if (!result.count) throw new Error("Không tìm thấy đầu việc");
     return updateChecklistProgress(tx, taskItemId);
   });
@@ -771,6 +846,9 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
   });
   if (users.length !== unique.size) throw new Error("Có người nhận không còn hoạt động hoặc không tồn tại");
   await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const previous = await tx.personalTaskShare.findMany({where:{taskItemId},select:{userId:true}});
+    const item = await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId}});
     await tx.personalTaskShare.deleteMany({ where: { taskItemId } });
     if (unique.size) {
       await tx.personalTaskShare.createMany({
@@ -781,6 +859,10 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
           sharedByUserId: current.userId,
         })),
       });
+    }
+    for (const userId of newShareRecipients(previous.map(s=>s.userId), [...unique.keys()], current.userId)) {
+      await queueWorkNotification(tx, {key:`work:share:${taskItemId}:${userId}:${crypto.randomUUID()}`, userId, actorId:current.userId,
+        taskItemId,kind:"SHARED",title:item.title,route:workRoute(taskItemId,true)});
     }
   });
 }

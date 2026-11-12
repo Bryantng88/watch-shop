@@ -559,6 +559,20 @@
                   "type": "null"
                 }
               ]
+            },
+            "reminderMinutes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "enum": [
+                null,
+                0,
+                10,
+                15,
+                30,
+                60
+              ]
             }
           },
           "required": [
@@ -575,7 +589,8 @@
             "priority",
             "checklist",
             "assigneeUserId",
-            "codex"
+            "codex",
+            "reminderMinutes"
           ]
         },
         {
@@ -884,6 +899,20 @@
                     "type": "null"
                   }
                 ]
+              },
+              "reminderMinutes": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "enum": [
+                  null,
+                  0,
+                  10,
+                  15,
+                  30,
+                  60
+                ]
               }
             },
             "required": [
@@ -900,7 +929,8 @@
               "priority",
               "checklist",
               "assigneeUserId",
-              "codex"
+              "codex",
+              "reminderMinutes"
             ]
           }
         },
