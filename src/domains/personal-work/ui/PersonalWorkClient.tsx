@@ -1028,7 +1028,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           <span className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-slate-100 sm:block"><span className="block h-full rounded-full bg-blue-600" style={{width:`${item.progressPercent}%`}}/></span>
                           <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums text-slate-600">{item.checklist.filter(e=>e.isDone).length}/{item.checklist.length} · {item.progressPercent}%</span>
                         </span>}
-                        {update && <PersonalWorkUpdateHint text={item.activities[0]?.body || update.detail} time={update.label.replace(/^Cập nhật /,"")}/> }
+                        {update && <PersonalWorkUpdateHint text={item.checklistOnly ? "Đầu việc được chia sẻ vừa cập nhật" : item.activities[0]?.body || update.detail} time={update.label.replace(/^Cập nhật /,"")}/> }
                         {late && <span className="text-amber-700">Quá hạn</span>}
                         {view !== "TODAY" && item.dueAt && <span>{dueLabel(item.dueAt)}</span>}
                         {item.estimatedDays > 1 && <span>· {item.estimatedDays} ngày</span>}
@@ -1237,7 +1237,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                             setEditingItem(current=>current&&current.id===editingItem.id?{...current,checklist:current.checklist.map(item=>item.id===entry.id?{...item,title}:item)}:current);
                             router.refresh();
                           }}/>
-                        {editingItem.access === "OWNER" && !editingItem.checklistLockedAt && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
+                        {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
                           await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
                           setEditingItem(current=>current?{...current,checklist:current.checklist.map(e=>e.id===entry.id?{...e,sharedWith:shares}:e)}:current);
                           router.refresh();

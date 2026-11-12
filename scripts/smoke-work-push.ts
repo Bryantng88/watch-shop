@@ -84,6 +84,7 @@ async function main(){
   const ownerView=(await getPersonalWorkPageData({userId:owner.id})).items.find(e=>e.id===privateItem.id)!;
   assert.equal(ownerView.note,"PRIVATE_PARENT_NOTE");assert.equal(ownerView.checklist.length,2);
   // Revocation removes the parent shell and invalidates queued entry-share push.
+  await prisma.taskItem.update({where:{id:privateItem.id},data:{checklistLockedAt:new Date()}});
   await replacePersonalChecklistShares(privateItem.id,visible.id,[],{userId:owner.id});
   const callsBeforeRevoke=calls;await runWorkPush(new Date(),fakeSend);assert.equal(calls,callsBeforeRevoke);
   assert.equal((await getPersonalWorkPageData({userId:partial.id})).items.length,0);

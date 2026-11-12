@@ -734,7 +734,6 @@ export async function replacePersonalChecklistShares(taskItemId:string,checklist
   return prisma.$transaction(async tx=>{
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
     const current=await assertPersonalWorkAccess(taskItemId,auth,"OWNER",tx);
-    assertChecklistOpen(current);
     const entry=await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId},include:{personalShares:true}});
     if(!entry)throw new Error("Không tìm thấy đầu việc");
     const unique=new Map(shares.filter(s=>s.userId!==current.userId).map(s=>[s.userId,s.accessLevel]));
