@@ -28,7 +28,7 @@ jobs:
           POSTGRES_DB: work_push_test
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U fixture -d work_push_test'
+          --health-cmd "pg_isready -U fixture -d work_push_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/work_push_test
