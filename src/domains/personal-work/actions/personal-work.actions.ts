@@ -10,6 +10,8 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import {
+  replacePersonalChecklistShares,
+  renamePersonalWorkChecklistItem,
   addPersonalWorkChecklistItem,
   assertPersonalWorkAccess,
   createPersonalWorkItem,
@@ -53,6 +55,7 @@ function refresh() {
 }
 
 export async function createPersonalWorkAction(input: {
+  reminderMinutes?: number | null;
   title: string;
   note?: string | null;
   dueAt?: string | null;
@@ -88,6 +91,7 @@ export async function searchPersonalWorkTargetsAction(input: { type: PersonalWor
 }
 
 export async function updatePersonalWorkAction(input: {
+  reminderMinutes?: number | null;
   id: string;
   title?: string;
   note?: string | null;
@@ -221,4 +225,16 @@ export async function cancelPersonalCodexRunAction(runId: string) {
   await cancelPersonalCodexRun(runId, await auth());
   refresh();
   return { ok: true };
+}
+
+export async function renamePersonalWorkChecklistItemAction(input: {taskItemId:string;checklistItemId:string;title:string}) {
+  const user = await auth();
+  const item = await renamePersonalWorkChecklistItem(input.taskItemId,input.checklistItemId,input.title,user);
+  refresh();
+  return {ok:true,item:{id:item.id,title:item.title,isDone:item.isDone}};
+}
+
+export async function replacePersonalChecklistSharesAction(input:{taskItemId:string;checklistItemId:string;shares:{userId:string;accessLevel:PersonalTaskShareAccess}[]}) {
+  await replacePersonalChecklistShares(input.taskItemId,input.checklistItemId,input.shares,await auth());
+  refresh();return {ok:true};
 }

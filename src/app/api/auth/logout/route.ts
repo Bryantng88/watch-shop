@@ -1,7 +1,15 @@
 // app/api/auth/logout/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST() {
+import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
+import { prisma } from "@/server/db/client";
+
+export async function POST(req: NextRequest) {
+    const endpoint = req.cookies.get("ben_push_endpoint")?.value;
+    if (endpoint) {
+      const {user} = await getCurrentUserPermissions();
+      if (user) await prisma.benPushSubscription.deleteMany({where:{userId:user.id,endpoint}});
+    }
     const res = NextResponse.json({ ok: true });
 
     res.cookies.set("auth_token", "", {
@@ -9,5 +17,6 @@ export async function POST() {
         maxAge: 0,
     });
 
+    res.cookies.set("ben_push_endpoint","",{path:"/",maxAge:0});
     return res;
 }

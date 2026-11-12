@@ -16,3 +16,10 @@ test("calendar write access includes editors but never viewers", () => {
   assert.equal(isPersonalWorkOwner({ personalOwnerUserId: "user-2", task: null }, "user-1"), false);
 });
 
+
+test("entry sharing is a list-only scope and never expands parent/Ben/calendar edit rights", async () => {
+  const {personalWorkListAccessWhere,personalWorkViewAccessWhere}=await import('./personal-work-access');
+  assert.match(JSON.stringify(personalWorkListAccessWhere('recipient')),/checklists/);
+  assert.doesNotMatch(JSON.stringify(personalWorkViewAccessWhere('recipient')),/checklists/);
+  assert.doesNotMatch(JSON.stringify(personalWorkEditAccessWhere('recipient')),/checklists/);
+});

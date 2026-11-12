@@ -84,6 +84,10 @@ export type PersonalCodexRun = {
 };
 
 export type PersonalWorkItem = {
+  checklistOnly?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  reminderMinutes?: number | null;
   personalWorkNumber?: number | null;
   assignedToMe?: boolean;
   assignee?: { id: string; name: string | null } | null;
@@ -123,6 +127,8 @@ export type PersonalWorkActivity = {
 };
 
 export type PersonalWorkChecklistItem = {
+  access?: "OWNER" | "EDITOR" | "VIEWER";
+  sharedWith?: PersonalWorkShare[];
   id: string;
   title: string;
   isDone: boolean;

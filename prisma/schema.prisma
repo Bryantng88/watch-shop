@@ -332,6 +332,7 @@ model MechanicalPartCatalog {
 }
 
 model Notification {
+  dedupeKey String? @unique
   id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
   type      String
   title     String
@@ -1606,6 +1607,7 @@ model TechnicalDetailCatalog {
 }
 
 model User {
+  personalChecklistShares PersonalChecklistShare[]
   benPushSubscriptions BenPushSubscription[]
   customerAssistantConversations CustomerAssistantConversation[]
   orderCodexProposals OrderCodexProposal[]
@@ -2812,6 +2814,7 @@ model Task {
 }
 
 model TaskItem {
+  reminderMinutes Int? @default(0)
   personalWorkNumber Int? @unique
   codexRuns PersonalCodexRun[]
   id     String  @id @default(dbgenerated("(gen_random_uuid())::text"))
@@ -3003,6 +3006,7 @@ model TaskItemActivityReply {
 }
 
 model TaskItemChecklist {
+  personalShares PersonalChecklistShare[]
   id         String  @id @default(dbgenerated("(gen_random_uuid())::text"))
   taskItemId String
   title      String
@@ -4098,4 +4102,38 @@ model BenPushSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([userId, updatedAt])
+}
+
+// Transactional inbox and Web Push delivery. No business data is cached on device.
+model WorkPushDelivery {
+  checklistItemId String?
+  id String @id @default(cuid())
+  notificationKey String
+  userId String
+  taskItemId String?
+  kind String
+  route String
+  endpoint String
+  subscriptionVersion DateTime
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  leaseUntil DateTime?
+  deliveredAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([notificationKey, endpoint])
+  @@index([deliveredAt, availableAt, leaseUntil])
+}
+
+model PersonalChecklistShare {
+  id String @id @default(cuid())
+  checklistItemId String
+  userId String
+  accessLevel PersonalTaskShareAccess @default(VIEWER)
+  sharedByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  checklist TaskItemChecklist @relation(fields:[checklistItemId],references:[id],onDelete:Cascade)
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@unique([checklistItemId,userId])
+  @@index([userId,accessLevel])
 }

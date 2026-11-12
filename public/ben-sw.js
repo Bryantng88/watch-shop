@@ -10,19 +10,27 @@ self.addEventListener("fetch", (event) => {
   )));
 });
 
+function workNotificationRoute(value) {
+  return typeof value === "string" && /^\/admin\/(?:personal-work\?item=[\w%-]+|ben\/work\/[\w%-]+)$/.test(value) ? value : "/admin/ben";
+}
 self.addEventListener("push", event => {
+  let payload = {};
+  try { payload = event.data?.json() || {}; } catch {}
+  const labels = { ASSIGNED: "Bạn được giao một công việc mới", SHARED: "Có công việc được chia sẻ với bạn", CHANGED: "Lịch công việc đã thay đổi", CANCELLED: "Có công việc đã hủy", REMINDER: "Bạn có lịch công việc hoặc sự kiện cần nhắc" };
   event.waitUntil(self.registration.showNotification("Ben", {
-    body: "Bạn có công việc mới",
-    icon: "/ben/icon-192.png",
+    body: labels[payload.kind] || "Bạn có công việc mới",
+    icon: "/ben/icon-192.png", badge: "/ben/icon-192.png",
+    tag: typeof payload.tag === "string" ? payload.tag.slice(0,250) : "ben-assignment",
+    data: { route: workNotificationRoute(payload.route) },
   }));
 });
-
 self.addEventListener("notificationclick", event => {
   event.notification.close();
   event.waitUntil((async () => {
+    const route = workNotificationRoute(event.notification.data?.route);
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    const ben = windows.find(client => new URL(client.url).pathname === "/admin/ben");
-    if (ben) await ben.focus();
-    else await self.clients.openWindow("/admin/ben");
+    const target = windows.find(client => new URL(client.url).origin === self.location.origin && new URL(client.url).pathname === new URL(route,self.location.origin).pathname);
+    if (target) { await target.navigate(route); await target.focus(); }
+    else await self.clients.openWindow(route);
   })());
 });

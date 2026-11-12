@@ -122,6 +122,9 @@ if [[ "$healthy" != true ]]; then
   die "Deployment failed health checks"
 fi
 
+log "Starting notification worker"
+compose up -d --no-deps notifications
+
 ln -sfn "$release_dir" "$release_root/current"
 
 log "Removing old release directories; keeping the newest $keep_releases"
