@@ -89,6 +89,13 @@ export async function updateTaskItemRepo(
     });
   }
 
+  if ((input.dueAt !== undefined && item.dueAt?.getTime() !== previous.dueAt?.getTime()) || (item.status === "CANCELLED" && previous.status !== "CANCELLED")) {
+    const shared = String(item.note ?? "").split(/\r?\n/).find(line=>line.startsWith("sharedUserIds:"))?.slice(14).split(",").map(id=>id.trim()).filter(Boolean) ?? [];
+    const recipients = new Set([item.assignedToUserId,...shared]);
+    for (const userId of recipients) if (userId && (userId === previous.assignedToUserId || shared.includes(userId))) await queueWorkNotification(client,{
+      key:`work:changed:${item.id}:${item.updatedAt.toISOString()}:${userId}`,userId,actorId,taskItemId:item.id,
+      kind:item.status === "CANCELLED" ? "CANCELLED" : "CHANGED",title:item.title,route:workRoute(item.id,false)});
+  }
   if(item.assignedToUserId && item.assignedToUserId!==previous.assignedToUserId) await queueWorkNotification(client,{key:`work:assigned:${item.id}:${item.updatedAt.toISOString()}`,userId:item.assignedToUserId,actorId,
     taskItemId:item.id,kind:"ASSIGNED",title:item.title,route:workRoute(item.id,false)});
   return item;

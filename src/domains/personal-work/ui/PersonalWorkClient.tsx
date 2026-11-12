@@ -987,9 +987,9 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
                           </span>
                         )}
-                        <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
+                        {!isPersonalEvent(item.workType) && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
                           {item.category.label}
-                        </span>
+                        </span>}
                         {isPersonalEvent(item.workType) && (
                           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
                             Sự kiện

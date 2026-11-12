@@ -21,7 +21,7 @@ async function main(){
   assert.equal(await prisma.notification.count({where:{dedupeKey:'rollback-'+suffix}}),0);assert.equal(await prisma.workPushDelivery.count(),0);
   await prisma.$transaction(async tx=>{await queueWorkNotification(tx,queue('dedupe-'+suffix));await queueWorkNotification(tx,queue('dedupe-'+suffix));});
   assert.equal(await prisma.notification.count({where:{dedupeKey:'dedupe-'+suffix}}),1);assert.equal(await prisma.workPushDelivery.count(),1);
-  await Promise.all([runWorkPush(now),runWorkPush(now)]);assert.equal(calls,1);
+  await Promise.all([runWorkPush(),runWorkPush()]);assert.equal(calls,1);
   await queueWorkNotification(prisma,{...queue('self-'+suffix),userId:owner.id});assert.equal(await prisma.notification.count({where:{dedupeKey:'self-'+suffix}}),0);
   await prisma.taskItem.update({where:{id:item.id},data:{dueAt:new Date(Date.now()-1000)}});
   await Promise.all([runWorkPush(),runWorkPush()]);
