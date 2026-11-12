@@ -991,7 +991,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                         {item.assignee && item.assignee.id !== item.owner.id && <span className="text-[11px] text-slate-500">→ {item.assignee.name || "Người thực hiện"}</span>}
                         {item.access !== "OWNER" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
-                            <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
+                            <Share2 className="h-3 w-3" /> {item.checklistOnly ? (item.checklist.some(e=>e.access === "EDITOR") ? "Sửa đầu việc" : "Xem đầu việc") : item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
                           </span>
                         )}
                         {item.tags.map((tag) => (
@@ -1016,7 +1016,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           {isPersonalEvent(item.workType) ? <CalendarDays className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
                           {personalEventTiming(item).timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa đặt giờ"}
                         </span>
-                        {!isPersonalEvent(item.workType) && <span className="max-w-20 shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
+                        {!item.checklistOnly && !isPersonalEvent(item.workType) && <span className="max-w-20 shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
                           {item.category.label}
                         </span>}
                         {isPersonalEvent(item.workType) && (
@@ -1138,7 +1138,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Thông tin công việc</p>
                 <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.access === "VIEWER" ? "Chi tiết công việc" : "Chỉnh sửa công việc"}</h2>
-                {calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
+                {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
               <button
                 type="button"
@@ -1611,7 +1611,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   onClick={() => setEditingItem(null)}
                   className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 >
-                  Hủy
+                  {editingItem.checklistOnly?"Đóng":"Hủy"}
                 </button>
                 {!editingItem.checklistOnly && <button
                   type="submit"
