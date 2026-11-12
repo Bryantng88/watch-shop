@@ -186,6 +186,25 @@ test("ambiguous, truncated and relaxed order matches cannot become an amendment 
     );
   }
   await assert.rejects(
+    prepareOrderServices({} as DB, raw, 1, sourceMessageId, [
+      {
+        request: {
+          tool: "serviceOrders.search",
+          query: '{"customerName":"Nam"}',
+        },
+        result: { matches: [{ id: "order" }, { id: "other" }] },
+      },
+      {
+        request: {
+          tool: "serviceOrders.search",
+          query: '{"reference":"picked-id"}',
+        },
+        result: { matches: [{ id: "order" }] },
+      },
+    ]),
+    /duy nhất/,
+  );
+  await assert.rejects(
     prepareOrderServices(
       {} as DB,
       raw,

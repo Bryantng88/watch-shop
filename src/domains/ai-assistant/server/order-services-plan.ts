@@ -38,7 +38,18 @@ export async function prepareOrderServices(
     matches.length !== 1 ||
     matches[0].id !== plan.orderId ||
     search?.result.truncated ||
-    search?.result.relaxed
+    search?.result.relaxed ||
+    entries.some(
+      (e) =>
+        e.request.tool === "serviceOrders.search" &&
+        Array.isArray(e.result.matches) &&
+        (e.result.matches as { id: string }[]).some(
+          (m) => m.id === plan.orderId,
+        ) &&
+        ((e.result.matches as unknown[]).length !== 1 ||
+          e.result.truncated ||
+          e.result.relaxed),
+    )
   )
     throw new AssistantError(
       "Cần xác định duy nhất đơn hàng; hỏi lại hoặc tra mã đơn được chọn.",
@@ -97,7 +108,14 @@ export async function prepareOrderServices(
       !found ||
       found.length !== 1 ||
       latest?.result.truncated ||
-      found[0].version !== serviceCatalogVersion(catalog)
+      found[0].version !== serviceCatalogVersion(catalog) ||
+      entries.some(
+        (e) =>
+          e.request.tool === "services.catalog" &&
+          Array.isArray(e.result.matches) &&
+          (e.result.matches as { id: string }[]).some((m) => m.id === id) &&
+          ((e.result.matches as unknown[]).length !== 1 || e.result.truncated),
+      )
     )
       throw new AssistantError(
         "Cần tra và chọn chính xác từng dịch vụ trong danh mục.",
