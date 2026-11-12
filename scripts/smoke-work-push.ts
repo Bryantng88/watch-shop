@@ -7,22 +7,28 @@ import {workRoute} from '../src/domains/notification/server/work-push-policy';
 async function main(){
  const url=new URL(process.env.DATABASE_URL||'');assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/work_push_test');
  const suffix=randomUUID();const now=new Date();
+ console.log('push fixture: creating users');
  const [owner,recipient]=await Promise.all(['owner','recipient'].map(name=>prisma.user.create({data:{email:`push-${name}-${suffix}@example.invalid`}})));
+ console.log('push fixture: creating item');
  const item=await prisma.taskItem.create({data:{title:'Synthetic work',personalOwnerUserId:owner.id,assignedToUserId:owner.id,dueAt:new Date(now.getTime()+60*60000),reminderMinutes:0}});
  await prisma.personalTaskShare.create({data:{taskItemId:item.id,userId:recipient.id,accessLevel:'VIEWER',sharedByUserId:owner.id}});
  const endpoint=`https://fcm.googleapis.com/fcm/send/${suffix}`;
  await prisma.benPushSubscription.create({data:{userId:recipient.id,endpoint,p256dh:'x'.repeat(87),auth:'x'.repeat(22)}});
  process.env.BEN_PUSH_PUBLIC_KEY='synthetic';process.env.BEN_PUSH_PRIVATE_KEY='synthetic';process.env.BEN_PUSH_SUBJECT='mailto:fixture@example.invalid';
+ console.log('push fixture: installing synthetic transport');
  const original=webpush.sendNotification;let calls=0;let failure:number|undefined;
  webpush.sendNotification=(async (_subscription,payload)=>{calls++;assert.ok(!String(payload).includes('Synthetic work'));if(failure)throw Object.assign(new Error('synthetic'),{statusCode:failure});return {statusCode:201,body:'',headers:{}};}) as typeof original;
  const queue=(key:string)=>({key,userId:recipient.id,actorId:owner.id,taskItemId:item.id,kind:'SHARED' as const,title:item.title,route:workRoute(item.id,true)});
  try{
+  console.log('push fixture: transaction rollback');
   await assert.rejects(prisma.$transaction(async tx=>{await queueWorkNotification(tx,queue('rollback-'+suffix));throw Error('rollback');}));
   assert.equal(await prisma.notification.count({where:{dedupeKey:'rollback-'+suffix}}),0);assert.equal(await prisma.workPushDelivery.count(),0);
   await prisma.$transaction(async tx=>{await queueWorkNotification(tx,queue('dedupe-'+suffix));await queueWorkNotification(tx,queue('dedupe-'+suffix));});
   assert.equal(await prisma.notification.count({where:{dedupeKey:'dedupe-'+suffix}}),1);assert.equal(await prisma.workPushDelivery.count(),1);
+  console.log('push fixture: concurrent delivery');
   await Promise.all([runWorkPush(),runWorkPush()]);assert.equal(calls,1);
   await queueWorkNotification(prisma,{...queue('self-'+suffix),userId:owner.id});assert.equal(await prisma.notification.count({where:{dedupeKey:'self-'+suffix}}),0);
+  console.log('push fixture: reminders');
   await prisma.taskItem.update({where:{id:item.id},data:{dueAt:new Date(Date.now()-1000)}});
   await Promise.all([runWorkPush(),runWorkPush()]);
   assert.equal(await prisma.notification.count({where:{userId:recipient.id,type:'WORK_REMINDER'}}),1);
@@ -44,4 +50,4 @@ async function main(){
   await prisma.workPushDelivery.deleteMany();await prisma.taskItem.delete({where:{id:item.id}});await prisma.user.deleteMany({where:{id:{in:[owner.id,recipient.id]}}});await prisma.$disconnect();
  }
 }
-main().catch(error=>{console.error(error);process.exitCode=1;});
+main().catch(async error=>{console.error(error);await prisma.$disconnect();process.exitCode=1;});
