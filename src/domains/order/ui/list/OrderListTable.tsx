@@ -45,7 +45,7 @@ export default function OrderListTable(props: Props) {
           </colgroup>
           <thead className="bg-slate-50/80 text-left text-xs font-medium text-slate-500">
             <tr>
-              <th className="px-4 py-3">
+              <th scope="col" className="px-4 py-3">
                 <input
                   type="checkbox"
                   checked={allChecked}
@@ -57,12 +57,12 @@ export default function OrderListTable(props: Props) {
                   className="h-4 w-4 rounded border-slate-300"
                 />
               </th>
-              <th className="px-4 py-3">Đơn hàng</th>
-              <th className="px-4 py-3">Khách hàng</th>
-              <th className="px-4 py-3">Thanh toán</th>
-              <th className="px-4 py-3">Giao hàng</th>
-              <th className="px-4 py-3 text-right">Tổng tiền</th>
-              <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Thao tác</th>
+              <th scope="col" className="px-4 py-3">Đơn hàng</th>
+              <th scope="col" className="px-4 py-3">Khách hàng</th>
+              <th scope="col" className="px-4 py-3">Thanh toán</th>
+              <th scope="col" className="px-4 py-3">Giao hàng</th>
+              <th scope="col" className="px-4 py-3 text-right">Tổng tiền</th>
+              <th scope="col" className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
