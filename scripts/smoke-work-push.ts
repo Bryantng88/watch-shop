@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import webpush from 'web-push';
+import type {sendNotification} from 'web-push';
 import {prisma} from '../src/server/db/client';
 import {queueWorkNotification,runWorkPush} from '../src/domains/notification/server/work-push.service';
 import {workRoute} from '../src/domains/notification/server/work-push-policy';
@@ -16,8 +16,8 @@ async function main(){
  await prisma.benPushSubscription.create({data:{userId:recipient.id,endpoint,p256dh:'x'.repeat(87),auth:'x'.repeat(22)}});
  process.env.BEN_PUSH_PUBLIC_KEY='synthetic';process.env.BEN_PUSH_PRIVATE_KEY='synthetic';process.env.BEN_PUSH_SUBJECT='mailto:fixture@example.invalid';
  console.log('push fixture: installing synthetic transport');
- const original=webpush.sendNotification;let calls=0;let failure:number|undefined;
- webpush.sendNotification=(async (_subscription,payload)=>{calls++;assert.ok(!String(payload).includes('Synthetic work'));if(failure)throw Object.assign(new Error('synthetic'),{statusCode:failure});return {statusCode:201,body:'',headers:{}};}) as typeof original;
+ let calls=0;let failure:number|undefined;
+ const fakeSend:typeof sendNotification=async (_subscription,payload)=>{calls++;assert.ok(!String(payload).includes('Synthetic work'));if(failure)throw Object.assign(new Error('synthetic'),{statusCode:failure});return {statusCode:201,body:'',headers:{}};};
  const queue=(key:string)=>({key,userId:recipient.id,actorId:owner.id,taskItemId:item.id,kind:'SHARED' as const,title:item.title,route:workRoute(item.id,true)});
  try{
   console.log('push fixture: transaction rollback');
@@ -26,27 +26,26 @@ async function main(){
   await prisma.$transaction(async tx=>{await queueWorkNotification(tx,queue('dedupe-'+suffix));await queueWorkNotification(tx,queue('dedupe-'+suffix));});
   assert.equal(await prisma.notification.count({where:{dedupeKey:'dedupe-'+suffix}}),1);assert.equal(await prisma.workPushDelivery.count(),1);
   console.log('push fixture: concurrent delivery');
-  await Promise.all([runWorkPush(),runWorkPush()]);assert.equal(calls,1);
+  await Promise.all([runWorkPush(new Date(),fakeSend),runWorkPush(new Date(),fakeSend)]);assert.equal(calls,1);
   await queueWorkNotification(prisma,{...queue('self-'+suffix),userId:owner.id});assert.equal(await prisma.notification.count({where:{dedupeKey:'self-'+suffix}}),0);
   console.log('push fixture: reminders');
   await prisma.taskItem.update({where:{id:item.id},data:{dueAt:new Date(Date.now()-1000)}});
-  await Promise.all([runWorkPush(),runWorkPush()]);
+  await Promise.all([runWorkPush(new Date(),fakeSend),runWorkPush(new Date(),fakeSend)]);
   assert.equal(await prisma.notification.count({where:{userId:recipient.id,type:'WORK_REMINDER'}}),1);
   // A cancelled item must never get a new reminder.
-  await prisma.taskItem.update({where:{id:item.id},data:{status:'CANCELLED',dueAt:new Date(Date.now()-500)}});await runWorkPush();
+  await prisma.taskItem.update({where:{id:item.id},data:{status:'CANCELLED',dueAt:new Date(Date.now()-500)}});await runWorkPush(new Date(),fakeSend);
   assert.equal(await prisma.notification.count({where:{userId:recipient.id,type:'WORK_REMINDER'}}),1);
   // Pending deliveries must recheck sharing before sending.
   await queueWorkNotification(prisma,queue('revoked-'+suffix));await prisma.personalTaskShare.deleteMany({where:{taskItemId:item.id}});
-  const before=calls;await runWorkPush();assert.equal(calls,before);
+  const before=calls;await runWorkPush(new Date(),fakeSend);assert.equal(calls,before);
   await prisma.personalTaskShare.create({data:{taskItemId:item.id,userId:recipient.id,sharedByUserId:owner.id}});
-  await queueWorkNotification(prisma,queue('retry-'+suffix));failure=503;await runWorkPush();
+  await queueWorkNotification(prisma,queue('retry-'+suffix));failure=503;await runWorkPush(new Date(),fakeSend);
   assert.equal(await prisma.workPushDelivery.count({where:{notificationKey:'retry-'+suffix,deliveredAt:null,attempts:1}}),1);
-  failure=undefined;await prisma.workPushDelivery.updateMany({where:{notificationKey:'retry-'+suffix},data:{availableAt:new Date(0)}});await runWorkPush();
+  failure=undefined;await prisma.workPushDelivery.updateMany({where:{notificationKey:'retry-'+suffix},data:{availableAt:new Date(0)}});await runWorkPush(new Date(),fakeSend);
   assert.equal(await prisma.workPushDelivery.count({where:{notificationKey:'retry-'+suffix,deliveredAt:{not:null}}}),1);
-  await queueWorkNotification(prisma,queue('expired-'+suffix));failure=410;await runWorkPush();assert.equal(await prisma.benPushSubscription.count({where:{endpoint}}),0);
+  await queueWorkNotification(prisma,queue('expired-'+suffix));failure=410;await runWorkPush(new Date(),fakeSend);assert.equal(await prisma.benPushSubscription.count({where:{endpoint}}),0);
   console.log('Work notification transaction, dedupe, concurrent lease, reminder, cancellation, access revocation, retry and expiry checks passed');
  }finally{
-  webpush.sendNotification=original;
   await prisma.workPushDelivery.deleteMany();await prisma.taskItem.delete({where:{id:item.id}});await prisma.user.deleteMany({where:{id:{in:[owner.id,recipient.id]}}});await prisma.$disconnect();
  }
 }

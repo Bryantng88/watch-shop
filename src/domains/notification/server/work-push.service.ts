@@ -1,5 +1,5 @@
 import { personalEventTiming } from "@/domains/personal-work/shared/personal-event";
-import webpush from "web-push";
+import { sendNotification } from "web-push";
 import { prisma, withDbTransaction, type DB } from "@/server/db/client";
 import { benPushVapid, pushEndpoint } from "@/domains/ai-assistant/server/ben-push";
 import { workRoute, reminderKey } from "./work-push-policy";
@@ -32,7 +32,7 @@ export async function queuePersonalChange(db: DB, id: string, actorId: string, k
     userId, actorId, taskItemId: id, kind, title: item.title, route: workRoute(id, true) });
 }
 
-export async function runWorkPush(now = new Date()) {
+export async function runWorkPush(now = new Date(), send: typeof sendNotification = sendNotification) {
   // Catch up after short outages, without flooding users with old reminders.
   const items = await prisma.taskItem.findMany({ where: { personalOwnerUserId: { not: null }, status: { notIn: ["DONE", "CANCELLED"] },
     reminderMinutes: {not:null}, dueAt: { gte: new Date(now.getTime() - 15 * 60000), lte: new Date(now.getTime()+60*60000) } }, include: { personalShares: true }, orderBy: [{dueAt:"asc"},{id:"asc"}], take: 500 });
@@ -65,7 +65,7 @@ export async function runWorkPush(now = new Date()) {
       const notification = await prisma.notification.findUnique({where:{dedupeKey:row.notificationKey}});
       const staleReminder = row.kind === "REMINDER" && (!item?.dueAt || item.reminderMinutes===null || ["DONE","CANCELLED"].includes(item.status) || reminderKey(item.id,row.userId,item.dueAt,item.reminderMinutes??0) !== row.notificationKey || item.dueAt.getTime()-(item.reminderMinutes??0)*60000 < Date.now()-15*60000);
       if (subscription && notification && (!row.taskItemId || canRead) && !staleReminder && pushEndpoint.safeParse(subscription.endpoint).success) {
-        await webpush.sendNotification({endpoint:subscription.endpoint,keys:{p256dh:subscription.p256dh,auth:subscription.auth}},
+        await send({endpoint:subscription.endpoint,keys:{p256dh:subscription.p256dh,auth:subscription.auth}},
           JSON.stringify({type:"work",kind:row.kind,route:row.route,tag:row.notificationKey}), {vapidDetails:vapid,TTL:900,timeout:5000});
         sent++;
       }

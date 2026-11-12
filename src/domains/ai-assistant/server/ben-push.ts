@@ -1,5 +1,5 @@
 import { z } from "zod";
-import webpush from "web-push";
+import { sendNotification } from "web-push";
 import { prisma } from "@/server/db/client";
 import { AssistantError } from "./access";
 
@@ -54,7 +54,7 @@ export async function notifyBenAssignment(userId: string) {
     await Promise.allSettled(subscriptions.map(async row => {
       if (!pushEndpoint.safeParse(row.endpoint).success) return;
       try {
-        await webpush.sendNotification(
+        await sendNotification(
           { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
           JSON.stringify({ type: "assignment" }),
           { vapidDetails: vapid, TTL: 3600, timeout: 5000 },
