@@ -1,3 +1,4 @@
+import {isPersonalWorkOwner} from "@/domains/personal-work/server/personal-work-access";
 import { personalEventTiming } from "@/domains/personal-work/shared/personal-event";
 import { sendNotification } from "web-push";
 import { prisma, withDbTransaction, type DB } from "@/server/db/client";
@@ -25,9 +26,9 @@ export async function queueWorkNotification(db: DB, input: {
 }
 
 export async function queuePersonalChange(db: DB, id: string, actorId: string, kind: "CHANGED" | "CANCELLED") {
-  const item = await db.taskItem.findUnique({ where: { id }, include: { personalShares: true } });
+  const item = await db.taskItem.findUnique({ where: { id }, include: { personalShares: true,task:true } });
   if (!item) return;
-  const recipients = new Set([item.personalOwnerUserId, item.assignedToUserId, ...item.personalShares.map(s => s.userId)]);
+  const recipients = new Set([item.personalOwnerUserId,item.task?.kind === "PERSONAL" ? item.task.createdByUserId : null,item.task?.kind === "PERSONAL" ? item.task.assignedToUserId : null, ...item.personalShares.map(s => s.userId)]);
   for (const userId of recipients) if (userId) await queueWorkNotification(db, { key: `work:${kind}:${id}:${item.updatedAt.toISOString()}:${userId}`,
     userId, actorId, taskItemId: id, kind, title: item.title, route: workRoute(id, true) });
 }
@@ -38,13 +39,13 @@ export async function runWorkPush(now = new Date(), send: typeof sendNotificatio
     reminderMinutes: {not:null}, dueAt: { gte: new Date(now.getTime() - 15 * 60000), lte: new Date(now.getTime()+60*60000) } }, include: { personalShares: true }, orderBy: [{dueAt:"asc"},{id:"asc"}], take: 500 });
   for (const item of items) {
     if (!personalEventTiming(item).timed || !item.dueAt || item.reminderMinutes===null || item.dueAt.getTime()-item.reminderMinutes*60000 > now.getTime() || item.dueAt.getTime()-item.reminderMinutes*60000 < now.getTime()-15*60000) continue;
-    const recipients = new Set([item.personalOwnerUserId, item.assignedToUserId, ...item.personalShares.map(s => s.userId)]);
+    const recipients = new Set([item.personalOwnerUserId, ...item.personalShares.map(s => s.userId)]);
     for (const userId of recipients) if (userId && item.dueAt) await withDbTransaction(prisma, async tx => {
       // Recheck under row lock: cancellation/rescheduling must win before enqueue.
       await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${item.id} FOR UPDATE`;
       const current = await tx.taskItem.findUnique({where:{id:item.id},include:{personalShares:true}});
       if (!current || ["DONE","CANCELLED"].includes(current.status) || current.dueAt?.getTime() !== item.dueAt?.getTime() || current.reminderMinutes !== item.reminderMinutes) return;
-      if (current.personalOwnerUserId !== userId && current.assignedToUserId !== userId && !current.personalShares.some(s=>s.userId===userId)) return;
+      if (current.personalOwnerUserId !== userId && !current.personalShares.some(s=>s.userId===userId)) return;
       await queueWorkNotification(tx, { key: reminderKey(item.id, userId, item.dueAt!, item.reminderMinutes ?? 0), userId, taskItemId: item.id, kind: "REMINDER", title: current.title, route: workRoute(item.id, true) });
     });
   }
@@ -62,7 +63,11 @@ export async function runWorkPush(now = new Date(), send: typeof sendNotificatio
       const subscription = await prisma.benPushSubscription.findFirst({ where: { endpoint: row.endpoint, userId: row.userId, updatedAt: row.subscriptionVersion, user: { isActive: true } } });
       const item = row.taskItemId ? await prisma.taskItem.findUnique({where:{id:row.taskItemId},include:{personalShares:true,task:true}}) : null;
       const entryShared = row.checklistItemId && item ? await prisma.personalChecklistShare.findFirst({where:{checklistItemId:row.checklistItemId,userId:row.userId,checklist:{taskItemId:item.id}},select:{id:true}}) : null;
-      const canRead = Boolean(entryShared) || item && (item.personalOwnerUserId === row.userId || item.assignedToUserId === row.userId || item.userId === row.userId || item.personalShares.some(s => s.userId === row.userId) || String(item.note ?? "").split(/\r?\n/).some(line=>line.startsWith("sharedUserIds:") && line.slice(14).split(",").map(v=>v.trim()).includes(row.userId)) || item.task?.assignedToUserId === row.userId);
+      const personal = item && (Boolean(item.personalOwnerUserId) || item.task?.kind === "PERSONAL");
+      const fullRead = item && (personal ? isPersonalWorkOwner(item,row.userId) || item.personalShares.some(s=>s.userId===row.userId) :
+        item.assignedToUserId===row.userId || item.userId===row.userId || item.task?.assignedToUserId===row.userId ||
+        String(item.note??"").split(/\r?\n/).some(line=>line.startsWith("sharedUserIds:")&&line.slice(14).split(",").map(v=>v.trim()).includes(row.userId)));
+      const canRead = Boolean(entryShared) || Boolean(fullRead);
       const notification = await prisma.notification.findUnique({where:{dedupeKey:row.notificationKey}});
       const staleReminder = row.kind === "REMINDER" && (!item?.dueAt || item.reminderMinutes===null || ["DONE","CANCELLED"].includes(item.status) || reminderKey(item.id,row.userId,item.dueAt,item.reminderMinutes??0) !== row.notificationKey || item.dueAt.getTime()-(item.reminderMinutes??0)*60000 < Date.now()-15*60000);
       if (subscription && notification && (!row.taskItemId || canRead) && !staleReminder && pushEndpoint.safeParse(subscription.endpoint).success) {

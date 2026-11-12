@@ -60,7 +60,7 @@ async function main(){
   await queueWorkNotification(prisma,queue('expired-'+suffix));failure=410;await runWorkPush(new Date(),fakeSend);assert.equal(await prisma.benPushSubscription.count({where:{endpoint}}),0);
   console.log('push fixture: scoped checklist sharing and server-side redaction');
   failure=undefined;
-  const privateItem=await prisma.taskItem.create({data:{title:"Shared parent",note:"PRIVATE_PARENT_NOTE",personalOwnerUserId:owner.id,assignedToUserId:owner.id,progressMode:"CHECKLIST",progressPercent:50}});
+  const privateItem=await prisma.taskItem.create({data:{title:"Shared parent",note:"PRIVATE_PARENT_NOTE",personalOwnerUserId:owner.id,assignedToUserId:partial.id,progressMode:"CHECKLIST",progressPercent:50}});
   const [visible,hidden]=await Promise.all(["Visible step","PRIVATE_OTHER_STEP"].map(title=>prisma.taskItemChecklist.create({data:{taskItemId:privateItem.id,title}})));
   await prisma.taskItemActivity.create({data:{taskItemId:privateItem.id,title:"Private history",body:"PRIVATE_HISTORY",sourceType:"DISCUSSION"}});
   const partialEndpoint=endpoint+'-partial';
