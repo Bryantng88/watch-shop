@@ -61,3 +61,51 @@ test("one compact review shows every item and one approval; saved single-item dr
   assert.ok(html.includes("Tạo 2 mục"));
   assert.equal(personalWorkDraftItems(items[0]).length, 1);
 });
+
+test("combined move-and-create review shows both operations with one approval", () => {
+  const plan = personalWorkPlansSchema.parse([first, second])[0];
+  const draft: PersonalWorkDraft = {
+    revision: 4,
+    plan: { ...plan, title: "Thêm trang quản lý khách hàng + vendor" },
+    categoryLabel: "WatchShop",
+    shares: [],
+    updates: {
+      revision: 4,
+      title: "BCPA: Bảo trì website",
+      code: "CV-25",
+      kind: "TASK",
+      requiredPermissions: ["TASK_VIEW"],
+      requiredTaskIds: ["existing"],
+      plan: {
+        itemId: "existing",
+        expectedUpdatedAt: "2026-11-12T06:00:00Z",
+        fields: ["dueAt", "scheduledEndAt"],
+        changes: {
+          title: null,
+          note: null,
+          status: null,
+          dueAt: "2026-11-13T13:30:00+07:00",
+          scheduledEndAt: "2026-11-13T16:30:00+07:00",
+        },
+      },
+    },
+  };
+  let approvals = 0;
+  const html = renderToStaticMarkup(
+    createElement(Review, {
+      draft,
+      busy: false,
+      onApprove: () => {
+        approvals++;
+      },
+    }),
+  );
+  assert.ok(html.includes("CV-25"));
+  assert.ok(html.includes("BCPA: Bảo trì website"));
+  assert.ok(html.includes("Thêm trang quản lý khách hàng + vendor"));
+  assert.ok(html.includes("13:30"));
+  assert.ok(html.includes("16:30"));
+  assert.equal((html.match(/<button/g) || []).length, 1);
+  assert.ok(html.includes("Tạo 1 và cập nhật 1 việc"));
+  assert.equal(approvals, 0);
+});

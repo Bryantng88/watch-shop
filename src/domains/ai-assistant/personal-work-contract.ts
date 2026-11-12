@@ -1,3 +1,4 @@
+import type {PersonalWorkUpdateDraft} from "./personal-work-update";
 import { z } from "zod";
 import type {
   BenCalendarTarget,
@@ -95,6 +96,7 @@ export type PersonalWorkDraftItem = {
 };
 export type PersonalWorkDraft = PersonalWorkDraftItem & {
   items?: PersonalWorkDraftItem[];
+  updates?: PersonalWorkUpdateDraft;
 };
 export function personalWorkDraftItems(
   draft: PersonalWorkDraft,
@@ -102,6 +104,7 @@ export function personalWorkDraftItems(
   return draft.items ?? [draft];
 }
 export type CreatedPersonalWork = {
+  code?: string;
   calendarRecipients?: BenCalendarResult[];
   revision: number;
   id: string;

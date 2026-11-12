@@ -10,7 +10,7 @@ import {AssistantError} from "./access";
 const eventScope = {workTypeId: PERSONAL_EVENT_TYPE};
 const taskScope = {OR:[{workTypeId:null},{workTypeId:{not:PERSONAL_EVENT_TYPE}}]};
 function numericCode(query:string) {
- const match = /^(CV|EV)-(\d{1,10})$/i.exec(query.trim());
+ const match = /^(CV|EV)\s*-?\s*(\d{1,10})$/i.exec(query.trim());
  const number = match ? Number(match[2]) : 0;
  return number > 0 && number <= 2147483647 ? {personalWorkNumber:number,...(match?.[1].toUpperCase()==="EV"?eventScope:taskScope)} : null;
 }

@@ -1,3 +1,6 @@
+import {personalWorkCode} from "@/domains/personal-work/shared/personal-work-code";
+import {applyPersonalUpdates,personalUpdateIds} from "./personal-work-mutation";
+import type {PersonalWorkUpdateDraft} from "../personal-work-update";
 import {isDeepStrictEqual} from "node:util";
 import {prepareOrderServices,orderServicesPermissions} from "./order-services-plan";
 import {searchServiceOrders,readServiceOrder,searchServiceCatalog} from "./service-order-search";
@@ -10,10 +13,9 @@ import {requestPersonalCodexRun} from "@/domains/personal-work/server/codex/pers
 import {lookupMediaWatches,lookupStockReceipts,prepareMediaPost,recheckMediaPost,lockMediaPostWatches,mediaPostPermissions} from "./media-post-plan";
 import {createMediaPostWithGallerySelections} from "@/domains/media-post/server/media-post.service";
 import type {MediaPostDraft} from "../media-post-contract";
-import {personalWorkUpdateInput} from "../personal-work-update";
 import {lookupPersonalWork,preparePersonalWorkUpdates} from "./personal-work-update";
 import {preparePersonalWork} from "./personal-work-plan";
-import {createPersonalWorkItem,updatePersonalWorkItem} from "@/domains/personal-work/server/personal-work.service";
+import {createPersonalWorkItem} from "@/domains/personal-work/server/personal-work.service";
 import {listPersonalCategories} from "@/domains/personal-work/server/personal-work-categories.service";
 import {PERSONAL_WORK_TYPES} from "@/domains/personal-work/shared/personal-work.types";
 import {syncPersonalTaskToGoogle} from "@/domains/personal-work/server/google-calendar.service";
@@ -74,6 +76,12 @@ async function visibleTask(db:DB,id:string,actor:Actor){
  if(personal)return {id:item.id,status:item.status};
  try{authorizeTaskItemDetail(item,{user:{id:actor.id},roles:actor.roles.map(r=>r.name),permissions:[...actor.permissions]});return {id:item.id,status:item.status};}catch{return null;}
 }
+async function readablePersonalUpdates(db:DB,draft:PersonalWorkUpdateDraft,actor:Actor){
+ if(!hasAssistantPermission(actor,"TASK_VIEW")||(draft.requiredPermissions||[]).some(p=>!hasAssistantPermission(actor,p)))return false;
+ if(!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((draft.requiredTaskIds||[]).map(id=>visibleTask(db,id,actor)))).some(t=>!t))return false;
+ const ids=personalUpdateIds(draft);
+ return await db.taskItem.count({where:{id:{in:ids},...personalWorkEditAccessWhere(actor.id)}})===ids.length;
+}
 async function readableOrderServices(db:DB,draft:State["orderServicesDraft"],actor:Actor){
  if(!draft||[...orderServicesPermissions,...(draft.requiredPermissions||[])].some(p=>!hasAssistantPermission(actor,p)))return null;
  if(!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((draft.requiredTaskIds||[]).map(id=>visibleTask(db,id,actor)))).some(t=>!t))return null;
@@ -124,7 +132,7 @@ async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<Retur
  s.updatedPersonalWork=hasAssistantPermission(actor,"TASK_VIEW")?(await Promise.all((s.updatedPersonalWork||[]).map(async result=>await prisma.taskItem.findFirst({where:{id:result.id,...personalWorkViewAccessWhere(actor.id)},select:{id:true}})?result:null))).filter((v):v is NonNullable<typeof v>=>!!v):[];
  if(s.personalWorkDraft&&((s.personalWorkDraft.requiredPermissions||["TASK_VIEW"]).some(p=>!hasAssistantPermission(actor,p))||!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((s.personalWorkDraft.requiredTaskIds||[]).map(id=>visibleTask(prisma,id,actor)))).some(t=>!t)))delete s.personalWorkDraft;
  if(s.personalWorkDraft&&personalWorkDraftItems(s.personalWorkDraft).some(d=>d.assignee)&&!hasAssistantPermission(actor,"TASK_MANAGE"))delete s.personalWorkDraft;
- if(s.personalWorkDraft?.revision!==row.revision)delete s.personalWorkDraft;
+ if(s.personalWorkDraft?.revision!==row.revision||s.personalWorkDraft?.updates&&!await readablePersonalUpdates(prisma,s.personalWorkDraft.updates,actor))delete s.personalWorkDraft;
  if(!hasAssistantPermission(actor,"TASK_VIEW")){delete s.personalWorkDraft;s.createdPersonalWork=[];}
  if(!mediaPostPermissions.every(p=>hasAssistantPermission(actor,p))){delete s.mediaPostDraft;s.createdMediaPosts=[];}
  if(s.mediaPostDraft&&(s.mediaPostDraft.revision!==row.revision||!await readableMediaDraft(prisma,s.mediaPostDraft,actor)))delete s.mediaPostDraft;
@@ -162,9 +170,11 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
      if(!image&&input.personalWorkApprovalRevision!==undefined&&/^(?:ok(?: duyet)?|duyet|dong y|xac nhan)$/.test(acknowledgment.replace(/đ/g,"d").replace(/\s+/g," "))){
        if(input.personalWorkApprovalRevision!==row.revision||s.personalWorkDraft?.revision!==row.revision)throw new AssistantError("Bản đề xuất đã thay đổi. Hãy xem lại.",409);
        const schedulesCodex=personalWorkDraftItems(s.personalWorkDraft).some(item=>!!item.plan.codex);
-       if(schedulesCodex)next=message(next,"Bản nháp có yêu cầu giao Codex chạy. Bấm nút trên thẻ để xác nhận cả việc tạo và giao chạy.",["TASK_VIEW"]);
+       const mixedUpdates=!!s.personalWorkDraft.updates;
+       if(mixedUpdates)next=message(next,"Bản duyệt gồm cả tạo mới và cập nhật việc hiện có. Bấm nút trên thẻ để duyệt toàn bộ một lần nhé.",["TASK_VIEW"]);
+       else if(schedulesCodex)next=message(next,"Bản nháp có yêu cầu giao Codex chạy. Bấm nút trên thẻ để xác nhận cả việc tạo và giao chạy.",["TASK_VIEW"]);
        await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next)}});
-       return {id:row.id,approveRevision:schedulesCodex?undefined:row.revision};
+       return {id:row.id,approveRevision:schedulesCodex||mixedUpdates?undefined:row.revision};
      }
      if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
      await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return {id:row.id};
@@ -186,6 +196,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const row=await tx.customerAssistantConversation.findFirst({where:{status:"QUEUED"},orderBy:{updatedAt:"asc"}});if(!row)return {run:null};
    let actor:Awaited<ReturnType<typeof assistantActor>>;try{actor=await assistantActor(tx,row.ownerId);}catch{await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:row.approvedAt?"APPLIED":"FAILED",errorCode:"REQUESTER_UNAUTHORIZED",state:json(withoutImage(state(row)))}});return {run:null};}
    const currentState=state(row);
+   if(currentState.personalWorkDraft?.updates&&!await readablePersonalUpdates(tx,currentState.personalWorkDraft.updates,actor))delete currentState.personalWorkDraft;
    const pendingOrderServices=await readableOrderServices(tx,currentState.orderServicesDraft,actor);
    if(!pendingOrderServices)delete currentState.orderServicesDraft;
    if(!["ORDER_VIEW","SERVICE_VIEW","CUSTOMER_VIEW"].every(p=>hasAssistantPermission(actor,p)))currentState.updatedServiceOrders=[];
@@ -312,7 +323,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
    const postEntry=[...evidence(row)].reverse().find(e=>e.request.tool==="media.posts.draft");
    if(body.failed!==true&&postEntry&&(body.personalWorkUpdatePlan||body.personalWorkPlan||body.plan||body.orderPlan||body.codePlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability||mediaEntry||evidence(row).some(e=>e.request.tool==="stock.receipts"||e.request.tool==="navigation.open"||e.request.tool.startsWith("repository."))))throw new AssistantError("Mỗi lượt chỉ có một bản duyệt.");
    const navigationEntry=[...evidence(row)].reverse().find(e=>e.request.tool==="navigation.open");
-   if(body.personalWorkUpdatePlan && (body.personalWorkPlan||body.plan||body.orderPlan||body.permissionRequest||body.codePlan||body.missingPermission||body.unsupportedCapability||navigationEntry||mediaEntry))throw new AssistantError("Mỗi lượt chỉ có một bản duyệt.");
+   if(body.personalWorkUpdatePlan && (body.plan||body.orderPlan||body.permissionRequest||body.codePlan||body.missingPermission||body.unsupportedCapability||navigationEntry||mediaEntry))throw new AssistantError("Mỗi lượt chỉ có một bản duyệt.");
    if(body.failed!==true&&navigationEntry&&(body.personalWorkPlan||body.plan||body.orderPlan||body.permissionRequest||body.missingPermission||body.unsupportedCapability))throw new AssistantError("Navigation must be completed separately from business reviews or permission requests.");
    const failed=body.failed===true;let reply=typeof body.reply==="string"?body.reply.trim().slice(0,1500):"";if(!reply&&!failed)throw new AssistantError("Thiếu câu trả lời.");
    const actor=await assistantActor(tx,row.ownerId);
@@ -382,7 +393,7 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      delete result.turnReadScope;
      await tx.customerAssistantConversation.update({where:{id},data:{state:json(result),status:next.mediaPostDraft?"DRAFT":"NEEDS_INFO",leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
    }
-   if(body.personalWorkUpdatePlan){
+   if(body.personalWorkUpdatePlan&&!body.personalWorkPlan){
      const next=state(row);delete next.mediaPostDraft;delete next.personalWorkUpdateDraft;delete next.personalWorkDraft;
      if(!failed&&!revoked&&hasAssistantPermission(actor,"TASK_VIEW"))next.personalWorkUpdateDraft={...await preparePersonalWorkUpdates(tx,actor.id,body.personalWorkUpdatePlan,row.revision,evidence(row)),requiredPermissions:required,requiredTaskIds:scopedTaskIds};
      const result=message(next,next.personalWorkUpdateDraft?"Mình đã chuẩn bị cập nhật bên dưới. Bạn duyệt để lưu nhé.":"Chưa thể chuẩn bị cập nhật vì quyền hoặc lượt xử lý đã thay đổi.",required);result.messages[result.messages.length-1].requiredTaskIds=scopedTaskIds;
@@ -394,9 +405,11 @@ export async function assistantWorker(operation:string,body:Record<string,unknow
      if(!failed&&!revoked&&hasAssistantPermission(actor,"TASK_VIEW")){
        const items:PersonalWorkDraftItem[]=[];
        for(const plan of batchPlans||[body.personalWorkPlan])items.push({...await preparePersonalWork(tx,actor.id,plan,row.revision,evidence(row)),requiredPermissions:required,requiredTaskIds:scopedTaskIds});
-       next.personalWorkDraft={...items[0],...(items.length>1?{items}:{})};
+       const updates=body.personalWorkUpdatePlan?{...await preparePersonalWorkUpdates(tx,actor.id,body.personalWorkUpdatePlan,row.revision,evidence(row)),requiredPermissions:required,requiredTaskIds:scopedTaskIds}:undefined;
+       if(items.length+(updates?personalUpdateIds(updates).length:0)>8)throw new AssistantError("Mỗi bản duyệt tối đa 8 mục tạo mới hoặc cập nhật.");
+       next.personalWorkDraft={...items[0],...(items.length>1?{items}:{}),...(updates?{updates}:{})};
      }
-     const result=message(next,next.personalWorkDraft?`Mình đã chuẩn bị ${personalWorkDraftItems(next.personalWorkDraft).length} mục bên dưới. Bạn duyệt một lần để tạo nhé.`:"Chưa thể tạo bản duyệt vì quyền hoặc lượt xử lý đã thay đổi.",required);
+     const result=message(next,next.personalWorkDraft?(next.personalWorkDraft.updates?`Mình đã chuẩn bị tạo ${personalWorkDraftItems(next.personalWorkDraft).length} mục và cập nhật ${personalUpdateIds(next.personalWorkDraft.updates).length} mục bên dưới. Bạn kiểm tra rồi duyệt toàn bộ một lần nhé.`:`Mình đã chuẩn bị ${personalWorkDraftItems(next.personalWorkDraft).length} mục bên dưới. Bạn duyệt một lần để tạo nhé.`):"Chưa thể tạo bản duyệt vì quyền hoặc lượt xử lý đã thay đổi.",required);
      await tx.customerAssistantConversation.update({where:{id},data:{state:json(result),status:"NEEDS_INFO",plan:Prisma.DbNull,leaseToken:null,leaseExpiresAt:null}});return {accepted:true};
    }
    let plan:AssistantPlan|undefined,request:CustomerRequest|undefined;let support=body.permissionRequest==null?undefined:permissionSummary.parse(body.permissionRequest);if(body.plan&&support)throw new AssistantError("Không thể gộp hỗ trợ quyền và giao việc nghiệp vụ.");
@@ -608,6 +621,9 @@ export async function approveAssistantPersonalWork(
         ),
       );
     }
+    if(pending.updates&&(pending.updates.revision!==revision||personalWorkDraftItems(pending).length+personalUpdateIds(pending.updates).length>8))throw new AssistantError("Bản duyệt đã thay đổi hoặc vượt 8 mục.",409);
+    if(pending.updates&&!await readablePersonalUpdates(tx,pending.updates,actor))throw new AssistantError("Quyền cập nhật công việc đã thay đổi.",403);
+    const updated=pending.updates?await applyPersonalUpdates(tx,actor,pending.updates,revision,evidence(row)):[];
     const results: {
       item: CreatedPersonalWork;
       syncTargets: NonNullable<PersonalWorkDraftItem["calendarTargets"]>;
@@ -694,6 +710,7 @@ export async function approveAssistantPersonalWork(
         : null;
       const created = {
         revision,
+        code:personalWorkCode(item.id,item.personalWorkNumber,p.kind),
         id: item.id,
         title: item.title,
         kind: p.kind,
@@ -720,10 +737,11 @@ export async function approveAssistantPersonalWork(
       ...(s.createdPersonalWork || []),
       ...results.map((r) => r.item),
     ];
+    if(updated.length)s.updatedPersonalWork=[...(s.updatedPersonalWork||[]),...updated];
     delete s.personalWorkDraft;
     const next = message(
       s,
-      results.length > 1
+      updated.length ? `Đã cập nhật ${updated.length} mục (${updated.map(item=>item.code||item.id).join(", ")}) và tạo ${results.length} mục mới (${results.map(result=>result.item.code).join(", ")}) trong Quản lý công việc.` : results.length > 1
         ? `Đã tạo đủ ${results.length} mục trong Quản lý công việc.`
         : drafts[0].plan.codex
           ? "Đã tạo việc và xếp hàng Codex theo thời điểm đã duyệt."
@@ -732,6 +750,7 @@ export async function approveAssistantPersonalWork(
             : "Đã tạo công việc trong Quản lý công việc.",
       ["TASK_VIEW"],
     );
+    if(updated.length)next.messages[next.messages.length-1].requiredTaskIds=updated.map(item=>item.id);
     await tx.customerAssistantConversation.update({
       where: { id },
       data: { state: json(next), status: "NEEDS_INFO" },
@@ -788,20 +807,8 @@ export async function approveAssistantPersonalWorkUpdate(userId:string,id:string
   const pending=s.personalWorkUpdateDraft;
   if(!pending||pending.revision!==revision||row.revision!==revision||["QUEUED","RUNNING"].includes(row.status))throw new AssistantError("Bản cập nhật đã thay đổi. Hãy xem lại.",409);
   if((pending.requiredPermissions||[]).some(p=>!hasAssistantPermission(actor,p))||!hasAssistantPermission(actor,"TASK_VIEW_ALL")&&(await Promise.all((pending.requiredTaskIds||[]).map(id=>visibleTask(tx,id,actor)))).some(t=>!t))throw new AssistantError("Quyền dữ liệu của bản cập nhật đã thay đổi.",403);
-  const plans=[pending.plan,...(pending.additional||[]).map(item=>item.plan)];
-  const ids=plans.map(plan=>plan.itemId);
-  await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR UPDATE`;
-  const draft=await preparePersonalWorkUpdates(tx,userId,plans,revision,evidence(row));
-  const updated=[];
-  for(const item of [draft,...draft.additional]){
-   const input=personalWorkUpdateInput(item.plan);
-   if(input.dueAt!==undefined&&input.scheduledEndAt===undefined){
-    const current=await tx.taskItem.findUniqueOrThrow({where:{id:item.plan.itemId},select:{scheduledEndAt:true}});
-    input.scheduledEndAt=current.scheduledEndAt?.toISOString()??null;
-   }
-   await updatePersonalWorkItem({id:item.plan.itemId,...input,updateBody:"Cập nhật qua Ben"},actor,tx);
-   updated.push({revision,id:item.plan.itemId,title:input.title||item.title,kind:item.kind});
-  }
+  const ids=personalUpdateIds(pending);
+  const updated=await applyPersonalUpdates(tx,actor,pending,revision,evidence(row));
   s.updatedPersonalWork=[...(s.updatedPersonalWork||[]),...updated];
   delete s.personalWorkUpdateDraft;
   const next=message(s,`Đã cập nhật ${updated.length} công việc.`,["TASK_VIEW"]);

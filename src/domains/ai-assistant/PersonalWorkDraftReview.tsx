@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import PersonalWorkUpdateReview from "./PersonalWorkUpdateReview";
 import {
   personalWorkDraftItems,
   type PersonalWorkDraft,
@@ -21,15 +22,31 @@ export default function PersonalWorkDraftReview({
 }) {
   const items = personalWorkDraftItems(draft),
     multiple = items.length > 1,
-    hasCodex = items.some((d) => d.plan.codex);
+    hasCodex = items.some((d) => d.plan.codex),
+    updateCount = draft.updates
+      ? 1 + (draft.updates.additional?.length || 0)
+      : 0;
   return (
     <section
-      aria-label={multiple ? "Duyệt nhiều việc" : "Duyệt lịch cá nhân"}
+      aria-label={
+        updateCount
+          ? "Duyệt tạo và cập nhật công việc"
+          : multiple
+            ? "Duyệt nhiều việc"
+            : "Duyệt lịch cá nhân"
+      }
       className="mt-4 rounded-2xl border border-blue-200 bg-white p-4 text-sm"
       aria-busy={busy}
     >
-      {multiple && (
-        <h3 className="mb-2 font-semibold">Tạo {items.length} mục</h3>
+      {(multiple || updateCount > 0) && (
+        <h3 className="mb-2 font-semibold">
+          {updateCount
+            ? `Tạo ${items.length} và cập nhật ${updateCount} việc`
+            : `Tạo ${items.length} mục`}
+        </h3>
+      )}
+      {draft.updates && (
+        <PersonalWorkUpdateReview draft={draft.updates} busy={busy} embedded />
       )}
       <div className="divide-y divide-slate-100">
         {items.map((item, index) => {
@@ -51,7 +68,15 @@ export default function PersonalWorkDraftReview({
                 {p.dueAt ? date(p.dueAt) : "Chưa đặt lịch"}
                 {p.scheduledEndAt ? " → " + date(p.scheduledEndAt) : ""}
               </p>
-              {p.dueAt && p.reminderMinutes !== undefined && <p className="text-xs text-slate-500">{p.reminderMinutes === null ? "Không nhắc lịch" : p.reminderMinutes === 0 ? "Nhắc đúng giờ" : `Nhắc trước ${p.reminderMinutes} phút`}</p>}
+              {p.dueAt && p.reminderMinutes !== undefined && (
+                <p className="text-xs text-slate-500">
+                  {p.reminderMinutes === null
+                    ? "Không nhắc lịch"
+                    : p.reminderMinutes === 0
+                      ? "Nhắc đúng giờ"
+                      : `Nhắc trước ${p.reminderMinutes} phút`}
+                </p>
+              )}
               {p.priority !== "MEDIUM" && (
                 <p className="mt-2 text-xs text-slate-500">
                   Ưu tiên:{" "}
@@ -117,14 +142,16 @@ export default function PersonalWorkDraftReview({
         className="mt-3 min-h-11 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
       >
         {busy
-          ? "Đang tạo…"
-          : multiple
-            ? `Tạo ${items.length} mục`
-            : hasCodex
-              ? "Tạo việc và giao Codex"
-              : items[0].plan.kind === "EVENT"
-                ? "Tạo sự kiện"
-                : "Tạo công việc"}
+          ? "Đang lưu…"
+          : updateCount
+            ? `Tạo ${items.length} và cập nhật ${updateCount} việc${hasCodex ? " · Giao Codex" : ""}`
+            : multiple
+              ? `Tạo ${items.length} mục`
+              : hasCodex
+                ? "Tạo việc và giao Codex"
+                : items[0].plan.kind === "EVENT"
+                  ? "Tạo sự kiện"
+                  : "Tạo công việc"}
       </button>
     </section>
   );

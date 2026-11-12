@@ -391,8 +391,9 @@ backward compatible. Never convert independent items into a checklist, omit late
 lines or show a partial actionable review when an item needs clarification. Ask
 about missing facts in chat; corrections preserve unmentioned items in the
 pending `personalWorkDraft.items` batch. More than eight requires splitting the
-request explicitly, never silent truncation. Mixed business/update/code/Media
-plans are invalid.
+request explicitly, never silent truncation. Business/code/Media plans remain
+separate; personal creations may accompany personal updates under the combined
+contract below.
 
 Display a flat compact review with each item's title, schedule, assignee, shares,
 Google destinations and Codex gate as applicable, plus one “Tạo N mục” button.
@@ -556,3 +557,40 @@ against an actual connected customer worker in isolated `personal_codex_test`.
 Run the latter only with `BEN_REAL_ORDER_SERVICES_EVAL=1`; it never approves drafts.
 Scripted CI does not establish real-model semantic acceptance. App and customer
 worker must use the same protocol version before using these tools.
+
+## Combined personal work creation and updates
+
+A current request may contain both edits to existing personal items and new
+personal tasks/events, up to eight operations total. Resolve CV25/CV-25/CV 25
+(and EV equivalents) under the same owner/share permissions; read fresh detail
+for every update and category/people evidence for every creation. Preserve all
+requested operations across clarification turns; never silently omit an item or
+say it has been created based on a chat promise. Missing facts mean no partial
+review. Only durable createdPersonalWork/updatedPersonalWork receipts establish
+completed writes.
+
+The leased worker may finish with personalWorkUpdatePlan together with either
+personalWorkPlan or personalWorkPlans (never both creation shapes). All other
+business/code/navigation/support plans remain null. The combined draft stores
+updates inside personalWorkDraft.updates; one compact card shows every update
+and creation and one explicit “Tạo N và cập nhật M việc” button. Chat agreement
+alone cannot approve a mixed mutation. Corrections must re-read both sides.
+
+The existing approve-personal-work action validates the owned revision, active
+permissions, inherited read/task scope, current edit access, exact update versions,
+category/recipients, schedule/checklist/Codex rules, then saves all canonical edits,
+creations, notifications and both receipt sets in one serializable transaction.
+Any failure rolls back the entire set; stale/revoked sources require a fresh
+review. Concurrent/replayed approval does not repeat either side or Google sync.
+Creation calendar sync stays post-commit under existing connected-account policy;
+updates retain their current calendar behavior. No orders or business tasks are
+included. Browser reload/history never replays an approval. A single update
+without creations retains its existing separate review/action.
+
+Regression coverage: smoke-ben-personal-mixed.ts runs against isolated PostgreSQL
+with synthetic model/Google output. The gated real-worker evaluator
+smoke-ben-personal-mixed-real.ts (`BEN_REAL_PERSONAL_MIXED_EVAL=1`) follows the
+screenshot's multi-turn CV-code/clarification/“ok bạn” flow and explicit removal
+using tests/fixtures/ben-personal-mixed-intents.json. It never approves a draft.
+Run semantic acceptance with a connected real worker before rollout; deterministic
+protocol/database tests alone do not prove the model will retain every request.
