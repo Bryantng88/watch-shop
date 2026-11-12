@@ -1,3 +1,4 @@
+import {isDeepStrictEqual} from "node:util";
 import {prepareOrderServices,orderServicesPermissions} from "./order-services-plan";
 import {searchServiceOrders,readServiceOrder,searchServiceCatalog} from "./service-order-search";
 import {appendOrderServicesTx,OrderServiceAppendError} from "@/domains/order/server/write/order-service-append";
@@ -946,7 +947,7 @@ export async function approveAssistantOrderServices(userId:string,id:string,revi
    if(row.revision!==revision||row.status!=="DRAFT"||draft?.revision!==revision||draft.sourceMessageId!==s.messages.filter(m=>m.role==="user").at(-1)?.id)throw new AssistantError("Bản duyệt đã thay đổi. Nhờ Ben chuẩn bị lại.",409);
    if(!await readableOrderServices(tx,draft,actor))throw new AssistantError("Quyền đọc bản duyệt đã thay đổi.",403);
    const fresh=await prepareOrderServices(tx,JSON.stringify(draft.plan),revision,draft.sourceMessageId,evidence(row));
-   if(JSON.stringify(fresh.rows)!==JSON.stringify(draft.rows)||fresh.afterSubtotal!==draft.afterSubtotal)throw new AssistantError("Nội dung hoặc giá đã thay đổi. Hãy duyệt bản mới.",409);
+   if(!isDeepStrictEqual(fresh.rows,draft.rows)||fresh.afterSubtotal!==draft.afterSubtotal)throw new AssistantError("Nội dung hoặc giá đã thay đổi. Hãy duyệt bản mới.",409);
    const work:(()=>Promise<void>)[]=[];
    let result;
    try{result=await appendOrderServicesTx(tx,{orderId:draft.plan.orderId,expectedVersion:draft.plan.expectedVersion,additions:draft.plan.additions,catalogVersions:Object.fromEntries(draft.rows.map(r=>[r.serviceCatalogId,r.catalogVersion])),actorUserId:userId},{deferConsumers:fn=>work.push(fn)});}catch(e){if(e instanceof OrderServiceAppendError)throw new AssistantError(e.message,e.status);throw e;}
