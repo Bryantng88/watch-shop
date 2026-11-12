@@ -1,15 +1,16 @@
-import {renamePersonalWorkChecklistItem} from "../src/domains/personal-work/server/personal-work.service";
+import {getPersonalWorkPageData,replacePersonalChecklistShares,renamePersonalWorkChecklistItem,setPersonalWorkChecklistItemDone,updatePersonalWorkItem,deletePersonalWorkChecklistItem} from "../src/domains/personal-work/server/personal-work.service";
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import type {sendNotification} from 'web-push';
 import {prisma} from '../src/server/db/client';
 import {queueWorkNotification,runWorkPush} from '../src/domains/notification/server/work-push.service';
+import {personalWorkViewAccessWhere} from '../src/domains/personal-work/server/personal-work-access';
 import {workRoute} from '../src/domains/notification/server/work-push-policy';
 async function main(){
  const url=new URL(process.env.DATABASE_URL||'');assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/work_push_test');
  const suffix=randomUUID();const now=new Date();
  console.log('push fixture: creating users');
- const [owner,recipient]=await Promise.all(['owner','recipient'].map(name=>prisma.user.create({data:{email:`push-${name}-${suffix}@example.invalid`}})));
+ const [owner,recipient,partial]=await Promise.all(['owner','recipient','partial'].map(name=>prisma.user.create({data:{email:`push-${name}-${suffix}@example.invalid`}})));
  console.log('push fixture: creating item');
  const item=await prisma.taskItem.create({data:{title:'Synthetic work',personalOwnerUserId:owner.id,assignedToUserId:owner.id,dueAt:new Date(now.getTime()+60*60000),reminderMinutes:0}});
  await prisma.personalTaskShare.create({data:{taskItemId:item.id,userId:recipient.id,accessLevel:'VIEWER',sharedByUserId:owner.id}});
@@ -57,9 +58,40 @@ async function main(){
   failure=undefined;await prisma.workPushDelivery.updateMany({where:{notificationKey:'retry-'+suffix},data:{availableAt:new Date(0)}});await runWorkPush(new Date(),fakeSend);
   assert.equal(await prisma.workPushDelivery.count({where:{notificationKey:'retry-'+suffix,deliveredAt:{not:null}}}),1);
   await queueWorkNotification(prisma,queue('expired-'+suffix));failure=410;await runWorkPush(new Date(),fakeSend);assert.equal(await prisma.benPushSubscription.count({where:{endpoint}}),0);
-  console.log('Work notification transaction, dedupe, concurrent lease, reminder, cancellation, access revocation, retry and expiry checks passed');
+  console.log('push fixture: scoped checklist sharing and server-side redaction');
+  failure=undefined;
+  const privateItem=await prisma.taskItem.create({data:{title:"Shared parent",note:"PRIVATE_PARENT_NOTE",personalOwnerUserId:owner.id,assignedToUserId:owner.id,progressMode:"CHECKLIST",progressPercent:50}});
+  const [visible,hidden]=await Promise.all(["Visible step","PRIVATE_OTHER_STEP"].map(title=>prisma.taskItemChecklist.create({data:{taskItemId:privateItem.id,title}})));
+  await prisma.taskItemActivity.create({data:{taskItemId:privateItem.id,title:"Private history",body:"PRIVATE_HISTORY",sourceType:"DISCUSSION"}});
+  const partialEndpoint=endpoint+'-partial';
+  await prisma.benPushSubscription.create({data:{userId:partial.id,endpoint:partialEndpoint,p256dh:'x'.repeat(87),auth:'x'.repeat(22)}});
+  assert.equal((await getPersonalWorkPageData({userId:partial.id})).items.length,0);
+  await replacePersonalChecklistShares(privateItem.id,visible.id,[{userId:partial.id,accessLevel:"VIEWER"}],{userId:owner.id});
+  const read=(await getPersonalWorkPageData({userId:partial.id})).items;
+  assert.equal(read.length,1);assert.equal(await prisma.taskItem.count({where:{id:privateItem.id,...personalWorkViewAccessWhere(partial.id)}}),0);assert.equal(read[0].title,"Shared parent");assert.equal(read[0].checklistOnly,true);
+  assert.deepEqual(read[0].checklist.map(e=>e.title),["Visible step"]);assert.equal(read[0].progressPercent,0);
+  assert.ok(!JSON.stringify(read).includes("PRIVATE_"));assert.equal(read[0].note,null);assert.equal(read[0].activities.length,0);assert.equal(read[0].sharedWith.length,0);
+  await assert.rejects(renamePersonalWorkChecklistItem(privateItem.id,visible.id,"Viewer edit",{userId:partial.id}));
+  await assert.rejects(setPersonalWorkChecklistItemDone(privateItem.id,visible.id,true,{userId:partial.id}));
+  await replacePersonalChecklistShares(privateItem.id,visible.id,[{userId:partial.id,accessLevel:"EDITOR"}],{userId:owner.id});
+  await renamePersonalWorkChecklistItem(privateItem.id,visible.id,"Visible renamed",{userId:partial.id});
+  await setPersonalWorkChecklistItemDone(privateItem.id,visible.id,true,{userId:partial.id});
+  assert.equal((await prisma.taskItemChecklist.findUniqueOrThrow({where:{id:visible.id}})).isDone,true);
+  await assert.rejects(renamePersonalWorkChecklistItem(privateItem.id,hidden.id,"Sibling edit",{userId:partial.id}));
+  await assert.rejects(updatePersonalWorkItem({id:privateItem.id,note:"Parent edit"},{userId:partial.id}));
+  await assert.rejects(deletePersonalWorkChecklistItem(privateItem.id,visible.id,{userId:partial.id}));
+  await assert.rejects(replacePersonalChecklistShares(privateItem.id,visible.id,[],{userId:partial.id}));
+  const ownerView=(await getPersonalWorkPageData({userId:owner.id})).items.find(e=>e.id===privateItem.id)!;
+  assert.equal(ownerView.note,"PRIVATE_PARENT_NOTE");assert.equal(ownerView.checklist.length,2);
+  // Revocation removes the parent shell and invalidates queued entry-share push.
+  await replacePersonalChecklistShares(privateItem.id,visible.id,[],{userId:owner.id});
+  const callsBeforeRevoke=calls;await runWorkPush(new Date(),fakeSend);assert.equal(calls,callsBeforeRevoke);
+  assert.equal((await getPersonalWorkPageData({userId:partial.id})).items.length,0);
+  await assert.rejects(renamePersonalWorkChecklistItem(privateItem.id,visible.id,"Revoked edit",{userId:partial.id}));
+  await prisma.taskItem.delete({where:{id:privateItem.id}});
+  console.log('Work notifications, scoped checklist view/edit, sibling isolation, parent-write denial, revocation and redaction checks passed');
  }finally{
-  await prisma.workPushDelivery.deleteMany();await prisma.taskItem.delete({where:{id:item.id}});await prisma.user.deleteMany({where:{id:{in:[owner.id,recipient.id]}}});await prisma.$disconnect();
+  await prisma.workPushDelivery.deleteMany();await prisma.taskItem.deleteMany({where:{personalOwnerUserId:owner.id}});await prisma.user.deleteMany({where:{id:{in:[owner.id,recipient.id,partial.id]}}});await prisma.$disconnect();
  }
 }
 main().catch(async error=>{console.error(error);await prisma.$disconnect();process.exitCode=1;});

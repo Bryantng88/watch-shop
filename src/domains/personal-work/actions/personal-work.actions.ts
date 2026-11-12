@@ -10,6 +10,7 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import {
+  replacePersonalChecklistShares,
   renamePersonalWorkChecklistItem,
   addPersonalWorkChecklistItem,
   assertPersonalWorkAccess,
@@ -231,4 +232,9 @@ export async function renamePersonalWorkChecklistItemAction(input: {taskItemId:s
   const item = await renamePersonalWorkChecklistItem(input.taskItemId,input.checklistItemId,input.title,user);
   refresh();
   return {ok:true,item:{id:item.id,title:item.title,isDone:item.isDone}};
+}
+
+export async function replacePersonalChecklistSharesAction(input:{taskItemId:string;checklistItemId:string;shares:{userId:string;accessLevel:PersonalTaskShareAccess}[]}) {
+  await replacePersonalChecklistShares(input.taskItemId,input.checklistItemId,input.shares,await auth());
+  refresh();return {ok:true};
 }

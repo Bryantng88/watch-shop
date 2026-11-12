@@ -6,7 +6,7 @@ import { workRoute, reminderKey } from "./work-push-policy";
 
 // Call with the same transaction as the business mutation. No network before commit.
 export async function queueWorkNotification(db: DB, input: {
-  key: string; userId: string; actorId?: string | null; taskItemId?: string;
+  key: string; userId: string; actorId?: string | null; taskItemId?: string; checklistItemId?:string;
   kind: "ASSIGNED" | "SHARED" | "CHANGED" | "CANCELLED" | "REMINDER";
   title: string; route: string;
 }) {
@@ -17,11 +17,11 @@ export async function queueWorkNotification(db: DB, input: {
   await db.notification.upsert({
     where: { dedupeKey: input.key }, update: {},
     create: { dedupeKey: input.key, userId: input.userId, type: `WORK_${input.kind}`, title: labels[input.kind], message: input.title,
-      metadata: { route: input.route, taskItemId: input.taskItemId ?? null } },
+      metadata: { route: input.route, taskItemId: input.taskItemId ?? null,checklistItemId:input.checklistItemId??null } },
   });
   const subscriptions = await db.benPushSubscription.findMany({ where: { userId: input.userId } });
   await db.workPushDelivery.createMany({ data: subscriptions.map(s => ({ notificationKey: input.key, userId: input.userId,
-    taskItemId: input.taskItemId, kind: input.kind, route: input.route, endpoint: s.endpoint, subscriptionVersion: s.updatedAt })), skipDuplicates: true });
+    taskItemId: input.taskItemId, checklistItemId:input.checklistItemId, kind: input.kind, route: input.route, endpoint: s.endpoint, subscriptionVersion: s.updatedAt })), skipDuplicates: true });
 }
 
 export async function queuePersonalChange(db: DB, id: string, actorId: string, kind: "CHANGED" | "CANCELLED") {
@@ -61,7 +61,8 @@ export async function runWorkPush(now = new Date(), send: typeof sendNotificatio
     try {
       const subscription = await prisma.benPushSubscription.findFirst({ where: { endpoint: row.endpoint, userId: row.userId, updatedAt: row.subscriptionVersion, user: { isActive: true } } });
       const item = row.taskItemId ? await prisma.taskItem.findUnique({where:{id:row.taskItemId},include:{personalShares:true,task:true}}) : null;
-      const canRead = item && (item.personalOwnerUserId === row.userId || item.assignedToUserId === row.userId || item.userId === row.userId || item.personalShares.some(s => s.userId === row.userId) || String(item.note ?? "").split(/\r?\n/).some(line=>line.startsWith("sharedUserIds:") && line.slice(14).split(",").map(v=>v.trim()).includes(row.userId)) || item.task?.assignedToUserId === row.userId);
+      const entryShared = row.checklistItemId && item ? await prisma.personalChecklistShare.findFirst({where:{checklistItemId:row.checklistItemId,userId:row.userId,checklist:{taskItemId:item.id}},select:{id:true}}) : null;
+      const canRead = Boolean(entryShared) || item && (item.personalOwnerUserId === row.userId || item.assignedToUserId === row.userId || item.userId === row.userId || item.personalShares.some(s => s.userId === row.userId) || String(item.note ?? "").split(/\r?\n/).some(line=>line.startsWith("sharedUserIds:") && line.slice(14).split(",").map(v=>v.trim()).includes(row.userId)) || item.task?.assignedToUserId === row.userId);
       const notification = await prisma.notification.findUnique({where:{dedupeKey:row.notificationKey}});
       const staleReminder = row.kind === "REMINDER" && (!item?.dueAt || item.reminderMinutes===null || ["DONE","CANCELLED"].includes(item.status) || reminderKey(item.id,row.userId,item.dueAt,item.reminderMinutes??0) !== row.notificationKey || item.dueAt.getTime()-(item.reminderMinutes??0)*60000 < Date.now()-15*60000);
       if (subscription && notification && (!row.taskItemId || canRead) && !staleReminder && pushEndpoint.safeParse(subscription.endpoint).success) {

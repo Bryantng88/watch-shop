@@ -1,4 +1,6 @@
 "use client";
+import {PersonalWorkUpdateHint} from "./PersonalWorkUpdateHint";
+import {PersonalChecklistShare} from "./PersonalChecklistShare";
 import {PersonalChecklistTitle} from "./PersonalChecklistTitle";
 import {personalWorkUpdateLabel} from "../shared/personal-work-update-label";
 import { personalWorkCode } from "../shared/personal-work-code";
@@ -22,7 +24,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  History,
   CalendarDays,
   Check,
   ChevronDown,
@@ -49,6 +50,7 @@ import {
   ProgressMetric,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
+  replacePersonalChecklistSharesAction,
   renamePersonalWorkChecklistItemAction,
   addPersonalWorkChecklistItemAction,
   createPersonalWorkAction,
@@ -264,7 +266,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
   const items = useMemo(
     () =>
       workItems.filter((item) => {
-        if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe) return false;
+        if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe && !item.checklistOnly) return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
         const event = isPersonalEvent(item.workType);
@@ -978,11 +980,11 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       <Check className="h-3.5 w-3.5" />
                     </button>}
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-nowrap items-center gap-2">
                         <button
                           type="button"
                           onClick={() => openTaskEdit(item)}
-                          className={`truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
+                          className={`min-w-0 flex-1 truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
                         >
                           <span className="mr-1.5 whitespace-nowrap font-mono text-xs font-semibold text-slate-600">{personalWorkCode(item.id, item.personalWorkNumber, item.workType)}</span>{item.title}
                         </button>
@@ -990,14 +992,6 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                         {item.access !== "OWNER" && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                             <Share2 className="h-3 w-3" /> {item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
-                          </span>
-                        )}
-                        {!isPersonalEvent(item.workType) && <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
-                          {item.category.label}
-                        </span>}
-                        {isPersonalEvent(item.workType) && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                            Sự kiện
                           </span>
                         )}
                         {item.tags.map((tag) => (
@@ -1017,16 +1011,24 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           <ExternalLink className="h-3 w-3" />
                         </Link>
                       ))}
-                      <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                      <p className="mt-1 flex flex-nowrap items-center gap-1.5 text-xs text-slate-500">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold tabular-nums ${late ? "bg-amber-50 text-amber-800" : isPersonalEvent(item.workType) ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800"}`}>
                           {isPersonalEvent(item.workType) ? <CalendarDays className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
                           {personalEventTiming(item).timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa đặt giờ"}
                         </span>
+                        {!isPersonalEvent(item.workType) && <span className="max-w-20 shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
+                          {item.category.label}
+                        </span>}
+                        {isPersonalEvent(item.workType) && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                            Sự kiện
+                          </span>
+                        )}
                         {!isPersonalEvent(item.workType) && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && <span role="progressbar" aria-label={`Tiến độ ${item.title}`} aria-valuenow={item.progressPercent} aria-valuemin={0} aria-valuemax={100} className="inline-flex shrink-0 items-center gap-1.5" title={`${item.checklist.filter(e=>e.isDone).length}/${item.checklist.length} đầu việc · ${item.progressPercent}%`}>
-                          <span className="h-1.5 w-12 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-blue-600" style={{width:`${item.progressPercent}%`}}/></span>
+                          <span className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-slate-100 sm:block"><span className="block h-full rounded-full bg-blue-600" style={{width:`${item.progressPercent}%`}}/></span>
                           <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums text-slate-600">{item.checklist.filter(e=>e.isDone).length}/{item.checklist.length} · {item.progressPercent}%</span>
                         </span>}
-                        {update && <span className="inline-flex items-center gap-1 text-[10px] text-blue-700" title={`${update.detail} · ${new Date(update.at).toLocaleString("vi-VN",{timeZone:"Asia/Bangkok"})}`}><History className="h-3 w-3"/><time dateTime={update.at}>{update.label}</time></span>}
+                        {update && <PersonalWorkUpdateHint text={item.activities[0]?.body || update.detail} time={update.label.replace(/^Cập nhật /,"")}/> }
                         {late && <span className="text-amber-700">Quá hạn</span>}
                         {view !== "TODAY" && item.dueAt && <span>{dueLabel(item.dueAt)}</span>}
                         {item.estimatedDays > 1 && <span>· {item.estimatedDays} ngày</span>}
@@ -1089,6 +1091,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
+              if(editingItem.checklistOnly)return;
               const nextTitle = editTitle.trim();
               if (!nextTitle) {
                 setMessage("Vui lòng nhập nội dung công việc cần làm");
@@ -1147,6 +1150,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               </button>
             </div>
             <div className="mt-5 space-y-4">
+              {editingItem.checklistOnly ? <div><h3 className="text-sm font-semibold text-slate-900">{editingItem.title}</h3><p className="mt-1 text-xs text-violet-700">Chỉ các đầu việc được chia sẻ với bạn</p></div> : <>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(calendarWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
                 <input
@@ -1171,6 +1175,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
+              </>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -1193,7 +1198,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       <div key={entry.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100">
                         <button
                           type="button"
-                          disabled={editingItem.access === "VIEWER" || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
+                          disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           aria-busy={checklistMutation.isPending(`toggle:${entry.id}`)}
                           aria-label={entry.isDone ? `Mở lại ${entry.title}` : `Hoàn thành ${entry.title}`}
                           onClick={() => {
@@ -1226,12 +1231,17 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                           )}
                         </button>
                         <PersonalChecklistTitle title={entry.title} done={entry.isDone}
-                          disabled={editingItem.access === "VIEWER" || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
+                          disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           onSave={async title=>{
                             await renamePersonalWorkChecklistItemAction({taskItemId:editingItem.id,checklistItemId:entry.id,title});
                             setEditingItem(current=>current&&current.id===editingItem.id?{...current,checklist:current.checklist.map(item=>item.id===entry.id?{...item,title}:item)}:current);
                             router.refresh();
                           }}/>
+                        {editingItem.access === "OWNER" && !editingItem.checklistLockedAt && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
+                          await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
+                          setEditingItem(current=>current?{...current,checklist:current.checklist.map(e=>e.id===entry.id?{...e,sharedWith:shares}:e)}:current);
+                          router.refresh();
+                        }}/>}
                         {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
                           <button
                             type="button"
@@ -1350,6 +1360,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                   </AsyncActionButton>
                 ) : null}
               </section>}
+              {!editingItem.checklistOnly && <>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
                 <textarea
@@ -1531,8 +1542,9 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
               )}
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
               {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
+              </>}
             </div>
-            <PersonalCodexPanel item={editingItem} configuration={data.codex} />
+            {!editingItem.checklistOnly && <PersonalCodexPanel item={editingItem} configuration={data.codex} />}
             {editingItem.activities.length > 0 && (
               <section className="mt-4 border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -1571,7 +1583,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />
               </div>
             )}
-            {editingItem.access === "VIEWER" && (
+            {editingItem.access === "VIEWER" && !editingItem.checklistOnly && (
               <p className="mt-4 rounded-lg bg-violet-50 px-3 py-2 text-xs font-medium text-violet-700">
                 Bạn đang xem công việc được chia sẻ ở chế độ chỉ xem.
               </p>
@@ -1601,13 +1613,13 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                 >
                   Hủy
                 </button>
-                <button
+                {!editingItem.checklistOnly && <button
                   type="submit"
                   disabled={pending || editingItem.access === "VIEWER"}
                   className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                 >
                   {pending ? "Đang lưu..." : "Lưu thay đổi"}
-                </button>
+                </button>}
               </div>
             </div>
           </form>

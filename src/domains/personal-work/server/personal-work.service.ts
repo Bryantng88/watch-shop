@@ -1,3 +1,4 @@
+import {checklistOnlyWork} from "../shared/checklist-share-projection";
 import { queueWorkNotification, queuePersonalChange } from "@/domains/notification/server/work-push.service";
 import { workRoute, newShareRecipients } from "@/domains/notification/server/work-push-policy";
 import {isPersonalEvent} from "../shared/personal-event";
@@ -15,7 +16,7 @@ import {
 import { prisma, withDbTransaction, type DB } from "@/server/db/client";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { hydrateTaskItemsWithTagsRepo, setTargetTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
-import { personalWorkScopeWhere, personalWorkViewAccessWhere, isPersonalWorkOwner, personalWorkTagOwner } from "./personal-work-access";
+import { personalWorkScopeWhere, personalWorkListAccessWhere, isPersonalWorkOwner, personalWorkTagOwner } from "./personal-work-access";
 import { isGoogleCalendarConfigured } from "./google-calendar.service";
 import { reconcilePersonalWorkBindings } from "./personal-work-bindings";
 import { validatePersonalSchedule } from "../shared/personal-work-schedule";
@@ -23,6 +24,7 @@ import { categoryFromRow, listPersonalCategories, resolvePersonalCategory, defau
 import {
   PERSONAL_WORK_DOMAINS,
   PERSONAL_WORK_TYPES,
+  type PersonalWorkItem,
   type PersonalWorkDomain,
   type PersonalWorkPageData,
   type PersonalWorkTarget,
@@ -232,7 +234,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
-        ...personalWorkViewAccessWhere(userId),
+        ...personalWorkListAccessWhere(userId),
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
@@ -264,7 +266,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           orderBy: { occurredAt: "desc" },
           take: 20,
         },
-        checklists: { orderBy: { sortOrder: "asc" } },
+        checklists: { orderBy: { sortOrder: "asc" },include:{personalShares:{include:{user:{select:{id:true,name:true,email:true,avatarUrl:true}}}}} },
       },
       orderBy: [{ isDone: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
     }),
@@ -292,7 +294,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       const share = item.personalShares.find((entry) => entry.userId === userId);
       const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
-      return {
+      const result: PersonalWorkItem = {
         id: item.id,
         personalWorkNumber: item.personalWorkNumber,
         assignedToMe: item.assignedToUserId === userId,
@@ -326,7 +328,10 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           occurredAt: activity.occurredAt.toISOString(),
           actor: activity.actorUser,
         })),
-        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone })),
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone,
+          access:owned?"OWNER":share?.accessLevel === "EDITOR"?"EDITOR":entry.personalShares.find(s=>s.userId===userId)?.accessLevel??"VIEWER",
+          sharedWith:owned?entry.personalShares.map(s=>({user:s.user,accessLevel:s.accessLevel})):[],
+        })),
         tags: names.filter((name) => !domainKeys.has(name.toUpperCase())),
         calendar: {
           synced: Boolean(calendar),
@@ -341,6 +346,12 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         owner,
         sharedWith: item.personalShares.map((entry) => ({ user: entry.user, accessLevel: entry.accessLevel })),
       };
+      if (!owned && !share) {
+        const visibleIds=new Set(item.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).map(e=>e.id));
+        const updated=item.checklists.filter(e=>visibleIds.has(e.id)).reduce((latest,e)=>e.updatedAt>latest?e.updatedAt:latest,item.createdAt);
+        return checklistOnlyWork(result,result.checklist.filter(e=>visibleIds.has(e.id)),updated.toISOString());
+      }
+      return result;
     }),
     codex: { ...codexExecutionReadiness(), canDispatch: Boolean(await prisma.user.findFirst({ where: { id: userId, isActive: true, roles: { some: { name: "ADMIN" } } }, select: { id: true } })) },
     currentUserId: userId,
@@ -709,12 +720,41 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
   });
 }
 
+async function assertPersonalChecklistEdit(taskItemId:string,checklistItemId:string,auth:unknown,db:DB=prisma) {
+  const userId=getAuthUserId(auth);
+  if(!userId)throw new Error("Không xác định được người dùng");
+  const item=await db.taskItem.findFirst({where:{id:taskItemId,...personalWorkScopeWhere},include:{task:true,personalShares:{where:{userId}},checklists:{where:{id:checklistItemId},include:{personalShares:{where:{userId}}}}}});
+  if(!item || !item.checklists.length)throw new Error("Không tìm thấy đầu việc");
+  const allowed=isPersonalWorkOwner(item,userId)||item.personalShares.some(s=>s.accessLevel==="EDITOR")||item.checklists[0].personalShares.some(s=>s.accessLevel==="EDITOR");
+  if(!allowed)throw new Error("Bạn không có quyền cập nhật đầu việc này");
+  return {...item,userId};
+}
+
+export async function replacePersonalChecklistShares(taskItemId:string,checklistItemId:string,shares:ShareInput[],auth:unknown) {
+  return prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current=await assertPersonalWorkAccess(taskItemId,auth,"OWNER",tx);
+    assertChecklistOpen(current);
+    const entry=await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId},include:{personalShares:true}});
+    if(!entry)throw new Error("Không tìm thấy đầu việc");
+    const unique=new Map(shares.filter(s=>s.userId!==current.userId).map(s=>[s.userId,s.accessLevel]));
+    if(unique.size>20||[...unique.values()].some(v=>!["VIEWER","EDITOR"].includes(v)))throw new Error("Danh sách chia sẻ không hợp lệ");
+    const users=await tx.user.findMany({where:{id:{in:[...unique.keys()]},isActive:true},select:{id:true}});
+    if(users.length!==unique.size)throw new Error("Người nhận không còn hoạt động hoặc không tồn tại");
+    await tx.personalChecklistShare.deleteMany({where:{checklistItemId,userId:{notIn:[...unique.keys()]}}});
+    for(const [userId,accessLevel] of unique)await tx.personalChecklistShare.upsert({where:{checklistItemId_userId:{checklistItemId,userId}},create:{checklistItemId,userId,accessLevel,sharedByUserId:current.userId},update:{accessLevel}});
+    const task=await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId},select:{title:true}});
+    for(const userId of newShareRecipients(entry.personalShares.map(s=>s.userId),[...unique.keys()],current.userId))await queueWorkNotification(tx,{
+      key:`work:checklist-share:${checklistItemId}:${userId}:${crypto.randomUUID()}`,userId,actorId:current.userId,taskItemId,checklistItemId,kind:"SHARED",title:`${task.title} · ${entry.title}`,route:workRoute(taskItemId,true)});
+  });
+}
+
 export async function renamePersonalWorkChecklistItem(taskItemId: string, checklistItemId: string, title: string, auth: unknown) {
   const normalized = title.trim();
   if (!normalized || normalized.length > 500) throw new Error("Tên đầu việc cần từ 1 đến 500 ký tự");
   return prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
-    const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx);
+    const current = await assertPersonalChecklistEdit(taskItemId, checklistItemId, auth, tx);
     assertChecklistOpen(current);
     const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
     if (!entry) throw new Error("Không tìm thấy đầu việc");
@@ -732,9 +772,10 @@ export async function setPersonalWorkChecklistItemDone(
   isDone: boolean,
   auth: unknown,
 ) {
-  const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
-  assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current = await assertPersonalChecklistEdit(taskItemId,checklistItemId,auth,tx);
+    assertChecklistOpen(current);
     const result = await tx.taskItemChecklist.updateMany({
       where: { id: checklistItemId, taskItemId },
       data: { isDone, doneAt: isDone ? new Date() : null },

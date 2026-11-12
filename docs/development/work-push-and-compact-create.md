@@ -69,3 +69,24 @@ cho Vintic, 1 watch cho Gent” stays in the work note. It becomes checklist ste
 only when explicitly requested, and never selects unidentified watch IDs. Deploy
 the updated customer-assistant worker protocol along with the application to use
 this instruction in live conversations.
+
+## Scoped checklist sharing
+
+The owner can share an individual checklist entry as VIEWER (default) or EDITOR.
+A scoped recipient receives only the parent shell (title/schedule/owner) and their
+shared entries. The server strips parent note, tags, business links, other shares,
+Codex results, calendar links, activities and global progress; counts/progress use
+only visible entries. Full-work grants retain their existing behavior.
+
+An entry EDITOR may rename/toggle that entry, but cannot edit the parent, siblings,
+create/delete steps, finalize the parent or grant sharing. Parent/Ben/calendar
+full-read/write policies do not inherit entry grants. Membership/access is checked
+again under the parent row lock for entry writes and sharing changes. Revocation
+removes the parent shell when no other entry/full-work grant remains and cancels
+pending scoped push delivery. Entry sharing sends the existing inbox/push event;
+it does not grant access to parent-only reminder or calendar controls.
+
+The compact list now uses the accepted two-line layout. “Có cập nhật” shows a
+small hover/focus tooltip containing only a one-line latest change and relative
+time. Touch toggles it, outside tap/blur/Escape closes it. Full history remains in
+work detail. The entry share icon opens a compact recipient/permission picker.
