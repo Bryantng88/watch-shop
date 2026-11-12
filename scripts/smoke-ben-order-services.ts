@@ -1,3 +1,4 @@
+import { createFromOrderTx } from "../src/domains/service/server/service-request-from-order.service";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../src/server/db/client";
@@ -143,13 +144,11 @@ async function main() {
     const additions = (
       opts.one ? order.orderItem.slice(0, 1) : order.orderItem
     ).flatMap((item) =>
-      catalogs
-        .slice(1)
-        .map((c) => ({
-          parentOrderItemId: item.id,
-          serviceCatalogId: c.id,
-          unitPriceAgreed: 100000,
-        })),
+      catalogs.slice(1).map((c) => ({
+        parentOrderItemId: item.id,
+        serviceCatalogId: c.id,
+        unitPriceAgreed: 100000,
+      })),
     );
     if (opts.duplicate) additions[0].serviceCatalogId = catalogs[0].id;
     const proposal = {
@@ -192,7 +191,15 @@ async function main() {
       /* recorded event outbox is enough for fixture */
     });
   try {
+    console.log("order-services fixture: search and first review");
     const order = await makeOrder();
+    await prisma.$transaction((tx) =>
+      createFromOrderTx(tx, { id: order.id, items: order.orderItem }),
+    );
+    const originalRepairs = await prisma.serviceRequest.findMany({
+      where: { orderItemId: { in: order.orderItem.map((i) => i.id) } },
+      orderBy: { id: "asc" },
+    });
     const found = await searchServiceOrders(
       prisma,
       JSON.stringify({
@@ -231,8 +238,18 @@ async function main() {
         () => {},
       ),
     );
+    console.log("order-services fixture: concurrent approval");
     await Promise.all([approve(review), approve(review)]);
+    console.log("order-services fixture: concurrent approval committed");
     await approve(review);
+    assert.deepEqual(
+      await prisma.serviceRequest.findMany({
+        where: { orderItemId: { in: order.orderItem.map((i) => i.id) } },
+        orderBy: { id: "asc" },
+      }),
+      originalRepairs,
+      "Existing repair tickets must remain unchanged",
+    );
     const updated = await prisma.order.findUniqueOrThrow({
       where: { id: order.id },
     });
@@ -283,6 +300,9 @@ async function main() {
     assert.equal(receipt.orderServicesDraft, undefined);
     // A pending receipt for the old amount remains untouched; remaining/available
     // are recomputed from the canonical order subtotal, never a false paid status.
+    console.log(
+      "order-services fixture: pending payment and draft/processing orders",
+    );
     const pending = await makeOrder();
     await prisma.payment.create({
       data: {
@@ -318,6 +338,7 @@ async function main() {
         status === "DRAFT" ? 0 : 2,
       );
     }
+    console.log("order-services fixture: missing evidence and stale snapshots");
     for (const options of [
       { noSearch: true },
       { staleSource: true },
@@ -353,6 +374,7 @@ async function main() {
       2,
     );
     // A different conversation cannot race a second copy onto the same watches.
+    console.log("order-services fixture: cross-conversation race");
     const race = await makeOrder(),
       r1 = await prepare(race),
       r2 = await prepare(race);
@@ -371,6 +393,7 @@ async function main() {
     });
     await assert.rejects(approve(oldReview));
     await cancelAssistant(owner.id, oldReview.id);
+    console.log("order-services fixture: blocked order states");
     for (const kind of [
       "terminal",
       "paid",
@@ -378,6 +401,7 @@ async function main() {
       "mixed",
       "quantity",
       "invoice",
+      "delivered",
     ]) {
       const target = await makeOrder();
       if (kind === "terminal")
@@ -410,6 +434,15 @@ async function main() {
           where: { id: target.orderItem[0].id },
           data: { quantity: 2 },
         });
+      if (kind === "delivered") {
+        await prisma.$transaction((tx) =>
+          createFromOrderTx(tx, { id: target.id, items: target.orderItem }),
+        );
+        await prisma.serviceRequest.updateMany({
+          where: { orderItemId: { in: target.orderItem.map((i) => i.id) } },
+          data: { status: "DELIVERED" },
+        });
+      }
       if (kind === "invoice")
         await prisma.invoice.create({
           data: {
@@ -428,6 +461,7 @@ async function main() {
       );
     }
     // Failure after inserting lines must roll back lines, subtotal, events and receipt.
+    console.log("order-services fixture: rollback and permission revocation");
     const rollback = await makeOrder(),
       rollbackReview = await prepare(rollback);
     await prisma.$executeRawUnsafe(

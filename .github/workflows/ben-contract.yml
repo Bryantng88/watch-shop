@@ -74,5 +74,5 @@ jobs:
       - run: npm ci
       - run: npx prisma db push --skip-generate
       - run: node --import tsx scripts/smoke-ben-auto-calendar.ts
-      - run: node --import tsx scripts/smoke-ben-order-services.ts
+      - run: timeout 120s node --import tsx scripts/smoke-ben-order-services.ts
       - run: npm run build
