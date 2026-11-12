@@ -58,6 +58,7 @@ async function main() {
   const original = await prisma.taskItem.findUniqueOrThrow({
     where: { id: item.id },
   });
+  assert.ok(original.personalWorkNumber,"Apply the checked-in personal work numbering migration before real-model evaluation.");
   const before = await prisma.taskItem.count();
   const cases = JSON.parse(
     readFileSync("tests/fixtures/ben-personal-mixed-intents.json", "utf8"),

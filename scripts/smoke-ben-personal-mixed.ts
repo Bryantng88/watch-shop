@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { prisma } from "../src/server/db/client";
 import { assistantActor } from "../src/domains/ai-assistant/server/access";
 import {
@@ -23,6 +24,39 @@ async function main() {
     }),
     0,
   );
+  // db push creates columns but not migration-owned SQL triggers. Install the
+  // checked-in numbering trigger in this isolated fixture, preserving production logic.
+  const numbering = readFileSync(
+    "prisma/migrations/20261111180000_personal_work_number/migration.sql",
+    "utf8",
+  );
+  await prisma.$executeRawUnsafe(
+    'CREATE SEQUENCE IF NOT EXISTS "personal_work_number_seq" AS INTEGER',
+  );
+  await prisma.$queryRawUnsafe(
+    `SELECT setval('"personal_work_number_seq"', GREATEST(COALESCE(MAX("personalWorkNumber"), 0), 24), true) FROM "TaskItem"`,
+  );
+  await prisma.$executeRawUnsafe(
+    numbering
+      .slice(
+        numbering.indexOf("CREATE FUNCTION"),
+        numbering.indexOf("CREATE TRIGGER"),
+      )
+      .trim()
+      .replace("CREATE FUNCTION", "CREATE OR REPLACE FUNCTION"),
+  );
+  const triggers = await prisma.$queryRaw<
+    { exists: boolean }[]
+  >`SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='assign_personal_work_number') AS "exists"`;
+  if (!triggers[0].exists)
+    await prisma.$executeRawUnsafe(
+      numbering
+        .slice(
+          numbering.indexOf("CREATE TRIGGER"),
+          numbering.indexOf("COMMIT;"),
+        )
+        .trim(),
+    );
   const suffix = randomUUID();
   await prisma.permission.upsert({
     where: { code: "TASK_VIEW" },
@@ -137,7 +171,9 @@ async function main() {
       const detail = (await assistantWorker("lookup", {
         ...run,
         lookup: { tool: "personalWork.detail", query: target.id },
-      })) as unknown as { evidence: { result: { item: { updatedAt: string } } } };
+      })) as unknown as {
+        evidence: { result: { item: { updatedAt: string } } };
+      };
       updates.push({
         itemId: target.id,
         expectedUpdatedAt: detail.evidence.result.item.updatedAt,
