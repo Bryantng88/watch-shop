@@ -365,6 +365,7 @@ export async function quickCreateTaskItem(
   const item = await createTaskItemRepo(db, {
     taskId: taskResult.task.id,
     title,
+    ownerUserId: getAuthUserId(auth),
     assignedToUserId: input.assignedToUserId ?? null,
     priority: input.priority,
     dueAt: input.dueAt ?? null,

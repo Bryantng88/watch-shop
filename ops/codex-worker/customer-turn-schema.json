@@ -585,7 +585,8 @@
             "priority",
             "checklist",
             "assigneeUserId",
-            "codex"
+            "codex",
+            "reminderMinutes"
           ]
         },
         {
@@ -924,7 +925,8 @@
               "priority",
               "checklist",
               "assigneeUserId",
-              "codex"
+              "codex",
+              "reminderMinutes"
             ]
           }
         },
