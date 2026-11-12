@@ -154,7 +154,9 @@ async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<Retur
  for(const m of s.messages){delete m.navigation;if(m.role==="assistant"&&m.navigationKey){const target=navigationTarget(m.navigationKey,actor);if(target)m.navigation=target;}delete m.products;if(m.role==="assistant"&&m.imageProductIds)m.products=m.imageProductIds.flatMap(id=>cards.filter(c=>c.id===id));}
  const rawReview=currentReview(state(row),row.revision,row.status,!!row.approvedAt,row.plan);
  const visibleReview=currentReview(s,row.revision,row.status,!!row.approvedAt,row.plan);
- if(rawReview&&visibleReview&&rawReview.kind===visibleReview.kind&&!(rawReview.kind==="code"&&!codeEnabled(actor))&&!(rawReview.kind==="order"&&s.orderDraft&&orderDeniedPermission(actor,s.orderDraft.plan)))s.pendingReview=rawReview;else delete s.pendingReview;
+ const businessPlan=rawReview?.kind==="business"?assistantPlanSchema.safeParse(row.plan):null;
+ const businessDenied=businessPlan&&(!businessPlan.success||!!planDeniedReason(actor,businessPlan.data));
+ if(rawReview&&visibleReview&&rawReview.kind===visibleReview.kind&&!businessDenied&&!(rawReview.kind==="code"&&!codeEnabled(actor))&&!(rawReview.kind==="order"&&s.orderDraft&&orderDeniedPermission(actor,s.orderDraft.plan)))s.pendingReview=rawReview;else delete s.pendingReview;
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
 export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor)))};}

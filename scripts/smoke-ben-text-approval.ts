@@ -546,6 +546,30 @@ async function main() {
     const businessReview = (await listAssistant(owner.id, work.chat.id))
       .conversations[0];
     assert.equal(businessReview.pendingReview?.kind, "business");
+    const assignmentsBefore = await prisma.taskItem.count({
+      where: { assignedToUserId: contact.id, title: "Synthetic condition" },
+    });
+    await prisma.role.update({
+      where: { id: role.id },
+      data: { permissions: { disconnect: { code: "TASK_MANAGE" } } },
+    });
+    assert.equal(
+      (await listAssistant(owner.id, businessReview.id)).conversations[0]
+        .pendingReview,
+      undefined,
+      "A readable but no-longer-approvable business review must not advertise text approval",
+    );
+    await assert.rejects(confirm(businessReview));
+    assert.equal(
+      await prisma.taskItem.count({
+        where: { assignedToUserId: contact.id, title: "Synthetic condition" },
+      }),
+      assignmentsBefore,
+    );
+    await prisma.role.update({
+      where: { id: role.id },
+      data: { permissions: { connect: { code: "TASK_MANAGE" } } },
+    });
     const businessKey = randomUUID(),
       businessDone = await confirm(businessReview, "ok bạn", businessKey);
     await confirm(businessReview, "ok bạn", businessKey);
