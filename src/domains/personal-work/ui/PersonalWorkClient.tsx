@@ -956,7 +956,7 @@ export function PersonalWorkClient({ data, localCalendar = false }: { data: Pers
                       if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
                       openTaskEdit(item);
                     }}
-                    className="group grid cursor-pointer gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center"
+                    className="group grid cursor-pointer gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 grid-cols-[auto_minmax(0,1fr)_auto] items-center"
                   >
                     {isPersonalEvent(item.workType)?<span title="Sự kiện không cần hoàn thành" className="flex h-7 w-7 items-center justify-center text-blue-600"><Clock3 className="h-4 w-4"/></span>:<button
                       aria-label="Đánh dấu hoàn thành"
