@@ -59,3 +59,16 @@ for (const [route,expected] of [["/admin/personal-work?item=fixture","/admin/per
  assert.equal(shown[0].body,"Bạn có lịch công việc hoặc sự kiện cần nhắc");assert.equal(shown[0].tag,"stable");assert.ok(!JSON.stringify(shown).includes("private customer data"));
  events.notificationclick({notification:{data:shown[0].data,close(){}},waitUntil(p){work=p;}});await work;assert.deepEqual(opened,[expected]);
 });
+
+test('legacy assignment notifications open the mobile work list', async () => {
+ const opened=[];let work, notification;
+ const events=worker(undefined,{
+  registration:{showNotification:async (_,options)=>{notification=options}},
+  clients:{matchAll:async()=>[],openWindow:async path=>opened.push(path)},
+ });
+ events.push({data:{json:()=>({type:'assignment'})},waitUntil(p){work=p}});
+ await work;
+ events.notificationclick({notification:{...notification,close(){}},waitUntil(p){work=p}});
+ await work;
+ assert.deepEqual(opened,['/admin/personal-work?view=list']);
+});
