@@ -11,7 +11,8 @@ self.addEventListener("fetch", (event) => {
 });
 
 function workNotificationRoute(value) {
-  return typeof value === "string" && /^\/admin\/ben\/work\/[\w%-]+$/.test(value) ? value : "/admin/personal-work?view=list";
+  if (value === "/admin/personal-work?view=list" || (typeof value === "string" && /^\/admin\/personal-work\?item=[\w%-]+$/.test(value))) return "/admin/personal-work?view=list";
+  return typeof value === "string" && /^\/admin\/ben\/work\/[\w%-]+$/.test(value) ? value : "/admin/ben";
 }
 self.addEventListener("push", event => {
   let payload = {};
