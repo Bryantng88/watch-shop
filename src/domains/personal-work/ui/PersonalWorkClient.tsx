@@ -985,7 +985,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         <button
                           type="button"
                           onClick={() => openTaskEdit(item)}
-                          className={`min-w-0 flex-1 truncate rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
+                          className={`min-w-0 max-w-full rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
                         >
                           <span className="mr-1.5 whitespace-nowrap font-mono text-xs font-semibold text-slate-600">{personalWorkCode(item.id, item.personalWorkNumber, item.workType)}</span>{item.title}
                         </button>
