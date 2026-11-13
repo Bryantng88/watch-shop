@@ -52,7 +52,7 @@ test('Ben push ignores malformed payload and opens only a validated internal des
  assert.deepEqual(opened,['/admin/ben']);
 });
 
-for (const [route,expected] of [["/admin/personal-work?item=fixture","/admin/personal-work?item=fixture"],["https://evil.invalid","/admin/ben"],["/admin/ben/work/fixture","/admin/ben/work/fixture"]]) test(`push click validates ${route}`,async()=>{
+for (const [route,expected] of [["/admin/personal-work?item=fixture","/admin/personal-work?view=list"],["https://evil.invalid","/admin/ben"],["/admin/ben/work/fixture","/admin/ben/work/fixture"]]) test(`push click validates ${route}`,async()=>{
  let work;const opened=[];const shown=[];
  const events=worker(undefined,{registration:{showNotification:async(t,o)=>shown.push(o)},clients:{matchAll:async()=>[],openWindow:async p=>opened.push(p)}});
  events.push({data:{json:()=>({kind:"REMINDER",route,tag:"stable",title:"private customer data"})},waitUntil(p){work=p;}});await work;

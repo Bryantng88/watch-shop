@@ -30,11 +30,12 @@ export default function AdminShell({ user, children, assistantSimulation = false
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const isBen = pathname === "/admin/ben";
+    const isBenWorkList = pathname === "/admin/personal-work" && searchParams.get("view") === "list";
     const isEmbedded = searchParams.get("embedded") === "1";
 
     return (
         <AdminNavigationHistoryProvider>
-        {isBen || isEmbedded ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
+        {isBen || isEmbedded || isBenWorkList ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
@@ -68,7 +69,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 </main>
             </div>
         </div>)}
-        <div hidden={isEmbedded || (isBen && !assistantLive)}>
+        <div hidden={isEmbedded || isBenWorkList || (isBen && !assistantLive)}>
         {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </div>
         </AdminNavigationHistoryProvider>

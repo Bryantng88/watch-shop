@@ -11,7 +11,8 @@ self.addEventListener("fetch", (event) => {
 });
 
 function workNotificationRoute(value) {
-  return typeof value === "string" && /^\/admin\/(?:personal-work\?item=[\w%-]+|ben\/work\/[\w%-]+)$/.test(value) ? value : "/admin/ben";
+  if (value === "/admin/personal-work?view=list" || (typeof value === "string" && /^\/admin\/personal-work\?item=[\w%-]+$/.test(value))) return "/admin/personal-work?view=list";
+  return typeof value === "string" && /^\/admin\/ben\/work\/[\w%-]+$/.test(value) ? value : "/admin/ben";
 }
 self.addEventListener("push", event => {
   let payload = {};
@@ -29,7 +30,9 @@ self.addEventListener("notificationclick", event => {
   event.waitUntil((async () => {
     const route = workNotificationRoute(event.notification.data?.route);
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    const target = windows.find(client => new URL(client.url).origin === self.location.origin && new URL(client.url).pathname === new URL(route,self.location.origin).pathname);
+    const sameOrigin = windows.filter(client => new URL(client.url).origin === self.location.origin);
+    const target = sameOrigin.find(client => new URL(client.url).pathname === new URL(route,self.location.origin).pathname)
+      || sameOrigin.find(client => new URL(client.url).pathname === "/admin/ben");
     if (target) { await target.navigate(route); await target.focus(); }
     else await self.clients.openWindow(route);
   })());
