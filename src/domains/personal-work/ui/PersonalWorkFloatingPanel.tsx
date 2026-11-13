@@ -7,7 +7,7 @@ export function PersonalWorkFloatingPanel({ anchor, children, onClose, role = "g
   anchor: HTMLElement | null; children: ReactNode; onClose: () => void;
   role?: "group" | "tooltip"; label?: string; id?: string; className?: string;
 }) {
-  const panel = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null), focused = useRef(false);
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   useLayoutEffect(() => {
     if (!anchor || !panel.current) return;
@@ -21,6 +21,12 @@ export function PersonalWorkFloatingPanel({ anchor, children, onClose, role = "g
     document.addEventListener("pointerdown", outside); document.addEventListener("keydown", escape); window.addEventListener("resize", onClose); window.addEventListener("scroll", scroll, true);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); window.removeEventListener("resize", onClose); window.removeEventListener("scroll", scroll, true); };
   }, [anchor, onClose, role]);
-  return createPortal(<div ref={panel} id={id} role={role} aria-label={label} className={className} onClick={e => e.stopPropagation()}
+  useLayoutEffect(() => {
+    if (!position || role !== "group" || focused.current) return;
+    focused.current = true;
+    const first = panel.current?.querySelector<HTMLElement>("button:not(:disabled),select:not(:disabled),input:not(:disabled),textarea:not(:disabled),a[href]");
+    (first || panel.current)?.focus({ preventScroll: true });
+  }, [position, role]);
+  return createPortal(<div ref={panel} tabIndex={role === "group" ? -1 : undefined} id={id} role={role} aria-label={label} className={className} onClick={e => e.stopPropagation()}
     style={{ position: "fixed", zIndex: 80, left: position?.left ?? 12, top: position?.top ?? 12, width: role === "tooltip" ? 224 : 272, maxWidth: "calc(100vw - 24px)", visibility: position ? "visible" : "hidden" }}>{children}</div>, document.body);
 }

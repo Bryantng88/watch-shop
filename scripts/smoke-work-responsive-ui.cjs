@@ -67,6 +67,10 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     const hint = page.getByRole('tooltip'); await hint.waitFor();
     assert.ok((await hint.innerText()).includes('20 phút trước')); await page.keyboard.press('Escape'); await hint.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: /^Bộ lọc công việc:/ }).click();
+    await page.getByRole('button', { name: 'Đóng bộ lọc', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Đóng bộ lọc', exact: true }).evaluate(el => el === document.activeElement), true);
+    await page.keyboard.press('Tab');
+    assert.equal(await page.getByRole('combobox', { name: 'Phạm vi công việc', exact: true }).evaluate(el => el === document.activeElement), true);
     await page.getByRole('combobox', { name: 'Phạm vi công việc', exact: true }).selectOption('SHARED');
     assert.equal(await page.locator('[data-work-row]').count(), 1); assert.ok(await page.getByRole('button', { name: 'Đánh dấu hoàn thành CV-40' }).isDisabled());
     await page.getByRole('combobox', { name: 'Phạm vi công việc', exact: true }).selectOption('MINE');
