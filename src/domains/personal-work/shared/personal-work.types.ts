@@ -127,6 +127,7 @@ export type PersonalWorkActivity = {
 };
 
 export type PersonalWorkChecklistItem = {
+  mediaContext?: {label:string;secondary:string|null;href:string;request:string};
   access?: "OWNER" | "EDITOR" | "VIEWER";
   sharedWith?: PersonalWorkShare[];
   id: string;

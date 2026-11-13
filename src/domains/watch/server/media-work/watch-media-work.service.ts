@@ -4,7 +4,7 @@ import {
   TaskStatus,
   type Prisma,
 } from "@prisma/client";
-import { prisma, type DB } from "@/server/db/client";
+import { prisma, withDbTransaction, type DB } from "@/server/db/client";
 import {
   getQueueItemWorkflowState,
   updateQueueItemWorkflowState,
@@ -836,6 +836,15 @@ export async function markWatchMediaAssetAttachedFromWatch(
 }
 
 export async function saveWatchMediaWorkDraftFromQueueItem(
+  input: Parameters<typeof saveMediaProgressLocked>[0], db: DB = prisma,
+) {
+  return withDbTransaction(db, async tx => {
+    await tx.$queryRaw`SELECT id FROM "TaskExecution" WHERE id = ${input.bindingId} FOR UPDATE`;
+    return saveMediaProgressLocked(input,tx);
+  });
+}
+
+async function saveMediaProgressLocked(
   input: {
     bindingId: string;
     actorUserId?: string | null;
@@ -888,6 +897,16 @@ export async function saveWatchMediaWorkDraftFromQueueItem(
     };
   }
 
+  const workflow = getQueueItemWorkflowState(binding);
+  if (["DONE", "RETURNED"].includes(String(workflow?.currentState))) throw new Error("Cần mở lại xử lý media trước khi lưu tiến độ.");
+  if (Object.values(input.parts).some(value => value === true)) {
+    const watch=await db.watch.findUnique({where:{id:binding.targetId},include:{watchContent:true,watchSpecV2:true,product:{include:{productImage:{where:{role:ImageRole.GALLERY},take:1}}}}});
+    if(!watch)throw new Error("Không tìm thấy watch cần hoàn tất.");
+    if(input.parts.profile && (!watch.product.title.trim() || !watch.watchSpecV2 || ![watch.watchSpecV2.model,watch.watchSpecV2.referenceNumber,watch.watchSpecV2.caseSizeMM,watch.watchSpecV2.dialColor,watch.watchSpecV2.primaryCaseMaterial,watch.watchSpecV2.calibre].some(value=>value!=null&&String(value).trim())))throw new Error("Cần tên watch và ít nhất một thông tin spec trước khi hoàn tất Thông tin/spec.");
+    if(input.parts.content && ![watch.watchContent?.titleOverride,watch.watchContent?.body,watch.watchContent?.hookText,watch.watchContent?.summary,watch.watchContent?.hashTags,...(watch.watchContent?.bulletSpecs||[])].some(value=>String(value??"").trim()))throw new Error("Chưa có nội dung để hoàn tất Content.");
+    if(input.parts.image && !hasGalleryImage(watch))throw new Error("Cần lưu ít nhất một ảnh gallery trước khi hoàn tất Hình ảnh.");
+    if(input.parts.cover && !watch.product.storefrontImageKey)throw new Error("Cần xác nhận ảnh Cover trước khi hoàn tất mục này.");
+  }
   const metadata = asRecord(binding.metadataJson);
   const currentProgress = asRecord(metadata.mediaWorkProgress);
   const currentParts = mediaWorkParts(currentProgress.parts);
@@ -1038,6 +1057,7 @@ export async function getActiveWatchMediaWorkspace(
 export async function getWatchMediaWorkspaceContext(
   productIdInput: string,
   db: DB = prisma,
+  requestedBindingId?: string,
 ) {
   const productId = clean(productIdInput);
   if (!productId) return null;
@@ -1063,11 +1083,14 @@ export async function getWatchMediaWorkspaceContext(
     },
   });
   const binding = bindings.find((item) =>
-    /workTypeKey:\s*(media-processing|publish)/i.test(
+    (!requestedBindingId || item.id === requestedBindingId) && (requestedBindingId ? /workTypeKey:\s*(media-processing|publish|photography|photoshoot)/i : /workTypeKey:\s*(media-processing|publish)/i).test(
       String(item.taskItem?.note ?? ""),
     ),
   );
-  if (!binding) return null;
+  if (!binding) {
+    if(requestedBindingId)throw new Error("Liên kết workspace không thuộc đúng watch hoặc không còn hợp lệ.");
+    return null;
+  }
 
   const progress = resolveMediaWorkProgressFromMetadata(
     asRecord(binding.metadataJson),
@@ -1129,7 +1152,7 @@ export async function saveWatchMediaWorkDraftFromWatch(
         },
       },
     },
-    select: { id: true },
+    select: { id: true, metadataJson: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -1141,6 +1164,7 @@ export async function saveWatchMediaWorkDraftFromWatch(
     };
   }
 
+  if (["DONE", "RETURNED"].includes(String(getQueueItemWorkflowState(binding)?.currentState))) return {ok:true,skipped:true,reason:"MEDIA_PROCESSING_CLOSED"};
   return saveWatchMediaWorkDraftFromQueueItem(
     {
       bindingId: binding.id,

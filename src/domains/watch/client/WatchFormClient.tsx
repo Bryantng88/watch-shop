@@ -1,6 +1,7 @@
 "use client";
 
 import { currentMediaEditor, registerMediaEditor, type MediaDraft, type MediaEditor } from "@/domains/ai-assistant/media-editor";
+import { effectiveMediaParts, mergeWatchSaveReceipt } from "../shared/media-work-state";
 import BenContentPreview from "../ui/edit/BenContentPreview";
 import { suggestWatchSpecWithOpenAIAction } from "./form/watch-ai-spec.actions";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -30,6 +31,7 @@ import {
 import { mapWatchDetailToFormValues } from "./form/watch-form.mapper";
 import type { WatchFormValues } from "./form/watch-form.types";
 
+import WatchMediaDailyWorkButton from "../ui/edit/WatchMediaDailyWorkButton";
 import WatchEditHeader from "../ui/edit/WatchEditHeader";
 import WatchBasicSection from "../ui/edit/WatchBasicSection";
 import WatchSpecModal from "../ui/edit/WatchSpecModal";
@@ -133,37 +135,14 @@ function missingRequiredMediaWorkPartLabels(doneState: Record<MediaWorkPart, boo
   ).map((part) => part.label);
 }
 
-function MediaWorkDoneButton({
-  label,
-  done,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  done: boolean;
-  disabled?: boolean;
-  onClick: () => void;
+function MediaWorkDoneButton({ label, done, disabled, onSaveDraft, onComplete }: {
+  label: string; done: boolean; disabled?: boolean; onSaveDraft: () => void; onComplete: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={[
-        "inline-flex h-9 items-center justify-center rounded-full px-3 text-xs font-semibold ring-1 transition disabled:cursor-not-allowed disabled:opacity-60",
-        done
-          ? "bg-emerald-100 text-emerald-800 ring-emerald-200 hover:bg-emerald-200"
-          : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
-      ].join(" ")}
-      title={
-        done
-          ? "Lưu cập nhật và giữ trạng thái đã hoàn tất"
-          : "Lưu và xác nhận mục này đã xong"
-      }
-    >
-      {done ? "Lưu cập nhật" : "Lưu & đánh dấu xong"} {label}
-    </button>
-  );
+  return <div className="flex flex-wrap items-center gap-2">
+    <span className={done?"text-xs font-medium text-emerald-700":"text-xs text-slate-500"}>{done?"Đã hoàn tất":"Chưa hoàn tất"}</span>
+    <button type="button" disabled={disabled} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</button>
+    <button type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-9 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</button>
+  </div>;
 }
 
 function setStepStatus(
@@ -391,26 +370,11 @@ export default function WatchFormClient({
   const [mediaSubmitPending, setMediaSubmitPending] = useState(false);
   const [reshootNoteOpen, setReshootNoteOpen] = useState(false);
   const [reshootNote, setReshootNote] = useState("");
-  const [mediaWorkDone, setMediaWorkDone] = useState<
-    Record<MediaWorkPart, boolean>
-  >({
-    profile:
-      Boolean(initialMediaWorkDone?.profile) ||
-      searchParams.get("mediaProfileDone") === "1" ||
-      String(initialValues.specStatus).toUpperCase() === "READY",
-    content:
-      Boolean(initialMediaWorkDone?.content) ||
-      searchParams.get("mediaContentDone") === "1" ||
-      String(initialValues.contentReviewStatus).toUpperCase() === "APPROVED",
-    image:
-      Boolean(initialMediaWorkDone?.image) ||
-      searchParams.get("mediaImageDone") === "1" ||
-      String(initialValues.imageReviewStatus).toUpperCase() === "APPROVED",
-    cover:
-      Boolean(initialMediaWorkDone?.cover) ||
-      searchParams.get("mediaCoverDone") === "1" ||
-      Boolean(initialValues.media.coverImage),
+  const [storedMediaWorkDone, setMediaWorkDone] = useState<Record<MediaWorkPart, boolean>>({
+    profile: Boolean(initialMediaWorkDone?.profile), content: Boolean(initialMediaWorkDone?.content),
+    image: Boolean(initialMediaWorkDone?.image), cover: Boolean(initialMediaWorkDone?.cover),
   });
+  const mediaWorkDone = effectiveMediaParts(storedMediaWorkDone, values, savedValues);
   const mediaSession = useMemo(() => ({productId: values.productId}), [values.productId]);
   const [mediaDraft, setMediaDraft] = useState<{productId: string; draft: MediaDraft}>();
   const [activeMediaSection, setActiveMediaSection] = useState<
@@ -518,12 +482,12 @@ export default function WatchFormClient({
       ? `/admin/watches/${initialValues.productId}`
       : "/admin/watches");
   const workspaceBindingId =
-    searchParams.get("workspaceBindingId") ||
     initialMediaWorkspaceContext?.bindingId ||
+    searchParams.get("workspaceBindingId") ||
     "";
   const initialWorkspaceState =
-    searchParams.get("workspaceState") ||
     initialMediaWorkspaceContext?.workflowState ||
+    (!isMediaMode ? searchParams.get("workspaceState") : "") ||
     "";
   const [workspaceState, setWorkspaceState] = useState(initialWorkspaceState);
   const isMediaProgressContext =
@@ -532,7 +496,7 @@ export default function WatchFormClient({
   const isMediaWorkspaceDone = workspaceState === "DONE";
   const isMediaWorkspaceReturned = workspaceState === "RETURNED";
   const canApproveMediaWorkspace =
-    fromMediaWorkspace &&
+    isMediaProgressContext &&
     Boolean(workspaceBindingId) &&
     canReviewContent &&
     (workspaceState === "NEW" || workspaceState === "REVIEW");
@@ -585,10 +549,10 @@ export default function WatchFormClient({
     };
   }, [initialValues.productId, isMediaMode, notify]);
 
-  const saveMediaWorkspacePart = async (part: MediaWorkPart) => {
+  const saveMediaWorkspacePart = async (part: MediaWorkPart, complete: boolean) => {
     if (!isMediaMode || !isMediaProgressContext || mediaSubmitPending) return;
 
-    const nextDone = true;
+    const nextDone = complete;
     const submitValues: WatchFormValues = {
       ...buildSubmitValues(),
       saveIntent: "MEDIA_WORKSPACE",
@@ -599,12 +563,12 @@ export default function WatchFormClient({
     setMediaSubmitPending(true);
     progress.show({
       title: `Đang lưu ${partLabel}`,
-      message: "Hệ thống đang lưu mục này và cập nhật tiến độ Workspace.",
+      message: complete ? "Đang lưu và xác nhận hoàn tất mục này." : "Đang lưu bản nháp; mục này vẫn chưa hoàn tất.",
     });
 
     try {
       const result = await submitWatchForm(submitValues);
-      updateValuesAfterSave(result);
+      updateValuesAfterSave(result, submitValues);
 
       const progressResult = await saveWatchMediaWorkDraftFromWatchAction({
         productId: submitValues.productId,
@@ -627,7 +591,7 @@ export default function WatchFormClient({
 
       notify.success({
         title: `Đã lưu ${partLabel}`,
-        message: "Mục này đã được lưu và giữ trạng thái hoàn tất.",
+        message: complete ? "Đã lưu và đánh dấu hoàn tất mục này." : "Đã lưu tạm. Bạn có thể rời màn hình và làm tiếp sau; mục này chưa hoàn tất.",
       });
     } catch (error: unknown) {
       notify.error({
@@ -903,48 +867,10 @@ export default function WatchFormClient({
     }
   };
 
-  const updateValuesAfterSave = (
-    result: Awaited<ReturnType<typeof submitWatchForm>>,
-  ) => {
+  const updateValuesAfterSave = (result: Awaited<ReturnType<typeof submitWatchForm>>, submitted: WatchFormValues) => {
     notifyParentOfWorkspaceRefresh();
-    setValues((prev): WatchFormValues => {
-      const serverChosenImages = result?.media?.poolImages as
-        | WatchFormValues["media"]["poolImages"]
-        | undefined;
-
-      const serverGalleryImages = result?.media?.galleryImages as
-        | WatchFormValues["media"]["galleryImages"]
-        | undefined;
-
-      const next: WatchFormValues = {
-        ...prev,
-        basic: {
-          ...prev.basic,
-          slug: result?.storefrontSlug || prev.basic.slug,
-        },
-        content: {
-          ...prev.content,
-          hookText: result?.hookText ?? prev.content.hookText,
-        },
-        contentReviewStatus:
-          (result?.contentReviewStatus as ReviewStatus | undefined) ??
-          prev.contentReviewStatus,
-        imageReviewStatus:
-          (result?.imageReviewStatus as ReviewStatus | undefined) ??
-          prev.imageReviewStatus,
-        media: {
-          ...prev.media,
-          poolImages: serverChosenImages ?? prev.media.poolImages,
-          galleryImages: serverGalleryImages ?? prev.media.galleryImages,
-          imageCount: serverGalleryImages?.length ?? prev.media.imageCount,
-        },
-      };
-
-      valuesRef.current = next;
-      setSavedValues(next);
-
-      return next;
-    });
+    setSavedValues(mergeWatchSaveReceipt(submitted,submitted,result).saved);
+    setValues(previous=>{const next=mergeWatchSaveReceipt(previous,submitted,result).current;valuesRef.current=next;return next;});
   };
 
   const onSubmit = () => {
@@ -958,9 +884,10 @@ export default function WatchFormClient({
       });
 
       try {
-        const result = await submitWatchForm(buildSubmitValues());
+        const submitValues = buildSubmitValues();
+        const result = await submitWatchForm(submitValues);
 
-        updateValuesAfterSave(result);
+        updateValuesAfterSave(result, submitValues);
 
         notify.success({
           title: "Đã lưu watch",
@@ -1048,7 +975,7 @@ export default function WatchFormClient({
 
         const result = await submitWatchForm(submitValues);
 
-        updateValuesAfterSave(result);
+        updateValuesAfterSave(result, submitValues);
 
         const nextGalleryImages = result?.media?.galleryImages as
           | WatchFormValues["media"]["galleryImages"]
@@ -1120,7 +1047,7 @@ export default function WatchFormClient({
 
     try {
       const result = await submitWatchForm(submitValues);
-      updateValuesAfterSave(result);
+      updateValuesAfterSave(result, submitValues);
 
       await saveWatchMediaWorkDraftFromWatchAction({
         productId: submitValues.productId,
@@ -1188,7 +1115,7 @@ export default function WatchFormClient({
 
     try {
       const result = await submitWatchForm(submitValues);
-      updateValuesAfterSave(result);
+      updateValuesAfterSave(result, submitValues);
       steps = setStepStatus(steps, "save", "done", "Đã lưu dữ liệu mới nhất.");
       steps = setStepStatus(steps, "transition", "running");
       progress.update({ steps });
@@ -1668,7 +1595,7 @@ export default function WatchFormClient({
 
       const result = await submitWatchForm(submitValues);
 
-      updateValuesAfterSave(result);
+      updateValuesAfterSave(result, submitValues);
 
       notify.success({
         title: "Đã lưu watch",
@@ -1699,32 +1626,19 @@ export default function WatchFormClient({
         disabled={
           mediaSubmitPending || isMediaWorkspaceDone || isMediaWorkspaceReturned
         }
-        onClick={() => void saveMediaWorkspacePart(part)}
+        onSaveDraft={() => void saveMediaWorkspacePart(part, false)}
+        onComplete={() => void saveMediaWorkspacePart(part, true)}
       />
     ) : null;
 
   const handleCoverImageChange = (item: WatchFormValues["media"]["coverImage"]) => {
     updateMedia({ coverImage: item });
-    setMediaWorkDone((current) => ({ ...current, cover: Boolean(item) }));
+    setMediaWorkDone((current) => ({ ...current, cover: false }));
 
-    if (isMediaProgressContext && workspaceBindingId) {
-      void saveWatchMediaWorkDraftFromWatchAction({
-        productId: values.productId,
-        bindingId: workspaceBindingId,
-        parts: { cover: Boolean(item) },
-        note: item
-          ? "Cover storefront confirmed from Watch media modal."
-          : "Cover storefront returned from Watch media modal.",
-      }).catch((error: unknown) => {
-        notify.error({
-          title: "Chưa đồng bộ được tiến độ Cover",
-          message: errorMessage(error, "Hãy tải lại Workspace để đồng bộ tiến độ."),
-        });
-      });
-    }
+
   };
 
-  const mediaImageActions = fromMediaWorkspace ? (
+  const mediaImageActions = isMediaProgressContext ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {workspaceBindingId && !isMediaWorkspaceDone ? (
         <button
@@ -1798,11 +1712,11 @@ export default function WatchFormClient({
           </div>
         </div>
       ) : null}
-      {mediaDoneAction("image")}
+      {mediaDoneAction(activeMediaSection === "cover" ? "cover" : "image")}
     </div>
   ) : null;
 
-  const mediaHeaderActions = fromMediaWorkspace ? (
+  const mediaHeaderActions = isMediaProgressContext ? (
     <>
       {isMediaWorkspaceDone ? (
         <>
@@ -1969,7 +1883,7 @@ export default function WatchFormClient({
           canReviewContent={canReviewContent}
           hideBack={false}
           hideSubmit={fromMediaWorkspace || fromPhotoshootWorkspace}
-          headerActions={mediaHeaderActions}
+          headerActions={isMediaMode ? <><WatchMediaDailyWorkButton productId={values.productId} watchTitle={values.basic.title} sku={values.header.sku} part={activeMediaSection === "basic" ? "profile" : activeMediaSection}/>{mediaHeaderActions}</> : mediaHeaderActions}
           breadcrumbs={[
             { label: "Watches", href: returnTo },
             { label: values.basic.title || "Edit" },
@@ -2018,7 +1932,7 @@ export default function WatchFormClient({
                   key: "cover" as const,
                   title: "Cover storefront",
                   subtitle: "Ảnh đại diện storefront",
-                  done: mediaWorkDone.cover || Boolean(values.media.coverImage),
+                  done: mediaWorkDone.cover,
                   icon: Images,
                 },
               ].map((item) => {
@@ -2117,7 +2031,7 @@ export default function WatchFormClient({
         onBack={handleBack}
         canReviewContent={canReviewContent}
         hideSubmit={fromMediaWorkspace}
-        headerActions={mediaHeaderActions}
+        headerActions={isMediaMode ? <><WatchMediaDailyWorkButton productId={values.productId} watchTitle={values.basic.title} sku={values.header.sku} part={activeMediaSection === "basic" ? "profile" : activeMediaSection}/>{mediaHeaderActions}</> : mediaHeaderActions}
         breadcrumbs={[
           { label: "Watches", href: returnTo },
           { label: values.basic.title || "Edit" },

@@ -1,3 +1,4 @@
+import { saveWatchMediaWorkDraftFromWatch } from "../../server/media-work/watch-media-work.service";
 import { prisma, type DB } from "@/server/db/client";
 import { attachIngestedWatchMedia, listSelectedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
@@ -680,6 +681,12 @@ export async function submitWatchFormApplication(
             materialNote: values.spec.materialNote || null,
         };
 
+        const basicChanged = [
+          [current.product.brandId, values.basic.brandId], [current.product.vendorId, values.basic.vendorId], [current.product.categoryId, values.basic.categoryId],
+          [current.gender, values.basic.gender], [current.style, values.basic.style], [current.siteChannel, values.basic.siteChannel], [current.isCollectible, values.basic.isCollectible],
+          [current.conditionGrade, values.basic.conditionGrade], [current.movementType, values.basic.movementType], [current.movementCalibre, values.basic.movementCalibre], [current.serialNumber, values.basic.serialNumber], [current.yearText, values.basic.yearText],
+        ].some(([before,after]) => String(before ?? "") !== String(after ?? ""));
+        const profileChanged = specChanged || basicChanged || postTargetsResult.changed || nextTitle !== current.product.title || safeSku !== current.product.sku || Object.entries(specData).some(([key,value]) => String(value ?? "") !== String((current.watchSpecV2 as Record<string,unknown> | null)?.[key] ?? ""));
         await tx.watchSpecV2.upsert({
             where: { watchId: current.id },
             create: { watchId: current.id, ...specData },
@@ -729,6 +736,7 @@ export async function submitWatchFormApplication(
             } as any,
         });
 
+        if(profileChanged || contentChanged)await saveWatchMediaWorkDraftFromWatch({productId,actorUserId:context.userId,parts:{...(profileChanged?{profile:false}:{}),...(contentChanged?{content:false}:{})},note:"Nội dung đã thay đổi; lưu bản nháp và cần xác nhận hoàn tất lại."},tx);
         if (contentChanged) {
             await emitWatchContentModifiedEvent(tx, {
                 watch: {
@@ -829,6 +837,7 @@ export async function submitWatchFormApplication(
                 hasContentData: hasContentSnapshotData(afterContent),
                 hasGalleryImages: normalizedGalleryImages.length > 0,
             });
+            await saveWatchMediaWorkDraftFromWatch({productId,actorUserId:context.userId,parts:{image:false},note:"Gallery đã thay đổi; lưu bản nháp và cần xác nhận hoàn tất lại."},tx);
             await emitWatchMediaAssetAttachedEvent(tx, {
                 watch: {
                     id: current.id,
