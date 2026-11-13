@@ -22,8 +22,8 @@
 .reviewHint { display: flex; align-items: center; gap: 6px; margin: 12px 0 0 38px; color: #837b8e; font-size: 11px; line-height: 1.5; }
 .footer { flex-shrink: 0; padding: 12px 18px max(10px,env(safe-area-inset-bottom)); background: #fffeffed; }
 .shortcuts { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; }
-.shortcuts button { display: flex; align-items: center; gap: 6px; flex-shrink: 0; border: 1px solid #eee5fb; border-radius: 999px; background: #f7f2fd; padding: 7px 12px; color: #625271; font-size: 12px; }
-.shortcuts button svg { color: #9669d8; width: 15px; height: 15px; }
+.shortcuts :is(button, a) { display: flex; align-items: center; gap: 6px; flex-shrink: 0; border: 1px solid #eee5fb; border-radius: 999px; background: #f7f2fd; padding: 7px 12px; color: #625271; font-size: 12px; }
+.shortcuts :is(button, a) svg { color: #9669d8; width: 15px; height: 15px; }
 .composer { display: grid; grid-template-columns: 36px 36px 1fr 42px; align-items: end; gap: 4px; border: 1px solid #d7c3f3; border-radius: 18px; padding: 9px; background: white; box-shadow: 0 2px 7px #7543b504; }
 .composer:focus-within { outline: 2px solid #eae0f8; outline-offset: 1px; }
 .composer textarea { grid-column: 1 / -1; grid-row: 1; width: 100%; min-width: 0; min-height: 42px; max-height: 120px; resize: none; border: 0; background: transparent; padding: 7px 9px; outline: none; font-size: 14px; line-height: 1.6; }

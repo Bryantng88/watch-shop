@@ -22,7 +22,7 @@ self.addEventListener("push", event => {
     body: labels[payload.kind] || "Bạn có công việc mới",
     icon: "/ben/icon-192.png", badge: "/ben/icon-192.png",
     tag: typeof payload.tag === "string" ? payload.tag.slice(0,250) : "ben-assignment",
-    data: { route: workNotificationRoute(payload.route) },
+    data: { route: workNotificationRoute(payload.route ?? (payload.type === "assignment" ? "/admin/personal-work?view=list" : undefined)) },
   }));
 });
 self.addEventListener("notificationclick", event => {
