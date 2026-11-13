@@ -6,7 +6,6 @@ import {
     getWatchMediaEditDetail,
 } from "@/domains/watch/server/detail/watch-detail.service";
 import {
-    getWatchMediaWorkProgressFromQueueItem,
     getWatchMediaWorkspaceContext,
 } from "@/domains/watch/server";
 import {
@@ -148,16 +147,7 @@ export default async function WatchEditPage({
                 listWatchMediaEditOptions(),
             ),
             perfStep("watch-edit-page", "getMediaWorkspaceContext", async () => {
-                if (workspaceBindingId) {
-                    const parts = await getWatchMediaWorkProgressFromQueueItem(workspaceBindingId);
-                    return {
-                        bindingId: workspaceBindingId,
-                        workTypeKey: query.from === "publish-workspace" ? "publish" : "media-processing",
-                        workflowState: typeof query.workspaceState === "string" ? query.workspaceState : null,
-                        parts,
-                    };
-                }
-                return getWatchMediaWorkspaceContext(id);
+                return getWatchMediaWorkspaceContext(id, undefined, workspaceBindingId || undefined);
             }),
         ])
         : await Promise.all([
@@ -167,7 +157,7 @@ export default async function WatchEditPage({
             perfStep("watch-edit-page", "listWatchEditOptions", () =>
                 listWatchEditOptions(),
             ),
-            Promise.resolve(null),
+            query.mode === "media" ? getWatchMediaWorkspaceContext(id, undefined, workspaceBindingId || undefined) : Promise.resolve(null),
         ]);
 
     if (!detail) notFound();
@@ -198,6 +188,7 @@ export default async function WatchEditPage({
     return (
         <div className="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6">
             <WatchFormClient
+                key={id}
                 detail={serialize(detail)}
                 brands={serialize(editOptions.brands)}
                 vendors={serialize(editOptions.vendors)}

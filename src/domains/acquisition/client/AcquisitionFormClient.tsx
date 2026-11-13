@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 import { useRouter } from "next/navigation";
 import {
@@ -9,6 +9,7 @@ import {
     PackagePlus,
     Plus,
     Save,
+    Sparkles,
     Search,
     WalletCards,
     X,
@@ -29,6 +30,7 @@ import type {
     AcquisitionTradeInOrder,
     AcquisitionWatchLine,
 } from "./form/acquisition-form.types";
+import { useAcquisitionQuickNames } from "./form/use-acquisition-quick-names";
 import WatchLineCard from "../ui/new/WatchLineCard";
 import AcquisitionCreatedDialog from "../ui/navigation/AcquisitionCreatedDialog";
 
@@ -36,6 +38,8 @@ type Props = {
     vendors: AcquisitionFormVendor[];
     canApprove: boolean;
 };
+
+const EMPTY_PURCHASED_WATCHES: NonNullable<AcquisitionTradeInOrder["purchasedWatches"]> = [];
 
 const FIELD_CLASS =
     "h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-violet-300 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
@@ -92,12 +96,12 @@ function SectionHeader({
                     <div className="sr-only">{description}</div>
                 </div>
             </div>
-            {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
         </div>
     );
 }
 
-function VendorQuickField({
+const VendorQuickField = memo(function VendorQuickField({
     value,
     vendors,
     disabled,
@@ -240,7 +244,7 @@ function VendorQuickField({
             ) : null}
         </div>
     );
-}
+});
 
 function TradeInOrderField({
     value,
@@ -337,6 +341,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
     const [watchLines, setWatchLines] = useState<AcquisitionWatchLine[]>([
         createEmptyWatchLine("MEN"),
     ]);
+    const quickNames = useAcquisitionQuickNames(watchLines, setWatchLines);
     const [submitting, setSubmitting] = useState(false);
     const submitLockRef = useRef(false);
     const createdAcquisitionIdRef = useRef<string | null>(null);
@@ -373,16 +378,16 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
         setWatchLines([createEmptyWatchLine("MEN")]);
     }
 
-    function updateLine(id: string, next: AcquisitionWatchLine) {
-        setWatchLines((prev) => prev.map((line) => (line.id === id ? next : line)));
-    }
+    const updateLine = useCallback((id: string, patch: Partial<AcquisitionWatchLine>) => {
+        setWatchLines((prev) => prev.map((line) => (line.id === id ? { ...line, ...patch } : line)));
+    }, []);
 
-    function removeLine(id: string) {
+    const removeLine = useCallback((id: string) => {
         setWatchLines((prev) => {
             const next = prev.filter((line) => line.id !== id);
             return next.length ? next : [createEmptyWatchLine(audienceSegment)];
         });
-    }
+    }, [audienceSegment]);
 
     function addWatchLine() {
         setWatchLines((prev) => [...prev, createEmptyWatchLine(audienceSegment)]);
@@ -440,7 +445,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
     async function submit() {
         // React state does not disable the button until the next render. This ref
         // closes the small window where rapid clicks could send duplicate requests.
-        if (submitLockRef.current) return;
+        if (submitLockRef.current || quickNames.busy) return;
         if (createdAcquisitionIdRef.current) {
             notify.warning({
                 title: "Phiếu nhập đã được tạo",
@@ -583,7 +588,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             {type === "TRADE_IN" ? (
                                 <TradeInOrderField
                                     value={tradeInOrder}
-                                    disabled={submitting}
+                                    disabled={submitting || quickNames.busy}
                                     onChange={(order) => {
                                         setTradeInOrder(order);
                                         setWatchLines((current) => current.map((line) => ({
@@ -597,7 +602,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                 <VendorQuickField
                                     value={vendorId}
                                     vendors={vendors}
-                                    disabled={submitting}
+                                    disabled={submitting || quickNames.busy}
                                     onChange={setVendorId}
                                     onVendorsChange={setVendors}
                                 />
@@ -652,7 +657,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                         <button
                                             key={segment}
                                             type="button"
-                                            disabled={submitting}
+                                            disabled={submitting || quickNames.busy}
                                             onClick={() => applyAudienceSegmentToAll(segment)}
                                             className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
                                                 audienceSegment === segment
@@ -710,15 +715,21 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             description="Chon nhieu anh tu NAS, he thong se do vao cac dong dang trong truoc roi moi them dong moi."
                             actions={
                                 <>
+                                    <button type="button" onClick={() => void quickNames.generate()} disabled={submitting || quickNames.busy || !quickNames.count}
+                                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-800 disabled:opacity-40">
+                                        {quickNames.busy ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
+                                        {quickNames.busy ? "Codex đang đọc ảnh…" : "Codex gợi ý tên"}
+                                    </button>
+                                    {quickNames.busy && <button type="button" onClick={quickNames.stop} className="min-h-10 px-2 text-xs text-slate-600 underline">Dừng chờ</button>}
                                     <AcquisitionBulkImagePicker
                                         onImport={importPreparedImages}
-                                        disabled={submitting}
+                                        disabled={submitting || quickNames.busy}
                                         audienceSegment={audienceSegment}
                                     />
                                     <button
                                         type="button"
                                         onClick={addWatchLine}
-                                        disabled={submitting}
+                                        disabled={submitting || quickNames.busy}
                                         className="inline-flex h-10 items-center gap-2 rounded-md border border-violet-200 bg-white px-4 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         <Plus className="h-4 w-4" />
@@ -728,18 +739,21 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             }
                         />
 
+                        <p className="py-2 text-xs leading-5 text-slate-500">Tên theo thứ tự: thương hiệu · dòng/model · mã tham chiếu · biệt danh · loại máy. Chỉ điền thông tin đã biết; năm sản xuất có thể bổ sung sau. Chọn ảnh NAS rồi nhờ Codex gợi ý tối đa 12 ảnh/lượt. Đây là bản nháp để bạn chỉnh, chưa đủ để tự đăng storefront.</p>
+                        {quickNames.error && <p role="alert" className="pb-2 text-xs text-amber-800">{quickNames.error}</p>}
                         <div className="divide-y divide-slate-100">
                             {watchLines.map((line, index) => (
                                 <WatchLineCard
                                     key={line.id}
                                     line={line}
                                     currency={currency}
+                                    codexStatus={quickNames.statuses[line.id]}
                                     index={index}
-                                    onChange={(next) => updateLine(line.id, next)}
-                                    onRemove={() => removeLine(line.id)}
+                                    onChange={updateLine}
+                                    onRemove={removeLine}
                                     canRemove={watchLines.length > 1}
                                     tradeIn={type === "TRADE_IN"}
-                                    purchasedWatches={tradeInOrder?.purchasedWatches ?? []}
+                                    purchasedWatches={tradeInOrder?.purchasedWatches ?? EMPTY_PURCHASED_WATCHES}
                                 />
                             ))}
 
@@ -755,7 +769,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                 <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
                     <button
                         type="button"
-                        disabled={submitting}
+                        disabled={submitting || quickNames.busy}
                         onClick={() => router.push("/admin/acquisitions")}
                         className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                     >
@@ -769,7 +783,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                         </div>
                         <button
                             type="button"
-                            disabled={submitting}
+                            disabled={submitting || quickNames.busy}
                             onClick={submit}
                             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
                         >

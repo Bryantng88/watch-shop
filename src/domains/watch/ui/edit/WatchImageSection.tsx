@@ -650,7 +650,7 @@ export default function WatchImageSection({
                 collapsible={collapsible}
                 surface={surface}
                 actions={
-                    !showGallery ? null :
+                    !showGallery && !hideReviewActions ? null :
                     <div className="flex flex-wrap items-center justify-end gap-2">
                         {hideReviewActions ? mediaActions : null}
                         {!hideReviewActions ? <TaskSignalIcon

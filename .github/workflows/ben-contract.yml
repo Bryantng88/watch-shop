@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'src/domains/ai-assistant/**'
+      - 'src/domains/watch/**'
+      - 'src/app/(admin)/admin/watches/**'
+      - 'scripts/smoke-watch-media*'
       - 'src/domains/media-post/**'
       - 'src/domains/order/server/write/order-service-append.ts'
       - 'src/app/api/admin/customer-assistant/route.ts'
@@ -35,9 +38,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
-      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
-      - run: npx eslint src/domains/ai-assistant src/domains/order/server/write/order-service-append.ts scripts/smoke-ben-*.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
+      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/acquisition/shared/quick-name.test.ts src/domains/watch/shared/media-work-state.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
+      - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/acquisition-quick-name.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
+      - run: npx eslint src/domains/ai-assistant src/domains/order/server/write/order-service-append.ts scripts/smoke-ben-*.ts scripts/smoke-acquisition-quick-names.ts scripts/smoke-watch-media-daily.ts src/domains/personal-work/server/media-daily.service.ts src/domains/personal-work/shared/media-daily.ts src/domains/watch/shared/media-work-state.ts src/domains/watch/ui/edit/WatchMediaDailyWorkButton.tsx src/domains/watch/client/media-work/media-daily.actions.ts src/domains/acquisition/server/quick-name.service.ts src/domains/acquisition/shared/quick-name.ts src/app/api/admin/acquisitions/quick-names/route.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit
       - run: npm run build
   calendar-integration:
@@ -78,4 +81,6 @@ jobs:
       - run: timeout 120s node --import tsx scripts/smoke-ben-personal-mixed.ts
       - run: timeout 120s node --import tsx scripts/smoke-ben-text-approval.ts
       - run: timeout 120s node --import tsx scripts/smoke-ben-order-services.ts
+      - run: timeout 120s node --import tsx scripts/smoke-acquisition-quick-names.ts
+      - run: timeout 120s node --import tsx scripts/smoke-watch-media-daily.ts
       - run: npm run build

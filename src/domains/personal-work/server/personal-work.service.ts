@@ -1,3 +1,4 @@
+import { mediaChecklistContext, mediaDayToday } from "../shared/media-daily";
 import {checklistOnlyWork} from "../shared/checklist-share-projection";
 import { queueWorkNotification, queuePersonalChange } from "@/domains/notification/server/work-push.service";
 import { workRoute, newShareRecipients } from "@/domains/notification/server/work-push-policy";
@@ -328,7 +329,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
           occurredAt: activity.occurredAt.toISOString(),
           actor: activity.actorUser,
         })),
-        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone,
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, mediaContext: mediaChecklistContext(entry.note),
           access:owned?"OWNER":share?.accessLevel === "EDITOR"?"EDITOR":entry.personalShares.find(s=>s.userId===userId)?.accessLevel??"VIEWER",
           sharedWith:owned?entry.personalShares.map(s=>({user:s.user,accessLevel:s.accessLevel})):[],
         })),
@@ -368,7 +369,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   };
 }
 
-export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma) {
+export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma, identity?: { systemId: string }) {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
   const title = input.title.trim();
@@ -393,6 +394,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   return withDbTransaction(db, async (tx) => {
     const item = await tx.taskItem.create({
       data: {
+        ...(identity ? { id: identity.systemId } : {}),
         reminderMinutes: input.reminderMinutes,
         title, note: input.note?.trim() || null,
         personalOwnerUserId: userId, assignedToUserId: userId,
@@ -528,6 +530,12 @@ export async function updatePersonalWorkItem(
 ) {
   if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
+  if(current.id.startsWith("media-daily-")) {
+    const receipt=await db.taskItemActivity.findFirst({where:{taskItemId:current.id,metadataJson:{path:["source"],equals:"WATCH_MEDIA_DAILY"}},orderBy:{createdAt:"asc"},select:{metadataJson:true}});
+    const day=(receipt?.metadataJson as Prisma.JsonObject|null)?.day;
+    if(typeof day!=="string" || input.dueAt!==undefined && (!input.dueAt || mediaDayToday(new Date(input.dueAt))!==day) || input.scheduledEndAt && mediaDayToday(new Date(input.scheduledEndAt))!==day)throw new Error("Việc media được gom cố định theo người phụ trách và ngày; không chuyển việc ngày này sang ngày khác.");
+    if(input.categoryKey!==undefined && input.categoryKey!=="WATCHSHOP" || input.domain!==undefined && input.domain!=="WATCHSHOP")throw new Error("Việc media trong ngày thuộc nhóm WatchShop.");
+  }
   const event = isPersonalEvent(current.workTypeId);
   if(input.workType!==undefined && isPersonalEvent(input.workType)!==event)throw new Error("Không đổi qua lại giữa công việc và sự kiện; hãy tạo mục mới.");
   if(event && ((input.status && input.status!==TaskStatus.CANCELLED)||input.progressMode!==undefined||input.progressPercent!==undefined))throw new Error("Sự kiện không có trạng thái hoàn thành hoặc tiến độ");

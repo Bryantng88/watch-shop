@@ -1027,6 +1027,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             setEditingItem(current=>current&&current.id===editingItem.id?{...current,checklist:current.checklist.map(item=>item.id===entry.id?{...item,title}:item)}:current);
                             router.refresh();
                           }}/>
+                        {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
                         {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
                           await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
                           setEditingItem(current=>current?{...current,checklist:current.checklist.map(e=>e.id===entry.id?{...e,sharedWith:shares}:e)}:current);

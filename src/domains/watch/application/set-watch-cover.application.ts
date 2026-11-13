@@ -1,3 +1,4 @@
+import { saveWatchMediaWorkDraftFromWatch } from "../server/media-work/watch-media-work.service";
 import {
   ImageRole,
   MediaBindingLifecycle,
@@ -100,6 +101,7 @@ export async function setWatchCoverApplication(input: {
       },
     });
 
+    await saveWatchMediaWorkDraftFromWatch({productId,actorUserId:input.actorUserId,parts:{cover:false},note:"Cover đã đổi; cần xác nhận hoàn tất lại."},tx);
     const event = await emitWatchCoverUpdatedEvent(tx, {
       watch,
       storageKey: mediaObject.storageKey,
