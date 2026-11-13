@@ -10,9 +10,10 @@ async function buildFixture() {
   const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {PersonalWorkClient} from './src/domains/personal-work/ui/PersonalWorkClient';import {checklistOnlyWork} from './src/domains/personal-work/shared/checklist-share-projection';
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'}).format(new Date());const yesterday=new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10);const now=Date.now();
 const owner={id:'long',name:'Long',email:'long@example.invalid',avatarUrl:null};const vi={id:'vi',name:'Vi',email:'vi@example.invalid',avatarUrl:null};
+const nam={id:'nam',name:'Nam',email:'nam@example.invalid',avatarUrl:null};const hoa={id:'hoa',name:'Hoa',email:'hoa@example.invalid',avatarUrl:null};
 const general={key:'GENERAL',label:'Cá nhân',domain:'GENERAL',color:'#64748b',isDefault:true};const work={key:'WATCHSHOP',label:'WatchShop',domain:'WATCHSHOP',color:'#f43f5e',isDefault:true};
 const specs=[['Tính tiền phí dịch vụ đồng hồ của An, Nam',23,'08:00',0,2],['Làm lại UI phiếu nhập WatchShop và tối ưu thao tác cho màn hình nhỏ với tiêu đề rất dài',28,'10:00',1,4],['Hoàn thành tối ưu web push cho PWA WatchShop',24,'10:00',3,5],['Tự động kết nối nhà vận chuyển',29,'14:00',0,0],['Nâng cấp vận hành cho Ben ở điện thoại',32,'09:00',0,1],['Tối ưu performance của trang quản lý công việc',31,'09:00',0,1],['GVU vs DK',26,'19:00',0,0],['GVU JR vs TCP',27,'20:00',0,0]];
-const data={currentUserId:'long',availableUsers:[vi],categories:[general,work],canManageDefaultCategories:false,codex:{ready:false,reason:'Dữ liệu mẫu',canDispatch:false},calendar:{configured:false,connected:false,accountEmail:null,lastSyncedAt:null,events:[],loadError:null},items:specs.map(([title,number,time,done,total],i)=>({id:'item-'+number,title,personalWorkNumber:number,createdAt:new Date(now-7*86400000).toISOString(),updatedAt:new Date(now-20*60000).toISOString(),note:'Ghi chú đầy đủ của công việc mẫu',status:'TODO',priority:'MEDIUM',dueAt:(i<2?yesterday:today)+'T'+time+':00+07:00',scheduledEndAt:i<2?(i===0?today:yesterday)+'T17:00:00+07:00':null,estimatedDays:i<2?2:1,completedAt:null,domain:i>=6?'GENERAL':'WATCHSHOP',category:i>=6?general:work,workType:i>=6?'EVENT':'GENERAL_TASK',targets:i===0?[{type:'ORDER',id:'order',label:'OD-MẪU',secondary:'Đơn hàng liên quan',href:'/admin/orders/order'}]:[],progressPercent:total?Math.round(done/total*100):0,progressMode:total?'CHECKLIST':'MANUAL',checklistLockedAt:null,activities:[{id:'activity-'+i,title:'Cập nhật tiến độ',body:'Đã kiểm tra dữ liệu · Chờ xác nhận từ người phụ trách',occurredAt:new Date(now-20*60000).toISOString(),actor:owner}],checklist:Array.from({length:total},(_,n)=>({id:'step-'+i+'-'+n,title:'Đầu việc '+(n+1),isDone:n<done})),tags:i===0?['media','theo dõi']:[],calendar:{synced:false,htmlLink:null,lastSyncedAt:null},owner,assignee:owner,access:'OWNER',sharedWith:i===0?[{user:vi,accessLevel:'VIEWER'}]:[]}))};
+const data={currentUserId:'long',availableUsers:[vi,nam,hoa],categories:[general,work],canManageDefaultCategories:false,codex:{ready:false,reason:'Dữ liệu mẫu',canDispatch:false},calendar:{configured:false,connected:false,accountEmail:null,lastSyncedAt:null,events:[],loadError:null},items:specs.map(([title,number,time,done,total],i)=>({id:'item-'+number,title,personalWorkNumber:number,createdAt:new Date(now-7*86400000).toISOString(),updatedAt:new Date(now-20*60000).toISOString(),note:'Ghi chú đầy đủ của công việc mẫu',status:'TODO',priority:'MEDIUM',dueAt:(i<2?yesterday:today)+'T'+time+':00+07:00',scheduledEndAt:i<2?(i===0?today:yesterday)+'T17:00:00+07:00':null,estimatedDays:i<2?2:1,completedAt:null,domain:i>=6?'GENERAL':'WATCHSHOP',category:i>=6?general:work,workType:i>=6?'EVENT':'GENERAL_TASK',targets:i===0?[{type:'ORDER',id:'order',label:'OD-MẪU',secondary:'Đơn hàng liên quan',href:'/admin/orders/order'}]:[],progressPercent:total?Math.round(done/total*100):0,progressMode:total?'CHECKLIST':'MANUAL',checklistLockedAt:null,activities:[{id:'activity-'+i,title:'Cập nhật tiến độ',body:'Đã kiểm tra dữ liệu · Chờ xác nhận từ người phụ trách',occurredAt:new Date(now-20*60000).toISOString(),actor:owner}],checklist:Array.from({length:total},(_,n)=>({id:'step-'+i+'-'+n,title:'Đầu việc '+(n+1),isDone:n<done})),tags:i===0?['media','theo dõi']:[],calendar:{synced:false,htmlLink:null,lastSyncedAt:null},owner,assignee:owner,access:'OWNER',sharedWith:i===0?[{user:vi,accessLevel:'EDITOR'},{user:nam,accessLevel:'VIEWER'},{user:hoa,accessLevel:'VIEWER'}]:[]}))};
 data.items.push(checklistOnlyWork({...data.items[0],id:'shared',personalWorkNumber:40,title:'Đầu việc được chia sẻ chỉ xem',owner:vi},[{id:'visible-step',title:'Đầu việc của bạn',isDone:false,access:new URLSearchParams(location.search).has('entryEditor')?'EDITOR':'VIEWER'}]));
 window.__fixture=data;const root=createRoot(document.getElementById('root'));window.__renderFixture=()=>root.render(<PersonalWorkClient data={window.__fixture}/>);window.__renderFixture();`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, outfile: '/tmp/work-responsive/app.js', bundle: true, platform: 'browser', jsx: 'automatic', write: false, define: { 'process.env.NODE_ENV': '"production"' }, plugins: [{ name: 'fixture', setup(build) {
@@ -59,8 +60,19 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.ok(await schedule.getByText('Thời lượng: 2 ngày', { exact: true }).count());
     await page.keyboard.press('Escape'); await schedule.waitFor({ state: 'hidden' });
     assert.equal(await row(23).getByRole('button', { name: /^Lịch CV-23:/ }).evaluate(el => el === document.activeElement), true);
-    await row(23).getByRole('button', { name: 'Thông tin thêm CV-23' }).click();
+    const sharing = row(23).getByRole('button', { name: /^Chia sẻ CV-23:/ });
+    await page.getByRole('heading', { level: 1 }).click();
+    const activeBefore = await page.evaluate(() => document.activeElement?.tagName);
+    await sharing.hover();
+    await page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => document.activeElement?.tagName), activeBefore);
+    await page.getByRole('heading', { level: 1 }).hover();
+    await page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }).waitFor({ state: 'hidden' });
+    await sharing.click();
     const info = page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }); await info.waitFor();
+    assert.equal(await info.getByText('Có thể sửa', { exact: true }).count(), 1);
+    assert.equal(await info.getByText('Chỉ xem', { exact: true }).count(), 2);
+    assert.equal(await row(23).getByText('+1', { exact: true }).count(), 1);
     assert.equal(await info.getByRole('link', { name: /OD-MẪU/ }).getAttribute('href'), '/admin/orders/order');
     await page.getByRole('heading', { level: 1 }).click(); await info.waitFor({ state: 'hidden' });
     await row(24).getByRole('button', { name: /^Có cập nhật:/ }).hover();
@@ -100,6 +112,18 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.ok(await phone.getByRole('button', { name: 'Đánh dấu hoàn thành CV-40' }).isDisabled());
     await phone.locator('[data-work-row="item-31"]').getByRole('button', { name: /^Có cập nhật:/ }).tap();
     await phone.getByRole('tooltip').waitFor(); await phone.getByRole('heading', { level: 1 }).tap(); await phone.getByRole('tooltip').waitFor({ state: 'hidden' });
+    await phone.locator('[data-work-row="item-23"]').getByRole('button', { name: /^Chia sẻ CV-23:/ }).tap();
+    const recipients = phone.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true });
+    await recipients.waitFor();
+    for (const name of ['Vi', 'Nam', 'Hoa']) assert.equal(await recipients.getByText(name, { exact: true }).count(), 1);
+    await phone.getByRole('heading', { level: 1 }).tap();
+    for (const id of ['item-23', 'shared']) {
+      await phone.goto(origin + '/?view=list&item=' + id);
+      await phone.getByRole('dialog').waitFor();
+      assert.equal(await phone.getByRole('dialog').getByRole('heading', { level: 2 }).innerText(), id === 'shared' ? 'Đầu việc được chia sẻ chỉ xem' : 'Tính tiền phí dịch vụ đồng hồ của An, Nam');
+      if (id === 'shared') assert.equal(await phone.getByRole('button', { name: /^Chia sẻ CV-40:/ }).count(), 0);
+      await phone.getByRole('button', { name: '← Danh sách công việc', exact: true }).tap();
+    }
     await touch.close();
     assert.deepEqual(errors, []);
     console.log('PASS: actual personal-work client at 320/390/768/1440; category/title and reference placement; view/scope/category filters; event and viewer restrictions; schedule/context/update popovers; completion payload and read-only open; desktop calendar layout.');

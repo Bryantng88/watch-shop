@@ -16,6 +16,9 @@ The list now responds to its own container width:
   bars stay visible on phones. Wide lists additionally show percentages and
   the update label. Overdue state has an explicit warning icon and readable
   text in the schedule disclosure.
+- Owners see at most two recipient avatars and a +N count between the category
+  and title. Mouse hover opens names and permissions without stealing focus;
+  click/tap pins the same panel. Scoped recipients keep only their projected data.
 - Full schedule, end time and duration open from the time control. Tags, related
   links, assignee and sharing names open from the context control. The existing
   DTO remains the only source; scoped recipients receive no new data or access.
@@ -30,3 +33,20 @@ synthetic data and stubbed server actions. It checks 320/390/768/1440 widths,
 filter values, event/viewer restrictions, row placement, accessible schedule and
 context disclosures, update hint, completion payload, non-mutating open and the
 calendar/desktop layout. Real application data and notifications are not used.
+
+## Notification entry
+
+The Ben worker canonicalizes personal-work destinations to
+`/admin/personal-work?view=list&item=<id>` so a native notification opens the
+standalone list and the authorized item dialog. Legacy assignment pushes and
+already-displayed notifications without a route open the list. Operational task
+notifications retain `/admin/ben/work/<id>`. Routes remain same-origin and
+allowlisted; unrelated order/admin editing windows are never reused.
+
+When resuming a PWA window, navigate and focus the returned WindowClient. If it
+vanishes, returns null or rejects, try another Ben window and then openWindow.
+VM worker tests cover cold launch, resume/focus failures, invalid routes and
+private-free notification text. Browser smoke checks owner/scoped item deep links,
+hover/touch recipient disclosure, and responsive rows. Login return tests preserve
+the list/item query. A physical device push/tap still needs validation after deploy;
+these checks do not send real notifications or alter runtime push configuration.

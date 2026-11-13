@@ -4,6 +4,9 @@ on:
     paths:
       - 'src/domains/personal-work/ui/**'
       - 'scripts/smoke-work-responsive-ui.cjs'
+      - 'public/ben-sw.js'
+      - 'tests/pwa/ben-service-worker.test.mjs'
+      - 'src/server/auth/login-destination*'
       - '.github/workflows/work-responsive-ui.yml'
 permissions:
   contents: read
@@ -18,6 +21,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node --test tests/pwa/ben-service-worker.test.mjs
+      - run: node --import tsx --test src/server/auth/login-destination.test.ts
       - run: npx eslint src/domains/personal-work/ui/PersonalWorkClient.tsx src/domains/personal-work/ui/PersonalWorkListRow.tsx src/domains/personal-work/ui/PersonalWorkListToolbar.tsx src/domains/personal-work/ui/PersonalWorkFloatingPanel.tsx src/domains/personal-work/ui/PersonalWorkUpdateHint.tsx
       - run: npx tailwindcss -i src/app/globals.css -o /tmp/work-responsive.css --minify
       - run: npm install --prefix /tmp/work-responsive-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1

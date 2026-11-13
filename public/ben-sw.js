@@ -11,29 +11,66 @@ self.addEventListener("fetch", (event) => {
 });
 
 function workNotificationRoute(value) {
-  if (value === "/admin/personal-work?view=list" || (typeof value === "string" && /^\/admin\/personal-work\?item=[\w%-]+$/.test(value))) return "/admin/personal-work?view=list";
-  return typeof value === "string" && /^\/admin\/ben\/work\/[\w%-]+$/.test(value) ? value : "/admin/ben";
+  if (typeof value !== "string" || value.length > 1024 || /[\\\u0000-\u0020\u007f]/.test(value)) return "/admin/ben";
+  if (value === "/admin/ben") return value;
+  if (/^\/admin\/personal-work(?:\?[^#]*)?$/.test(value)) {
+    const url = new URL(value, self.location.origin);
+    const params = url.searchParams;
+    if ([...params.keys()].some(key => key !== "view" && key !== "item") || params.getAll("view").length > 1 || params.getAll("item").length > 1 || (params.has("view") && params.get("view") !== "list")) return "/admin/ben";
+    const id = params.get("item");
+    if (params.has("item") && (!id || !/^[\w-]{1,160}$/.test(id))) return "/admin/ben";
+    return "/admin/personal-work?view=list" + (id ? "&item=" + encodeURIComponent(id) : "");
+  }
+  const match = value.match(/^\/admin\/ben\/work\/([^/?#]+)$/);
+  if (match) {
+    try {
+      const id = decodeURIComponent(match[1]);
+      if (/^[\w-]{1,160}$/.test(id)) return "/admin/ben/work/" + encodeURIComponent(id);
+    } catch {}
+  }
+  return "/admin/ben";
+}
+function benWindowPath(client) {
+  try {
+    const url = new URL(client.url);
+    if (url.origin === self.location.origin && (url.pathname === "/admin/ben" || url.pathname === "/admin/personal-work" || /^\/admin\/ben\/work\/[\w-]+$/.test(url.pathname))) return url.pathname;
+  } catch {}
+  return null;
 }
 self.addEventListener("push", event => {
   let payload = {};
-  try { payload = event.data?.json() || {}; } catch {}
+  try { const data = event.data?.json(); if (data && typeof data === "object" && !Array.isArray(data)) payload = data; } catch {}
   const labels = { ASSIGNED: "Bạn được giao một công việc mới", SHARED: "Có công việc được chia sẻ với bạn", CHANGED: "Lịch công việc đã thay đổi", CANCELLED: "Có công việc đã hủy", REMINDER: "Bạn có lịch công việc hoặc sự kiện cần nhắc" };
+  const label = Object.prototype.hasOwnProperty.call(labels, payload.kind) ? labels[payload.kind] : undefined;
+  const isWork = payload.type === "assignment" || payload.type === "work" || Boolean(label);
   event.waitUntil(self.registration.showNotification("Ben", {
-    body: labels[payload.kind] || "Bạn có công việc mới",
+    body: label || "Bạn có công việc mới",
     icon: "/ben/icon-192.png", badge: "/ben/icon-192.png",
     tag: typeof payload.tag === "string" ? payload.tag.slice(0,250) : "ben-assignment",
-    data: { route: workNotificationRoute(payload.route ?? (payload.type === "assignment" ? "/admin/personal-work?view=list" : undefined)) },
+    data: { route: workNotificationRoute(payload.route ?? (isWork ? "/admin/personal-work?view=list" : undefined)) },
   }));
 });
 self.addEventListener("notificationclick", event => {
   event.notification.close();
   event.waitUntil((async () => {
-    const route = workNotificationRoute(event.notification.data?.route);
-    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-    const sameOrigin = windows.filter(client => new URL(client.url).origin === self.location.origin);
-    const target = sameOrigin.find(client => new URL(client.url).pathname === new URL(route,self.location.origin).pathname)
-      || sameOrigin.find(client => new URL(client.url).pathname === "/admin/ben");
-    if (target) { await target.navigate(route); await target.focus(); }
-    else await self.clients.openWindow(route);
+    // Old displayed notifications may have no route, or the pre-list item route.
+    const route = workNotificationRoute(event.notification.data?.route ?? "/admin/personal-work?view=list");
+    const destination = new URL(route, self.location.origin);
+    let windows = [];
+    try { windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true }); } catch {}
+    const candidates = windows.filter(client => benWindowPath(client));
+    const rank = client => benWindowPath(client) === destination.pathname ? 0 : benWindowPath(client) === "/admin/ben" ? 1 : 2;
+    candidates.sort((a, b) => rank(a) - rank(b));
+    for (const client of candidates) {
+      try {
+        const navigated = await client.navigate(destination.href);
+        // Mobile clients can disappear or return null while the app resumes.
+        if (!navigated) continue;
+        await navigated.focus();
+        return;
+      } catch { /* Try another Ben window, then an explicit openWindow fallback. */ }
+    }
+    const opened = await self.clients.openWindow(destination.href);
+    if (opened) { try { await opened.focus(); } catch {} }
   })());
 });
