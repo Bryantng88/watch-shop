@@ -59,7 +59,7 @@ export async function requestQuickNames(userId: string, raw: unknown) {
   const images: {base64:string;version:string}[] = [];
   for (const line of input.lines) images.push(await imageForPreview(line));
   return transaction(async tx => {
-    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`acquisition-quick-name:${userId}`}, 0))`;
     await actor(tx, userId);
     const existing = await tx.customerAssistantConversation.findMany({where:{firstRequestKey:{startsWith:prefix}}, select:{id:true,ownerId:true,state:true}});
     if (existing.length) {
