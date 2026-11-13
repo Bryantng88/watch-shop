@@ -1,9 +1,10 @@
 "use client";
-import {PersonalWorkUpdateHint} from "./PersonalWorkUpdateHint";
+import {PersonalWorkListRow} from "./PersonalWorkListRow";
+import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
+import listStyles from "./PersonalWorkList.module.css";
+import { personalWorkCode } from "../shared/personal-work-code";
 import {PersonalChecklistShare} from "./PersonalChecklistShare";
 import {PersonalChecklistTitle} from "./PersonalChecklistTitle";
-import {personalWorkUpdateLabel} from "../shared/personal-work-update-label";
-import { personalWorkCode } from "../shared/personal-work-code";
 import {PersonalWorkKindField} from "./PersonalWorkKindField";
 import {isPersonalEvent,personalEventLabel,personalItemScheduleInput,personalEventTiming} from "../shared/personal-event";
 
@@ -30,23 +31,18 @@ import {
   ChevronLeft,
   ChevronRight,
   Circle,
-  Clock3,
   ExternalLink,
   Loader2,
   RefreshCw,
   Share2,
-  Settings2,
   Trash2,
   X,
 } from "lucide-react";
 import { useAppDialog } from "@/domains/shared/feedback";
 import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
-  AdminUserAvatar,
-  AdminUserInlineList,
   AdminFlatToolbar,
   AdminPageCanvas,
-  AdminPageHeader,
   ProgressMetric,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
@@ -441,21 +437,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
   return (
-    <AdminPageCanvas>
-      {listOnly && <Link href="/admin/ben" className="mb-3 inline-flex min-h-11 items-center rounded-lg bg-violet-50 px-4 text-sm font-semibold text-violet-700">Trò chuyện với Ben</Link>}
-      <AdminPageHeader
-        title="Quản lý công việc"
-        meta={
-          <>
-            <span>
-              <b className="text-lg text-slate-950">{openCount}</b> việc đang mở
-            </span>
-            <span>
-              <b className="text-lg text-amber-600">{overdue}</b> quá hạn
-            </span>
-          </>
-        }
-      />
+    <AdminPageCanvas className="min-w-0 !px-4 !py-3 sm:!px-6 sm:!py-5">
+      {listOnly && <Link href="/admin/ben" className={`${listStyles.back} focus-visible:ring-2 focus-visible:ring-blue-300`}>← Trò chuyện với Ben</Link>}
+      <header className={listStyles.header}>
+        <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</h1>
+        <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
+      </header>
 
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
@@ -895,180 +882,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           </section>
         )}
 
-        <section className="min-w-0 bg-transparent xl:flex xl:h-[766px] xl:flex-col xl:overflow-hidden xl:border-l xl:border-slate-100">
-          <div className="flex min-h-[56px] flex-nowrap items-center justify-between gap-2 overflow-x-auto whitespace-nowrap px-1 py-2 xl:ml-5 xl:shrink-0">
-            <div className="flex shrink-0 items-center">
-              <div className="flex gap-1 rounded-lg bg-slate-100/80 p-1">
-                {(
-                  [
-                    ["TODAY", "Hôm nay"],
-                    ["OVERDUE", "Quá hạn"],
-                    ["UPCOMING", "Sắp tới"],
-                    ["ALL", "Tất cả"],
-                    ["EVENTS", "Sự kiện"],
-                    ["DONE", "Đã xong"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setView(key)}
-                    className={`rounded-md px-2 py-1.5 text-xs font-medium ${view === key ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <label className="flex items-center">
-                <span className="sr-only">Phạm vi công việc</span>
-                <select
-                  value={scope}
-                  onChange={(event) => setScope(event.target.value as "MINE" | "SHARED" | "ALL")}
-                  className="h-8 w-20 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0 transition-colors hover:bg-slate-200/70 focus:ring-2 focus:ring-blue-400/30"
-                >
-                  <option value="MINE">Của tôi</option>
-                  <option value="SHARED">Được chia sẻ</option>
-                  <option value="ALL">Tất cả công việc</option>
-                </select>
-              </label>
-              <label className="flex items-center gap-2">
-              <select
-                aria-label="Loại công việc"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value as PersonalWorkDomain | "ALL")}
-                className="h-8 w-32 truncate rounded-lg border-0 bg-slate-100/80 pl-2 pr-5 text-xs font-medium text-slate-700 outline-none ring-0"
-              >
-                <option value="ALL">Tất cả loại</option>
-                {filterCategories.map((item) => (
-                  <option key={item.key} value={item.key}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              </label>
-              <button type="button" aria-label="Quản lý loại công việc" title="Quản lý loại công việc" onClick={() => setCategoryManagerOpen(true)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
-                <Settings2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-          <div className="space-y-1 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pl-5 xl:[direction:rtl] [&>*]:[direction:ltr]">
+        <section className={`${listStyles.pane} bg-transparent xl:flex xl:h-[766px] xl:flex-col ${calendarOpen && !listOnly ? "xl:border-l xl:border-slate-100 xl:pl-5" : ""}`}>
+          <PersonalWorkListToolbar view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />
+          <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
-                const update = personalWorkUpdateLabel(item,now);
                 const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
-                return (
-                  <div
-                    key={item.id}
-                    onClick={(event) => {
-                      if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
-                      openTaskEdit(item);
-                    }}
-                    className="group grid cursor-pointer gap-2 px-1 py-3 transition-colors hover:bg-slate-100/60 grid-cols-[auto_minmax(0,1fr)_auto] items-center"
-                  >
-                    {isPersonalEvent(item.workType)?<span title="Sự kiện không cần hoàn thành" className="flex h-7 w-7 items-center justify-center text-blue-600"><Clock3 className="h-4 w-4"/></span>:<button
-                      aria-label="Đánh dấu hoàn thành"
-                      disabled={pending || item.access === "VIEWER"}
-                      onClick={() =>
-                        item.progressMode === "CHECKLIST" && item.status !== "DONE"
-                          ? openTaskEdit(item)
-                          : run(() =>
-                              updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }),
-                            )
-                      }
-                      className={`flex h-7 w-7 items-center justify-center rounded-full border transition ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </button>}
-                    <div className="min-w-0">
-                      <div className="flex flex-nowrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openTaskEdit(item)}
-                          className={`min-w-0 max-w-full rounded-sm text-left text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}
-                        >
-                          <span className="mr-1.5 whitespace-nowrap font-mono text-xs font-semibold text-slate-600">{personalWorkCode(item.id, item.personalWorkNumber, item.workType)}</span>{item.title}
-                        </button>
-                        {item.assignee && item.assignee.id !== item.owner.id && <span className="text-[11px] text-slate-500">→ {item.assignee.name || "Người thực hiện"}</span>}
-                        {item.access !== "OWNER" && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
-                            <Share2 className="h-3 w-3" /> {item.checklistOnly ? (item.checklist.some(e=>e.access === "EDITOR") ? "Sửa đầu việc" : "Xem đầu việc") : item.access === "EDITOR" ? "Có thể sửa" : "Chỉ xem"}
-                          </span>
-                        )}
-                        {item.tags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      {item.targets.map((target) => (
-                        <Link
-                          key={`${target.type}:${target.id}`}
-                          href={target.href}
-                          className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"
-                        >
-                          {target.label}
-                          {target.secondary ? ` · ${target.secondary}` : ""}
-                          <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      ))}
-                      <p className="mt-1 flex flex-nowrap items-center gap-1.5 text-xs text-slate-500">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold tabular-nums ${late ? "bg-amber-50 text-amber-800" : isPersonalEvent(item.workType) ? "bg-violet-50 text-violet-800" : "bg-blue-50 text-blue-800"}`}>
-                          {isPersonalEvent(item.workType) ? <CalendarDays className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
-                          {personalEventTiming(item).timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa đặt giờ"}
-                        </span>
-                        {!item.checklistOnly && !isPersonalEvent(item.workType) && <span className="max-w-20 shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-bold" style={personalCategoryStyle(item.category.color)}>
-                          {item.category.label}
-                        </span>}
-                        {isPersonalEvent(item.workType) && (
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
-                            Sự kiện
-                          </span>
-                        )}
-                        {!isPersonalEvent(item.workType) && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && <span role="progressbar" aria-label={`Tiến độ ${item.title}`} aria-valuenow={item.progressPercent} aria-valuemin={0} aria-valuemax={100} className="inline-flex shrink-0 items-center gap-1.5" title={`${item.checklist.filter(e=>e.isDone).length}/${item.checklist.length} đầu việc · ${item.progressPercent}%`}>
-                          <span className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-slate-100 sm:block"><span className="block h-full rounded-full bg-blue-600" style={{width:`${item.progressPercent}%`}}/></span>
-                          <span className="whitespace-nowrap text-[10px] font-semibold tabular-nums text-slate-600">{item.checklist.filter(e=>e.isDone).length}/{item.checklist.length} · {item.progressPercent}%</span>
-                        </span>}
-                        {update && <PersonalWorkUpdateHint text={item.checklistOnly ? "Đầu việc được chia sẻ vừa cập nhật" : item.activities[0]?.body || update.detail} time={update.label.replace(/^Cập nhật /,"")}/> }
-                        {late && <span className="text-amber-700">Quá hạn</span>}
-                        {view !== "TODAY" && item.dueAt && <span>{dueLabel(item.dueAt)}</span>}
-                        {item.estimatedDays > 1 && <span>· {item.estimatedDays} ngày</span>}
-                      </p>
-                      {item.access === "OWNER" && item.sharedWith.length > 0 && (
-                        <div
-                          className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-violet-700"
-                          title={item.sharedWith
-                            .map(
-                              (share) =>
-                                `${share.user.name || share.user.email} (${share.accessLevel === "EDITOR" ? "Có thể sửa" : "Chỉ xem"})`,
-                            )
-                            .join(", ")}
-                        >
-                          <span className="shrink-0 text-slate-500">Chia sẻ với</span>
-                          <AdminUserInlineList users={item.sharedWith.map((share) => share.user)} />
-                          <span className="sr-only">
-                            {item.sharedWith
-                              .slice(0, 2)
-                              .map((share) => share.user.name || share.user.email)
-                              .join(" · ")}
-                            {item.sharedWith.length > 2 ? ` +${item.sharedWith.length - 2}` : ""}
-                          </span>
-                        </div>
-                      )}
-                      {item.access !== "OWNER" && (
-                        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-violet-700">
-                          <AdminUserAvatar user={item.owner} size="xs" />
-                          <span className="truncate">
-                            {item.owner.name || item.owner.email} đã chia sẻ với bạn
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-end gap-3">
-                      <ChevronRight className="h-4 w-4 text-slate-300" />
-                    </div>
-                  </div>
-                );
+                return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={late}
+                  scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending} onOpen={() => openTaskEdit(item)}
+                  onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : run(() => updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }))} />;
               })
             ) : (
               <div className="flex flex-col items-center py-16 text-center">
