@@ -201,3 +201,25 @@ test('one current personal request can preserve an existing-item update and a ne
  await runCustomerConversation({id:'fixture',text:'synthetic complete mixed personal request'},{execute:async()=>mixed,api:async(op,body)=>{assert.equal(op,'finish');saved=body;return {accepted:true};}});
  assert.deepEqual(saved.personalWorkPlan,personalWorkPlan);assert.deepEqual(saved.personalWorkUpdatePlan,personalWorkUpdatePlan);
 });
+
+test('combined daily read uses two model calls and the existing individual lookups', async () => {
+ const tools = ['orders.list', 'technicalIssues.list'];
+ const run = {id:'r', text:JSON.stringify({requester:{allowedLookups:tools}})};
+ const combined = {...finish,type:'lookup',tool:'dailyBusiness.list',query:'2026-11-09',reply:null};
+ const calls = [];
+ let modelCalls = 0;
+ await runCustomerConversation(run,{
+  execute:async () => ++modelCalls === 1 ? combined : finish,
+  api:async (op, body) => {
+   if(op === 'finish') return {accepted:true};
+   calls.push(body.lookup);
+   return {evidence:{request:body.lookup}};
+  },
+ });
+ assert.equal(modelCalls,2);
+ assert.deepEqual(calls,tools.map(tool => ({tool,query:'2026-11-09'})));
+ await assert.rejects(runCustomerConversation(
+  {...run,text:JSON.stringify({requester:{allowedLookups:tools.slice(0,1)}})},
+  {execute:async () => combined,api:async () => assert.fail('unexpected API call')},
+ ),/CUSTOMER_LOOKUP_REJECTED/);
+});

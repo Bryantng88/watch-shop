@@ -37,9 +37,24 @@ export async function runCustomerAssistantWorker() {
   try {
     await pollCustomerQueue({ stopped: () => stopping, runOnce: async () => {
       let run, heartbeat, deadline, heartbeatWork, active = true, heartbeatBusy = false, output, imagePath;
+      const started = performance.now();
+      const timings = { modelMs: [], lookupMs: [], finishMs: null };
+      let claimMs;
+      let outcome = 'failed';
+      const timedApi = async (operation, body) => {
+        const start = performance.now();
+        try {
+          return await api(operation, body);
+        } finally {
+          const elapsed = Math.round(performance.now() - start);
+          if (operation === 'lookup') timings.lookupMs.push(elapsed);
+          if (operation === 'finish') timings.finishMs = elapsed;
+        }
+      };
       try {
         ({ run } = await api('claim', { workerId: config.workerId, imageInput: true, acquisitionQuickName: true }));
         if (!run) return 'idle';
+        claimMs = Math.round(performance.now() - started);
         if (!/^[a-f0-9-]{36}$/.test(run.id)) throw Error('INVALID_CUSTOMER_RUN');
         const directory = '/work/customer-runs/' + run.id;
         output = '/work/results/customer-' + run.id + '.json';
@@ -80,8 +95,18 @@ export async function runCustomerAssistantWorker() {
           if (text.length > 64000) throw Error('CUSTOMER_OUTPUT_TOO_LARGE');
           return JSON.parse(text);
         };
-        if(run.kind === "acquisition-quick-name")await runQuickNamePreview(run,{api,execute,assertActive});
-        else await runCustomerConversation(run, { api, execute, assertActive });
+        const timedExecute = async prompt => {
+          const start = performance.now();
+          try {
+            return await execute(prompt);
+          } finally {
+            timings.modelMs.push(Math.round(performance.now() - start));
+          }
+        };
+        const handlers = { api: timedApi, execute: timedExecute, assertActive };
+        if (run.kind === 'acquisition-quick-name') await runQuickNamePreview(run, handlers);
+        else await runCustomerConversation(run, handlers);
+        outcome = 'processed';
         return 'processed';
       } catch (error) {
         if (run && active && !stopping) await api('finish', { id: run.id, leaseToken: run.leaseToken, failed: true, ...(run.kind==='acquisition-quick-name'?{kind:run.kind}:{}) }).catch(() => {});
@@ -94,6 +119,7 @@ export async function runCustomerAssistantWorker() {
         kill(); child = null;
         if (imagePath) await rm(imagePath, { force: true }).catch(() => {});
         if (output) await rm(output, { force: true }).catch(() => {});
+        if (run) console.info('ben.customer.timing', JSON.stringify({ outcome, claimMs, ...timings, totalMs: Math.round(performance.now() - started) }));
       }
     } });
   } finally { process.removeListener('SIGTERM', stop); process.removeListener('SIGINT', stop); stop(); }
