@@ -1082,7 +1082,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
       {editingItem && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 backdrop-blur-[1px] sm:p-4"
           onMouseDown={() => setEditingItem(null)}
         >
           <form
@@ -1133,50 +1133,17 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 () => setEditingItem(null),
               );
             }}
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl shadow-slate-950/15"
+            className="h-[100dvh] w-full max-w-2xl overflow-y-auto overscroll-contain bg-white px-4 pb-5 sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:px-5 sm:shadow-2xl"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="sticky top-0 z-10 border-b border-slate-100 bg-white pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+              <button type="button" onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</button>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Thông tin công việc</p>
-                <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.access === "VIEWER" ? "Chi tiết công việc" : "Chỉnh sửa công việc"}</h2>
+                <p className="font-mono text-xs text-slate-600">{personalWorkCode(editingItem.id, editingItem.personalWorkNumber, editingItem.workType)}</p>
+                <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.title}</h2>
                 {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
-              <button
-                type="button"
-                aria-label="Đóng"
-                onClick={() => setEditingItem(null)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
             <div className="mt-5 space-y-4">
-              {editingItem.checklistOnly ? <div><h3 className="text-sm font-semibold text-slate-900">{editingItem.title}</h3><p className="mt-1 text-xs text-violet-700">Chỉ các đầu việc được chia sẻ với bạn</p></div> : <>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(calendarWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
-                <input
-                  autoFocus
-                  required
-                  value={editTitle}
-                  disabled={editingItem.access === "VIEWER"}
-                  onChange={(event) => setEditTitle(event.target.value)}
-                  className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
-              <PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} />
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
-                <textarea
-                  ref={editNoteRef}
-                  value={editNote}
-                  disabled={editingItem.access === "VIEWER"}
-                  onChange={(event) => setEditNote(event.target.value)}
-                  rows={8}
-                  placeholder="Mô tả chi tiết công việc, yêu cầu hoặc các bước cần thực hiện..."
-                  className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
-              </>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -1362,6 +1329,29 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 ) : null}
               </section>}
               {!editingItem.checklistOnly && <>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(editWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
+                <input
+                  required
+                  value={editTitle}
+                  disabled={editingItem.access === "VIEWER"}
+                  onChange={(event) => setEditTitle(event.target.value)}
+                  className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
+              <PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} />
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
+                <textarea
+                  ref={editNoteRef}
+                  value={editNote}
+                  disabled={editingItem.access === "VIEWER"}
+                  onChange={(event) => setEditNote(event.target.value)}
+                  rows={8}
+                  placeholder="Mô tả chi tiết công việc, yêu cầu hoặc các bước cần thực hiện..."
+                  className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </label>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
                 <textarea
