@@ -1,0 +1,61 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "brandName": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "referenceNumber": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nickname": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "movementType": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "AUTOMATIC",
+        "HAND_WOUND",
+        "QUARTZ",
+        "SOLAR",
+        "KINETIC",
+        "MECHAQUARTZ",
+        "SPRING_DRIVE",
+        "HYBRID",
+        null
+      ]
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "brandName",
+    "model",
+    "referenceNumber",
+    "nickname",
+    "movementType",
+    "notes"
+  ]
+}

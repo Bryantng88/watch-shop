@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
 import { Expand, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
@@ -10,15 +10,16 @@ import type { AcquisitionPurchasedWatch, AcquisitionWatchLine } from "../../clie
 type Props = {
     line: AcquisitionWatchLine;
     index: number;
-    onChange: (next: AcquisitionWatchLine) => void;
-    onRemove: () => void;
+    onChange: (id: string, patch: Partial<AcquisitionWatchLine>) => void;
+    onRemove: (id: string) => void;
+    codexStatus?: string;
     canRemove?: boolean;
     tradeIn?: boolean;
     currency?: string;
     purchasedWatches?: AcquisitionPurchasedWatch[];
 };
 
-function getPreviewSrc(line: AcquisitionWatchLine) {
+function getPreviewSrc(line: Pick<AcquisitionWatchLine, "imageKey" | "imageUrl">) {
     if (line.imageUrl) return line.imageUrl;
     if (typeof line.imageKey === "string" && line.imageKey.trim()) {
         return `/api/media/sign?key=${encodeURIComponent(line.imageKey)}`;
@@ -26,7 +27,9 @@ function getPreviewSrc(line: AcquisitionWatchLine) {
     return "";
 }
 
-export default function WatchLineCard({
+const StableMediaPicker = memo(MediaPickerInline);
+
+const WatchLineCard = memo(function WatchLineCard({
     line,
     index,
     onChange,
@@ -35,20 +38,21 @@ export default function WatchLineCard({
     tradeIn = false,
     purchasedWatches = [],
     currency = "VND",
+    codexStatus,
 }: Props) {
     const notify = useNotify();
     const [previewOpen, setPreviewOpen] = useState(false);
 
-    const previewSrc = useMemo(() => getPreviewSrc(line), [line]);
+    const previewSrc = useMemo(() => getPreviewSrc({imageKey:line.imageKey,imageUrl:line.imageUrl}), [line.imageKey, line.imageUrl]);
 
     const setField = <K extends keyof AcquisitionWatchLine>(
         key: K,
         value: AcquisitionWatchLine[K]
     ) => {
-        onChange({ ...line, [key]: value });
+        onChange(line.id, { [key]: value });
     };
 
-    function handlePickImage(nextFileKey: string) {
+    const handlePickImage = useCallback((nextFileKey: string) => {
         const key = String(nextFileKey ?? "").trim();
 
         if (!key) {
@@ -59,12 +63,11 @@ export default function WatchLineCard({
             return;
         }
 
-        onChange({
-            ...line,
+        onChange(line.id, {
             imageKey: key,
             imageUrl: `/api/media/sign?key=${encodeURIComponent(key)}`,
         });
-    }
+    }, [line.id, onChange, notify]);
 
     return (
         <>
@@ -100,7 +103,7 @@ export default function WatchLineCard({
                     {canRemove ? (
                         <button
                             type="button"
-                            onClick={onRemove}
+                            onClick={() => onRemove(line.id)}
                             className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700"
                         >
                             <Trash2 className="h-4 w-4" />
@@ -117,7 +120,7 @@ export default function WatchLineCard({
                                 value={line.tradeInSource}
                                 onChange={(event) => {
                                     const source = event.target.value as AcquisitionWatchLine["tradeInSource"];
-                                    onChange({ ...line, tradeInSource: source, sourceOrderItemId: null });
+                                    onChange(line.id, { tradeInSource: source, sourceOrderItemId: null });
                                 }}
                                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                             >
@@ -133,8 +136,7 @@ export default function WatchLineCard({
                                     value={line.sourceOrderItemId ?? ""}
                                     onChange={(event) => {
                                         const selected = purchasedWatches.find((item) => item.sourceOrderItemId === event.target.value);
-                                        onChange({
-                                            ...line,
+                                        onChange(line.id, {
                                             sourceOrderItemId: selected?.sourceOrderItemId ?? null,
                                             quickInput: selected?.title ?? line.quickInput,
                                             imageKey: selected?.imageKey ?? line.imageKey,
@@ -164,7 +166,7 @@ export default function WatchLineCard({
                         </div>
 
                         <div className="relative w-fit">
-                            <MediaPickerInline
+                            <StableMediaPicker
                                 value={line.imageKey ?? ""}
                                 onChange={handlePickImage}
                                 pending={false}
@@ -192,14 +194,17 @@ export default function WatchLineCard({
 
                     <div className="min-w-0 space-y-1">
                         <div className="flex h-7 items-end whitespace-nowrap text-xs font-medium text-slate-500">
-                            Mô tả nhanh / tên đồng hồ
+                            Tên / mô tả nhanh
                         </div>
                         <input
+                            maxLength={500}
                             value={line.quickInput}
                             onChange={(e) => setField("quickInput", e.target.value)}
-                            placeholder="VD: seiko tự động"
+                            aria-label={`Tên đồng hồ ${index + 1}`}
+                            placeholder="VD: Seiko 5 7009 Automatic"
                             className="h-[42px] w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         />
+                        {codexStatus && <p role="status" className="text-xs leading-5 text-slate-500">{codexStatus}</p>}
                     </div>
 
                     <div className="min-w-0 space-y-1">
@@ -207,6 +212,7 @@ export default function WatchLineCard({
                             Gợi ý thêm cho AI
                         </div>
                         <input
+                            maxLength={1000}
                             value={line.aiHint}
                             onChange={(e) => setField("aiHint", e.target.value)}
                             placeholder="VD: niềng 18K"
@@ -266,4 +272,6 @@ export default function WatchLineCard({
             ) : null}
         </>
     );
-}
+});
+
+export default WatchLineCard;

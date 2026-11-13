@@ -25,8 +25,8 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     AppDialogProvider: `const dialog={confirm:async()=>true};export const useAppDialog=()=>dialog;`,
     'vendor.actions': `export const createQuickVendor=async()=>({id:'new',name:'New'});`,
     'operation-delivery.client': `export const waitForOperationProjectionDeliveries=async()=>{};`,
-    MediaPickerInline: `export default function Picker(){return <button type="button" aria-label="Chọn ảnh">Ảnh</button>;}`,
-    AcquisitionBulkImagePicker: `export default function Picker(){return <button type="button">Chọn nhiều ảnh</button>;}`,
+    MediaPickerInline: `export default function Picker({value,onChange}){window.__pickerRenders=(window.__pickerRenders||0)+1;window.__pickers=window.__pickers||{};window.__pickers[value]=onChange;return <button type="button" aria-label="Chọn ảnh">Ảnh</button>;}`,
+    AcquisitionBulkImagePicker: `export default function Picker({onImport}){return <button type="button" onClick={()=>onImport([1,2,3].map(n=>({key:'media/men/inline/fixture-'+n+'.jpg',url:'/fixture.jpg'})))}>Chọn nhiều ảnh</button>;}`,
     AcquisitionCreatedDialog: `export default function Dialog({open}){return open?<p>Đã lưu phiếu mẫu</p>:null;}`,
   };
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, bundle: true, platform: 'browser', jsx: 'automatic', write: false,
@@ -61,7 +61,7 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     });
     await page.goto(origin);
     await page.getByRole('combobox', { name: 'Vendor', exact: true }).selectOption('vendor');
-    await page.getByPlaceholder('VD: seiko tự động').fill('Seiko mẫu');
+    await page.getByRole('textbox', {name:'Tên đồng hồ 1',exact:true}).fill('Seiko mẫu');
     const cost = page.getByRole('textbox', { name: 'Giá nhập đồng hồ 1', exact: true });
     await cost.fill('2500');
     await page.getByRole('textbox', { name: 'Giá bán đồng hồ 1', exact: true }).fill('3200');
@@ -70,6 +70,28 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     await page.getByRole('button', { name: 'Lưu phiếu nhập', exact: true }).click();
     await page.getByText('Đã lưu phiếu mẫu').waitFor();
     assert.equal(created.items[0].cost, 2500000); assert.equal(created.items[0].salePrice, 3200000);
+    await page.goto(origin + '/?mode=quick');
+    await page.getByRole('button',{name:'Chọn nhiều ảnh',exact:true}).click();
+    const names=[1,2,3].map(n=>page.getByRole('textbox',{name:'Tên đồng hồ '+n,exact:true}));
+    const initialRenders=await page.evaluate(()=>window.__pickerRenders);
+    await names[0].pressSequentially('Seiko tự động',{delay:0});
+    assert.equal(await names[0].inputValue(),'Seiko tự động');
+    assert.equal(await names[1].inputValue(),'');
+    assert.equal(await page.evaluate(()=>window.__pickerRenders),initialRenders,'typing must not rerender NAS pickers');
+    let previewRequest,completePreview=false;
+    await page.route('**/api/admin/acquisitions/quick-names',async route=>{previewRequest=route.request().postDataJSON();await route.fulfill({json:{ids:['job1','job2','job3']}})});
+    await page.route('**/api/admin/acquisitions/quick-names?*',async route=>{await route.fulfill({json:{items:previewRequest.lines.map((line,i)=>({id:'job'+(i+1),line,status:completePreview?'APPLIED':'RUNNING',title:completePreview?'Seiko 5 7009 Automatic':null,notes:[],error:null}))}})});
+    await page.getByRole('button',{name:'Codex gợi ý tên',exact:true}).click();
+    await page.waitForFunction(()=>document.querySelectorAll('[role=status]').length>=3);
+    await names[0].fill('Tên mình vừa sửa');
+    await page.getByRole('textbox',{name:'Giá nhập đồng hồ 1',exact:true}).fill('1500');
+    await page.evaluate(()=>window.__pickers['media/men/inline/fixture-2.jpg']('media/men/inline/replaced.jpg'));
+    completePreview=true;
+    await page.getByText('Tên Codex đề xuất · Bạn có thể sửa lại.',{exact:true}).waitFor();
+    assert.equal(await names[0].inputValue(),'Tên mình vừa sửa');assert.equal(await names[1].inputValue(),'');assert.equal(await names[2].inputValue(),'Seiko 5 7009 Automatic');
+    await page.getByRole('combobox',{name:'Vendor',exact:true}).selectOption('vendor');
+    await page.getByRole('button',{name:'Lưu phiếu nhập',exact:true}).click();await page.getByText('Đã lưu phiếu mẫu').waitFor();
+    assert.equal(created.items[0].quickInput,'Tên mình vừa sửa');assert.equal(created.items[0].cost,1500000);assert.equal(created.items[1].imageKey,'media/men/inline/replaced.jpg');assert.equal(created.items[2].quickInput,'Seiko 5 7009 Automatic');
     await page.goto(origin + '/?mode=edit');
     const editCost = page.getByRole('textbox', { name: 'Giá nhập Seiko mẫu', exact: true });
     await editCost.waitFor(); assert.equal(await editCost.inputValue(), '2500');

@@ -1,3 +1,5 @@
+import { formatWatchTitle } from "./watch-title-format";
+export { normalizeWatchTitleTerminology } from "./watch-title-format";
 import type { WatchFormValues } from "../client/form/watch-form.types";
 
 type BrandOption = {
@@ -9,41 +11,6 @@ type BrandOption = {
 function cleanText(value?: string | null) {
   const text = String(value ?? "").trim();
   return text || null;
-}
-
-export function normalizeWatchTitleTerminology(value?: string | null) {
-  return String(value ?? "")
-    .replace(/lên dây tay/giu, "Manual Winding")
-    .replace(/hand[- ]wound/giu, "Manual Winding")
-    .replace(/manual winding/giu, "Manual Winding")
-    .replace(/automatic/giu, "Automatic")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeMovementLabel(value?: string | null) {
-  const text = cleanText(value)?.toUpperCase();
-
-  switch (text) {
-    case "AUTOMATIC":
-      return "Automatic";
-    case "HAND_WOUND":
-      return "Manual Winding";
-    case "QUARTZ":
-      return "Quartz";
-    case "SOLAR":
-      return "Solar";
-    case "KINETIC":
-      return "Kinetic";
-    case "MECHAQUARTZ":
-      return "Mechaquartz";
-    case "SPRING_DRIVE":
-      return "Spring Drive";
-    case "HYBRID":
-      return "Hybrid";
-    default:
-      return cleanText(value);
-  }
 }
 
 function normalizeBrandText(value?: string | null) {
@@ -67,13 +34,9 @@ export function buildWatchTitleFromForm(
   const yearText = cleanText(values.basic.yearText);
   const reference = cleanText(values.spec.referenceNumber);
   const nickname = cleanText(values.spec.nickname);
-  const movement = normalizeMovementLabel(values.basic.movementType);
+  const movementType = values.basic.movementType;
 
-  return normalizeWatchTitleTerminology([yearText, brandName, model, reference, nickname, movement]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim());
+  return formatWatchTitle({ yearText, brandName, model, referenceNumber: reference, nickname, movementType });
 }
 
 export function buildWatchSkuPrefix(brandName?: string | null) {

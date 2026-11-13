@@ -1,3 +1,4 @@
+import { runQuickNamePreview } from "./acquisition-quick-name.mjs";
 import { pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -6,10 +7,10 @@ import { codexArguments, validateWorkerConfiguration } from './worker.mjs';
 import { runCustomerConversation } from './customer-assistant-protocol.mjs';
 import { pollCustomerQueue } from './customer-queue.mjs';
 
-export function customerCodexArguments(directory, output, imagePath) {
+export function customerCodexArguments(directory, output, imagePath, quickName = false) {
   const args = codexArguments(directory, output).map(arg => arg.startsWith('permissions.staging-worker=')
     ? arg.replace('extends=":workspace"', 'extends=":read-only"').replace('filesystem={', 'filesystem={"/work/repo"="deny","/work/runs"="deny","/work/order-runs"="deny","/work/sales-runs"="deny",') : arg);
-  args.splice(args.length - 1, 0, '--skip-git-repo-check', '--output-schema', '/opt/worker/customer-turn-schema.json');
+  args.splice(args.length - 1, 0, '--skip-git-repo-check', '--output-schema', quickName ? '/opt/worker/acquisition-quick-name-schema.json' : '/opt/worker/customer-turn-schema.json');
   if (imagePath) args.splice(args.length - 1, 0, "--image", imagePath, "--");
   return args;
 }
@@ -37,7 +38,7 @@ export async function runCustomerAssistantWorker() {
     await pollCustomerQueue({ stopped: () => stopping, runOnce: async () => {
       let run, heartbeat, deadline, heartbeatWork, active = true, heartbeatBusy = false, output, imagePath;
       try {
-        ({ run } = await api('claim', { workerId: config.workerId, imageInput: true }));
+        ({ run } = await api('claim', { workerId: config.workerId, imageInput: true, acquisitionQuickName: true }));
         if (!run) return 'idle';
         if (!/^[a-f0-9-]{36}$/.test(run.id)) throw Error('INVALID_CUSTOMER_RUN');
         const directory = '/work/customer-runs/' + run.id;
@@ -60,7 +61,7 @@ export async function runCustomerAssistantWorker() {
           if (heartbeatBusy) return;
           heartbeatBusy = true;
           heartbeatWork = (async () => {
-            try { active = Boolean((await api('heartbeat', { id: run.id, leaseToken: run.leaseToken })).active); } catch { active = false; }
+            try { active = Boolean((await api('heartbeat', { id: run.id, leaseToken: run.leaseToken, ...(run.kind==='acquisition-quick-name'?{kind:run.kind}:{}) })).active); } catch { active = false; }
             finally { heartbeatBusy = false; }
             if (!active) kill();
           })();
@@ -70,7 +71,7 @@ export async function runCustomerAssistantWorker() {
           assertActive(); await rm(output, { force: true });
           const env = Object.fromEntries(['PATH', 'HOME', 'CODEX_HOME', 'LANG', 'LC_ALL', 'TMPDIR', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'NODE_EXTRA_CA_CERTS'].filter(key => process.env[key]).map(key => [key, process.env[key]]));
           const rc = await new Promise((resolve, reject) => {
-            child = spawn('codex', customerCodexArguments(directory, output, imagePath), { cwd: directory, env, detached: true, stdio: ['pipe', 'ignore', 'ignore'] });
+            child = spawn('codex', customerCodexArguments(directory, output, imagePath, run.kind === "acquisition-quick-name"), { cwd: directory, env, detached: true, stdio: ['pipe', 'ignore', 'ignore'] });
             child.on('error', reject); child.on('close', resolve); child.stdin.on('error', () => {}); child.stdin.end(prompt);
           });
           child = null; assertActive();
@@ -79,10 +80,11 @@ export async function runCustomerAssistantWorker() {
           if (text.length > 64000) throw Error('CUSTOMER_OUTPUT_TOO_LARGE');
           return JSON.parse(text);
         };
-        await runCustomerConversation(run, { api, execute, assertActive });
+        if(run.kind === "acquisition-quick-name")await runQuickNamePreview(run,{api,execute,assertActive});
+        else await runCustomerConversation(run, { api, execute, assertActive });
         return 'processed';
       } catch (error) {
-        if (run && active && !stopping) await api('finish', { id: run.id, leaseToken: run.leaseToken, failed: true }).catch(() => {});
+        if (run && active && !stopping) await api('finish', { id: run.id, leaseToken: run.leaseToken, failed: true, ...(run.kind==='acquisition-quick-name'?{kind:run.kind}:{}) }).catch(() => {});
         const code = typeof error?.message === 'string' && /^(?:CUSTOMER_[A-Z0-9_]+|INVALID_CUSTOMER_[A-Z0-9_]+)$/.test(error.message) ? error.message : 'CUSTOMER_EXECUTION_FAILED';
         console.error('Customer assistant did not complete: ' + code + '. No business text or secrets logged.');
         return 'failed';

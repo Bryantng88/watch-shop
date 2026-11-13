@@ -36,3 +36,35 @@ unchanged edit amounts, decimal/blank/invalid/unsafe inputs, unscaled USD,
 viewer default, role changes, revoke failure rollback, revoke success, keyboard
 close and mobile/tablet overflow. It does not approve receipts, send real pushes
 or mutate application data.
+
+## Responsive quick entry and image name suggestions
+
+Watch rows and the NAS picker are memoized with stable ID/patch callbacks. Editing
+one name/hint/amount updates controlled domain state immediately, without delaying
+values or re-rendering every NAS dialog. Vendor selection is memoized separately.
+All submitted values still use the current state and existing money/trade-in rules.
+
+The optional **Codex gợi ý tên** action processes up to 12 current NAS inline images
+per click through the existing authenticated customer Codex worker. It returns only
+bounded name facts and uncertainty notes. The full watch editor and quick intake
+share title ordering: year (when known), brand, model, reference, nickname, movement.
+Quick input permits missing year/research facts; it does not relax storefront
+publication criteria. The AI cannot set price, assert authenticity, publish, create
+an acquisition/watch or approve anything. The user can edit the suggested name and
+save normally. Missing facts remain absent, not invented placeholders.
+
+Preview records reuse the existing leased queue but have an isolated purpose and
+never appear in Ben history or accept Ben conversation approvals/lookups. The worker
+must advertise the new capability; older workers leave previews queued. Account and
+WATCH_ACQUISITION_CREATE authority are rechecked at request/read/claim/heartbeat/
+finish. NAS paths, format, size, pixels, lease and media version are bounded and
+checked. Images are stripped on finish/expiry and excluded from status polling SQL.
+Request-key retries reuse the same batch; changed payloads cannot reuse a key.
+Replies bind to the original line ID/image/name/hint/audience and cannot overwrite
+new edits, changed prices, replacement photos, customer-purchase trade-ins or deleted
+rows. Stop waiting/unmount aborts polling; it never executes a business mutation.
+
+App and customer worker must be released together. A missing/offline worker leaves
+manual entry available. Synthetic browser/database/protocol checks do not establish
+recognition accuracy; validate representative NAS photos with the actual worker
+before enabling this workflow for staff. No production deployment is part of this PR.

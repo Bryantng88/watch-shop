@@ -1,3 +1,4 @@
+import { quickNameWorker } from "@/domains/acquisition/server/quick-name.service";
 import {codeCommand} from "./code-jobs";
 import {currentReview,sameReview} from "./review-approval";
 import {reviewConfirmation,reviewBindingSchema,type ReviewBinding} from "../review-approval";
@@ -65,7 +66,7 @@ const json=(value:unknown)=>JSON.parse(JSON.stringify(value)) as Prisma.InputJso
 const state=(row:CustomerAssistantConversation)=>row.state as unknown as State;
 const evidence=(row:CustomerAssistantConversation)=>row.evidence as unknown as Evidence[];
 async function transaction<T>(fn:(tx:Tx)=>Promise<T>):Promise<T>{for(let attempt=0;;attempt++){try{return await prisma.$transaction(fn,{isolationLevel:"Serializable",timeout:45000,maxWait:10000});}catch(e){if(attempt<3&&e instanceof Prisma.PrismaClientKnownRequestError&&(["P2034","P2002"].includes(e.code)||(e.code==="P2010"&&["40001","40P01"].includes(String(e.meta?.code))))){await new Promise(resolve=>setTimeout(resolve,10*(attempt+1)));continue;}throw e;}}}
-async function owned(db:DB,id:string,userId:string){const row=await db.customerAssistantConversation.findFirst({where:{id,ownerId:userId}});if(!row)throw new AssistantError("Không có quyền xem cuộc trao đổi này.",403);return row;}
+async function owned(db:DB,id:string,userId:string){const row=await db.customerAssistantConversation.findFirst({where:{id,ownerId:userId}});if(!row || (row.state as Prisma.JsonObject).purpose === "ACQUISITION_QUICK_NAME")throw new AssistantError("Không có quyền xem cuộc trao đổi này.",403);return row;}
 async function lock(tx:Tx,id:string){await tx.$queryRaw`SELECT "id" FROM "CustomerAssistantConversation" WHERE "id"=${id} FOR UPDATE`;}
 async function quota(tx:Tx,userId:string){const since=Date.now()-3600000;const configured=Number(process.env.CUSTOMER_AI_MAX_TURNS_PER_HOUR||30);const max=Number.isInteger(configured)&&configured>=1&&configured<=100?configured:30;const rows=await tx.customerAssistantConversation.findMany({where:{ownerId:userId,updatedAt:{gte:new Date(since)}},select:{state:true},take:101});const count=rows.reduce((sum,r)=>sum+((r.state as unknown as State).turnTimes||[]).filter(t=>new Date(t).getTime()>=since).length,0);if(rows.length>100||count>=max)throw new AssistantError("Bạn đã dùng hết lượt trợ lý trong giờ này. Hãy thử lại sau.",429);}
 function withoutImage(s:State){const next={...s};delete next.pendingImage;return next;}
@@ -159,7 +160,7 @@ async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<Retur
  if(rawReview&&visibleReview&&rawReview.kind===visibleReview.kind&&!businessDenied&&!(rawReview.kind==="code"&&!codeEnabled(actor))&&!(rawReview.kind==="order"&&s.orderDraft&&orderDeniedPermission(actor,s.orderDraft.plan)))s.pendingReview=rawReview;else delete s.pendingReview;
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
-export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor)))};}
+export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId,state:{path:["messages"],array_contains:[]}},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor)))};}
 export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string;personalWorkApprovalRevision?:number;reviewApproval?:ReviewBinding},defer?: (work:()=>Promise<void>)=>void){
  const sender=await assistantActor(prisma,userId);
  if(input.imageBase64!==undefined&&(process.env.BEN_IMAGE_SEARCH_ENABLED!=="1"||!hasAssistantPermission(sender,"PRODUCT_VIEW")))
@@ -189,7 +190,7 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
      if(identityQuestion){const actor=await assistantActor(tx,userId);delete next.orderDraft;delete next.permissionRequest;delete next.permissionRequestScope;next=message(next,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
      await tx.customerAssistantConversation.update({where:{id:row.id},data:{state:json(next),status:identityQuestion?"NEEDS_INFO":"QUEUED",revision:{increment:1},evidence:[],plan:Prisma.DbNull,approvedAt:null,approvedRevision:null,errorCode:null,leaseToken:null,leaseExpiresAt:null}});return {id:row.id};
    }
-   if(await tx.customerAssistantConversation.count({where:{ownerId:userId,status:{in:["QUEUED","RUNNING"]}}})>=3)throw new AssistantError("Bạn đang có 3 yêu cầu chờ.",429);
+   if(await tx.customerAssistantConversation.count({where:{ownerId:userId,status:{in:["QUEUED","RUNNING"]},state:{path:["messages"],array_contains:[]}}})>=3)throw new AssistantError("Bạn đang có 3 yêu cầu chờ.",429);
    await quota(tx,userId);
    if(input.productId&&hasAssistantPermission(sender,"PRODUCT_VIEW")&&!await tx.product.findFirst({where:{id:input.productId,type:"WATCH"},select:{id:true}}))throw new AssistantError("Không tìm thấy watch đang xem.");
    let s=newConversation(null);s.messages=[{id:input.requestKey,role:"user",text:input.text}];s.title=input.text.slice(0,65);if(identityQuestion){const actor=await assistantActor(tx,userId);delete s.orderDraft;delete s.permissionRequest;s=message(s,accountReply(actor,actor.id===process.env.CUSTOMER_AI_PERMISSION_CONTACT_USER_ID),[]);}
@@ -199,11 +200,13 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
  return dto(await owned(prisma,result.id,userId));
 }
 export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(withoutImage(state(row)),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
-async function leased(tx:Tx,id:string,token:string){const row=await tx.customerAssistantConversation.findFirst({where:{id,leaseToken:token,status:"RUNNING",leaseExpiresAt:{gt:new Date()}}});if(!row)throw new AssistantError("Lượt xử lý đã hết hiệu lực.",409);await assistantActor(tx,row.ownerId);return row;}
+async function leased(tx:Tx,id:string,token:string){const row=await tx.customerAssistantConversation.findFirst({where:{id,leaseToken:token,status:"RUNNING",leaseExpiresAt:{gt:new Date()}}});if(!row || (row.state as Prisma.JsonObject).purpose === "ACQUISITION_QUICK_NAME")throw new AssistantError("Lượt xử lý đã hết hiệu lực.",409);await assistantActor(tx,row.ownerId);return row;}
 export async function assistantWorker(operation:string,body:Record<string,unknown>){
+ if(body.kind === "acquisition-quick-name")return quickNameWorker(operation,body);
+ if(operation === "claim" && body.acquisitionQuickName === true && body.imageInput === true){const preview=await quickNameWorker("claim",body);if(preview.run)return preview;}
  if(operation==="claim")return transaction(async tx=>{
-   const expired=await tx.customerAssistantConversation.findMany({where:{status:"RUNNING",leaseExpiresAt:{lt:new Date()}},take:20});for(const r of expired)await tx.customerAssistantConversation.update({where:{id:r.id},data:{status:r.approvedAt?"APPLIED":"FAILED",errorCode:"LEASE_EXPIRED",leaseToken:null,state:json(withoutImage(state(r)))}});
-   const row=await tx.customerAssistantConversation.findFirst({where:{status:"QUEUED"},orderBy:{updatedAt:"asc"}});if(!row)return {run:null};
+   const expired=await tx.customerAssistantConversation.findMany({where:{status:"RUNNING",leaseExpiresAt:{lt:new Date()},state:{path:["messages"],array_contains:[]}},take:20});for(const r of expired)await tx.customerAssistantConversation.update({where:{id:r.id},data:{status:r.approvedAt?"APPLIED":"FAILED",errorCode:"LEASE_EXPIRED",leaseToken:null,state:json(withoutImage(state(r)))}});
+   const row=await tx.customerAssistantConversation.findFirst({where:{status:"QUEUED",state:{path:["messages"],array_contains:[]}},orderBy:{updatedAt:"asc"}});if(!row)return {run:null};
    let actor:Awaited<ReturnType<typeof assistantActor>>;try{actor=await assistantActor(tx,row.ownerId);}catch{await tx.customerAssistantConversation.update({where:{id:row.id},data:{status:row.approvedAt?"APPLIED":"FAILED",errorCode:"REQUESTER_UNAUTHORIZED",state:json(withoutImage(state(row)))}});return {run:null};}
    const currentState=state(row);
    if(currentState.personalWorkDraft?.updates&&!await readablePersonalUpdates(tx,currentState.personalWorkDraft.updates,actor))delete currentState.personalWorkDraft;
