@@ -1,0 +1,25 @@
+name: Responsive personal work UI
+on:
+  pull_request:
+    paths:
+      - 'src/domains/personal-work/ui/**'
+      - 'scripts/smoke-work-responsive-ui.cjs'
+      - '.github/workflows/work-responsive-ui.yml'
+permissions:
+  contents: read
+jobs:
+  work-responsive-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx eslint src/domains/personal-work/ui/PersonalWorkClient.tsx src/domains/personal-work/ui/PersonalWorkListRow.tsx src/domains/personal-work/ui/PersonalWorkListToolbar.tsx src/domains/personal-work/ui/PersonalWorkFloatingPanel.tsx src/domains/personal-work/ui/PersonalWorkUpdateHint.tsx
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/work-responsive.css --minify
+      - run: npm install --prefix /tmp/work-responsive-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/work-responsive-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright WORK_RESPONSIVE_CSS=/tmp/work-responsive.css node scripts/smoke-work-responsive-ui.cjs
