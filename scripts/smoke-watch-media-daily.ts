@@ -16,14 +16,14 @@ async function main(){
  const staff=await prisma.user.create({data:{email:'media-staff-'+suffix+'@example.invalid',roles:{connect:{id:staffRole.id}}}});
  const other=await prisma.user.create({data:{email:'media-other-'+suffix+'@example.invalid',roles:{connect:{id:staffRole.id}}}});
  const oldFetch=globalThis.fetch;globalThis.fetch=async()=>{throw Error('External request in media fixture');};
- const product=await prisma.product.create({data:{type:'WATCH',title:'Synthetic Bulova Oceanographer',sku:'MEDIA-'+suffix,slug:'media-'+suffix,status:'DRAFT'}});
+ const product=await prisma.product.create({data:{type:'WATCH',title:'Synthetic Bulova Oceanographer',sku:'MEDIA-'+suffix,slug:'media-'+suffix,status:'AVAILABLE'}});
  const watch=await prisma.watch.create({data:{productId:product.id,movementType:'AUTOMATIC',watchSpecV2:{create:{model:'Oceanographer',dialColor:'Blue'}},watchContent:{create:{body:'Saved initial content',contentStatus:'DRAFT'}}}});
  const space=await prisma.task.create({data:{title:'Synthetic media workspace',kind:'OPERATION'}});
  const queue=await prisma.taskItem.create({data:{taskId:space.id,title:'Media processing',note:'workTypeKey: media-processing'}});
  const at=new Date().toISOString();
  const binding=await prisma.taskExecution.create({data:{taskId:space.id,taskItemId:queue.id,targetType:'WATCH',targetId:watch.id,metadataJson:{workflowRuntime:{workflowKey:'synthetic-media',currentState:'NEW',startedAt:at,updatedAt:at},mediaWorkProgress:{parts:{profile:false,content:false,image:false,cover:false},updatedAt:at}}}});
  try{
- const progress=async()=>getWatchMediaWorkProgressFromQueueItem(binding.id);
+ const progress=async()=>{const value=await getWatchMediaWorkProgressFromQueueItem(binding.id);assert.ok(value);return value;};
  assert.equal((await progress()).content,false);
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{content:false}});assert.equal((await progress()).content,false);
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{content:true}});assert.equal((await progress()).content,true);
