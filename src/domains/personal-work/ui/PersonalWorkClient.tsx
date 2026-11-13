@@ -164,7 +164,9 @@ function monthCells(cursor: Date) {
 
 export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const router = useRouter();
-  const requestedItem=useSearchParams().get("item");
+  const searchParams=useSearchParams();
+  const requestedItem=searchParams.get("item");
+  const listOnly=searchParams.get("view")==="list";
   const openedItem=useRef<string|null>(null);
   const appDialog = useAppDialog();
   const checklistMutation = useUiMutation();
@@ -174,7 +176,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null);
   const [calendarSyncFailures, setCalendarSyncFailures] = useState<Record<string, {id:string;title:string}>>({});
   const [pending, startTransition] = useTransition();
-  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE" | "EVENTS" | "OVERDUE">("TODAY");
+  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE" | "EVENTS" | "OVERDUE">(listOnly ? "ALL" : "TODAY");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
   const [domain, setDomain] = useState<string>("ALL");
   const [newCategoryKey, setNewCategoryKey] = useState("GENERAL");
@@ -440,6 +442,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
   return (
     <AdminPageCanvas>
+      {listOnly && <Link href="/admin/ben" className="mb-3 inline-flex min-h-11 items-center rounded-lg bg-violet-50 px-4 text-sm font-semibold text-violet-700">Trò chuyện với Ben</Link>}
       <AdminPageHeader
         title="Quản lý công việc"
         meta={
@@ -456,7 +459,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
-      <section className="grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <section hidden={listOnly} className={listOnly ? "hidden" : "grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]"}>
         <form
           className="flex h-full min-w-0 flex-col justify-center px-1"
           onSubmit={(event) => {
@@ -733,9 +736,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       ))}
 
       <div
-        className={`grid items-start gap-5 ${calendarOpen ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
+        className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
       >
-        {calendarOpen && (
+        {calendarOpen && !listOnly && (
           <section id="personal-google-calendar-agenda" className="min-w-0 overflow-hidden bg-white">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
