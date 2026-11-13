@@ -37,7 +37,7 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
         {showSharing && <button ref={contextTrigger} type="button" aria-label={`Chia sẻ ${code}: ${item.owner.name || item.owner.email}`} aria-expanded={popup === "context"}
           onClick={() => setPopup(popup === "context" ? null : "context")}
           className="inline-flex h-8 shrink-0 items-center rounded px-1 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300">
-          <AdminUserAvatar user={item.owner} size="xs" />
+          <AdminUserAvatar user={item.owner} size="sm" className="ring-1 ring-slate-200" />
         </button>}
         <button type="button" aria-label={`Mở ${code}: ${item.title}`} title={item.title} onClick={onOpen} className={`${styles.title} focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}>{item.title}</button>
         {item.access !== "OWNER" && <span title={accessLabel} aria-label={accessLabel} className="inline-flex shrink-0 items-center gap-1 rounded bg-violet-50 px-1 py-0.5 text-[10px] text-violet-700"><Share2 className="h-3 w-3" />{sharedEditable ? "Sửa" : "Xem"}</span>}

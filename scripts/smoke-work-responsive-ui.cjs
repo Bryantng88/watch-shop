@@ -9,7 +9,8 @@ async function buildFixture() {
   const root = path.resolve(__dirname, '..');
   const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {PersonalWorkClient} from './src/domains/personal-work/ui/PersonalWorkClient';import {checklistOnlyWork} from './src/domains/personal-work/shared/checklist-share-projection';
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'}).format(new Date());const yesterday=new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10);const now=Date.now();
-const owner={id:'long',name:'Long',email:'long@example.invalid',avatarUrl:null};const vi={id:'vi',name:'Vi',email:'vi@example.invalid',avatarUrl:null};
+const sampleAvatar='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#dce7ed"/><path d="M7 80c0-23 13-34 33-34s33 11 33 34" fill="#334155"/><ellipse cx="40" cy="32" rx="18" ry="23" fill="#e6b493"/><path d="M21 31C15 4 62 0 59 31l-10-9-18 2z" fill="#302b2a"/><path d="M34 43q6 4 12 0" fill="none" stroke="#9b6452" stroke-width="2"/></svg>');
+const owner={id:'long' ,name:'Long',email:'long@example.invalid',avatarUrl:sampleAvatar};const vi={id:'vi',name:'Vi',email:'vi@example.invalid',avatarUrl:null};
 const nam={id:'nam',name:'Nam',email:'nam@example.invalid',avatarUrl:null};const hoa={id:'hoa',name:'Hoa',email:'hoa@example.invalid',avatarUrl:null};
 const general={key:'GENERAL',label:'Cá nhân',domain:'GENERAL',color:'#64748b',isDefault:true};const work={key:'WATCHSHOP',label:'WatchShop',domain:'WATCHSHOP',color:'#f43f5e',isDefault:true};
 const specs=[['Tính tiền phí dịch vụ đồng hồ của An, Nam',23,'08:00',0,2],['Làm lại UI phiếu nhập WatchShop và tối ưu thao tác cho màn hình nhỏ với tiêu đề rất dài',28,'10:00',1,4],['Hoàn thành tối ưu web push cho PWA WatchShop',24,'10:00',3,5],['Tự động kết nối nhà vận chuyển',29,'14:00',0,0],['Nâng cấp vận hành cho Ben ở điện thoại',32,'09:00',0,1],['Tối ưu performance của trang quản lý công việc',31,'09:00',0,1],['GVU vs DK',26,'19:00',0,0],['GVU JR vs TCP',27,'20:00',0,0]];
@@ -65,6 +66,7 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await sharing.hover();
     assert.equal(await page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }).count(), 0);
     assert.equal(await sharing.getByLabel('Long', { exact: true }).count(), 1);
+    assert.equal(await sharing.locator('img').evaluate(img => img.complete && img.naturalWidth > 0), true);
     assert.equal(await sharing.getByText('+1', { exact: true }).count(), 0);
     await sharing.click();
     const info = page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }); await info.waitFor();
