@@ -62,17 +62,15 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.equal(await row(23).getByRole('button', { name: /^Lịch CV-23:/ }).evaluate(el => el === document.activeElement), true);
     const sharing = row(23).getByRole('button', { name: /^Chia sẻ CV-23:/ });
     await page.getByRole('heading', { level: 1 }).click();
-    const activeBefore = await page.evaluate(() => document.activeElement?.tagName);
     await sharing.hover();
-    await page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }).waitFor();
-    assert.equal(await page.evaluate(() => document.activeElement?.tagName), activeBefore);
-    await page.getByRole('heading', { level: 1 }).hover();
-    await page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }).count(), 0);
+    assert.equal(await sharing.getByLabel('Long', { exact: true }).count(), 1);
+    assert.equal(await sharing.getByText('+1', { exact: true }).count(), 0);
     await sharing.click();
     const info = page.getByRole('group', { name: 'Thông tin thêm CV-23', exact: true }); await info.waitFor();
     assert.equal(await info.getByText('Có thể sửa', { exact: true }).count(), 1);
     assert.equal(await info.getByText('Chỉ xem', { exact: true }).count(), 2);
-    assert.equal(await row(23).getByText('+1', { exact: true }).count(), 1);
+    assert.equal(await info.getByText('Long', { exact: true }).count(), 1);
     assert.equal(await info.getByRole('link', { name: /OD-MẪU/ }).getAttribute('href'), '/admin/orders/order');
     await page.getByRole('heading', { level: 1 }).click(); await info.waitFor({ state: 'hidden' });
     await row(24).getByRole('button', { name: /^Có cập nhật:/ }).hover();
@@ -121,9 +119,15 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
       await phone.goto(origin + '/?view=list&item=' + id);
       await phone.getByRole('dialog').waitFor();
       assert.equal(await phone.getByRole('dialog').getByRole('heading', { level: 2 }).innerText(), id === 'shared' ? 'Đầu việc được chia sẻ chỉ xem' : 'Tính tiền phí dịch vụ đồng hồ của An, Nam');
-      if (id === 'shared') assert.equal(await phone.getByRole('button', { name: /^Chia sẻ CV-40:/ }).count(), 0);
+
       await phone.getByRole('button', { name: '← Danh sách công việc', exact: true }).tap();
     }
+    await phone.locator('[data-work-row="shared"]').getByRole('button', { name: /^Chia sẻ CV-40:/ }).tap();
+    const scopedSharing = phone.getByRole('group', { name: 'Thông tin thêm CV-40', exact: true });
+    await scopedSharing.waitFor();
+    assert.equal(await scopedSharing.getByText('Vi', { exact: true }).count(), 1);
+    assert.equal(await scopedSharing.getByText('Bạn · Xem đầu việc', { exact: true }).count(), 1);
+    assert.equal(await scopedSharing.getByText('Nam', { exact: true }).count(), 0);
     await touch.close();
     assert.deepEqual(errors, []);
     console.log('PASS: actual personal-work client at 320/390/768/1440; category/title and reference placement; view/scope/category filters; event and viewer restrictions; schedule/context/update popovers; completion payload and read-only open; desktop calendar layout.');

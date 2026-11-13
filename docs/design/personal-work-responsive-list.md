@@ -16,9 +16,10 @@ The list now responds to its own container width:
   bars stay visible on phones. Wide lists additionally show percentages and
   the update label. Overdue state has an explicit warning icon and readable
   text in the schedule disclosure.
-- Owners see at most two recipient avatars and a +N count between the category
-  and title. Mouse hover opens names and permissions without stealing focus;
-  click/tap pins the same panel. Scoped recipients keep only their projected data.
+- Shared work shows one avatar of the owner who shares it, between category
+  and title. Click/tap opens the sharer and recipients with permissions; hover
+  does not open the panel. Scoped recipients see only the sharer and their own
+  entry access, using the existing projected data.
 - Full schedule, end time and duration open from the time control. Tags, related
   links, assignee and sharing names open from the context control. The existing
   DTO remains the only source; scoped recipients receive no new data or access.
@@ -47,6 +48,6 @@ When resuming a PWA window, navigate and focus the returned WindowClient. If it
 vanishes, returns null or rejects, try another Ben window and then openWindow.
 VM worker tests cover cold launch, resume/focus failures, invalid routes and
 private-free notification text. Browser smoke checks owner/scoped item deep links,
-hover/touch recipient disclosure, and responsive rows. Login return tests preserve
+click/touch recipient disclosure, and responsive rows. Login return tests preserve
 the list/item query. A physical device push/tap still needs validation after deploy;
 these checks do not send real notifications or alter runtime push configuration.
