@@ -20,7 +20,8 @@ on:
       - 'public/ben*'
       - 'public/ben/**'
       - 'src/app/(admin)/login/**'
-      - 'src/server/auth/login-destination*'
+      - 'src/server/auth/**'
+      - 'src/app/(admin)/admin/auth/_server/auth.service.ts'
       - 'next.config.ts'
       - 'docs/design/ai-assistant-interaction-contract.md'
       - '.github/workflows/ben-contract.yml'
@@ -38,7 +39,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/login-destination.test.ts src/domains/acquisition/shared/quick-name.test.ts src/domains/watch/shared/media-work-state.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
+      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/*.test.ts src/domains/acquisition/shared/quick-name.test.ts src/domains/watch/shared/media-work-state.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
+      - run: node --test tests/auth/remember-device.test.cjs
+      - run: npx eslint src/server/auth/auth-token.ts src/app/\(admin\)/admin/auth/_server/auth.service.ts src/app/\(admin\)/login/_client/LoginForm.tsx
       - run: node --test ops/codex-worker/worker.test.mjs ops/codex-worker/worker.integration.test.mjs ops/codex-worker/sales-intake-protocol.test.mjs ops/codex-worker/customer-assistant-protocol.test.mjs ops/codex-worker/acquisition-quick-name.test.mjs ops/codex-worker/customer-queue.test.mjs ops/codex-worker/ben-code-worker.test.mjs ops/codex-worker/ben-staging-release.test.mjs tests/pwa/ben-service-worker.test.mjs
       - run: npx eslint src/domains/ai-assistant src/domains/order/server/write/order-service-append.ts scripts/smoke-ben-*.ts scripts/smoke-acquisition-quick-names.ts scripts/smoke-watch-media-daily.ts src/domains/personal-work/server/media-daily.service.ts src/domains/personal-work/shared/media-daily.ts src/domains/watch/shared/media-work-state.ts src/domains/watch/ui/edit/WatchMediaDailyWorkButton.tsx src/domains/watch/client/media-work/media-daily.actions.ts src/domains/acquisition/server/quick-name.service.ts src/domains/acquisition/shared/quick-name.ts src/app/api/admin/acquisitions/quick-names/route.ts src/app/api/admin/customer-assistant/route.ts src/app/api/admin/ben-code src/app/api/internal/ben-code
       - run: npx tsc --noEmit
@@ -84,3 +87,16 @@ jobs:
       - run: timeout 120s node --import tsx scripts/smoke-acquisition-quick-names.ts
       - run: timeout 120s node --import tsx scripts/smoke-watch-media-daily.ts
       - run: npm run build
+  remembered-login-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --prefix /tmp/login-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/login-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/login-browser/node_modules/playwright node tests/auth/remember-device-ui.cjs
