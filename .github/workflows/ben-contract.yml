@@ -88,7 +88,7 @@ jobs:
       - run: timeout 120s node --import tsx scripts/smoke-watch-media-daily.ts
       - run: npm run build
   remembered-login-browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
