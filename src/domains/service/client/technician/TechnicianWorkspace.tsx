@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Search,
@@ -465,6 +465,7 @@ export default function TechnicianWorkspace({
   data: TechnicianData;
 }) {
   const router = useRouter();
+  const fromBen = useSearchParams().get("from") === "ben";
   const [pending, startTransition] = useTransition(),
     [query, setQuery] = useState(data.q),
     [selected, setSelected] = useState<TechnicianIssue | null>(null),
@@ -472,6 +473,7 @@ export default function TechnicianWorkspace({
   useEffect(() => setQuery(data.q), [data.q]);
   function navigate(view: TechnicianView, q = query, page = 1) {
     const params = new URLSearchParams({ view, page: String(page) });
+    if (fromBen) params.set("from", "ben");
     if (q.trim()) params.set("q", q.trim());
     startTransition(() =>
       router.push("/admin/services/technician?" + params.toString(), {
@@ -482,11 +484,11 @@ export default function TechnicianWorkspace({
   return (
     <AdminPageCanvas className="mx-auto max-w-3xl !px-4 pb-24">
       <Link
-        href="/admin/dashboard"
+        href={fromBen ? "/admin/ben" : "/admin/dashboard"}
         className="inline-flex min-h-9 items-center gap-1 text-xs text-slate-500"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        Admin
+        {fromBen ? "Ben" : "Admin"}
       </Link>
       <AdminPageHeader
         title="Phiếu kỹ thuật"

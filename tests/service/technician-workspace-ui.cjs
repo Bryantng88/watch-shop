@@ -34,7 +34,7 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
           );
           build.onLoad({ filter: /.*/, namespace: "fixture" }, (args) => ({
             contents: args.path.endsWith("navigation")
-              ? "const router={push:href=>window.__navigate(href),refresh:()=>window.__render()};export const useRouter=()=>router;"
+              ? "const router={push:href=>window.__navigate(href),refresh:()=>window.__render()};export const useRouter=()=>router;export const useSearchParams=()=>new URLSearchParams(window.location.search);"
               : args.path.endsWith("link")
                 ? 'import React from "react";export default function Link({href,children,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}'
                 : 'import React from "react";export default function Image({unoptimized,...props}){return <img {...props}/>}',
