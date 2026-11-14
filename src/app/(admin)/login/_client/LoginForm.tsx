@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 export default function LoginForm({ localAutoLogin = false, destination = "/admin/dashboard" }: { localAutoLogin?: boolean; destination?: string }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [rememberDevice, setRememberDevice] = useState(false);
     const [error, setError] = useState("");
     const [autoLoggingIn, setAutoLoggingIn] = useState(localAutoLogin);
     const [submitting,setSubmitting]=useState(false);
@@ -39,7 +40,7 @@ export default function LoginForm({ localAutoLogin = false, destination = "/admi
         setSubmitting(true);
         try {
             const res = await fetch("/api/auth/login", {
-                method: "POST", body: JSON.stringify({ email, password }),
+                method: "POST", body: JSON.stringify({ email, password, rememberDevice }),
                 headers: { "Content-Type": "application/json" },
             });
             if (!res.ok) {
@@ -81,6 +82,11 @@ export default function LoginForm({ localAutoLogin = false, destination = "/admi
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
+
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <input type="checkbox" checked={rememberDevice} disabled={autoLoggingIn||submitting} onChange={e => setRememberDevice(e.target.checked)} className="h-4 w-4 accent-slate-900" />
+                Ghi nhớ thiết bị này trong 30 ngày
+            </label>
 
             <button disabled={autoLoggingIn||submitting} className="w-full bg-black text-white py-2 rounded disabled:opacity-50">
                 Đăng nhập

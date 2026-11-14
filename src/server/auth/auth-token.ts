@@ -1,6 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const TOKEN_TTL_SECONDS = 60 * 60 * 12;
+export const AUTH_REMEMBER_MAX_AGE = 60 * 60 * 24 * 30;
+
+export function authSessionMaxAge(rememberDevice = false) {
+    return rememberDevice === true ? AUTH_REMEMBER_MAX_AGE : TOKEN_TTL_SECONDS;
+}
 
 function getSecret() {
     const secret = process.env.AUTH_SECRET;
@@ -15,13 +20,13 @@ function sign(value: string, secret: string) {
     return createHmac("sha256", secret).update(value).digest("base64url");
 }
 
-export function createAuthToken(userId: string, now = Date.now()) {
+export function createAuthToken(userId: string, now = Date.now(), rememberDevice = false) {
     const secret = getSecret();
     if (!secret) {
         throw new Error("AUTH_SECRET must contain at least 32 characters");
     }
 
-    const expiresAt = Math.floor(now / 1000) + TOKEN_TTL_SECONDS;
+    const expiresAt = Math.floor(now / 1000) + authSessionMaxAge(rememberDevice);
     const payload = `${userId}.${expiresAt}`;
     return `${payload}.${sign(payload, secret)}`;
 }

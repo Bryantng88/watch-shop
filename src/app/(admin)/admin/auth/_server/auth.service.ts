@@ -2,19 +2,23 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { cookies } from "next/headers";
 import * as authRepo from "./auth.repo";
-import { AUTH_TOKEN_MAX_AGE, createAuthToken } from "@/server/auth/auth-token";
+import { authSessionMaxAge, createAuthToken } from "@/server/auth/auth-token";
 import { isAuthCookieSecure } from "@/server/auth/auth-cookie";
 
-type LoginInput = {
-    email: string;
-    password: string;
-};
+const loginInput = z.object({
+    email: z.string().email(),
+    password: z.string().min(1),
+    rememberDevice: z.boolean().optional().default(false),
+}).strict();
 
-export async function loginService(input: LoginInput) {
+export async function loginService(rawInput: unknown) {
+    const parsed = loginInput.safeParse(rawInput);
+    if (!parsed.success) throw new Error("Thông tin đăng nhập không hợp lệ");
+    const input = parsed.data;
     const user = await authRepo.findUserByEmail(input.email);
-    //console.log('in ra auth service: ' + user?.email + user?.passwordHash)
     if (!user || !user.isActive || !user.passwordHash) {
         throw new Error("Email hoặc mật khẩu không đúng");
     }
@@ -24,15 +28,15 @@ export async function loginService(input: LoginInput) {
         throw new Error("mật khẩu không đúng");
     }
 
-    // 👉 set auth cookie (demo: dùng userId)
+    // Keep the signed expiry and persistent cookie lifetime aligned.
     const cookieStore = await cookies();
 
-    cookieStore.set("auth_token", createAuthToken(user.id), {
+    cookieStore.set("auth_token", createAuthToken(user.id, Date.now(), input.rememberDevice), {
         httpOnly: true,
         sameSite: "lax",
         secure: isAuthCookieSecure(),
         path: "/",
-        maxAge: AUTH_TOKEN_MAX_AGE,
+        maxAge: authSessionMaxAge(input.rememberDevice),
     });
 
 
