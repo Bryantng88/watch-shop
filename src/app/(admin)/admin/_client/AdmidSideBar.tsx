@@ -21,6 +21,7 @@ import {
     CalendarCheck2,
     MessageSquare,
     Globe,
+    Wrench,
 } from "lucide-react";
 
 import ReportMenu from "./ReportMenu";
@@ -106,6 +107,13 @@ const NAV: NavEntry[] = [
                 label: "Sales",
                 icon: MessageSquare,
                 permissionsAll: [PERMISSIONS.TASK_VIEW, PERMISSIONS.TASK_MANAGE, PERMISSIONS.PRODUCT_VIEW, PERMISSIONS.CUSTOMER_VIEW],
+            },
+            {
+                type: "item",
+                href: "/admin/services/technician",
+                label: "Kỹ thuật",
+                icon: Wrench,
+                permission: PERMISSIONS.SERVICE_VIEW,
             },
             {
                 type: "item",

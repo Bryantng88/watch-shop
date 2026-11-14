@@ -31,11 +31,12 @@ export default function AdminShell({ user, children, assistantSimulation = false
     const pathname = usePathname();
     const isBen = pathname === "/admin/ben";
     const isBenWorkList = pathname === "/admin/personal-work" && searchParams.get("view") === "list";
+    const isTechnicianWorkspace = pathname === "/admin/services/technician";
     const isEmbedded = searchParams.get("embedded") === "1";
 
     return (
         <AdminNavigationHistoryProvider>
-        {isBen || isEmbedded || isBenWorkList ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
+        {isBen || isEmbedded || isBenWorkList || isTechnicianWorkspace ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
