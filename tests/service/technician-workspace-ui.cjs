@@ -44,7 +44,7 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
           build.onLoad(
             { filter: /technician-workspace\.actions\.ts$/ },
             () => ({
-              contents: `export async function updateTechnicianIssue(command){window.__actions.push(command);if(window.__delay)await new Promise(r=>setTimeout(r,window.__delay));if(window.__failNext){window.__failNext=false;return {ok:false,error:'Chi phí đang chờ duyệt.'}}window.__items=window.__items.map(i=>i.id===command.id?{...i,...(command.action==='confirm'?{executionStatus:'CONFIRMED',isConfirmed:true}:command.action==='start'?{executionStatus:'IN_PROGRESS',technicalDetailCatalogId:command.technicalDetailCatalogId,expectedWorkingDays:command.expectedWorkingDays}:command.action==='complete'?{executionStatus:'DONE',actualCost:command.actualCost,resolutionNote:command.resolutionNote}:{note:command.note}),updatedAt:new Date().toISOString()}:i);return {ok:true}}`,
+              contents: `export async function updateTechnicianIssue(command){window.__actions.push(command);if(window.__delay)await new Promise(r=>setTimeout(r,window.__delay));if(window.__failNext){window.__failNext=false;return {ok:false,error:'Chi phí đang chờ duyệt.'}}window.__items=window.__items.map(i=>i.id===command.id?{...i,...(command.action==='confirm'?{executionStatus:'CONFIRMED',isConfirmed:true}:command.action==='start'?{executionStatus:'IN_PROGRESS',technicalDetailCatalogId:command.technicalDetailCatalogId,expectedWorkingDays:command.expectedWorkingDays}:command.action==='complete'?{executionStatus:'DONE',actualCost:command.actualCost,resolutionNote:command.resolutionNote}:{note:command.note}),...(command.note!==undefined?{note:command.note}:{}),updatedAt:new Date().toISOString()}:i);return {ok:true}}`,
               loader: "js",
             }),
           );
@@ -192,6 +192,9 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
     );
     await page.locator('[data-technician-row="issue-0"]').click();
     await page
+      .getByRole("textbox", { name: "Ghi chú kỹ thuật", exact: true })
+      .fill("Ghi chú nhập cùng lúc hoàn tất.");
+    await page
       .getByRole("textbox", { name: "Chi phí thực tế · nghìn ₫", exact: true })
       .fill("750");
     await page
@@ -228,6 +231,10 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
     assert.equal(
       (await page.evaluate(() => window.__actions.at(-1))).actualCost,
       750000,
+    );
+    assert.equal(
+      (await page.evaluate(() => window.__actions.at(-1))).note,
+      "Ghi chú nhập cùng lúc hoàn tất.",
     );
     await page.goto(origin + "/?readonly=1");
     await page.locator('[data-technician-row="issue-0"]').click();

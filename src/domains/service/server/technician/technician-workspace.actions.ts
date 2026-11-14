@@ -57,9 +57,14 @@ export async function updateTechnicianIssue(
         actorName: actor.name,
         deferConsumers: (work: () => Promise<void>) => after(work),
       };
+      const saveEditedNote = async () => {
+        if (input.note !== undefined)
+          await updateTechnicalIssue({ ...common, note: input.note }, tx);
+      };
       if (input.action === "confirm") {
         if (issue.executionStatus !== "OPEN" || issue.isConfirmed)
           throw new Error("Phiếu không còn ở trạng thái chờ xác nhận.");
+        await saveEditedNote();
         await confirmTechnicalIssue(common, tx);
       } else if (input.action === "start") {
         if (!issue.isConfirmed && issue.executionStatus !== "CONFIRMED")
@@ -71,6 +76,7 @@ export async function updateTechnicianIssue(
           select: { area: true },
         });
         if (!detail) throw new Error("Chi tiết kỹ thuật không còn khả dụng.");
+        await saveEditedNote();
         await startTechnicalIssue(
           { ...common, ...input, technicalArea: detail.area ?? issue.area },
           tx,
@@ -78,6 +84,7 @@ export async function updateTechnicianIssue(
       } else if (input.action === "complete") {
         if (issue.executionStatus !== "IN_PROGRESS")
           throw new Error("Chỉ hoàn tất phiếu đang xử lý.");
+        await saveEditedNote();
         await completeTechnicalIssue({ ...common, ...input }, tx);
       } else await updateTechnicalIssue({ ...common, note: input.note }, tx);
     });

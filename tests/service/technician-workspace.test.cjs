@@ -178,3 +178,31 @@ test("all-issue workspace keeps server pagination bounded and has no technician 
   assert.ok(!JSON.stringify(query.where).includes("technicianId"));
   assert.ok(JSON.stringify(query.where).includes("Seiko"));
 });
+
+test("edited notes travel atomically with a completion command", async () => {
+  const { api, state } = await fixture();
+  assert.equal(
+    (
+      await api.updateTechnicianIssue({
+        ...command,
+        note: "Ghi chú cùng thao tác",
+      })
+    ).ok,
+    true,
+  );
+  assert.deepEqual(
+    state.writes.map((write) => write.name),
+    ["note", "complete"],
+  );
+  assert.equal(state.writes[0].input.note, "Ghi chú cùng thao tác");
+  assert.equal(
+    (
+      await api.updateTechnicianIssue({
+        ...command,
+        note: "Ghi chú cùng thao tác",
+      })
+    ).ok,
+    false,
+  );
+  assert.equal(state.writes.length, 2);
+});

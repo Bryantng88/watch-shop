@@ -19,7 +19,7 @@ detail, duration, performer/vendor and required replacement parts), complete
 (actual cost and resolution), or save a note. Cost input is explicitly in
 thousands of VND; the domain receives full VND. Ending an issue keeps the
 existing payment/event rules and displays that effect before submission.
-View-only users see no mutating controls. On failure, inputs remain available
+Edited notes are saved in the same transaction when confirming, starting or completing, so the main action does not discard pending note edits. View-only users see no mutating controls. On failure, inputs remain available
 and the user can reload the list, including uncertain or stale results.
 
 Server actions require SERVICE_UPDATE, validate a strict command and derive the

@@ -132,7 +132,11 @@ function IssueDetail({
       setBusy(false);
     }
   }
-  const base = { id: item.id, version: item.updatedAt };
+  const base = {
+    id: item.id,
+    version: item.updatedAt,
+    ...(note !== item.note ? { note } : {}),
+  };
   const input =
     ADMIN_UI.input + " min-h-11 w-full px-3 text-sm disabled:bg-slate-50";
   return (

@@ -80,7 +80,11 @@ export type TechnicianData = {
   details: { id: string; area: string | null; code: string; name: string }[];
   vendors: { id: string; name: string }[];
 };
-const base = { id: z.string().min(1).max(100), version: z.string().datetime() };
+const base = {
+  id: z.string().min(1).max(100),
+  version: z.string().datetime(),
+  note: z.string().max(4000).optional(),
+};
 const money = z.number().finite().min(0).max(999999999999);
 export const technicianCommand = z.discriminatedUnion("action", [
   z.object({ ...base, action: z.literal("confirm") }).strict(),
