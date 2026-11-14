@@ -249,7 +249,19 @@ fills the form and does not save or publish it.
 ## Group Media posts and stock receipts
 
 `media.watches.select` reads catalog candidates using a strict JSON-string query
-with brand, keywords, count (1–20), optional sale-price bounds and similarPrices.
+with brand, keywords, caseShapes (optional enum array), count (1–20), optional sale-price bounds and similarPrices.
+Form dáng is a structured criterion: tròn/round maps to ROUND, vuông to SQUARE,
+chữ nhật/tank to TANK, oval/bầu dục to OVAL, tonneau/thùng to TONNEAU,
+cushion/gối to CUSHION, bát giác to OCTAGON, đa giác to POLYGON and bất đối xứng
+to ASYMMETRICAL. Multiple requested alternatives are OR; brand, price and other
+keywords remain AND. Exact standalone shape keywords from older workers/reviews
+normalize identically. Compound model phrases stay literal. Use canonical saved
+WatchSpecV2.caseShape; unknown values never match a requested shape and legacy
+WatchSpec.caseType default ROUND is not evidence. Shape is returned in selection
+evidence, shown in review, locked/rechecked at approval alongside inventory.
+Do not infer shape from a photo or quietly relax it. Conversational clarifications
+preserve unmentioned shape/brand/price criteria. “Khoảng” price bounds must be
+disclosed, never presented as an exact user-supplied range.
 It requires PRODUCT_VIEW + MEDIA_VIEW. Candidates must be available, in stock,
 not sold/held/consigned, have a positive sale price and a Gallery image. Match
 keywords against catalog title/model/reference/tags; never infer diver capability

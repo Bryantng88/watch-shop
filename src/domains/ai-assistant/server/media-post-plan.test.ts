@@ -39,6 +39,45 @@ const authority = (...permissions: string[]) => ({
   permissions: new Set(permissions),
 });
 
+test("shape terms select canonical forms without requiring words in the title or dropping other filters", () => {
+  for (const [term, shape] of [
+    ["tròn", "ROUND"], ["mặt tròn", "ROUND"], ["form tròn", "ROUND"],
+    ["ROUND", "ROUND"], ["vuông", "SQUARE"], ["chữ nhật", "TANK"],
+    ["bầu dục", "OVAL"], ["tonneau", "TONNEAU"], ["cushion", "CUSHION"],
+    ["bát giác", "OCTAGON"], ["đa giác", "POLYGON"], ["bất đối xứng", "ASYMMETRICAL"],
+  ]) {
+    const parsed = watchSelectionSchema.parse({ brand: "Seiko", keywords: [term, "diver"], count: 5, priceMin: 4000000, priceMax: 6000000 });
+    assert.deepEqual(parsed.caseShapes, [shape]);
+    assert.deepEqual(parsed.keywords, ["diver"]);
+    const where = selectionWhere(parsed);
+    assert.deepEqual(where.watchSpecV2, { caseShape: { in: [shape] } });
+    assert.deepEqual(where.watchPrice, { salePrice: { gt: 0, gte: 4000000, lte: 6000000 } });
+    assert.equal(where.AND instanceof Array && where.AND.length, 1);
+    assert.ok(!JSON.stringify(where).includes('caseType'));
+  }
+  const parsed = watchSelectionSchema.parse({ brand: "Seiko", keywords: ["Round Trip", "diver"], caseShapes: ["ROUND", "SQUARE", "ROUND"], count: 5 });
+  assert.deepEqual(parsed.keywords, ["Round Trip", "diver"]);
+  assert.deepEqual(parsed.caseShapes, ["ROUND", "SQUARE"]);
+  assert.equal(watchSelectionSchema.safeParse({ ...selection, caseShapes: ["CIRCLE"] }).success, false);
+  assert.deepEqual(watchSelectionSchema.parse({brand:"Seiko",count:1}).caseShapes, []);
+});
+
+test("shape evidence survives lookup/review and a changed shape invalidates approval", async () => {
+  const queries: unknown[] = [];
+  let shape = "ROUND";
+  const db = {watch:{count:async()=>1,findMany:async(input:unknown)=>{
+    queries.push(input);return [{...row("a",5000000),watchSpecV2:{caseShape:shape}}];
+  }}} as unknown as DB;
+  const result = await lookupMediaWatches(db, JSON.stringify({brand:"Seiko",keywords:["tròn"],count:3,priceMin:4000000,priceMax:6000000}));
+  assert.deepEqual(result.selection.caseShapes,["ROUND"]);
+  assert.deepEqual(result.selection.keywords,[]);
+  assert.equal(result.matches[0].caseShape,"ROUND");
+  const draft = await prepareMediaPost(db,JSON.stringify({sourceMessageId:source,watchIds:["a"],caption:"Seiko giá bán 5 triệu",brief:"Seiko tròn khoảng 5 triệu"}),1,source,[{request:{tool:"media.watches.select",query:"{}"},result}]);
+  shape="SQUARE";
+  await assert.rejects(recheckMediaPost(db,draft),/thay đổi/);
+  assert.ok(queries.every(q=>JSON.stringify(q).includes('"caseShape":{"in":["ROUND"]}')));
+});
+
 test("similar-price selection finds the fullest tight group, preserves input and never pads or uses invalid prices", () => {
   const prices = [1, 10, 10.1, 10.2, 10.3, 10.4, 30, 31];
   const rows = prices.map((price, i) => ({

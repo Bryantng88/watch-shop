@@ -1,9 +1,11 @@
 import { z } from "zod";
+import { mediaCaseShapeSchema, mediaShapeKeyword, type MediaCaseShape } from "./media-case-shape";
 
 export const watchSelectionSchema = z
   .object({
     brand: z.string().trim().min(1).max(80),
     keywords: z.array(z.string().trim().min(2).max(60)).max(5).default([]),
+    caseShapes: z.array(mediaCaseShapeSchema).max(11).default([]),
     count: z.number().int().min(1).max(20),
     priceMin: z
       .number()
@@ -22,6 +24,14 @@ export const watchSelectionSchema = z
     similarPrices: z.boolean().default(false),
   })
   .strict()
+  .transform((p) => ({
+    ...p,
+    caseShapes: [...new Set([...p.caseShapes, ...p.keywords.flatMap(term => {
+      const shape = mediaShapeKeyword(term);
+      return shape ? [shape] : [];
+    })])],
+    keywords: p.keywords.filter(term => !mediaShapeKeyword(term)),
+  }))
   .refine(
     (p) =>
       p.priceMin === null || p.priceMax === null || p.priceMin <= p.priceMax,
@@ -48,6 +58,7 @@ export type MediaPostWatch = {
   price: string;
   sourceGalleryKey: string;
   updatedAt: string;
+  caseShape?: MediaCaseShape | null;
 };
 export type MediaPostDraft = {
   requiredPermissions?: string[];

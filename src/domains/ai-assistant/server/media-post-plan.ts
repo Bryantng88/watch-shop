@@ -19,7 +19,10 @@ export const mediaPostPermissions = [
 ];
 const LIMIT = 1000;
 export function selectionWhere(p: WatchSelection): Prisma.WatchWhereInput {
+  // Normalize older persisted reviews and older worker keyword-only queries too.
+  p = watchSelectionSchema.parse(p);
   return {
+    ...(p.caseShapes.length ? { watchSpecV2: { caseShape: { in: p.caseShapes } } } : {}),
     stockStage: "IN_STOCK",
     saleStage: { notIn: ["SOLD", "HOLD", "CONSIGNED_TO"] },
     product: {
@@ -52,6 +55,7 @@ const select = {
   id: true,
   productId: true,
   updatedAt: true,
+  watchSpecV2: { select: { caseShape: true } },
   watchPrice: { select: { salePrice: true } },
   product: {
     select: {
@@ -76,6 +80,7 @@ function project(row: Row): MediaPostWatch {
     price: row.watchPrice!.salePrice!.toString(),
     sourceGalleryKey: row.product.productImage[0].fileKey,
     updatedAt: row.updatedAt.toISOString(),
+    caseShape: row.watchSpecV2?.caseShape ?? null,
   };
 }
 export async function lookupMediaWatches(db: DB, query: string) {
@@ -101,7 +106,7 @@ export async function lookupMediaWatches(db: DB, query: string) {
       ? "Giá cao nhất không quá 125% giá thấp nhất; ưu tiên đủ số lượng rồi độ chênh nhỏ nhất."
       : "Giá bán tăng dần.",
     meaning:
-      "Đồng hồ còn kho, chưa bán/giữ, có giá bán và ảnh Gallery. Từ khóa đối chiếu tiêu đề/model/reference/tag; không suy đoán diver từ hình ảnh.",
+      "Đồng hồ còn kho, chưa bán/giữ, có giá bán và ảnh Gallery. Form dáng lọc theo WatchSpecV2.caseShape đã lưu; chưa có form dáng thì không tính là khớp, không suy đoán qua ảnh hoặc caseType mặc định. Từ khóa khác đối chiếu tiêu đề/model/reference/tag; không suy đoán diver từ hình ảnh.",
   };
 }
 export async function prepareMediaPost(
@@ -174,7 +179,8 @@ export async function recheckMediaPost(db: DB, draft: MediaPostDraft) {
             w.sourceGalleryKey === old.sourceGalleryKey &&
             w.updatedAt === old.updatedAt &&
             w.title === old.title &&
-            w.sku === old.sku,
+            w.sku === old.sku &&
+            (old.caseShape === undefined || w.caseShape === old.caseShape),
         ),
     )
   )
@@ -263,6 +269,7 @@ export async function lockMediaPostWatches(db: DB, draft: MediaPostDraft) {
   );
   await db.$queryRaw`SELECT "id" FROM "Watch" WHERE "id" IN (${ids}) ORDER BY "id" FOR UPDATE`;
   await db.$queryRaw`SELECT "id" FROM "WatchPrice" WHERE "watchId" IN (${ids}) ORDER BY "id" FOR UPDATE`;
+  await db.$queryRaw`SELECT "id" FROM "WatchSpecV2" WHERE "watchId" IN (${ids}) ORDER BY "id" FOR UPDATE`;
   await db.$queryRaw`SELECT "id" FROM "Product" WHERE "id" IN (${products}) ORDER BY "id" FOR UPDATE`;
   await db.$queryRaw`SELECT "id" FROM "ProductImage" WHERE "productId" IN (${products}) AND "role" = 'GALLERY' ORDER BY "id" FOR UPDATE`;
 }
