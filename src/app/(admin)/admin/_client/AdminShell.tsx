@@ -71,7 +71,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
             </div>
         </div>)}
         <div hidden={isEmbedded || isBenWorkList || (isBen && !assistantLive)}>
-        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
+        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canViewTechnical={!!user.roles?.includes("ADMIN") || user.permissions.includes("SERVICE_VIEW")} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </div>
         </AdminNavigationHistoryProvider>
     );

@@ -10,7 +10,7 @@
 .header button, .icon { color: #655e71; border-radius: 12px; }
 .header button:hover, .icon:hover { background: #f4effb; }
 .tabs { display: flex; align-items: center; margin: 0 20px 8px; border-bottom: 1px solid var(--ben-line); }
-.tabs > button { flex: 1; min-height: 44px; padding: 10px 8px; color: #6b6576; border-bottom: 3px solid transparent; font-size: 14px; }
+.tabs > :is(button, a) { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; flex: 1; min-height: 44px; padding: 10px 8px; color: #6b6576; border-bottom: 3px solid transparent; font-size: 14px; }
 .tabs > button[aria-pressed="true"] { color: var(--ben-accent); border-bottom-color: #8b5cf6; font-weight: 650; }
 .tabs > button:last-child { flex: 0 0 36px; }
 .badge { margin-left: 5px; border-radius: 999px; background: #ede5fa; color: #7242bb; padding: 2px 7px; font-size: 11px; }
