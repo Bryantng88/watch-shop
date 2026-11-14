@@ -36,7 +36,7 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
             contents: args.path.endsWith("navigation")
               ? "const router={push:href=>window.__navigate(href),refresh:()=>window.__render()};export const useRouter=()=>router;export const useSearchParams=()=>new URLSearchParams(window.location.search);"
               : args.path.endsWith("link")
-                ? 'import React from "react";export default function Link({href,children,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}'
+                ? 'import React from "react";export const useLinkStatus=()=>({pending:false});export default function Link({href,children,prefetch,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}'
                 : 'import React from "react";export default function Image({unoptimized,...props}){return <img {...props}/>}',
             loader: "tsx",
             resolveDir: process.cwd(),

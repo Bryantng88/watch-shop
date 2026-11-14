@@ -24,6 +24,7 @@ import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { BenNavigationPending } from "@/domains/ai-assistant/BenNavigationPending";
 import {
   CalendarDays,
   Check,
@@ -438,7 +439,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
   return (
     <AdminPageCanvas className="min-w-0 !px-4 !py-3 sm:!px-6 sm:!py-5">
-      {listOnly && <Link href="/admin/ben" className={`${listStyles.back} focus-visible:ring-2 focus-visible:ring-blue-300`}>← Trò chuyện với Ben</Link>}
+      {listOnly && <Link href="/admin/ben" prefetch className={`${listStyles.back} focus-visible:ring-2 focus-visible:ring-blue-300`}>← Trò chuyện với Ben <BenNavigationPending /></Link>}
       <header className={listStyles.header}>
         <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</h1>
         <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
