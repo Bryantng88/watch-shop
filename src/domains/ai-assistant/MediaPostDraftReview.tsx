@@ -1,5 +1,6 @@
 "use client";
 import type { MediaPostDraft } from "./media-post-contract";
+import { mediaCaseShapeLabels } from "./media-case-shape";
 const price = (value: string) =>
   new Intl.NumberFormat("vi-VN").format(Number(value)) + " ₫";
 export default function MediaPostDraftReview({
@@ -20,6 +21,7 @@ export default function MediaPostDraftReview({
       <h3 className="font-semibold">
         Post {draft.watches.length} đồng hồ · {draft.selection.brand}
       </h3>
+      {!!draft.selection.caseShapes?.length && <p className="mt-2 text-slate-600">Form dáng: {draft.selection.caseShapes.map(shape => mediaCaseShapeLabels[shape]).join(" / ")}</p>}
       {draft.selection.keywords.length > 0 && (
         <p className="mt-2 text-slate-600">
           {draft.selection.keywords.join(" · ")}

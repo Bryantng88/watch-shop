@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { lookupMediaWatches, recheckMediaPost } from "../src/domains/ai-assistant/server/media-post-plan";
 import { codeCommand } from "../src/domains/ai-assistant/server/code-jobs";
 import { prisma } from "../src/server/db/client";
 import { PERMISSIONS } from "../src/constants/permissions";
@@ -469,21 +470,41 @@ async function main() {
           create: {
             saleStage: "READY",
             stockStage: "IN_STOCK",
-            watchPrice: { create: { salePrice: 3000000 } },
+            watchPrice: { create: { salePrice: 5000000 } },
+            watchSpecV2: { create: { caseShape: "ROUND" } },
           },
         },
       },
       include: { watch: true },
     });
+    // A literal title match is not proof of form; null/missing specs stay unknown.
+    for (const variant of ["square-title-tron", "null-shape", "missing-spec", "too-expensive", "held", "no-gallery"]) {
+      await prisma.product.create({data:{
+        type:"WATCH",title:"Seiko tròn " + variant,sku:`TEXT-SHAPE-${variant}-${suffix}`,
+        status:"AVAILABLE",brandId:brand.id,
+        productImage:variant === "no-gallery" ? undefined : {create:{fileKey:galleryKey,role:"GALLERY",isForAdmin:true}},
+        watch:{create:{saleStage:variant === "held" ? "HOLD" : "READY",stockStage:"IN_STOCK",
+          watchPrice:{create:{salePrice:variant === "too-expensive" ? 9000000 : 5000000}},
+          ...(variant === "missing-spec" ? {} : {watchSpecV2:{create:{caseShape:variant === "square-title-tron" ? "SQUARE" : variant === "null-shape" ? null : "ROUND"}}}),
+        }},
+      }});
+    }
+    const shapeQuery={brand:brand.name,keywords:["tròn"],count:10,priceMin:4000000,priceMax:6000000};
+    const shapeResult=await lookupMediaWatches(prisma,JSON.stringify(shapeQuery));
+    assert.equal(shapeResult.total,1);assert.deepEqual(shapeResult.matches.map(w=>w.watchId),[mediaProduct.watch!.id]);
+    assert.equal(shapeResult.matches[0].caseShape,"ROUND");assert.deepEqual(shapeResult.selection.keywords,[]);
+    const structuredShape=await lookupMediaWatches(prisma,JSON.stringify({...shapeQuery,keywords:[],caseShapes:["ROUND"]}));
+    assert.deepEqual(structuredShape.matches,shapeResult.matches);
     const mediaRun = await begin();
     await mediaRun.lookup("media.watches.select", {
       query: JSON.stringify({
         brand: brand.name,
         keywords: [],
+        caseShapes: ["ROUND"],
         count: 1,
         similarPrices: false,
-        priceMin: null,
-        priceMax: null,
+        priceMin: 4000000,
+        priceMax: 6000000,
       }),
     });
     await mediaRun.lookup("media.posts.draft", {
@@ -499,6 +520,10 @@ async function main() {
     const mediaReview = (await listAssistant(owner.id, mediaRun.chat.id))
       .conversations[0];
     assert.equal(mediaReview.pendingReview?.kind, "media-post");
+    assert.deepEqual(mediaReview.mediaPostDraft?.selection.caseShapes,["ROUND"]);
+    await prisma.watchSpecV2.update({where:{watchId:mediaProduct.watch!.id},data:{caseShape:"SQUARE"}});
+    await assert.rejects(recheckMediaPost(prisma,mediaReview.mediaPostDraft!),/thay đổi/);
+    await prisma.watchSpecV2.update({where:{watchId:mediaProduct.watch!.id},data:{caseShape:"ROUND"}});
     const mediaKey = randomUUID(),
       mediaDone = await confirm(mediaReview, "duyệt", mediaKey);
     await confirm(mediaReview, "duyệt", mediaKey);

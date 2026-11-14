@@ -223,3 +223,14 @@ test('combined daily read uses two model calls and the existing individual looku
   {execute:async () => combined,api:async () => assert.fail('unexpected API call')},
  ),/CUSTOMER_LOOKUP_REJECTED/);
 });
+
+// Prompt/transport regression, not a real-model semantic acceptance test.
+test('post selection carries form separately and teaches Vietnamese shape intent without title matching',async()=>{
+ let prompt='';let turn=0;const calls=[];
+ await runCustomerConversation({id:'shape-run',text:JSON.stringify({messages:[{role:'user',text:'tạo post Seiko tròn tầm 5 triệu'},{role:'user',text:'gom nhiều bạn'}]})},{
+  execute:async value=>{prompt=value;return turn++===0?{...finish,type:'lookup',tool:'media.watches.select',query:JSON.stringify({brand:'Seiko',keywords:[],caseShapes:['ROUND'],count:10,priceMin:4000000,priceMax:6000000}),reply:null}:finish},
+  api:async(op,body)=>{calls.push([op,body]);return op==='lookup'?{evidence:{request:body.lookup,result:{matches:[],selection:JSON.parse(body.lookup.query)}}}:{accepted:true}}
+ });
+ const query=JSON.parse(calls[0][1].lookup.query);assert.deepEqual(query.caseShapes,['ROUND']);assert.deepEqual(query.keywords,[]);
+ for(const text of ['SHAPE FILTERS','never literal title keywords','unknown shapes are excluded','preserve these criteria','4–6 million VND'])assert.ok(prompt.includes(text),text);
+});
