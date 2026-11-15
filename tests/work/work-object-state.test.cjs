@@ -1,39 +1,328 @@
-const {test}=require('node:test');const assert=require('node:assert/strict');const esbuild=require('esbuild');const vm=require('node:vm');
-async function fixture(permissions=['TASK_VIEW','PRODUCT_VIEW']){
- const state={events:[],calls:[],profiles:[{id:'owner',name:'Owner',email:'owner@example.invalid',avatarUrl:null},{id:'creator',name:'Creator',email:'creator@example.invalid',avatarUrl:null},{id:'assignee',name:'Assigned',email:'assigned@example.invalid',avatarUrl:null}],permissions,watchRows:[{id:'watch-1',productId:'product-1',product:{title:'Seiko',sku:'SEI-1',primaryImageUrl:'cover.jpg',productImage:[{fileKey:'inline.jpg'}]}}],entries:[]};
- const db={user:{findFirst:async()=>({roles:[{name:'fixture',permissions:state.permissions.map(code=>({code}))}]}),findMany:async()=>state.profiles},watch:{findMany:async query=>{state.calls.push({model:'watch',query});return state.watchRows}},serviceRequest:{findMany:async()=>[]},taskItemChecklist:{findMany:async query=>{state.calls.push({model:'checklist',query});return state.entries}},$transaction:async(fn,options)=>{state.events.push({phase:'begin',options});try{const result=await fn(db);state.events.push({phase:'commit'});return result}catch(error){state.events.push({phase:'rollback'});throw error}}};
- const built=await esbuild.build({stdin:{contents:`export * from './src/domains/personal-work/server/personal-work-objects';export * from './src/domains/personal-work/server/media-daily-read.service';export * from './src/domains/personal-work/server/personal-work-events';export * from './src/domains/personal-work/shared/checklist-share-projection';export * from './src/domains/event/validator/business-event-validator';export * from './src/domains/event/server/business-event-transaction';`,loader:'ts',resolveDir:process.cwd()},bundle:true,platform:'node',format:'cjs',write:false,plugins:[{name:'ports',setup(build){
- build.onResolve({filter:/^(@\/server\/db\/client|@\/domains\/event\/server\/business-event.service|@\/domains\/event\/delivery)$/},args=>({path:args.path,namespace:'ports'}));
- build.onLoad({filter:/.*/,namespace:'ports'},args=>({contents:args.path.includes('db/client')?'export const prisma=globalThis.__db;':args.path.endsWith('/delivery')?'export async function processBusinessEventOperation(key){globalThis.__state.events.push({phase:"consume",key})}':'export async function recordBusinessEvent(db,input,options){globalThis.__state.events.push({phase:"record",input});const result={projectionDeliveryKey:input.eventKey+":"+input.targetId+":"+(input.payload?.eventInstanceId||"new")};if(options?.deferConsumers)options.deferConsumers(async()=>globalThis.__state.events.push({phase:"consume",key:result.projectionDeliveryKey}));return result}'}));
- }}]});const module={exports:{}};vm.runInNewContext(built.outputFiles[0].text,{module,exports:module.exports,require,Date,Map,Set,__db:db,__state:state});return {api:module.exports,state,db};
+/* eslint-disable @typescript-eslint/no-require-imports -- Node CommonJS fixture runner. */
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const esbuild = require("esbuild");
+const vm = require("node:vm");
+async function fixture(permissions = ["TASK_VIEW", "PRODUCT_VIEW"]) {
+  const state = {
+    events: [],
+    calls: [],
+    profiles: [
+      {
+        id: "owner",
+        name: "Owner",
+        email: "owner@example.invalid",
+        avatarUrl: null,
+      },
+      {
+        id: "creator",
+        name: "Creator",
+        email: "creator@example.invalid",
+        avatarUrl: null,
+      },
+      {
+        id: "assignee",
+        name: "Assigned",
+        email: "assigned@example.invalid",
+        avatarUrl: null,
+      },
+    ],
+    permissions,
+    watchRows: [
+      {
+        id: "watch-1",
+        productId: "product-1",
+        product: {
+          title: "Seiko",
+          sku: "SEI-1",
+          primaryImageUrl: "cover.jpg",
+          productImage: [{ fileKey: "inline.jpg" }],
+        },
+      },
+    ],
+    entries: [],
+  };
+  const db = {
+    user: {
+      findFirst: async () => ({
+        roles: [
+          {
+            name: "fixture",
+            permissions: state.permissions.map((code) => ({ code })),
+          },
+        ],
+      }),
+      findMany: async () => state.profiles,
+    },
+    watch: {
+      findMany: async (query) => {
+        state.calls.push({ model: "watch", query });
+        return state.watchRows;
+      },
+    },
+    serviceRequest: { findMany: async () => [] },
+    taskItemChecklist: {
+      findMany: async (query) => {
+        state.calls.push({ model: "checklist", query });
+        return state.entries;
+      },
+    },
+    $transaction: async (fn, options) => {
+      state.events.push({ phase: "begin", options });
+      try {
+        const result = await fn(db);
+        state.events.push({ phase: "commit" });
+        return result;
+      } catch (error) {
+        state.events.push({ phase: "rollback" });
+        throw error;
+      }
+    },
+  };
+  const built = await esbuild.build({
+    stdin: {
+      contents: `export * from './src/domains/personal-work/server/personal-work-objects';export * from './src/domains/personal-work/server/media-daily-read.service';export * from './src/domains/personal-work/server/personal-work-events';export * from './src/domains/personal-work/shared/checklist-share-projection';export * from './src/domains/event/validator/business-event-validator';export * from './src/domains/event/server/business-event-transaction';`,
+      loader: "ts",
+      resolveDir: process.cwd(),
+    },
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    write: false,
+    plugins: [
+      {
+        name: "ports",
+        setup(build) {
+          build.onResolve(
+            {
+              filter:
+                /^(@\/server\/db\/client|@\/domains\/event\/server\/business-event.service|@\/domains\/event\/delivery)$/,
+            },
+            (args) => ({ path: args.path, namespace: "ports" }),
+          );
+          build.onLoad({ filter: /.*/, namespace: "ports" }, (args) => ({
+            contents: args.path.includes("db/client")
+              ? "export const prisma=globalThis.__db;"
+              : args.path.endsWith("/delivery")
+                ? 'export async function processBusinessEventOperation(key){globalThis.__state.events.push({phase:"consume",key})}'
+                : 'export async function recordBusinessEvent(db,input,options){globalThis.__state.events.push({phase:"record",input});const result={projectionDeliveryKey:input.eventKey+":"+input.targetId+":"+(input.payload?.eventInstanceId||"new")};if(options?.deferConsumers)options.deferConsumers(async()=>globalThis.__state.events.push({phase:"consume",key:result.projectionDeliveryKey}));return result}',
+          }));
+        },
+      },
+    ],
+  });
+  const fixtureModule = { exports: {} };
+  vm.runInNewContext(built.outputFiles[0].text, {
+    module: fixtureModule,
+    exports: fixtureModule.exports,
+    require,
+    Date,
+    Map,
+    Set,
+    __db: db,
+    __state: state,
+  });
+  return { api: fixtureModule.exports, state, db };
 }
-const context=productId=>JSON.stringify({source:'WATCH_MEDIA_DAILY',productId,watchTitle:'Seiko',sku:'SEI-1',part:'image',request:'Chụp ảnh'});
-test('object previews prefer current INLINE and strip stale/supplied URLs',async()=>{
- const {api,db,state}=await fixture();const items=[{targets:[{type:'WATCH',id:'watch-1',label:'Seiko',secondary:null,href:'/watch',imageUrl:'https://untrusted.invalid/old'}],checklist:[{id:'entry',mediaContext:{productId:'product-1',href:'/media'}}]}];
- const result=await api.hydratePersonalWorkObjects(db,'owner',items);assert.equal(result[0].targets[0].imageUrl,'inline.jpg');assert.equal(result[0].checklist[0].object.imageUrl,'inline.jpg');assert.equal(result[0].checklist[0].object.id,'watch-1');assert.equal(state.calls.filter(call=>call.model==='watch').length,1);
- const denied=await fixture(['TASK_VIEW']);const hidden=await denied.api.hydratePersonalWorkObjects(denied.db,'owner',items);assert.equal(hidden[0].targets[0].imageUrl,null);assert.equal(hidden[0].checklist[0].object,undefined);assert.equal(denied.state.calls.length,0);
+const context = (productId) =>
+  JSON.stringify({
+    source: "WATCH_MEDIA_DAILY",
+    productId,
+    watchTitle: "Seiko",
+    sku: "SEI-1",
+    part: "image",
+    request: "Chụp ảnh",
+  });
+test("object previews prefer current INLINE and strip stale/supplied URLs", async () => {
+  const { api, db, state } = await fixture();
+  const items = [
+    {
+      targets: [
+        {
+          type: "WATCH",
+          id: "watch-1",
+          label: "Seiko",
+          secondary: null,
+          href: "/watch",
+          imageUrl: "https://untrusted.invalid/old",
+        },
+      ],
+      checklist: [
+        {
+          id: "entry",
+          mediaContext: { productId: "product-1", href: "/media" },
+        },
+      ],
+    },
+  ];
+  const result = await api.hydratePersonalWorkObjects(db, "owner", items);
+  assert.equal(result[0].targets[0].imageUrl, "inline.jpg");
+  assert.equal(result[0].checklist[0].object.imageUrl, "inline.jpg");
+  assert.equal(result[0].checklist[0].object.id, "watch-1");
+  assert.equal(state.calls.filter((call) => call.model === "watch").length, 1);
+  const denied = await fixture(["TASK_VIEW"]);
+  const hidden = await denied.api.hydratePersonalWorkObjects(
+    denied.db,
+    "owner",
+    items,
+  );
+  assert.equal(hidden[0].targets[0].imageUrl, null);
+  assert.equal(hidden[0].checklist[0].object, undefined);
+  assert.equal(denied.state.calls.length, 0);
 });
-test('checklist-only projection keeps hidden targets and sibling photos out of hydration',async()=>{
- const {api,db,state}=await fixture();const parent={targets:[{type:'WATCH',id:'hidden-watch'}],checklist:[],createdAt:'2026-11-15T00:00:00Z',activities:[]};
- const scoped=api.checklistOnlyWork(parent,[{id:'visible',title:'Visible entry',isDone:false,mediaContext:{productId:'product-1',href:'/media'}}]);
- const result=await api.hydratePersonalWorkObjects(db,'creator',[scoped]);assert.equal(result[0].targets.length,0);assert.equal(result[0].checklist.length,1);assert.equal(result[0].checklist[0].object.label,'Seiko');assert.ok(!JSON.stringify(state.calls).includes('hidden-watch'));
+test("checklist-only projection keeps hidden targets and sibling photos out of hydration", async () => {
+  const { api, db, state } = await fixture();
+  const parent = {
+    targets: [{ type: "WATCH", id: "hidden-watch" }],
+    checklist: [],
+    createdAt: "2026-11-15T00:00:00Z",
+    activities: [],
+  };
+  const scoped = api.checklistOnlyWork(parent, [
+    {
+      id: "visible",
+      title: "Visible entry",
+      isDone: false,
+      mediaContext: { productId: "product-1", href: "/media" },
+    },
+  ]);
+  const result = await api.hydratePersonalWorkObjects(db, "creator", [scoped]);
+  assert.equal(result[0].targets.length, 0);
+  assert.equal(result[0].checklist.length, 1);
+  assert.equal(result[0].checklist[0].object.label, "Seiko");
+  assert.ok(!JSON.stringify(state.calls).includes("hidden-watch"));
 });
-test('active daily work counts only validated matching contexts and never guesses on permission denial',async()=>{
- const {api,db,state}=await fixture();state.entries=[{id:'e1',taskItemId:'media-daily-one',note:context('product-1')},{id:'e2',taskItemId:'media-daily-two',note:context('product-1')},{id:'other',taskItemId:'hidden',note:context('different-product')},{id:'invalid',note:'not JSON'}];
- const result=await api.dailyMediaWorkForProducts(db,'owner',['product-1']);assert.equal(result.get('product-1').count,2);assert.equal(result.get('product-1').taskItemId,'media-daily-one');const query=state.calls.find(call=>call.model==='checklist').query;assert.equal(query.where.isDone,false);assert.ok(JSON.stringify(query.where).includes('personalShares'));assert.ok(JSON.stringify(query.where).includes('IN_PROGRESS'));
- const denied=await fixture(['PRODUCT_VIEW']);assert.equal((await denied.api.dailyMediaWorkForProducts(denied.db,'owner',['product-1'])).size,0);assert.equal(denied.state.calls.length,0);
+test("active daily work counts only validated matching contexts and never guesses on permission denial", async () => {
+  const { api, db, state } = await fixture();
+  state.entries = [
+    { id: "e1", taskItemId: "media-daily-one", note: context("product-1") },
+    { id: "e2", taskItemId: "media-daily-two", note: context("product-1") },
+    { id: "other", taskItemId: "hidden", note: context("different-product") },
+    { id: "invalid", note: "not JSON" },
+  ];
+  const result = await api.dailyMediaWorkForProducts(db, "owner", [
+    "product-1",
+  ]);
+  assert.equal(result.get("product-1").count, 2);
+  assert.equal(result.get("product-1").taskItemId, "media-daily-one");
+  const query = state.calls.find((call) => call.model === "checklist").query;
+  assert.equal(query.where.isDone, false);
+  assert.ok(JSON.stringify(query.where).includes("personalShares"));
+  assert.ok(JSON.stringify(query.where).includes("IN_PROGRESS"));
+  const denied = await fixture(["PRODUCT_VIEW"]);
+  assert.equal(
+    (
+      await denied.api.dailyMediaWorkForProducts(denied.db, "owner", [
+        "product-1",
+      ])
+    ).size,
+    0,
+  );
+  assert.equal(denied.state.calls.length, 0);
 });
-test('created-event payload distinguishes creator, owner and assignee and validates the catalog',async()=>{
- const {api,db,state}=await fixture();await api.recordPersonalWorkCreated(db,{item:{id:'work',title:'Media',taskId:null,priority:'HIGH',dueAt:new Date('2026-11-15T10:00:00Z'),scheduledEndAt:null,estimatedDays:1,workTypeId:'GENERAL_TASK'},ownerUserId:'owner',actorUserId:'creator',assignedToUserId:'assignee',domain:'MEDIA',tags:['Photo'],targets:[{type:'WATCH',id:'watch-1',label:'Seiko',secondary:'SEI-1',href:'/watch',imageUrl:'signed-token'}]});
- const event=state.events[0].input;assert.equal(event.actorUserId,'creator');assert.equal(event.payload.personalOwnerUserId,'owner');assert.equal(event.payload.assignedToUserId,'assignee');assert.equal(event.payload.creatorName,'Creator');assert.equal(event.payload.assignedToName,'Assigned');assert.equal(event.payload.dueAt,'2026-11-15T10:00:00.000Z');assert.equal(event.payload.targets[0].imageUrl,undefined);assert.ok(api.validateBusinessEventInput(event).ok);
- for(const id of ['entry-a','entry-b'])await api.recordPersonalChecklistCreated(db,{taskItemId:'work',id,title:'Photo '+id,actorUserId:'creator'});
- const first=state.events[1].input,second=state.events[2].input;assert.notEqual(first.payload.eventInstanceId,second.payload.eventInstanceId);assert.ok(api.validateBusinessEventInput(first).ok);assert.equal(api.validateBusinessEventInput({...first,payload:{taskItemId:'work'}}).ok,false);
+test("created-event payload distinguishes creator, owner and assignee and validates the catalog", async () => {
+  const { api, db, state } = await fixture();
+  await api.recordPersonalWorkCreated(db, {
+    item: {
+      id: "work",
+      title: "Media",
+      taskId: null,
+      priority: "HIGH",
+      dueAt: new Date("2026-11-15T10:00:00Z"),
+      scheduledEndAt: null,
+      estimatedDays: 1,
+      workTypeId: "GENERAL_TASK",
+    },
+    ownerUserId: "owner",
+    actorUserId: "creator",
+    assignedToUserId: "assignee",
+    domain: "MEDIA",
+    tags: ["Photo"],
+    targets: [
+      {
+        type: "WATCH",
+        id: "watch-1",
+        label: "Seiko",
+        secondary: "SEI-1",
+        href: "/watch",
+        imageUrl: "signed-token",
+      },
+    ],
+  });
+  const event = state.events[0].input;
+  assert.equal(event.actorUserId, "creator");
+  assert.equal(event.payload.personalOwnerUserId, "owner");
+  assert.equal(event.payload.assignedToUserId, "assignee");
+  assert.equal(event.payload.creatorName, "Creator");
+  assert.equal(event.payload.assignedToName, "Assigned");
+  assert.equal(event.payload.dueAt, "2026-11-15T10:00:00.000Z");
+  assert.equal(event.payload.targets[0].imageUrl, undefined);
+  assert.ok(api.validateBusinessEventInput(event).ok);
+  for (const id of ["entry-a", "entry-b"])
+    await api.recordPersonalChecklistCreated(db, {
+      taskItemId: "work",
+      id,
+      title: "Photo " + id,
+      actorUserId: "creator",
+    });
+  const first = state.events[1].input,
+    second = state.events[2].input;
+  assert.notEqual(
+    first.payload.eventInstanceId,
+    second.payload.eventInstanceId,
+  );
+  assert.ok(api.validateBusinessEventInput(first).ok);
+  assert.equal(
+    api.validateBusinessEventInput({
+      ...first,
+      payload: { taskItemId: "work" },
+    }).ok,
+    false,
+  );
 });
-test('managed events consume only after commit, preserve isolation, and never consume a rollback',async()=>{
- const {api,state}=await fixture();const callbacks=[];
- await api.runBusinessEventTransaction(async(tx,delivery)=>{await delivery.emit({eventKey:'task.item.created',targetType:'TASK_ITEM',targetId:'work',payload:{}})},{isolationLevel:'Serializable',deferConsumers:work=>callbacks.push(work)});
- assert.equal(state.events.at(-1).phase,'commit');assert.equal(state.events[0].options.isolationLevel,'Serializable');assert.equal(callbacks.length,1);await callbacks[0]();assert.equal(state.events.at(-1).phase,'consume');
- const before=state.events.filter(event=>event.phase==='consume').length;
- await assert.rejects(api.runBusinessEventTransaction(async(tx,delivery)=>{await delivery.emit({eventKey:'task.item.created',targetType:'TASK_ITEM',targetId:'rolled-back',payload:{}});throw Error('rollback')}),/rollback/);assert.equal(state.events.filter(event=>event.phase==='consume').length,before);
- await assert.rejects(api.runBusinessEventTransaction(async()=>true),/BUSINESS_COMMAND_EVENT_REQUIRED/);
+test("managed events consume only after commit, preserve isolation, and never consume a rollback", async () => {
+  const { api, state } = await fixture();
+  const callbacks = [];
+  await api.runBusinessEventTransaction(
+    async (tx, delivery) => {
+      await delivery.emit({
+        eventKey: "task.item.created",
+        targetType: "TASK_ITEM",
+        targetId: "work",
+        payload: {},
+      });
+    },
+    {
+      isolationLevel: "Serializable",
+      deferConsumers: (work) => callbacks.push(work),
+    },
+  );
+  assert.equal(state.events.at(-1).phase, "commit");
+  assert.equal(state.events[0].options.isolationLevel, "Serializable");
+  assert.equal(callbacks.length, 1);
+  await callbacks[0]();
+  assert.equal(state.events.at(-1).phase, "consume");
+  const before = state.events.filter(
+    (event) => event.phase === "consume",
+  ).length;
+  await assert.rejects(
+    api.runBusinessEventTransaction(async (tx, delivery) => {
+      await delivery.emit({
+        eventKey: "task.item.created",
+        targetType: "TASK_ITEM",
+        targetId: "rolled-back",
+        payload: {},
+      });
+      throw Error("rollback");
+    }),
+    /rollback/,
+  );
+  assert.equal(
+    state.events.filter((event) => event.phase === "consume").length,
+    before,
+  );
+  await assert.rejects(
+    api.runBusinessEventTransaction(async () => true),
+    /BUSINESS_COMMAND_EVENT_REQUIRED/,
+  );
 });
