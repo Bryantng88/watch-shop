@@ -1,3 +1,4 @@
+import type { DailyMediaWorkSummary } from "@/domains/personal-work/shared/media-daily";
 import type { CoordinationContext } from "./coordination-cycle.types";
 import type {
   BlueprintSource,
@@ -130,6 +131,7 @@ export type CoordinationFlowListItemDTO = QueueItemDTO & {
 };
 
 export type CoordinationMediaBoardItemDTO = {
+  dailyMediaWork?: DailyMediaWorkSummary | null;
   id: string;
   targetType: "WATCH" | "MEDIA_POST";
   productId: string | null;

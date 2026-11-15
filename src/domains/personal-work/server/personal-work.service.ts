@@ -1,3 +1,7 @@
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
+import type { RecordedBusinessEvent } from "@/domains/event/server/business-event.service";
+import { recordPersonalWorkCreated, recordPersonalChecklistCreated } from "./personal-work-events";
+import { hydratePersonalWorkObjects } from "./personal-work-objects";
 import { mediaChecklistContext, mediaDayToday } from "../shared/media-daily";
 import {checklistOnlyWork} from "../shared/checklist-share-projection";
 import { queueWorkNotification, queuePersonalChange } from "@/domains/notification/server/work-push.service";
@@ -155,7 +159,7 @@ async function resolvePersonalWorkTarget(
   if (target.type === "WATCH") {
     const row = await prisma.watch.findUnique({
       where: { id },
-      select: { id: true, productId: true, product: { select: { title: true, sku: true } } },
+      select: { id: true, productId: true, product: { select: { title: true, sku: true, primaryImageUrl: true, productImage: { where: { role: "INLINE" }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 1, select: { fileKey: true } } } } },
     });
     if (!row) throw new Error("Không tìm thấy Watch đã chọn");
     return {
@@ -163,6 +167,7 @@ async function resolvePersonalWorkTarget(
       id: row.id,
       label: row.product.title,
       secondary: row.product.sku,
+      imageUrl: row.product.productImage[0]?.fileKey || row.product.primaryImageUrl,
       href: `/admin/watches/${row.productId}`,
     };
   }
@@ -284,7 +289,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   const ownerIds = [...new Set(items.map(item => item.personalOwnerUserId || item.task?.createdByUserId || item.task?.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
   const ownerCategories = new Map(ownerIds.map(id => [id, mergePersonalCategories(ownerCategoryRows.filter(row => row.userId === id), categories.filter(c => c.isDefault))]));
-  return {
+  const data: PersonalWorkPageData = {
     canManageDefaultCategories: canManageDefaults,
     categories,
     items: tagged.map((item) => {
@@ -367,9 +372,11 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       loadError: null,
     },
   };
+  return {...data,items:await hydratePersonalWorkObjects(prisma,userId,data.items)};
 }
 
-export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma, identity?: { systemId: string }) {
+export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma, identity?: { systemId?: string; actorUserId?: string; assignedToUserId?: string; eventTargets?: PersonalWorkTarget[]; onEvent?: (event:RecordedBusinessEvent)=>void; deferConsumers?: (work:()=>Promise<void>)=>void }): Promise<import("@prisma/client").TaskItem> {
+  if(db===prisma)return runBusinessEventTransaction((tx,delivery)=>createPersonalWorkItem(input,auth,tx,{...identity,deferConsumers:undefined,onEvent:event=>delivery.track(event)}),{deferConsumers:identity?.deferConsumers});
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
   const title = input.title.trim();
@@ -397,7 +404,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
         ...(identity ? { id: identity.systemId } : {}),
         reminderMinutes: input.reminderMinutes,
         title, note: input.note?.trim() || null,
-        personalOwnerUserId: userId, assignedToUserId: userId,
+        personalOwnerUserId: userId, assignedToUserId: identity?.assignedToUserId??userId,
         priority: input.priority || "MEDIUM", workTypeId: workType,
         personalCategoryId: category.id, dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt,
         estimatedDays: schedule.estimatedDays ?? Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
@@ -419,6 +426,7 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
         createdByUserId: userId, actionType: "LINKED",
       } });
     }
+    const event=await recordPersonalWorkCreated(tx,{item,ownerUserId:userId,actorUserId:identity?.actorUserId??userId,assignedToUserId:item.assignedToUserId??userId,domain,tags:input.tags??[],targets:identity?.eventTargets??targets},{deferConsumers:identity?.deferConsumers});identity?.onEvent?.(event);
     return item;
   });
 }
@@ -433,7 +441,7 @@ export async function searchPersonalWorkTargets(input: {
   if (input.type === "WATCH") {
     const rows = await prisma.watch.findMany({
       where: query ? { product: { OR: [{ title: contains }, { sku: contains }] } } : undefined,
-      select: { id: true, productId: true, product: { select: { title: true, sku: true } } },
+      select: { id: true, productId: true, product: { select: { title: true, sku: true, primaryImageUrl: true, productImage: { where: { role: "INLINE" }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], take: 1, select: { fileKey: true } } } } },
       orderBy: { updatedAt: "desc" },
       take: 12,
     });
@@ -442,6 +450,7 @@ export async function searchPersonalWorkTargets(input: {
       id: row.id,
       label: row.product.title,
       secondary: row.product.sku,
+      imageUrl: row.product.productImage[0]?.fileKey || row.product.primaryImageUrl,
       href: `/admin/watches/${row.productId}`,
     }));
   }
@@ -713,7 +722,7 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
   const normalizedTitle = title.trim();
   if (!normalizedTitle) throw new Error("Vui lòng nhập tên đầu việc");
   if (normalizedTitle.length > 500) throw new Error("Tên đầu việc không được vượt quá 500 ký tự");
-  return prisma.$transaction(async (tx) => {
+  return runBusinessEventTransaction(async (tx,delivery) => {
     const last = await tx.taskItemChecklist.findFirst({
       where: { taskItemId },
       orderBy: { sortOrder: "desc" },
@@ -724,6 +733,7 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
     });
     await updateChecklistProgress(tx, taskItemId);
     await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Thêm đầu việc",body:normalizedTitle}});
+    delivery.track(await recordPersonalChecklistCreated(tx,{taskItemId,id:checklist.id,title:checklist.title,actorUserId:current.userId}));
     return checklist;
   });
 }

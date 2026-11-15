@@ -244,6 +244,9 @@ async function main() {
     const done = await confirm(first, "duyệt", key);
     assert.equal(await prisma.taskItem.count(), before + 1);
     assert.equal(done.createdPersonalWork?.length, 1);
+    const createdEvent=await prisma.businessEventLog.findFirstOrThrow({where:{eventKey:"task.item.created",targetId:done.createdPersonalWork![0].id}});
+    assert.equal(createdEvent.actorUserId,owner.id);
+    assert.equal((createdEvent.metadataJson as Record<string,unknown>).personalOwnerUserId,owner.id);
     assert.equal(done.pendingReview, undefined);
     assert.ok(!JSON.stringify(done).includes("textApprovals"));
     await confirm(first, "duyệt", key);

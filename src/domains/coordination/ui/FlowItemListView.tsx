@@ -1,4 +1,6 @@
 "use client";
+import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
+import { useMediaDailyState } from "@/domains/watch/client/media-work/use-media-daily-state";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -271,6 +273,7 @@ export default function FlowItemListView({
   onItemsMovedFromStage,
   onReloadRequested,
 }: Props) {
+  const dailyState = useMediaDailyState(items.map(item=>item.dailyMediaWork));
   const previewState = useBusinessEntityPreview();
   const mediaTriggers = useRef(new Map<string, () => void>());
   const progress = useAppProgress();
@@ -1152,7 +1155,7 @@ export default function FlowItemListView({
                       </span>
                       <span className="min-w-0">
                         <span className="block max-w-[340px] truncate text-sm font-semibold text-slate-950">{item.preview.title || "Item chưa đặt tên"}</span>
-                        <span className="mt-1 block truncate text-xs text-slate-500">{item.preview.ref || item.targetType}</span>
+                        <span className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-500"><span className="truncate">{item.preview.ref || item.targetType}</span><WatchMediaWorkBadge state={dailyState(item.dailyMediaWork)}/></span>
                       </span>
                     </button>
                   </td>

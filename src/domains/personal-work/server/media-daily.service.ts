@@ -1,3 +1,5 @@
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
+import { recordPersonalChecklistCreated } from "./personal-work-events";
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma, type DB } from "@/server/db/client";
@@ -18,13 +20,13 @@ export async function mediaDailyAssignees(userId:string) {
   const users=await prisma.user.findMany({where:{isActive:true,...(!current.canAssign?{id:userId}:{})},select:{id:true,name:true,email:true,roles:{select:{name:true,permissions:{select:{code:true}}}}},orderBy:{name:'asc'}});
   return {currentUserId:userId,users:users.filter(user=>{const p=new Set(expandPermissions(user.roles.flatMap(role=>role.permissions.map(v=>v.code))));return user.roles.some(role=>role.name==='ADMIN')||p.has('TASK_VIEW')&&p.has('PRODUCT_UPDATE');}).map(({id,name,email})=>({id,name,email}))};
 }
-export async function addDailyMediaWork(userId:string,raw:unknown) {
+export async function addDailyMediaWork(userId:string,raw:unknown, options?:{deferConsumers?:(work:()=>Promise<void>)=>void}) {
   const input=mediaDailyRequestSchema.parse(raw);
   const parentId='media-daily-'+digest(input.assigneeUserId+':'+input.day);
   const entryId='media-entry-'+digest(userId+':'+input.requestKey);
   const requestHash=digest(JSON.stringify(input));
   for(let attempt=0;;attempt++) {
-    try{return await prisma.$transaction(async tx=>{
+    try{return await runBusinessEventTransaction(async (tx,delivery)=>{
       const user=await actor(tx,userId);
       if(input.assigneeUserId!==userId && !user.canAssign)throw Error('Bạn không có quyền giao việc cho người khác.');
       await actor(tx,input.assigneeUserId);
@@ -37,21 +39,22 @@ export async function addDailyMediaWork(userId:string,raw:unknown) {
       if(!watch)throw Error('Không tìm thấy Watch cần làm media.');
       let item=await tx.taskItem.findUnique({where:{id:parentId}});let created=false;
       if(!item){
-        item=await createPersonalWorkItem({title:'Media · '+input.day.split('-').reverse().join('/'),note:'Tổng hợp công việc media trong ngày. Mỗi yêu cầu là một đầu việc; mở Media từ đầu việc để xử lý đúng Watch.',domain:'WATCHSHOP',workType:'GENERAL_TASK',dueAt:input.day+'T23:59:00+07:00',reminderMinutes:null,tags:['Media']},{userId:input.assigneeUserId},tx,{systemId:parentId});created=true;
+        item=await createPersonalWorkItem({title:'Media · '+input.day.split('-').reverse().join('/'),note:'Tổng hợp công việc media trong ngày. Mỗi yêu cầu là một đầu việc; mở Media từ đầu việc để xử lý đúng Watch.',domain:'WATCHSHOP',workType:'GENERAL_TASK',dueAt:input.day+'T23:59:00+07:00',reminderMinutes:null,tags:['Media']},{userId:input.assigneeUserId},tx,{systemId:parentId,actorUserId:userId,onEvent:event=>delivery.track(event)});created=true;
       }
       if(item.personalOwnerUserId!==input.assigneeUserId)throw Error('Việc media của ngày này không còn thuộc người phụ trách đã chọn.');
       if(item.status==='CANCELLED')throw Error('Việc media ngày này đã bị hủy. Hãy khôi phục việc đó để bổ sung đầu việc.');
       const reopened=item.status==='DONE'||!!item.checklistLockedAt;
       const last=await tx.taskItemChecklist.findFirst({where:{taskItemId:parentId},orderBy:{sortOrder:'desc'},select:{sortOrder:true}});
       const context={source:'WATCH_MEDIA_DAILY',productId:input.productId,watchTitle:watch.product.title.slice(0,500),sku:watch.product.sku?.slice(0,150)||null,part:input.part,request:input.request};
-      await tx.taskItemChecklist.create({data:{id:entryId,taskItemId:parentId,title:`${(watch.product.sku||watch.product.title).slice(0,150)} · ${MEDIA_DAILY_PARTS[input.part]}: ${input.request}`.slice(0,500),note:JSON.stringify(context),sortOrder:(last?.sortOrder??-1)+1}});
+      const checklist=await tx.taskItemChecklist.create({data:{id:entryId,taskItemId:parentId,title:`${(watch.product.sku||watch.product.title).slice(0,150)} · ${MEDIA_DAILY_PARTS[input.part]}: ${input.request}`.slice(0,500),note:JSON.stringify(context),sortOrder:(last?.sortOrder??-1)+1}});
       if(userId!==input.assigneeUserId)await tx.personalChecklistShare.create({data:{checklistItemId:entryId,userId,accessLevel:'EDITOR',sharedByUserId:userId}});
       const [total,done]=await Promise.all([tx.taskItemChecklist.count({where:{taskItemId:parentId}}),tx.taskItemChecklist.count({where:{taskItemId:parentId,isDone:true}})]);
       await tx.taskItem.update({where:{id:parentId},data:{progressMode:'CHECKLIST',progressPercent:Math.round(done/total*100),...(reopened?{status:'IN_PROGRESS',isDone:false,completedAt:null,checklistLockedAt:null}:{}),assignedToUserId:input.assigneeUserId}});
       await tx.taskItemActivity.create({data:{id:entryId,taskItemId:parentId,sourceType:'SYSTEM',sourceId:entryId,actorUserId:userId,title:created?'Tạo việc media trong ngày':'Thêm đầu việc media',body:`${watch.product.title} · ${MEDIA_DAILY_PARTS[input.part]}: ${input.request}`,metadataJson:{...context,requestHash,day:input.day,checklistItemId:entryId}}});
+      delivery.track(await recordPersonalChecklistCreated(tx,{taskItemId:parentId,id:entryId,title:checklist.title,actorUserId:userId,context:{...context,assigneeUserId:input.assigneeUserId,day:input.day}}));
       await queueWorkNotification(tx,{key:entryId+':'+input.assigneeUserId,userId:input.assigneeUserId,actorId:userId,taskItemId:parentId,checklistItemId:entryId,kind:created?'ASSIGNED':'CHANGED',title:`${watch.product.title} · ${input.request}`,route:'/admin/personal-work?item='+parentId});
       return {taskItemId:parentId,checklistItemId:entryId,created,reopened};
-    },{isolationLevel:'Serializable',timeout:20000});}
+    },{isolationLevel:'Serializable',timeout:20000,allowNoEvents:true,deferConsumers:options?.deferConsumers});}
     catch(error){if(attempt<3 && error instanceof Prisma.PrismaClientKnownRequestError && ['P2034','P2002'].includes(error.code))continue;throw error;}
   }
 }

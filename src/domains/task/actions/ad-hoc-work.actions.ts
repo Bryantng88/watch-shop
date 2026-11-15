@@ -8,11 +8,12 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/server/auth/requirePermission";
-import { prisma, withDbTransaction } from "@/server/db/client";
+import { after } from "next/server";
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
+import { prisma } from "@/server/db/client";
 import { ensureOperationSpace } from "@/domains/coordination/server/operation-space.service";
 import { createTaskItemRepo } from "@/domains/task/server/core/task-item.repo";
 import { ensureTaskItemReferenceBinding } from "@/domains/task/server/business-binding.service";
-import { recordBusinessEvent } from "@/domains/event/server/business-event.service";
 import { getTaskQuickCreateData } from "@/domains/task/server/core/task.service";
 
 export type AdHocWorkTarget = {
@@ -42,7 +43,7 @@ export async function createAdHocWorkAction(input: {
   const detail = String(input.detail ?? "").trim();
   if (!request) throw new Error("Vui lòng nhập yêu cầu cần thực hiện.");
 
-  const result = await withDbTransaction(prisma, async (tx) => {
+  const result = await runBusinessEventTransaction(async (tx,delivery) => {
     const creator = auth.userId
       ? await tx.user.findUnique({
           where: { id: auth.userId },
@@ -117,7 +118,7 @@ export async function createAdHocWorkAction(input: {
       bindingId = binding.binding.id;
     }
 
-    if (input.target) await recordBusinessEvent(tx, {
+    await delivery.emit({
       eventKey: "task.item.created",
       targetType: "TASK_ITEM",
       targetId: item.id,
@@ -149,7 +150,7 @@ export async function createAdHocWorkAction(input: {
     });
 
     return { id: item.id, taskId: operationSpace.task.id };
-  });
+  },{deferConsumers:work=>after(work)});
 
   revalidatePath("/admin/coordination/operation");
   revalidatePath("/admin/watches");

@@ -1,4 +1,5 @@
 "use client";
+import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import {PersonalWorkListRow} from "./PersonalWorkListRow";
 import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
 import listStyles from "./PersonalWorkList.module.css";
@@ -1020,6 +1021,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             <Check className="h-3.5 w-3.5" />
                           )}
                         </button>
+                        {entry.object&&<WorkObjectThumbnail object={entry.object}/>}
                         <PersonalChecklistTitle title={entry.title} done={entry.isDone}
                           disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           onSave={async title=>{

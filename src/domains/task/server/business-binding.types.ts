@@ -1,3 +1,4 @@
+import type { DailyMediaWorkSummary } from "@/domains/personal-work/shared/media-daily";
 import {
   TaskExecutionActionType,
   TaskExecutionTargetType,
@@ -71,6 +72,7 @@ export type QueueItemManualTransitionDTO = {
 };
 
 export type QueueItemDTO = {
+  dailyMediaWork?: DailyMediaWorkSummary | null;
   id: string;
   taskItemId: string;
   targetType: BusinessBindingTargetType;
