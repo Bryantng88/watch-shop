@@ -18,3 +18,5 @@ The new checklist event is registered in the catalog and workspace projection so
 Validation: boundary unit tests exercise payload/catalog, after-commit, rollback and idempotent no-op semantics. PostgreSQL fixture scripts additionally cover actual permissions, creation, replay and checklist lifecycle in CI.
 
 Legacy limitation: the broad check-business-event-after-commit checker also flags existing transaction patterns in Ben service, order posting and sales intake. Those pre-existing paths are not refactored wholesale here. The modified Ben approval path explicitly collects callbacks per transaction attempt and drains only after a successful commit; its fixture asserts the canonical creation event.
+
+The older general task action (`src/domains/task/actions/task.actions.ts`) already publishes task.item.created, but records it after the task write rather than inside the same owning transaction. This remains a legacy atomicity gap outside the modified personal/media creation paths; it should be migrated before claiming every task-creation command is atomic.
