@@ -481,23 +481,6 @@ export async function submitWatchFormApplication(
         saveIntent === "SUBMIT_IMAGE"
             ? beforeContent
             : buildContentSnapshot({ ...values.content, hookText: nextHookText });
-    const afterSpec = buildSpecSnapshot({
-        brand: values.spec.specBrand || undefined,
-        model: values.spec.model,
-        referenceNumber: values.spec.referenceNumber,
-        caseShape: values.spec.caseShape,
-        primaryCaseMaterial: values.spec.primaryCaseMaterial,
-        dialColor: values.spec.dialColor,
-        movementType: values.basic.movementType,
-        calibre: values.spec.calibre,
-        yearText: values.basic.yearText,
-        conditionGrade: values.basic.conditionGrade,
-        goldKarat: values.spec.goldKarat,
-        goldTreatment: values.spec.primaryCaseMaterial === "GOLD" ? "SOLID_GOLD" : values.spec.goldTreatment,
-        goldColors: values.spec.goldColors,
-        goldWeightGrams: values.spec.goldWeightGrams,
-        complicationNames: values.spec.complicationNames,
-    });
     const beforeImageKeys = normalizeImageKeys(
         current.product.productImage.map((x: any) => ({ key: x.fileKey })),
     );
@@ -519,7 +502,6 @@ export async function submitWatchFormApplication(
     // pool, not a transfer that consumes or deletes the source originals.
     const remainingPoolImages = mediaChanges.pool;
     const contentChanged = !sameJson(beforeContent, afterContent);
-    const specChanged = !sameJson(beforeSpec, afterSpec);
     const imagesChanged = saveIntent === "SUBMIT_CONTENT"
         ? false
         : mediaChanges.galleryChanged;
@@ -680,6 +662,16 @@ export async function submitWatchFormApplication(
             cardIncluded: Boolean((values.spec as any).cardIncluded),
             materialNote: values.spec.materialNote || null,
         };
+
+        // Compare the values actually persisted, not raw form defaults. Otherwise
+        // an untouched empty material/brand/decimal can invalidate another tab.
+        const afterSpec = buildSpecSnapshot({
+            ...specData,
+            yearText: values.basic.yearText,
+            conditionGrade: values.basic.conditionGrade,
+            complicationNames: values.spec.complicationNames,
+        });
+        const specChanged = !sameJson(beforeSpec, afterSpec);
 
         const basicChanged = [
           [current.product.brandId, values.basic.brandId], [current.product.vendorId, values.basic.vendorId], [current.product.categoryId, values.basic.categoryId],

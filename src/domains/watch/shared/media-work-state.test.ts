@@ -15,3 +15,10 @@ test('late save receipts preserve newer edits and never call unsaved work saved'
  assert.equal(effectiveMediaParts(complete,receipt.current,receipt.saved).content,false);
  assert.equal(effectiveMediaParts(complete,receipt.current,receipt.saved).image,false);
 });
+
+
+test('refreshing the same chosen pool in another order preserves completion',()=>{
+ const saved=base();saved.media.poolImages=[{key:'a.jpg'},{key:'b.jpg'}];saved.media.galleryImages=[{key:'a.jpg'},{key:'b.jpg'}];
+ const current=structuredClone(saved);current.media.poolImages.reverse();assert.deepEqual(effectiveMediaParts(complete,current,saved),complete);
+ current.media.galleryImages.reverse();assert.equal(effectiveMediaParts(complete,current,saved).image,false);
+});
