@@ -1,3 +1,4 @@
+import { dailyMediaWorkForWatches, dailyMediaWorkForProducts } from "@/domains/personal-work/server/media-daily-read.service";
 import {
   ActivitySourceType,
   PaymentDirection,
@@ -1748,15 +1749,19 @@ async function loadMediaBoard(input: {
   pageSize?: number;
   doneRetentionDays?: number | null;
 }) {
+  async function enrich(board:Awaited<ReturnType<typeof loadMediaBoardLive>>){
+    const summaries=await dailyMediaWorkForProducts(input.db,input.viewerUserId,board.items.flatMap(item=>item.productId?[item.productId]:[]));
+    return {...board,items:board.items.map(item=>({...item,dailyMediaWork:item.productId?summaries.get(item.productId)??null:null}))};
+  }
   try {
     const projection = await loadMediaBoardFromProjection(input);
-    if (projection) return projection;
+    if (projection) return enrich(projection);
   } catch (error) {
     console.warn("[coordination-dashboard] media board projection unavailable; using live fallback", {
       error: error instanceof Error ? error.message : String(error),
     });
   }
-  return loadMediaBoardLive(input);
+  return enrich(await loadMediaBoardLive(input));
 }
 
 function technicalIssueBoardStage(input: {
@@ -4195,7 +4200,10 @@ export async function getCoordinationDashboard(input: {
       };
     }),
     workTickets,
-    flowItems,
+    flowItems: await (async()=>{
+      const state=await dailyMediaWorkForWatches(db,getAuthUserId(input.auth),flowItems.filter(item=>item.targetType==='WATCH').map(item=>item.targetId));
+      return flowItems.map(item=>item.targetType==='WATCH'?{...item,dailyMediaWork:state.get(item.targetId)??null}:item);
+    })(),
     flowItemsPagination: {
       page: flowPage,
       pageSize: flowPageSize,

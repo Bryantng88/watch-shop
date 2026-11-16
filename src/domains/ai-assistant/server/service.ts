@@ -1,3 +1,4 @@
+import { recordPersonalChecklistCreated } from "@/domains/personal-work/server/personal-work-events";
 import { quickNameWorker } from "@/domains/acquisition/server/quick-name.service";
 import {codeCommand} from "./code-jobs";
 import {currentReview,sameReview} from "./review-approval";
@@ -580,7 +581,10 @@ export async function approveAssistantPersonalWork(
   defer?: (work: () => Promise<void>) => void,
   includeUpdates=false,
 ) {
+  const workEvents:(()=>Promise<void>)[]=[];
+  const registerWorkEvent=(work:()=>Promise<void>)=>{workEvents.push(work);};
   const outcomes = await transaction(async (tx) => {
+    workEvents.length=0;
     await lock(tx, id);
     const row = await owned(tx, id, userId),
       actor = await assistantActor(tx, userId),
@@ -665,6 +669,7 @@ export async function approveAssistantPersonalWork(
         },
         actor,
         tx,
+        {assignedToUserId:draft.assignee?.id,deferConsumers:registerWorkEvent},
       );
       if (draft.assignee) {
         await tx.taskItem.update({
@@ -690,13 +695,10 @@ export async function approveAssistantPersonalWork(
         });
       }
       if (p.checklist.length) {
-        await tx.taskItemChecklist.createMany({
-          data: p.checklist.map((title, i) => ({
-            taskItemId: item.id,
-            title,
-            sortOrder: i + 1,
-          })),
-        });
+        for (const [index,title] of p.checklist.entries()) {
+          const entry=await tx.taskItemChecklist.create({data:{taskItemId:item.id,title,sortOrder:index+1}});
+          await recordPersonalChecklistCreated(tx,{taskItemId:item.id,id:entry.id,title:entry.title,actorUserId:userId},{deferConsumers:registerWorkEvent});
+        }
         await tx.taskItem.update({
           where: { id: item.id },
           data: { progressMode: "CHECKLIST", progressPercent: 0 },
@@ -772,6 +774,7 @@ export async function approveAssistantPersonalWork(
     });
     return results;
   });
+  for(const work of workEvents){if(defer)defer(work);else await work();}
   for (const recipient of new Set(
     outcomes.flatMap((o) =>
       o.recipient && o.recipient !== userId ? [o.recipient] : [],

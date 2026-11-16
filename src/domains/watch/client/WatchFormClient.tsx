@@ -1841,6 +1841,7 @@ export default function WatchFormClient({
         isFormDirty={isDirty}
         openTaskCount={detail.taskSummary?.watchImage ?? 0}
         hideReviewActions={isMediaMode}
+        galleryCompleted={isMediaMode && mediaWorkDone.image}
         mediaActions={mediaImageActions}
         collapsible={!isMediaMode}
         surface={isMediaMode ? "flat" : "card"}
@@ -2086,6 +2087,7 @@ export default function WatchFormClient({
             isFormDirty={isDirty}
             openTaskCount={detail.taskSummary?.watchImage ?? 0}
             hideReviewActions={fromMediaWorkspace}
+            galleryCompleted={isMediaMode && mediaWorkDone.image}
             mediaActions={mediaImageActions}
             onBeforeSubmitReview={saveBeforeReview}
             onPoolImagesChange={(items) => {

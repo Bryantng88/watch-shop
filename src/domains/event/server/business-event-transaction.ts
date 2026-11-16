@@ -24,8 +24,9 @@ export type BusinessEventTransactionDelivery = {
 
 export type RunBusinessEventTransactionOptions = {
   deferConsumers?: (work: () => Promise<void>) => void;
-  /** Explicit escape hatch for non-projected maintenance commands. */
+  /** Idempotent no-ops and non-projected maintenance commands may emit no new event. */
   allowNoEvents?: boolean;
+  isolationLevel?: Prisma.TransactionIsolationLevel;
   maxWait?: number;
   timeout?: number;
 };
@@ -74,6 +75,7 @@ export async function runBusinessEventTransaction<T>(
       deliveryKeys: Array.from(new Set(deliveryKeys)),
     };
   }, {
+    isolationLevel: options.isolationLevel,
     maxWait: options.maxWait,
     timeout: options.timeout,
   });

@@ -165,6 +165,14 @@ export const LEGACY_BUSINESS_EVENT_CONTRACTS: BusinessEventContract[] = [
     knownConsumers: ["projection"],
   }),
   defineBusinessEventContract({
+    key: "task.item.checklist.created",
+    label: "Task checklist item created",
+    targetType: "TASK_ITEM",
+    group: "Task",
+    knownConsumers: ["projection"],
+    payload: { name: "TaskChecklistCreatedPayload", version: 1, required: ["taskItemId", "checklistItemId", "title", "createdByUserId", "eventInstanceId"] },
+  }),
+  defineBusinessEventContract({
     key: "task.item.moved",
     label: "Task item moved",
     targetType: "TASK_ITEM",

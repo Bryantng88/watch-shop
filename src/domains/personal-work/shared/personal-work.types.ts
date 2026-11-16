@@ -72,6 +72,7 @@ export const PERSONAL_WORK_TYPES = {
 export type PersonalWorkTargetType = "WATCH" | "ORDER" | "PURCHASE_REQUEST" | "ACQUISITION" | "SERVICE_REQUEST";
 
 export type PersonalWorkTarget = {
+  imageUrl?: string | null;
   type: PersonalWorkTargetType;
   id: string;
   label: string;
@@ -127,7 +128,8 @@ export type PersonalWorkActivity = {
 };
 
 export type PersonalWorkChecklistItem = {
-  mediaContext?: {label:string;secondary:string|null;href:string;request:string};
+  object?: PersonalWorkTarget;
+  mediaContext?: {productId?:string;label:string;secondary:string|null;href:string;request:string};
   access?: "OWNER" | "EDITOR" | "VIEWER";
   sharedWith?: PersonalWorkShare[];
   id: string;

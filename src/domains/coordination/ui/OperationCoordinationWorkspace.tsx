@@ -1,4 +1,5 @@
 "use client";
+import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 
 import { Fragment, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
@@ -3449,7 +3450,7 @@ function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoard
             <div className="line-clamp-2 text-sm font-bold leading-5 text-slate-950">{item.title}</div>
             {pending ? <LoaderCircle className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-violet-500" /> : <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-slate-500" />}
           </div>
-          <div className="mt-1 truncate text-[11px] font-medium text-slate-500">{item.sku ?? "Chưa có SKU"}</div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-500"><span>{item.sku ?? "Chưa có SKU"}</span><WatchMediaWorkBadge state={item.dailyMediaWork}/></div>
           <span className={cn("mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ring-1 ring-inset", appearance.badge)}><StageIcon className="h-3 w-3" />{item.workflowState ?? "Sẵn sàng"}</span>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
+import type { RecordedBusinessEvent } from "@/domains/event/server/business-event.service";
 import { Prisma } from "@prisma/client";
 import { dbOrTx, prisma, withDbTransaction, type DB } from "@/server/db/client";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
@@ -19,7 +21,8 @@ export async function listPersonalPhotoshootPlans(date: string, auth: unknown, d
   return rows.map(row => ({ id: row.id, title: row.title, dueAt: row.dueAt!.toISOString(), scheduledEndAt: row.scheduledEndAt?.toISOString() ?? null, watchCount: new Set(row.executions.map(link => link.targetId)).size }));
 }
 
-export async function schedulePersonalWatchPhotoshoot(input: PersonalPhotoshootInput, auth: unknown, db: DB = prisma): Promise<PersonalPhotoshootResult> {
+export async function schedulePersonalWatchPhotoshoot(input: PersonalPhotoshootInput, auth: unknown, db: DB = prisma, events?:{onEvent:(event:RecordedBusinessEvent)=>void}): Promise<PersonalPhotoshootResult> {
+  if(db===prisma)return runBusinessEventTransaction((tx,delivery)=>schedulePersonalWatchPhotoshoot(input,auth,tx,{onEvent:event=>delivery.track(event)}),{allowNoEvents:true});
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
   const day = personalPhotoshootDay(input.date);
@@ -37,7 +40,7 @@ export async function schedulePersonalWatchPhotoshoot(input: PersonalPhotoshootI
     if (!id && candidates.length > 1) throw new Error("Ngày này có nhiều việc chụp; hãy chọn việc cần thêm watch");
     let created = false;
     if (!id) {
-      const item = await createPersonalWorkItem({ title: `Chụp ảnh ${input.date.split("-").reverse().join("/")}`, categoryKey: "MEDIA", workType: "PHOTOGRAPHY", dueAt: day.dueAt.toISOString() }, auth, tx);
+      const item = await createPersonalWorkItem({ title: `Chụp ảnh ${input.date.split("-").reverse().join("/")}`, categoryKey: "MEDIA", workType: "PHOTOGRAPHY", dueAt: day.dueAt.toISOString() }, auth, tx,{onEvent:events?.onEvent,eventTargets:[{type:"WATCH",id:watch.id,label:watch.product.title,secondary:watch.product.sku,href:`/admin/watches/${watch.productId}`}]});
       id = item.id; created = true;
     }
     // Also serialize against ordinary task edits and recheck after waiting for the row lock.

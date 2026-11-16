@@ -1,3 +1,5 @@
+import {dailyMediaWorkForProducts} from "../src/domains/personal-work/server/media-daily-read.service";
+import {createPersonalWorkItem,addPersonalWorkChecklistItem} from "../src/domains/personal-work/server/personal-work.service";
 import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {prisma} from '../src/server/db/client';
 import {addDailyMediaWork} from '../src/domains/personal-work/server/media-daily.service';
@@ -36,6 +38,8 @@ async function main(){
  assert.equal((await getWatchMediaWorkspaceContext(product.id))?.parts.content,false);
  await assert.rejects(getWatchMediaWorkspaceContext(product.id,undefined,randomUUID()));
  assert.equal((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson && JSON.stringify((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson).includes('"currentState":"DONE"'),false);
+ await prisma.product.update({where:{id:product.id},data:{primaryImageUrl:'synthetic-cover.jpg'}});
+ await prisma.productImage.create({data:{productId:product.id,fileKey:'synthetic-inline.jpg',role:'INLINE',isForAdmin:true}});
  const input={requestKey:randomUUID(),productId:product.id,assigneeUserId:staff.id,day:'2026-11-13',part:'image',request:'Chỉnh sáng gallery cho Watch này'};
  const pair=await Promise.all([addDailyMediaWork(user.id,input),addDailyMediaWork(user.id,input)]);
  assert.equal(pair[0].taskItemId,pair[1].taskItemId);assert.equal(pair[0].checklistItemId,pair[1].checklistItemId);
@@ -43,19 +47,29 @@ async function main(){
  assert.equal(second.taskItemId,pair[0].taskItemId);assert.notEqual(second.checklistItemId,pair[0].checklistItemId);
  assert.equal(await prisma.taskItem.count({where:{id:{startsWith:'media-daily-'},personalOwnerUserId:staff.id}}),1);
  assert.equal(await prisma.taskItemChecklist.count({where:{taskItemId:second.taskItemId}}),2);
+ const createdEvent=await prisma.businessEventLog.findFirstOrThrow({where:{eventKey:'task.item.created',targetId:second.taskItemId}});
+ assert.equal(createdEvent.actorUserId,user.id);assert.equal((createdEvent.metadataJson as Record<string,unknown>).personalOwnerUserId,staff.id);assert.equal((createdEvent.metadataJson as Record<string,unknown>).assignedToUserId,staff.id);
+ assert.equal(await prisma.businessEventLog.count({where:{eventKey:'task.item.created',targetId:second.taskItemId}}),1);
+ const entryDeliveries=await prisma.projectionEventDelivery.findMany({where:{eventKey:'task.item.checklist.created',targetId:second.taskItemId}});assert.equal(entryDeliveries.length,2);assert.equal(new Set(entryDeliveries.map(row=>row.eventInstanceId)).size,2);
+ assert.equal((await dailyMediaWorkForProducts(prisma,user.id,[product.id])).get(product.id)?.count,1);assert.equal((await dailyMediaWorkForProducts(prisma,staff.id,[product.id])).get(product.id)?.count,2);assert.equal((await dailyMediaWorkForProducts(prisma,other.id,[product.id])).get(product.id)?.count,0);
+ const parent=await createPersonalWorkItem({title:'Linked watch '+suffix,domain:'MEDIA',targets:[{type:'WATCH',id:watch.id,label:'untrusted',secondary:null,href:'https://untrusted.invalid'}]},{userId:staff.id});
+ const step=await addPersonalWorkChecklistItem(parent.id,'Generic entry',{userId:staff.id});assert.ok(await prisma.businessEventLog.findFirst({where:{eventKey:'task.item.checklist.created',targetId:parent.id}}));assert.ok(step.id);
+ const linked=(await getPersonalWorkPageData({userId:staff.id})).items.find(item=>item.id===parent.id);assert.equal(linked?.targets[0].imageUrl,'synthetic-inline.jpg');assert.equal(linked?.targets[0].href,`/admin/watches/${product.id}`);
+ let rolledBackId='';await assert.rejects(prisma.$transaction(async tx=>{const task=await createPersonalWorkItem({title:'Rollback '+suffix},{userId:staff.id},tx);rolledBackId=task.id;throw Error('intentional rollback');}));assert.equal(await prisma.taskItem.count({where:{id:rolledBackId}}),0);assert.equal(await prisma.businessEventLog.count({where:{targetId:rolledBackId}}),0);assert.equal(await prisma.projectionEventDelivery.count({where:{targetId:rolledBackId}}),0);
+
  const otherDay=await addDailyMediaWork(user.id,{...input,requestKey:randomUUID(),day:'2026-11-14'});assert.notEqual(otherDay.taskItemId,second.taskItemId);
  const otherUser=await addDailyMediaWork(user.id,{...input,requestKey:randomUUID(),assigneeUserId:other.id});assert.notEqual(otherUser.taskItemId,second.taskItemId);
  await assert.rejects(addDailyMediaWork(staff.id,{...input,requestKey:randomUUID(),assigneeUserId:other.id}));
  await assert.rejects(addDailyMediaWork(user.id,{...input,request:'Reused key, changed text'}));
  await assert.rejects(updatePersonalWorkItem({id:second.taskItemId,dueAt:'2026-11-14T10:00:00+07:00'},{userId:staff.id}));
- const managerView=(await getPersonalWorkPageData({userId:user.id})).items.find(item=>item.id===second.taskItemId);assert.ok(managerView?.checklistOnly);assert.equal(managerView.checklist.length,1);assert.equal(managerView.checklist[0].mediaContext?.href,`/admin/watches/${product.id}/edit?mode=media&focus=image`);assert.equal(managerView.activities.length,0);
+ const managerView=(await getPersonalWorkPageData({userId:user.id})).items.find(item=>item.id===second.taskItemId);assert.ok(managerView?.checklistOnly);assert.equal(managerView.checklist.length,1);assert.equal(managerView.checklist[0].mediaContext?.href,`/admin/watches/${product.id}/edit?mode=media&focus=image`);assert.equal(managerView.activities.length,0);assert.equal(managerView.targets.length,0);assert.equal(managerView.checklist[0].object?.imageUrl,'synthetic-inline.jpg');assert.equal(managerView.checklist[0].object?.id,watch.id);
  await prisma.taskItemChecklist.updateMany({where:{taskItemId:second.taskItemId},data:{isDone:true,doneAt:new Date()}});
  await prisma.taskItem.update({where:{id:second.taskItemId},data:{status:'DONE',isDone:true,completedAt:new Date(),checklistLockedAt:new Date()}});
  const reopened=await addDailyMediaWork(staff.id,{...input,requestKey:randomUUID(),part:'profile',request:'Kiểm tra lại spec'});assert.equal(reopened.taskItemId,second.taskItemId);assert.equal(reopened.reopened,true);
- const updated=await prisma.taskItem.findUniqueOrThrow({where:{id:second.taskItemId}});assert.equal(updated.status,'IN_PROGRESS');assert.equal(updated.checklistLockedAt,null);assert.equal(updated.progressPercent,67);
+ const updated=await prisma.taskItem.findUniqueOrThrow({where:{id:second.taskItemId}});assert.equal(updated.status,'IN_PROGRESS');assert.equal(updated.checklistLockedAt,null);assert.equal(updated.progressPercent,67);assert.equal((await dailyMediaWorkForProducts(prisma,staff.id,[product.id])).get(product.id)?.count,2);await prisma.taskItemChecklist.delete({where:{id:reopened.checklistItemId}});assert.equal((await dailyMediaWorkForProducts(prisma,staff.id,[product.id])).get(product.id)?.count,1);
  await prisma.role.update({where:{id:staffRole.id},data:{permissions:{set:[]}}});const count=await prisma.taskItemChecklist.count({where:{taskItemId:second.taskItemId}});
  await assert.rejects(addDailyMediaWork(user.id,{...input,requestKey:randomUUID()}));assert.equal(await prisma.taskItemChecklist.count({where:{taskItemId:second.taskItemId}}),count);
- console.log('PASS media drafts/daily work DB: draft persists without completion; changed saved content invalidates completed part; empty gallery/cover and foreign binding reject; same user/day aggregates under concurrency and replay; other day/person separates; self/assignment rights, receipt mismatch, fixed-day identity, checklist-only context scope, reopen-on-new-head and revoked recipient enforce. No real provider calls.');
+ console.log('PASS media drafts/daily work DB: draft persists without completion; changed saved content invalidates completed part; empty gallery/cover and foreign binding reject; same user/day aggregates under concurrency and replay; other day/person separates; self/assignment rights, receipt mismatch, fixed-day identity, checklist-only context scope, reopen-on-new-head and revoked recipient enforce. INLINE hydration and scoped photo access; active/done/deleted daily state; created/checklist events and per-entry outbox identities; rollback removes task/event/outbox. No real provider calls.');
  }finally{globalThis.fetch=oldFetch;await prisma.user.updateMany({where:{id:{in:[user.id,staff.id,other.id]}},data:{isActive:false}});}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());
