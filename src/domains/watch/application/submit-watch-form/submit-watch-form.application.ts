@@ -3,7 +3,7 @@ import { prisma, type DB } from "@/server/db/client";
 import { attachIngestedWatchMedia, listSelectedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
-import { MediaRole, WatchSpecStatus } from "@prisma/client";
+import { MediaRole, WatchSpecStatus, Prisma } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
     ensureWatchInlineImageFromFirstGalleryRepo,
@@ -99,6 +99,12 @@ function buildContentSnapshot(input: {
         bulletSpecs: normalizeArray(input.bulletSpecs as any),
         hashTags: normalizeText(input.hashTags),
     };
+}
+
+// Match PostgreSQL numeric scales before comparing or writing form strings.
+function persistedSpecDecimal(value: string | null | undefined, scale: number) {
+    const decimal = toDecimal(value);
+    return decimal === null ? null : new Prisma.Decimal(decimal).toDecimalPlaces(scale);
 }
 
 function buildSpecSnapshot(input: {
@@ -615,9 +621,9 @@ export async function submitWatchFormApplication(
                 WatchFormEnums.WatchStrapComponentSource,
             ),
             caseShape: pickEnumOrNull(values.spec.caseShape, WatchFormEnums.CaseType),
-            caseSizeMM: toDecimal(values.spec.caseSizeMM),
-            lugToLugMM: toDecimal(values.spec.lugToLugMM),
-            thicknessMM: toDecimal(values.spec.thicknessMM),
+            caseSizeMM: persistedSpecDecimal(values.spec.caseSizeMM, 2),
+            lugToLugMM: persistedSpecDecimal(values.spec.lugToLugMM, 2),
+            thicknessMM: persistedSpecDecimal(values.spec.thicknessMM, 2),
             crystal: pickEnumOrNull(values.spec.crystal, WatchFormEnums.Glass),
             dialColor: values.spec.dialColor || null,
             dialFinish: values.spec.dialFinish || null,
@@ -647,7 +653,7 @@ export async function submitWatchFormApplication(
             goldColors: pickGoldColors(values.spec.goldColors),
             goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
             goldWeightGrams: values.spec.primaryCaseMaterial === "GOLD"
-                ? toDecimal(goldWeightGrams)
+                ? persistedSpecDecimal(goldWeightGrams, 3)
                 : null,
             braceletType: pickEnumOrNull(
                 values.spec.braceletType,
