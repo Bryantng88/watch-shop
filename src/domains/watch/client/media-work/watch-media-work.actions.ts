@@ -7,6 +7,7 @@ import { routeWatchesToMedia } from "@/domains/media/pipeline";
 import { listSelectedWatchMedia } from "@/domains/media/application";
 import { ensureOperationSpace } from "@/domains/coordination/server";
 import {
+  getWatchMediaWorkspaceContext,
   markWatchMediaAssetAttachedFromQueueItem,
   markWatchMediaAssetAttachedFromWatch,
   saveWatchMediaWorkDraftFromQueueItem,
@@ -177,4 +178,11 @@ export async function saveWatchMediaWorkDraftFromWatchAction(input: {
   revalidatePath(`/admin/watches/${input.productId}/edit`);
 
   return result;
+}
+
+export async function loadWatchMediaWorkStateAction(input: {productId: string; bindingId?: string | null}) {
+  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const context = await getWatchMediaWorkspaceContext(input.productId, prisma, input.bindingId || undefined);
+  if (!context) throw new Error("Không tìm thấy trạng thái xử lý media của Watch.");
+  return context.parts;
 }

@@ -1,3 +1,4 @@
+import { mediaContentValues, mediaDecimal, mediaProfileValues } from "../../shared/media-part-values";
 import { saveWatchMediaWorkDraftFromWatch } from "../../server/media-work/watch-media-work.service";
 import { prisma, type DB } from "@/server/db/client";
 import { attachIngestedWatchMedia, listSelectedWatchMedia } from "@/domains/media/application";
@@ -28,7 +29,6 @@ import {
     pickGoldColors,
     sameJson,
     textOrUndefined,
-    toDecimal,
 } from "../../server/shared";
 import {
     emitWatchContentModifiedEvent,
@@ -103,8 +103,8 @@ function buildContentSnapshot(input: {
 
 // Match PostgreSQL numeric scales before comparing or writing form strings.
 function persistedSpecDecimal(value: string | null | undefined, scale: number) {
-    const decimal = toDecimal(value);
-    return decimal === null ? null : new Prisma.Decimal(decimal).toDecimalPlaces(scale);
+    const decimal = mediaDecimal(value, scale);
+    return decimal === null ? null : new Prisma.Decimal(decimal);
 }
 
 function buildSpecSnapshot(input: {
@@ -507,7 +507,7 @@ export async function submitWatchFormApplication(
     // The chosen pool is durable. Gallery selection is an overlay on that
     // pool, not a transfer that consumes or deletes the source originals.
     const remainingPoolImages = mediaChanges.pool;
-    const contentChanged = !sameJson(beforeContent, afterContent);
+    const contentChanged = !sameJson(mediaContentValues(beforeContent), mediaContentValues(afterContent));
     const imagesChanged = saveIntent === "SUBMIT_CONTENT"
         ? false
         : mediaChanges.galleryChanged;
@@ -679,12 +679,13 @@ export async function submitWatchFormApplication(
         });
         const specChanged = !sameJson(beforeSpec, afterSpec);
 
-        const basicChanged = [
-          [current.product.brandId, values.basic.brandId], [current.product.vendorId, values.basic.vendorId], [current.product.categoryId, values.basic.categoryId],
-          [current.gender, values.basic.gender], [current.style, values.basic.style], [current.siteChannel, values.basic.siteChannel], [current.isCollectible, values.basic.isCollectible],
-          [current.conditionGrade, values.basic.conditionGrade], [current.movementType, values.basic.movementType], [current.movementCalibre, values.basic.movementCalibre], [current.serialNumber, values.basic.serialNumber], [current.yearText, values.basic.yearText],
-        ].some(([before,after]) => String(before ?? "") !== String(after ?? ""));
-        const profileChanged = specChanged || basicChanged || postTargetsResult.changed || nextTitle !== current.product.title || safeSku !== current.product.sku || Object.entries(specData).some(([key,value]) => String(value ?? "") !== String((current.watchSpecV2 as Record<string,unknown> | null)?.[key] ?? ""));
+        const beforeProfile = mediaProfileValues({
+            basic: {...current, title: current.product.title, brandId: current.product.brandId, vendorId: current.product.vendorId, categoryId: current.product.categoryId},
+            spec: {...current.watchSpecV2, complicationNames: current.product.watchSpec?.Complication.map(item => item.name)},
+            sku: current.product.sku,
+        });
+        const afterProfile = mediaProfileValues({basic: {...values.basic, title: nextTitle, postTargetIds: []}, spec: {...specData, complicationNames: values.spec.complicationNames}, sku: safeSku});
+        const profileChanged = postTargetsResult.changed || !sameJson(beforeProfile, afterProfile);
         await tx.watchSpecV2.upsert({
             where: { watchId: current.id },
             create: { watchId: current.id, ...specData },
@@ -876,6 +877,7 @@ export async function submitWatchFormApplication(
             }, tx);
 
             if (result.changedFields.length > 0) {
+                await saveWatchMediaWorkDraftFromWatch({productId, actorUserId: context.userId, parts: {profile:false}, note: "Giá đã thay đổi; cần xác nhận hoàn tất lại."}, tx);
                 await emitWatchPriceUpdatedEvent(tx, {
                     watch: {
                         id: result.watchId,

@@ -39,7 +39,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/*.test.ts src/domains/acquisition/shared/quick-name.test.ts src/domains/watch/shared/media-work-state.test.ts src/domains/watch/server/media/watch-form-media.service.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
+      - run: node --import tsx --test src/domains/ai-assistant/*.test.ts src/domains/ai-assistant/server/*.test.ts src/server/auth/*.test.ts src/domains/acquisition/shared/quick-name.test.ts src/domains/watch/shared/media-work-state.test.ts src/domains/watch/shared/media-part-values.test.ts src/domains/watch/server/media/watch-form-media.service.test.ts src/domains/media-post/server/*.test.ts src/domains/media-post/shared/*.test.ts src/domains/personal-work/shared/*.test.ts src/domains/personal-work/server/*.test.ts src/domains/personal-work/server/codex/*.test.ts
       - run: node --test tests/auth/remember-device.test.cjs
       - run: node --test tests/work/work-object-state.test.cjs
       - run: npx eslint src/server/auth/auth-token.ts src/app/\(admin\)/admin/auth/_server/auth.service.ts src/app/\(admin\)/login/_client/LoginForm.tsx
