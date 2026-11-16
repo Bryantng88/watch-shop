@@ -507,6 +507,7 @@ export default function WatchFormClient({
   const isMediaWorkspaceReturned = workspaceState === "RETURNED";
   const canApproveMediaWorkspace =
     isMediaProgressContext &&
+    mediaPoolReady && !mediaStatusUnknown &&
     Boolean(workspaceBindingId) &&
     canReviewContent &&
     (workspaceState === "NEW" || workspaceState === "REVIEW");
