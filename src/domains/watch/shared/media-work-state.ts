@@ -11,7 +11,7 @@ export function mediaPartSnapshot(values: WatchFormValues, part: MediaWorkPart) 
   const value=part==="profile"?{basic:values.basic,spec:values.spec,sku:values.header.sku}
     :part==="content"?values.content
     :part==="cover"?key(values.media.coverImage)
-    :{gallery:values.media.galleryImages.map(key),pool:values.media.poolImages.map(key)};
+    :{gallery:values.media.galleryImages.map(key),pool:[...new Set(values.media.poolImages.map(key))].sort()};
   return JSON.stringify(sorted(value));
 }
 export function effectiveMediaParts(done:Record<MediaWorkPart,boolean>, current:WatchFormValues, saved:WatchFormValues) {

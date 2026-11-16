@@ -45,6 +45,9 @@ function App(){const [state,setState]=useState(null);useEffect(()=>{fetch('/fixt
  await page.goto(url);await page.getByRole('textbox',{name:'Tên Watch',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Hoàn tất mục',exact:true}).isEnabled(),true);await page.getByText('Chưa hoàn tất',{exact:true}).waitFor();
  await page.getByRole('button',{name:'Lưu tạm',exact:true}).click();await page.waitForFunction(()=>window.__success?.message?.includes('lưu tạm'));assert.equal(progressCalls.at(-1).parts.profile,false);
  await page.getByRole('button',{name:'Hoàn tất mục',exact:true}).click();await page.getByText('Đã hoàn tất',{exact:true}).waitFor();assert.equal(progressCalls.at(-1).parts.profile,true);
+ await page.getByRole('button',{name:/^2\s*Content/}).click();await page.getByRole('button',{name:/^1\s*Thông tin chính/}).click();await page.getByText('Đã hoàn tất',{exact:true}).waitFor();
+ await page.getByRole('button',{name:/^3\s*Hình ảnh/}).click();await page.getByRole('button',{name:'Chọn gallery mẫu',exact:true}).click();await page.getByRole('button',{name:'Hoàn tất mục',exact:true}).click();await page.getByText('Đã hoàn tất',{exact:true}).waitFor();assert.equal(parts.profile,true);assert.equal(parts.image,true);
+ await page.getByRole('button',{name:/^1\s*Thông tin chính/}).click();await page.getByText('Đã hoàn tất',{exact:true}).waitFor();
  await page.getByRole('textbox',{name:'Tên Watch',exact:true}).fill('Bulova còn đang chỉnh');await page.getByText('Chưa hoàn tất',{exact:true}).waitFor();
  await page.getByRole('button',{name:/^2\s*Content/}).click();await page.getByRole('textbox',{name:'Nội dung Watch',exact:true}).fill('Content đang làm dở');
  await page.getByRole('button',{name:'Lưu tạm',exact:true}).click();await page.waitForFunction(()=>window.__success?.message?.includes('lưu tạm'));assert.equal(parts.content,false);assert.equal(saved.content.body,'Content đang làm dở');

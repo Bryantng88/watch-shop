@@ -36,6 +36,28 @@ async function main(){
  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
  assert.equal((await prisma.watchContent.findUniqueOrThrow({where:{watchId:watch.id}})).body,'WIP saved for later');assert.equal((await progress()).content,false);assert.equal((await progress()).profile,false);
  assert.equal((await getWatchMediaWorkspaceContext(product.id))?.parts.content,false);
+ // Completing another tab resubmits the original form values. Canonical
+ // defaults and decimal formatting must not invalidate an already saved part.
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal((await progress()).profile,true,'unchanged original form must retain profile completion');
+ const galleryKey='media/objects/'+suffix+'/original/gallery.jpg';
+ await prisma.mediaObject.create({data:{bucket:'synthetic-text-review-media',storageKey:galleryKey,availability:'AVAILABLE',bindings:{create:{ownerType:'WATCH',ownerId:watch.id,role:'GALLERY',audienceSegment:'MEN',lifecycle:'ATTACHED'}}}});
+ await prisma.productImage.create({data:{productId:product.id,fileKey:galleryKey,role:'GALLERY',isForAdmin:true}});
+ const withImage=mapWatchDetailToFormValues(await getWatchEditDetail(product.id));withImage.saveIntent='MEDIA_WORKSPACE';
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{image:true}});
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ assert.equal((await progress()).image,true,'completing profile must retain unchanged gallery completion');
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{image:true}});
+ assert.equal((await progress()).profile,true,'completing gallery must retain unchanged profile completion');
+ withImage.spec.caseSizeMM='39';await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal((await progress()).profile,false,'actual spec changes still invalidate profile');assert.equal((await progress()).image,true);
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ withImage.spec.caseSizeMM='039.00';await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal((await progress()).profile,true,'equivalent decimal formatting is not an edit');
+
  await assert.rejects(getWatchMediaWorkspaceContext(product.id,undefined,randomUUID()));
  assert.equal((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson && JSON.stringify((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson).includes('"currentState":"DONE"'),false);
  await prisma.product.update({where:{id:product.id},data:{primaryImageUrl:'synthetic-cover.jpg'}});
