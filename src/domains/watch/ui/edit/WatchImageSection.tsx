@@ -72,6 +72,7 @@ type Props = {
     openTaskCount?: number;
     hideReviewActions?: boolean;
     mediaActions?: React.ReactNode;
+    galleryCompleted?: boolean;
     collapsible?: boolean;
     surface?: "card" | "flat";
     audienceSegment?: "MEN" | "WOMEN" | "UNISEX";
@@ -132,11 +133,16 @@ export default function WatchImageSection({
     openTaskCount = 0,
     hideReviewActions = false,
     mediaActions,
+    galleryCompleted = false,
     collapsible = true,
     surface = "card",
     audienceSegment = "MEN",
     entryPoint = null,
 }: Props) {
+    const [chosenCollapsed, setChosenCollapsed] = useState(galleryCompleted);
+    useEffect(() => {
+        if (galleryCompleted) setChosenCollapsed(true);
+    }, [galleryCompleted]);
     const showGallery = sectionMode !== "cover";
     const showCover = sectionMode !== "gallery";
     const saleStatus = String(saleStage ?? "").toUpperCase();
@@ -878,6 +884,8 @@ export default function WatchImageSection({
                             </button>
                         </div>
                         <MediaPickerMulti
+                            chosenCollapsed={chosenCollapsed}
+                            onChosenCollapsedChange={setChosenCollapsed}
                             chosenValue={poolImages}
                             selectedValue={galleryImages}
                             onChosenChange={handlePoolImagesChange}

@@ -54,6 +54,8 @@ type Props = {
     onRecycleChosen?: (keys: string[]) => Promise<string[]>;
     onDeleteChosen?: (keys: string[]) => Promise<string[]>;
     hideSelectedFromChosen?: boolean;
+    chosenCollapsed?: boolean;
+    onChosenCollapsedChange?: (collapsed: boolean) => void;
     onReturnChosen?: (keys: string[]) => Promise<string[]>;
     onMoveToPost?: (keys: string[]) => Promise<string[]>;
 };
@@ -246,6 +248,8 @@ function ChosenGrid({
     managementSelectedKeys,
     onToggleManagement,
     managementEnabled,
+    collapsed = false,
+    onCollapsedChange,
 }: {
     items: PickedMediaItem[];
     selectedItems: PickedMediaItem[];
@@ -257,16 +261,25 @@ function ChosenGrid({
     managementSelectedKeys: Set<string>;
     onToggleManagement: (key: string) => void;
     managementEnabled: boolean;
+    collapsed?: boolean;
+    onCollapsedChange?: (collapsed: boolean) => void;
 }) {
     const selectedKeySet = new Set(selectedItems.map((item) => item.key));
 
     return (
         <div className="space-y-3">
-            <div className="text-sm font-medium text-slate-700">
+            {onCollapsedChange ? <button
+                type="button"
+                aria-expanded={!collapsed}
+                onClick={() => onCollapsedChange(!collapsed)}
+                className="flex min-h-8 w-full items-center gap-2 text-left text-sm font-medium text-slate-700 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
+            >
+                <span aria-hidden="true">{collapsed ? "▸" : "▾"}</span>
                 Kho ảnh đã chọn tạm
-            </div>
+                <span className="text-xs font-normal tabular-nums text-slate-500">{items.length} ảnh</span>
+            </button> : <div className="text-sm font-medium text-slate-700">Kho ảnh đã chọn tạm</div>}
 
-            {items.length === 0 ? (
+            {collapsed ? null : items.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
                     Chưa có ảnh nào trong chosen.
                 </div>
@@ -515,6 +528,8 @@ export default function MediaPickerMulti({
     onRecycleChosen,
     onDeleteChosen,
     hideSelectedFromChosen = false,
+    chosenCollapsed = false,
+    onChosenCollapsedChange,
     onReturnChosen,
     onMoveToPost,
 }: Props) {
@@ -805,6 +820,8 @@ export default function MediaPickerMulti({
             ) : null}
 
             <ChosenGrid
+                collapsed={chosenCollapsed}
+                onCollapsedChange={onChosenCollapsedChange}
                 items={visibleChosenItems}
                 selectedItems={selectedItems}
                 onToggleSelect={handleToggleSelect}
