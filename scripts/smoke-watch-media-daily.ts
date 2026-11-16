@@ -1,3 +1,5 @@
+import {setWatchCoverApplication} from "../src/domains/watch/application/set-watch-cover.application";
+import {mediaStorage} from "../src/domains/media/storage";
 import {dailyMediaWorkForProducts} from "../src/domains/personal-work/server/media-daily-read.service";
 import {createPersonalWorkItem,addPersonalWorkChecklistItem} from "../src/domains/personal-work/server/personal-work.service";
 import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
@@ -17,6 +19,7 @@ async function main(){
  const user=await prisma.user.create({data:{email:'media-manager-'+suffix+'@example.invalid',roles:{connect:{id:manager.id}}}});
  const staff=await prisma.user.create({data:{email:'media-staff-'+suffix+'@example.invalid',roles:{connect:{id:staffRole.id}}}});
  const other=await prisma.user.create({data:{email:'media-other-'+suffix+'@example.invalid',roles:{connect:{id:staffRole.id}}}});
+ const oldStat=mediaStorage.stat;
  const oldFetch=globalThis.fetch;globalThis.fetch=async()=>{throw Error('External request in media fixture');};
  const product=await prisma.product.create({data:{type:'WATCH',title:'Synthetic Bulova Oceanographer',sku:'MEDIA-'+suffix,slug:'media-'+suffix,status:'AVAILABLE'}});
  const watch=await prisma.watch.create({data:{productId:product.id,movementType:'AUTOMATIC',watchSpecV2:{create:{model:'Oceanographer',dialColor:'Blue'}},watchContent:{create:{body:'Saved initial content',contentStatus:'DRAFT'}}}});
@@ -36,6 +39,53 @@ async function main(){
  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
  assert.equal((await prisma.watchContent.findUniqueOrThrow({where:{watchId:watch.id}})).body,'WIP saved for later');assert.equal((await progress()).content,false);assert.equal((await progress()).profile,false);
  assert.equal((await getWatchMediaWorkspaceContext(product.id))?.parts.content,false);
+ // Completing another tab resubmits the original form values. Canonical
+ // defaults and decimal formatting must not invalidate an already saved part.
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal((await progress()).profile,true,'unchanged original form must retain profile completion');
+ const galleryKey='media/objects/'+suffix+'/original/gallery.jpg';
+ await prisma.mediaObject.create({data:{bucket:'synthetic-text-review-media',storageKey:galleryKey,availability:'AVAILABLE',bindings:{create:{ownerType:'WATCH',ownerId:watch.id,role:'GALLERY',audienceSegment:'MEN',lifecycle:'ATTACHED'}}}});
+ await prisma.productImage.create({data:{productId:product.id,fileKey:galleryKey,role:'GALLERY',isForAdmin:true}});
+ const withImage=mapWatchDetailToFormValues(await getWatchEditDetail(product.id));withImage.saveIntent='MEDIA_WORKSPACE';
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{image:true}});
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ assert.equal((await progress()).image,true,'completing profile must retain unchanged gallery completion');
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{image:true}});
+ assert.equal((await progress()).profile,true,'completing gallery must retain unchanged profile completion');
+ withImage.spec.caseSizeMM='39';await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal((await progress()).profile,false,'actual spec changes still invalidate profile');assert.equal((await progress()).image,true);
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ withImage.spec.caseSizeMM='039.00';await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal((await progress()).profile,true,'equivalent decimal formatting is not an edit');
+ const coverKey='media/objects/'+suffix+'/original/cover.jpg';
+ await prisma.mediaObject.create({data:{bucket:'synthetic-text-review-media',storageKey:coverKey,availability:'AVAILABLE',bindings:{create:{ownerType:'WATCH',ownerId:watch.id,role:'COVER',audienceSegment:'MEN',lifecycle:'ATTACHED'}}}});
+ await prisma.productImage.create({data:{productId:product.id,fileKey:coverKey,role:'COVER',isForAdmin:true}});
+ await prisma.product.update({where:{id:product.id},data:{storefrontImageKey:coverKey}});
+ mediaStorage.stat=async key=>{assert.ok([coverKey,galleryKey].includes(key),'only synthetic fixture objects may be read');return {key,sizeBytes:1,etag:'synthetic',contentType:'image/jpeg'};};
+ withImage.media.coverImage={key:coverKey};withImage.content.hookText='Link https://vinticwatches.vn/products/old';
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true,content:true,image:true,cover:true}});
+ await setWatchCoverApplication({productId:product.id,storageKey:coverKey,actorUserId:user.id,deferConsumers:()=>{}});
+ const allDone={profile:true,content:true,image:true,cover:true};assert.deepEqual((await progress()),allDone,'same Cover must retain every completion');
+ for(const part of ['profile','content','image','cover'] as const){
+  await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{[part]:true}});
+  assert.deepEqual((await getWatchMediaWorkspaceContext(product.id,prisma,binding.id))?.parts,allDone,'completing '+part+' must retain siblings after reread');
+ }
+ withImage.basic.title='Synthetic Bulova new title';
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.deepEqual((await progress()),{...allDone,profile:false},'title and generated storefront URL invalidate profile only');
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
+ withImage.content.body='Actual new body';
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.deepEqual((await progress()),{...allDone,content:false},'a content edit invalidates content only');
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{content:true}});
+ mediaStorage.stat=oldStat;
+
+
  await assert.rejects(getWatchMediaWorkspaceContext(product.id,undefined,randomUUID()));
  assert.equal((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson && JSON.stringify((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson).includes('"currentState":"DONE"'),false);
  await prisma.product.update({where:{id:product.id},data:{primaryImageUrl:'synthetic-cover.jpg'}});
@@ -70,6 +120,6 @@ async function main(){
  await prisma.role.update({where:{id:staffRole.id},data:{permissions:{set:[]}}});const count=await prisma.taskItemChecklist.count({where:{taskItemId:second.taskItemId}});
  await assert.rejects(addDailyMediaWork(user.id,{...input,requestKey:randomUUID()}));assert.equal(await prisma.taskItemChecklist.count({where:{taskItemId:second.taskItemId}}),count);
  console.log('PASS media drafts/daily work DB: draft persists without completion; changed saved content invalidates completed part; empty gallery/cover and foreign binding reject; same user/day aggregates under concurrency and replay; other day/person separates; self/assignment rights, receipt mismatch, fixed-day identity, checklist-only context scope, reopen-on-new-head and revoked recipient enforce. INLINE hydration and scoped photo access; active/done/deleted daily state; created/checklist events and per-entry outbox identities; rollback removes task/event/outbox. No real provider calls.');
- }finally{globalThis.fetch=oldFetch;await prisma.user.updateMany({where:{id:{in:[user.id,staff.id,other.id]}},data:{isActive:false}});}
+ }finally{mediaStorage.stat=oldStat;globalThis.fetch=oldFetch;await prisma.user.updateMany({where:{id:{in:[user.id,staff.id,other.id]}},data:{isActive:false}});}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());

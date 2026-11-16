@@ -1,9 +1,10 @@
+import { mediaContentValues, mediaDecimal, mediaProfileValues } from "../../shared/media-part-values";
 import { saveWatchMediaWorkDraftFromWatch } from "../../server/media-work/watch-media-work.service";
 import { prisma, type DB } from "@/server/db/client";
 import { attachIngestedWatchMedia, listSelectedWatchMedia } from "@/domains/media/application";
 import { notifyUsersByRole } from "@/app/(admin)/admin/notifications/notification.service";
 
-import { MediaRole, WatchSpecStatus } from "@prisma/client";
+import { MediaRole, WatchSpecStatus, Prisma } from "@prisma/client";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
     ensureWatchInlineImageFromFirstGalleryRepo,
@@ -28,7 +29,6 @@ import {
     pickGoldColors,
     sameJson,
     textOrUndefined,
-    toDecimal,
 } from "../../server/shared";
 import {
     emitWatchContentModifiedEvent,
@@ -99,6 +99,12 @@ function buildContentSnapshot(input: {
         bulletSpecs: normalizeArray(input.bulletSpecs as any),
         hashTags: normalizeText(input.hashTags),
     };
+}
+
+// Match PostgreSQL numeric scales before comparing or writing form strings.
+function persistedSpecDecimal(value: string | null | undefined, scale: number) {
+    const decimal = mediaDecimal(value, scale);
+    return decimal === null ? null : new Prisma.Decimal(decimal);
 }
 
 function buildSpecSnapshot(input: {
@@ -481,23 +487,6 @@ export async function submitWatchFormApplication(
         saveIntent === "SUBMIT_IMAGE"
             ? beforeContent
             : buildContentSnapshot({ ...values.content, hookText: nextHookText });
-    const afterSpec = buildSpecSnapshot({
-        brand: values.spec.specBrand || undefined,
-        model: values.spec.model,
-        referenceNumber: values.spec.referenceNumber,
-        caseShape: values.spec.caseShape,
-        primaryCaseMaterial: values.spec.primaryCaseMaterial,
-        dialColor: values.spec.dialColor,
-        movementType: values.basic.movementType,
-        calibre: values.spec.calibre,
-        yearText: values.basic.yearText,
-        conditionGrade: values.basic.conditionGrade,
-        goldKarat: values.spec.goldKarat,
-        goldTreatment: values.spec.primaryCaseMaterial === "GOLD" ? "SOLID_GOLD" : values.spec.goldTreatment,
-        goldColors: values.spec.goldColors,
-        goldWeightGrams: values.spec.goldWeightGrams,
-        complicationNames: values.spec.complicationNames,
-    });
     const beforeImageKeys = normalizeImageKeys(
         current.product.productImage.map((x: any) => ({ key: x.fileKey })),
     );
@@ -518,8 +507,7 @@ export async function submitWatchFormApplication(
     // The chosen pool is durable. Gallery selection is an overlay on that
     // pool, not a transfer that consumes or deletes the source originals.
     const remainingPoolImages = mediaChanges.pool;
-    const contentChanged = !sameJson(beforeContent, afterContent);
-    const specChanged = !sameJson(beforeSpec, afterSpec);
+    const contentChanged = !sameJson(mediaContentValues(beforeContent), mediaContentValues(afterContent));
     const imagesChanged = saveIntent === "SUBMIT_CONTENT"
         ? false
         : mediaChanges.galleryChanged;
@@ -633,9 +621,9 @@ export async function submitWatchFormApplication(
                 WatchFormEnums.WatchStrapComponentSource,
             ),
             caseShape: pickEnumOrNull(values.spec.caseShape, WatchFormEnums.CaseType),
-            caseSizeMM: toDecimal(values.spec.caseSizeMM),
-            lugToLugMM: toDecimal(values.spec.lugToLugMM),
-            thicknessMM: toDecimal(values.spec.thicknessMM),
+            caseSizeMM: persistedSpecDecimal(values.spec.caseSizeMM, 2),
+            lugToLugMM: persistedSpecDecimal(values.spec.lugToLugMM, 2),
+            thicknessMM: persistedSpecDecimal(values.spec.thicknessMM, 2),
             crystal: pickEnumOrNull(values.spec.crystal, WatchFormEnums.Glass),
             dialColor: values.spec.dialColor || null,
             dialFinish: values.spec.dialFinish || null,
@@ -665,7 +653,7 @@ export async function submitWatchFormApplication(
             goldColors: pickGoldColors(values.spec.goldColors),
             goldKarat: values.spec.goldKarat ? Number(values.spec.goldKarat) : null,
             goldWeightGrams: values.spec.primaryCaseMaterial === "GOLD"
-                ? toDecimal(goldWeightGrams)
+                ? persistedSpecDecimal(goldWeightGrams, 3)
                 : null,
             braceletType: pickEnumOrNull(
                 values.spec.braceletType,
@@ -681,12 +669,23 @@ export async function submitWatchFormApplication(
             materialNote: values.spec.materialNote || null,
         };
 
-        const basicChanged = [
-          [current.product.brandId, values.basic.brandId], [current.product.vendorId, values.basic.vendorId], [current.product.categoryId, values.basic.categoryId],
-          [current.gender, values.basic.gender], [current.style, values.basic.style], [current.siteChannel, values.basic.siteChannel], [current.isCollectible, values.basic.isCollectible],
-          [current.conditionGrade, values.basic.conditionGrade], [current.movementType, values.basic.movementType], [current.movementCalibre, values.basic.movementCalibre], [current.serialNumber, values.basic.serialNumber], [current.yearText, values.basic.yearText],
-        ].some(([before,after]) => String(before ?? "") !== String(after ?? ""));
-        const profileChanged = specChanged || basicChanged || postTargetsResult.changed || nextTitle !== current.product.title || safeSku !== current.product.sku || Object.entries(specData).some(([key,value]) => String(value ?? "") !== String((current.watchSpecV2 as Record<string,unknown> | null)?.[key] ?? ""));
+        // Compare the values actually persisted, not raw form defaults. Otherwise
+        // an untouched empty material/brand/decimal can invalidate another tab.
+        const afterSpec = buildSpecSnapshot({
+            ...specData,
+            yearText: values.basic.yearText,
+            conditionGrade: values.basic.conditionGrade,
+            complicationNames: values.spec.complicationNames,
+        });
+        const specChanged = !sameJson(beforeSpec, afterSpec);
+
+        const beforeProfile = mediaProfileValues({
+            basic: {...current, title: current.product.title, brandId: current.product.brandId, vendorId: current.product.vendorId, categoryId: current.product.categoryId},
+            spec: {...current.watchSpecV2, complicationNames: current.product.watchSpec?.Complication.map(item => item.name)},
+            sku: current.product.sku,
+        });
+        const afterProfile = mediaProfileValues({basic: {...values.basic, title: nextTitle, postTargetIds: []}, spec: {...specData, complicationNames: values.spec.complicationNames}, sku: safeSku});
+        const profileChanged = postTargetsResult.changed || !sameJson(beforeProfile, afterProfile);
         await tx.watchSpecV2.upsert({
             where: { watchId: current.id },
             create: { watchId: current.id, ...specData },
@@ -878,6 +877,7 @@ export async function submitWatchFormApplication(
             }, tx);
 
             if (result.changedFields.length > 0) {
+                await saveWatchMediaWorkDraftFromWatch({productId, actorUserId: context.userId, parts: {profile:false}, note: "Giá đã thay đổi; cần xác nhận hoàn tất lại."}, tx);
                 await emitWatchPriceUpdatedEvent(tx, {
                     watch: {
                         id: result.watchId,

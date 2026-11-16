@@ -37,3 +37,15 @@ test("Adding only to the pool is persisted even when Gallery is unchanged", () =
     "media/source/MEN/edit/new-watch.jpg",
   ]);
 });
+
+
+test("Pool read order does not invalidate completed images; gallery reorder does", () => {
+  const a = {key: "media/objects/a/original/a.jpg"};
+  const b = {key: "media/objects/b/original/b.jpg"};
+  const unchanged = watchMediaSelectionChanges({beforePool:[a,b],beforeGallery:[a,b],requestedPool:[b,a],requestedGallery:[a,b]});
+  assert.equal(unchanged.poolChanged, false);
+  assert.equal(unchanged.galleryChanged, false);
+  const reordered = watchMediaSelectionChanges({beforePool:[a,b],beforeGallery:[a,b],requestedPool:[b,a],requestedGallery:[b,a]});
+  assert.equal(reordered.poolChanged, false);
+  assert.equal(reordered.galleryChanged, true);
+});

@@ -49,7 +49,11 @@ export function watchMediaSelectionChanges(input: {
     const pool = mergeWatchMediaPoolItems(input.requestedPool, input.requestedGallery);
     return {
         pool,
-        poolChanged: !sameJson(normalizeImageKeys(input.beforePool), normalizeImageKeys(pool)),
+        // Pool membership is unordered; gallery ordering remains meaningful.
+        poolChanged: !sameJson(
+            [...new Set(normalizeImageKeys(input.beforePool))].sort(),
+            [...new Set(normalizeImageKeys(pool))].sort(),
+        ),
         galleryChanged: !sameJson(
             normalizeImageKeys(input.beforeGallery),
             normalizeImageKeys(input.requestedGallery),
