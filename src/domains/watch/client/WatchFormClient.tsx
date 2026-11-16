@@ -1939,9 +1939,10 @@ export default function WatchFormClient({
                   done: mediaWorkDone.cover,
                   icon: Images,
                 },
-              ].map((item) => {
+              ].map((item, index) => {
                 const Icon = item.icon;
                 const active = activeMediaSection === item.key;
+                const stateLabel = mediaStatusUnknown ? "Chưa xác nhận trạng thái" : item.done ? "Đã hoàn tất" : mediaDirty[item.key === "basic" ? "profile" : item.key] ? "Có thay đổi chưa lưu" : "Đã lưu, chưa hoàn tất";
 
                 return (
                   <button
@@ -1949,7 +1950,8 @@ export default function WatchFormClient({
                     type="button"
                     onClick={() => scrollToMediaSection(item.key)}
                     aria-current={active ? "step" : undefined}
-                    title={`${item.title}: ${mediaStatusUnknown ? "Chưa xác nhận được trạng thái" : item.done ? "Đã hoàn tất" : mediaDirty[item.key === "basic" ? "profile" : item.key] ? "Có thay đổi chưa lưu" : "Đã lưu · chưa hoàn tất"}`}
+                    aria-label={`${index + 1} ${item.title}: ${stateLabel}`}
+                    title={`${item.title}: ${stateLabel}`}
                     className={[
                       "group inline-flex h-11 min-w-max items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition",
                       active
@@ -1975,7 +1977,6 @@ export default function WatchFormClient({
                     </span>
                     <Icon className="h-4 w-4" aria-hidden="true" />
                     <span>{item.title}</span>
-                    <span className="sr-only">{mediaStatusUnknown ? "Chưa xác nhận trạng thái" : item.done ? "Đã hoàn tất" : mediaDirty[item.key === "basic" ? "profile" : item.key] ? "Có thay đổi chưa lưu" : "Đã lưu, chưa hoàn tất"}</span>
                     <span
                       className={[
                         "h-2 w-2 rounded-full ring-4",
