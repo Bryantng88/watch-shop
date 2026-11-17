@@ -46,6 +46,7 @@ import {
   AdminFlatToolbar,
   AdminPageCanvas,
   ProgressMetric,
+  AdminViewTabs,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
   replacePersonalChecklistSharesAction,
@@ -500,15 +501,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             );
           }}
         >
-          <div role="group" aria-label="Kiểu mục" className="mb-2 inline-flex w-fit gap-1 rounded-lg bg-slate-100 p-1">
-            {[false, true].map(event => (
-              <button key={String(event)} type="button" aria-pressed={creatingEvent === event}
-                onClick={() => setWorkType(event ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${creatingEvent === event ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}>
-                {event ? "Sự kiện" : "Công việc"}
-              </button>
-            ))}
-          </div>
+          <AdminViewTabs
+            label="Kiểu mục"
+            value={creatingEvent ? "EVENT" : "TASK"}
+            items={[{ value: "TASK", label: "Công việc" }, { value: "EVENT", label: "Sự kiện" }]}
+            onValueChange={value => setWorkType(value === "EVENT" ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
+            className="mb-2 max-w-48"
+          />
           <AdminFlatToolbar
             className={createStyles.toolbar}
           >

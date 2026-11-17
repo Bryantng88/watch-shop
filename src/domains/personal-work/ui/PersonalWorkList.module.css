@@ -1,7 +1,6 @@
 .pane { container: work-list / inline-size; min-width: 0; }
+.viewTabs { flex: 1; min-width: 0; }
 .toolbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 6px 0; }
-.tabs { display: none; gap: 2px; padding: 3px; border-radius: 8px; background: #f1f5f9; }
-.mobileView { min-width: 0; flex: 1; height: 36px; border: 0; border-radius: 8px; background: #f8fafc; padding: 0 10px; color: #334155; font-size: 12px; }
 .filters { position: absolute; top: calc(100% + 2px); right: 0; z-index: 35; width: 288px; max-width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: white; box-shadow: 0 10px 25px #0f172a12; }
 .row { position: relative; display: flex; align-items: flex-start; gap: 6px; min-width: 0; padding: 10px 0; transition: background-color .15s; }
 .row:hover { background: #f8fafc; }
@@ -25,5 +24,5 @@
 .summary { display: flex; gap: 12px; align-items: center; font-size: 12px; color: #64748b; }
 .back { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; border-radius: 6px; padding: 0 6px; color: #64748b; font-size: 12px; }
 @container work-list (min-width: 440px) { .track { width: 28px; } .code { max-width: 64px; } .percent { display: inline; } .meta { gap: 9px; } .row { gap: 8px; } }
-@container work-list (min-width: 600px) { .tabs { display: flex; } .mobileView { display: none; } .updateLabel { display: inline; } }
+@container work-list (min-width: 600px) { .updateLabel { display: inline; } }
 @media (max-width: 639px) { .header { grid-template-columns: minmax(0,1fr); gap: 6px; } .summary { font-size: 12px; } }
