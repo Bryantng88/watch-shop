@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { createPersonalWorkItem } from "../src/domains/personal-work/server/personal-work.service";
+import { updatePersonalWorkWithCalendar, finalizePersonalWorkWithCalendar } from "../src/domains/personal-work/server/personal-work-calendar-mutations";
 import { prisma } from "../src/server/db/client";
 import { encryptCalendarToken } from "../src/domains/personal-work/server/google-calendar-crypto";
 import { syncPersonalTaskToGoogle, listPersonalGoogleCalendarEvents } from "../src/domains/personal-work/server/google-calendar.service";
@@ -171,6 +173,40 @@ async function main() {
       await prisma.$executeRawUnsafe(`DROP TRIGGER IF EXISTS ben_batch_fixture_reject ON "TaskItem"`);
       await prisma.$executeRawUnsafe(`DROP FUNCTION IF EXISTS ben_batch_fixture_reject()`);
     }
+    // A Google failure after the canonical commit must not reject a saved edit.
+    const editorAuth={userId:owner.id};
+    const edited=await createPersonalWorkItem({title:"Synthetic save survives Google failure",dueAt:"2026-11-17T09:00:00+07:00"},editorAuth);
+    await syncPersonalTaskToGoogle(owner.id,edited.id);
+    const beforeEditEvents=events.size;
+    fail.add(`fixture-${owner.id}`);
+    const saved=await updatePersonalWorkWithCalendar({id:edited.id,title:"Saved title",dueAt:"2026-11-18T09:00:00+07:00",updateBody:"500.000"},editorAuth);
+    assert.deepEqual(saved,{ok:true,calendarSync:"FAILED"});
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:edited.id}})).title,"Saved title");
+    assert.equal(await prisma.taskItemActivity.count({where:{taskItemId:edited.id,body:"500.000"}}),1);
+    fail.clear();
+    await listPersonalGoogleCalendarEvents(owner.id);
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:edited.id}})).dueAt!.toISOString(),"2026-11-18T02:00:00.000Z","Reloading an older Google event must not undo the saved edit");
+    await syncPersonalTaskToGoogle(owner.id,edited.id);
+    assert.equal(events.size,beforeEditEvents,"Retry updates existing event without duplicate");
+    assert.equal(await prisma.taskItemActivity.count({where:{taskItemId:edited.id,body:"500.000"}}),1,"Calendar retry does not repeat the work update");
+    assert.equal((await updatePersonalWorkWithCalendar({id:edited.id,note:"Synced update"},editorAuth)).calendarSync,"SYNCED");
+    const unlinked=await createPersonalWorkItem({title:"Synthetic unlinked edit"},editorAuth);
+    const callsBefore=googleCalls;
+    assert.equal((await updatePersonalWorkWithCalendar({id:unlinked.id,note:"No Google needed"},editorAuth)).calendarSync,"NOT_LINKED");
+    assert.equal(googleCalls,callsBefore);
+    await assert.rejects(updatePersonalWorkWithCalendar({id:edited.id,updateBody:"forbidden"},{userId:viewer.id}));
+    await assert.rejects(updatePersonalWorkWithCalendar({id:edited.id,title:" "},editorAuth));
+    assert.equal(googleCalls,callsBefore,"Validation and permission failures must not invoke Google");
+    assert.equal(await prisma.taskItemActivity.count({where:{taskItemId:edited.id,body:"forbidden"}}),0);
+    await prisma.taskItemChecklist.create({data:{taskItemId:edited.id,title:"Synthetic completed head",isDone:true,doneAt:new Date()}});
+    fail.add(`fixture-${owner.id}`);
+    assert.equal((await finalizePersonalWorkWithCalendar(edited.id,editorAuth)).calendarSync,"FAILED");
+    const finished=await prisma.taskItem.findUniqueOrThrow({where:{id:edited.id}});assert.equal(finished.status,"DONE");assert.ok(finished.checklistLockedAt);
+    fail.clear();
+    // Expired Google tokens are also an external failure, never a failed local save.
+    await prisma.googleCalendarConnection.update({where:{userId:owner.id},data:{tokenExpiresAt:new Date(0),refreshTokenCipher:null}});
+    assert.equal((await updatePersonalWorkWithCalendar({id:edited.id,note:"Saved with expired Google auth"},editorAuth)).calendarSync,"FAILED");
+    assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:edited.id}})).note,"Saved with expired Google auth");
     const revoked = await prepare();
     await prisma.role.update({ where: { id: role.id }, data: { permissions: { set: [] } } });
     const tasks = await prisma.taskItem.count();

@@ -23,7 +23,7 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     build.onResolve({ filter: /^next\/(navigation|link|image)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onResolve({ filter: /^@\/domains\/shared\/feedback$/ }, () => ({ path: 'feedback', namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'feedback' ? `const dialog={confirm:async()=>true,alert:async()=>{}};export const useAppDialog=()=>dialog;` : args.path.endsWith('navigation') ? `const params=new URLSearchParams(location.search);if(!params.has('full'))params.set('view','list');const router={refresh(){window.__refreshed=true;window.__renderFixture?.()},push(path){window.__route=path},replace(){}};export const useRouter=()=>router;export const useSearchParams=()=>params;` : args.path.endsWith('link') ? `import React from 'react';export default function Link({children,href,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}` : `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`, loader: 'tsx', resolveDir: root }));
-    build.onLoad({ filter: /\/personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}return [];}`).join('\n'), loader: 'js' }; });
+    build.onLoad({ filter: /\/personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
     build.onLoad({ filter: /\/AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;`, loader: 'js' }));
   } }] });
   return { js: bundle.outputFiles.find(f => f.path.endsWith('.js')).text, css: bundle.outputFiles.find(f => f.path.endsWith('.css'))?.text || '' };
@@ -133,6 +133,28 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.equal(await scopedSharing.getByText('Vi', { exact: true }).count(), 1);
     assert.equal(await scopedSharing.getByText('Bạn · Xem đầu việc', { exact: true }).count(), 1);
     assert.equal(await scopedSharing.getByText('Nam', { exact: true }).count(), 0);
+    // Saved work must close its editor even when optional Google sync failed.
+    await phone.goto(origin+'/?view=list&item=item-23');
+    await phone.getByRole('dialog').waitFor();
+    await phone.evaluate(()=>{window.__calendarStatus='FAILED'});
+    await phone.getByLabel('Nội dung cập nhật',{exact:true}).fill('500.000');
+    await phone.getByRole('button',{name:'Lưu thay đổi',exact:true}).tap();
+    await phone.getByRole('dialog').waitFor({state:'hidden'});
+    assert.ok(await phone.getByText('Đã lưu công việc. Chưa đồng bộ Google Calendar; bạn có thể thử lại.',{exact:true}).isVisible());
+    await phone.getByRole('button',{name:'Thử đồng bộ lại',exact:true}).tap();
+    await phone.getByRole('button',{name:'Thử đồng bộ lại',exact:true}).waitFor({state:'hidden'});
+    const saveCalls=await phone.evaluate(()=>window.__actions);
+    assert.equal(saveCalls.filter(a=>a.name==='updatePersonalWorkAction').length,1);
+    assert.equal(saveCalls.filter(a=>a.name==='syncPersonalWorkCalendarAction').length,1);
+    assert.equal(saveCalls.find(a=>a.name==='updatePersonalWorkAction').input.updateBody,'500.000');
+    await phone.goto(origin+'/?view=list&item=item-23');
+    await phone.getByRole('dialog').waitFor();
+    await phone.evaluate(()=>{window.__saveError=true});
+    await phone.getByLabel('Nội dung cập nhật',{exact:true}).fill('Giữ nội dung khi lỗi');
+    await phone.getByRole('button',{name:'Lưu thay đổi',exact:true}).tap();
+    await phone.getByRole('dialog').getByRole('alert').waitFor();
+    assert.match(await phone.getByRole('dialog').getByRole('alert').innerText(),/tải lại danh sách/);
+    assert.equal(await phone.getByLabel('Nội dung cập nhật',{exact:true}).inputValue(),'Giữ nội dung khi lỗi');
     await touch.close();
     assert.deepEqual(errors, []);
     console.log('PASS: actual personal-work client at 320/390/768/1440; category/title and reference placement; view/scope/category filters; event and viewer restrictions; schedule/context/update popovers; completion payload and read-only open; desktop calendar layout.');
