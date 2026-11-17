@@ -72,9 +72,15 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
         assert.ok(attentionBox.x===listBox.x&&attentionBox.width<=listBox.width+1);
         assert.ok(attentionBox.y<chartBox.y+chartBox.height);
         assert.equal(await page.locator('[data-insight-panel]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(239, 246, 255)');
-        const canvasBox=await page.locator('h1').evaluate(el=>{const box=el.closest('.min-h-screen').getBoundingClientRect();return {x:box.x,width:box.width};});
-        assert.ok(Math.abs(canvasBox.width-width)<=1,`dashboard must fill available width at ${width}`);
-        assert.ok(Math.abs(canvasBox.x)<=1,`dashboard must not be centered in a narrow column at ${width}`);
+        const { canvas, container } = await page.locator('h1').evaluate(el => {
+          const dashboard = el.closest('.min-h-screen');
+          return {
+            canvas: dashboard.getBoundingClientRect().toJSON(),
+            container: dashboard.parentElement.getBoundingClientRect().toJSON(),
+          };
+        });
+        assert.ok(Math.abs(canvas.width - container.width) <= 1, `dashboard must fill available width at ${width}`);
+        assert.ok(Math.abs(canvas.left - container.left) <= 1, `dashboard must align with its container at ${width}`);
       }
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`expanded overflow at ${width}`);
       await page.screenshot({path:path.join(output,`dashboard-${width}.png`),fullPage:true});
