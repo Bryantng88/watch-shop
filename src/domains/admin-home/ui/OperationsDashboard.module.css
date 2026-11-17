@@ -1,36 +1,42 @@
 .queueRow {
   display: grid;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 0.75rem;
 }
 
-.queueHeader {
-  display: none;
-}
-
-.queueInsight {
-  display: flex;
-  align-items: baseline;
-  gap: 0.375rem;
+.queueIdentity {
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
-  margin-top: 0.25rem;
-  overflow: hidden;
-  white-space: nowrap;
-  font-size: 10px;
-  line-height: 16px;
+}
+
+.queueCount {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+}
+
+.queueDetails {
+  grid-column: 1 / -1;
+  min-width: 0;
+  padding-left: 2.75rem;
 }
 
 @media (min-width: 1024px) {
-  .queueRow,
-  .queueHeader {
-    grid-template-columns: minmax(190px, 1.05fr) 100px minmax(300px, 1.8fr) 150px;
-    column-gap: 1.25rem;
-  }
-
   .queueRow {
+    grid-template-columns: minmax(200px, 0.65fr) minmax(0, 1.6fr) auto;
     align-items: center;
+    column-gap: 1.5rem;
   }
 
-  .queueHeader {
-    display: grid;
+  .queueDetails {
+    grid-column: 2;
+    grid-row: 1;
+    padding-left: 0;
+  }
+
+  .queueCount {
+    grid-column: 3;
+    align-self: center;
   }
 }

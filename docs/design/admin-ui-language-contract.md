@@ -93,6 +93,28 @@ mappings.
 - Inputs use a quiet neutral border and blue focus ring.
 - Destructive actions require confirmation and must state downstream effects.
 
+### View switches
+
+- Use `AdminViewTabs` from `@/domains/shared/ui/admin-design-contract` for
+  controlled view filters, including Work/Event creation, personal-work views,
+  and operations chart view switches. Do not copy local tab markup or styling.
+- Use compact 12px text, neutral inactive labels, and a stronger active label
+  with a thin underline. Keep labels on one line. No filled pill container,
+  raised active button, shadow, or domain-colored selection.
+- Use short visible labels; the group label and content heading explain the
+  scope. For example, chart filters read `Tất cả`, `Chờ xử lý`, `Đang xử lý`.
+- Short groups remain a horizontal strip. Groups with more than four options
+  become a native select when their **own available width** is below 520px,
+  including a narrow desktop pane. It keeps the same value, options and label.
+  Do not wrap a row of filters onto multiple lines or shrink labels to fit.
+- Preserve native keyboard Tab/Enter/Space, visible focus and disabled states;
+  Arrow Left/Right and Home/End move and select enabled options. Touch targets
+  are at least 44px. Keep selection visible without scrolling the page.
+- These controls filter one view: use a labeled group with `aria-pressed`
+  buttons, not `tablist`/`tabpanel` semantics unless real panels exist.
+- Domain code owns values, permissions, filters and data. Sharing presentation
+  never reclassifies a workflow stage as an execution state or supplies counts.
+
 ### Lists and data density
 
 - Render rows directly on the canvas, not as a stack of mini cards.
@@ -152,6 +174,8 @@ Import from `@/domains/shared/ui/admin-design-contract`:
 - `AdminPageCanvas`: white page canvas and standard page rhythm.
 - `AdminPageHeader`: standard page title hierarchy and compact metrics.
 - `AdminFlatToolbar`: grouped control surface.
+- `AdminViewTabs`: shared, controlled text-and-underline view filters with an
+  adaptive select for long groups in narrow panes.
 
 Canonical tokens include page and section typography, metadata and numeric
 values, flat and elevated surfaces, badges, interactive hover/focus treatment,
