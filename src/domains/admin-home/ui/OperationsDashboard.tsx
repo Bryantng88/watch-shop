@@ -40,7 +40,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
 
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
   const priorities = quickAttention(data.queues);
-  return <AdminPageCanvas className="mx-auto w-full min-w-0 !max-w-[1320px] pb-8 sm:px-4 lg:px-5 xl:px-6">
+  return <AdminPageCanvas className="mx-auto w-full min-w-0 !max-w-none pb-8 sm:px-4 lg:px-5 xl:px-6">
     <AdminPageHeader title="Trung tâm điều hành" description="Việc đang mở và những điểm cần chú ý." meta={
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-slate-500"><span><strong className="text-lg font-semibold tabular-nums text-slate-950">{number(data.totalActive)}</strong> việc đang mở</span><span>Toàn shop</span></div>
     } />

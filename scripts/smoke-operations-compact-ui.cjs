@@ -30,7 +30,7 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
   try {
     const page=await browser.newPage();
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
-    for(const width of [360,390,768,1440]){
+    for(const width of [360,390,768,1440,1920,2560]){
       await page.setViewportSize({width,height:1000});
       await page.goto('http://127.0.0.1:'+server.address().port);
       await page.getByRole('heading',{name:'Trung tâm điều hành'}).waitFor();
@@ -72,7 +72,9 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
         assert.ok(attentionBox.x===listBox.x&&attentionBox.width<=listBox.width+1);
         assert.ok(attentionBox.y<chartBox.y+chartBox.height);
         assert.equal(await page.locator('[data-insight-panel]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(239, 246, 255)');
-        assert.ok(await page.locator('h1').evaluate(el=>el.closest('.min-h-screen').getBoundingClientRect().width<=1320));
+        const canvasBox=await page.locator('h1').evaluate(el=>{const box=el.closest('.min-h-screen').getBoundingClientRect();return {x:box.x,width:box.width};});
+        assert.ok(Math.abs(canvasBox.width-width)<=1,`dashboard must fill available width at ${width}`);
+        assert.ok(Math.abs(canvasBox.x)<=1,`dashboard must not be centered in a narrow column at ${width}`);
       }
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`expanded overflow at ${width}`);
       await page.screenshot({path:path.join(output,`dashboard-${width}.png`),fullPage:true});

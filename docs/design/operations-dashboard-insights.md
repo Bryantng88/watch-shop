@@ -42,7 +42,8 @@ queries.
 
 ## Density and actionable interventions
 
-The approved dense layout bounds the main reading area to 1320px. The queue list
+The dense layout uses the full available admin content width with standard page
+padding, without a fixed desktop width cap. The queue list
 and up to six intervention records flow naturally in the left column; the
 independent blue insight region stays on the right. No matching enclosing cards.
 Queue titles and warnings share a compact headline; stage counts are secondary.
