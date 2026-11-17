@@ -1,7 +1,7 @@
 import { quickAttention } from "../application/attention-selection";
 import { OperationsAttentionList } from "./OperationsAttentionList";
 import Link from "next/link";
-import { AlertCircle, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { ADMIN_UI, ADMIN_DOMAIN_TONE, AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals";
 import type { OperationsDashboardData, OperationsDashboardQueue } from "../shared";
@@ -30,10 +30,9 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
       <QueueStageSummary stages={queue.stages} />
     </div>
     <div className={styles.queueWarning} data-queue-warning>{insight && <Link href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
-          <AlertCircle aria-hidden="true" className={cn("h-3 w-3 shrink-0", insight.severity === "risk" ? "text-rose-500" : insight.severity === "attention" ? "text-amber-600" : "text-slate-400")} />
-          <span><strong className="font-semibold tabular-nums">{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
+          <span><strong className={cn("font-semibold tabular-nums", ADMIN_UI.attentionValue)}>{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
         </Link>}</div>
-    <Link href={queue.href} className={cn(styles.queueCount, "flex min-h-10 items-center justify-end gap-1 rounded text-sm font-semibold tabular-nums text-slate-800 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400")} aria-label={`Mở ${visual.label}: ${number(queue.activeCount)} việc đang mở`}>
+    <Link href={queue.href} className={cn(styles.queueCount, "flex min-h-10 items-center justify-end gap-1 rounded text-sm font-semibold tabular-nums text-blue-700 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400")} aria-label={`Mở ${visual.label}: ${number(queue.activeCount)} việc đang mở`}>
       {number(queue.activeCount)}<ChevronRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
     </Link>
   </li>;
@@ -41,7 +40,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
 
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
   const priorities = quickAttention(data.queues);
-  return <AdminPageCanvas className="mx-auto w-full min-w-0 !max-w-none pb-8 sm:px-4 lg:px-5 xl:px-6">
+  return <AdminPageCanvas className={cn(styles.dashboard, "mx-auto w-full min-w-0 !max-w-none pb-8 sm:px-4 lg:px-5 xl:px-6")}>
     <AdminPageHeader title="Trung tâm điều hành" description="Việc đang mở và những điểm cần chú ý." meta={
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-slate-500"><span><strong className="text-lg font-semibold tabular-nums text-slate-950">{number(data.totalActive)}</strong> việc đang mở</span><span>Toàn shop</span></div>
     } />
@@ -60,10 +59,14 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
       <OperationsInsightPanel>
         <div className={cn(styles.chartSurface, ADMIN_UI.insightSurface)} data-chart-surface><OperationsVolumeChart queues={data.queues} /></div>
         <StageConcentrationInsights queues={data.queues} />
-        <details className="border-t border-slate-100 pt-3">
-          <summary className="cursor-pointer rounded py-2 text-xs font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Nhịp hoàn tất đơn hàng · 7 ngày</summary>
-          <div className="mt-3 grid grid-cols-7 gap-2 text-center text-xs tabular-nums">{data.completionTrend.map(item => <div key={item.date}><span className="block font-semibold text-slate-900">{number(item.count)}</span><span className="text-slate-500">{item.label}</span></div>)}</div>
-        </details>
+        <section className={styles.completionCard} aria-labelledby="completion-title">
+          <h2 id="completion-title" className={ADMIN_UI.sectionTitle}>Nhịp hoàn tất đơn hàng · 7 ngày</h2>
+          <p className="mt-1 text-xs text-slate-500">Số đơn hoàn tất theo ngày</p>
+          <dl className="mt-4 grid grid-cols-7 gap-1 text-center text-xs tabular-nums">{data.completionTrend.map(item => <div key={item.date}>
+            <dt className="text-slate-500"><time dateTime={item.date}>{item.label}</time></dt>
+            <dd className="mt-2 text-base font-semibold text-blue-700">{number(item.count)}</dd>
+          </div>)}</dl>
+        </section>
       </OperationsInsightPanel>
     </div>
     <p className="border-t border-slate-100 pt-4 text-right text-xs text-slate-500">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</p>

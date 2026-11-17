@@ -8,6 +8,7 @@ export const ADMIN_UI = {
   sectionDescription: "mt-0.5 text-xs text-slate-500",
   rowTitle: "text-sm font-semibold text-slate-900",
   metadata: "text-xs text-slate-500",
+  attentionValue: "text-orange-600",
   metricValue: "font-bold tabular-nums text-slate-950",
   toolbar: "rounded-xl border border-slate-200/80 bg-slate-50/60 p-2",
   insightSurface: "bg-blue-50",
