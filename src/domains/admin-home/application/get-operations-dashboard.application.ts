@@ -1,3 +1,6 @@
+import { executionCounts } from "../shared/execution-summary";
+import { queryDashboardExecutionCounts } from "./execution-summary.query";
+import { isPersonalEvent } from "@/domains/personal-work/shared/personal-event";
 import { personalWorkViewAccessWhere } from "@/domains/personal-work/server/personal-work-access";
 import { prisma } from "@/server/db/client";
 import { queryOrderListProjection, queryOrderStageStatistics } from "@/domains/projection/server/order-list.projection";
@@ -45,7 +48,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   const now = new Date();
   const today = bangkokDayBounds(now);
   const trendStart = new Date(today.start.getTime() - 6 * 86_400_000);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems, orderStats, mediaStats, technicalStats, openStats, throughput] = await Promise.all([
+  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems, orderStats, mediaStats, technicalStats, openStats, throughput, execution] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
     prisma.purchaseRequest.findMany({
@@ -70,13 +73,14 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
         ...personalWorkViewAccessWhere(input.userId),
         status: { notIn: ["DONE", "CANCELLED"] },
       },
-      select: { dueAt: true },
+      select: { dueAt: true, status: true, workTypeId: true },
     }) : Promise.resolve([]),
     queryOrderStageStatistics(prisma, now),
     queryProjectionStageStatistics(prisma, MEDIA_OPERATION_BOARD_PROJECTION_KEY, MEDIA_OPERATION_BOARD_PROJECTION_VERSION, now),
     queryProjectionStageStatistics(prisma, TECHNICAL_ISSUE_BOARD_PROJECTION_KEY, TECHNICAL_ISSUE_BOARD_PROJECTION_VERSION, now),
     queryOpenOperationStageStatistics(prisma, { now, todayStart: today.start, todayEnd: today.end, userId: input.userId ?? null }),
     queryStageThroughput(prisma, now),
+    queryDashboardExecutionCounts(prisma),
   ]);
 
   const overdueRequests = purchaseRequests.filter((request) => request.followUpAt && request.followUpAt < now);
@@ -101,12 +105,13 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
       activeCount: Number(orderCounts.need_action ?? 0) + Number(orderCounts.processing ?? 0),
       actionLabel: "Xử lý đơn hàng",
       insights: [
-        { key: "remaining-payment", label: "Còn phải thu", count: Number(orderCounts.processingSub?.remaining_payment ?? 0) + Number(orderCounts.processingSub?.delivered_remaining ?? 0), href: "/admin/orders?view=processing&subFilter=remaining_payment", severity: "risk" },
+        { key: "remaining-payment", label: "Còn phải thu", count: Number(orderCounts.processingSub?.remaining_payment ?? 0) + Number(orderCounts.processingSub?.delivered_remaining ?? 0), href: "/admin/orders?view=processing", severity: "risk" },
         { key: "awaiting-shipment", label: "Chờ tạo/giao hàng", count: Number(orderCounts.processingSub?.awaiting_shipment ?? 0), href: "/admin/orders?view=processing&subFilter=awaiting_shipment", severity: "attention" },
       ],
       stages: [
         { key: "need-action", label: "Cần xử lý", actionLabel: "Xử lý", count: Number(orderCounts.need_action ?? 0), href: "/admin/orders?view=need_action" },
-        { key: "remaining-payment", label: "Còn phải thu", actionLabel: "Thu tiền", count: Number(orderCounts.processingSub?.remaining_payment ?? 0), href: "/admin/orders?view=processing&subFilter=remaining_payment" },
+        { key: "remaining-payment", label: "Chưa giao, còn phải thu", actionLabel: "Thu tiền", count: Number(orderCounts.processingSub?.remaining_payment ?? 0), href: "/admin/orders?view=processing&subFilter=remaining_payment" },
+        { key: "delivered-remaining", label: "Đã giao, còn phải thu", actionLabel: "Thu tiền", count: Number(orderCounts.processingSub?.delivered_remaining ?? 0), href: "/admin/orders?view=processing&subFilter=delivered_remaining" },
         { key: "awaiting-shipment", label: "Chờ giao", actionLabel: "Giao hàng", count: Number(orderCounts.processingSub?.awaiting_shipment ?? 0), href: "/admin/orders?view=processing&subFilter=awaiting_shipment" },
       ],
     },
@@ -197,6 +202,22 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
       ],
     },
   ];
+
+  for (const queue of queues) {
+    if (queue.key === "purchase-requests") {
+      queue.execution = executionCounts(queue.activeCount, count(purchase, "WAITING"), count(purchase, "PROCESSING"));
+    } else if (queue.key === "media" || queue.key === "technical") {
+      const counts = execution[queue.key];
+      queue.execution = executionCounts(queue.activeCount, counts.waiting, counts.inProgress);
+    } else if (queue.key === "personal-work") {
+      queue.execution = executionCounts(queue.activeCount,
+        personalItems.filter(item => !isPersonalEvent(item.workTypeId) && item.status === "TODO").length,
+        personalItems.filter(item => !isPersonalEvent(item.workTypeId) && item.status === "IN_PROGRESS").length);
+    } else {
+      // Fulfilment/payment buckets do not record whether someone started work.
+      queue.execution = executionCounts(queue.activeCount);
+    }
+  }
 
   const attention: OperationsDashboardAttentionItem[] = [];
   for (const request of overdueRequests.slice(0, 3)) {

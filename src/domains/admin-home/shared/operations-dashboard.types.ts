@@ -1,3 +1,4 @@
+import type { DashboardExecutionCounts } from "./execution-summary";
 export type DashboardTone = "slate" | "blue" | "amber" | "emerald" | "rose" | "violet";
 
 export type OperationsDashboardStage = {
@@ -15,6 +16,7 @@ export type OperationsDashboardQueue = {
   description: string;
   href: string;
   activeCount: number;
+  execution?: DashboardExecutionCounts;
   actionLabel: string;
   insights: Array<{
     key: string;
