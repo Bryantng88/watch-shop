@@ -1,49 +1,27 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { concentratedStages } from "../application/stage-insights";
-import type { OperationsDashboardQueue } from "../shared";
+import type { OperationsDashboardQueue, OperationsDashboardStage } from "../shared";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals";
 
+function Hotspot({ queue, stage }: { queue: OperationsDashboardQueue; stage: OperationsDashboardStage }) {
+  return <details className="border-b border-slate-100 py-3 last:border-b-0">
+    <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+      <span><span className="block text-xs font-semibold text-slate-900">{operationalDomainPresentation(queue.key).label}</span><span className="mt-1 block text-xs text-slate-500">{stage.label} · {stage.count.toLocaleString("vi-VN")}/{queue.activeCount.toLocaleString("vi-VN")} việc</span></span>
+      <span className="text-xs tabular-nums text-slate-900">{Math.round(stage.count / queue.activeCount * 100)}%</span>
+    </summary>
+    <dl className="mt-3 space-y-3">{stage.metrics?.map(metric => <div key={metric.label}><dt className="text-xs text-slate-500">{metric.label}</dt><dd className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">{metric.value}<p className="mt-1 text-xs font-normal leading-5 text-slate-500">{metric.detail}</p></dd></div>)}</dl>
+    <Link href={stage.href} className="mt-3 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold text-slate-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Mở giai đoạn<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
+  </details>;
+}
 export function StageConcentrationInsights({ queues }: { queues: OperationsDashboardQueue[] }) {
   const hotspots = queues.flatMap(queue => concentratedStages(queue).map(stage => ({ queue, stage })));
-  if (hotspots.length === 0) return null;
-
-  return (
-    <details className="border-t border-slate-100 pt-4">
-      <summary className="w-fit cursor-pointer rounded-md py-2 text-sm font-semibold text-slate-600 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Điểm tập trung <span className="ml-1 font-normal tabular-nums text-slate-500">{hotspots.length} giai đoạn</span></summary>
-      <p className="my-2 text-xs text-slate-500">Từ 3 việc và chiếm ≥ 60% việc mở trong khu vực</p>
-      <div className="grid gap-4 xl:grid-cols-2">
-        {hotspots.map(({ queue, stage }) => (
-          <article key={`${queue.key}:${stage.key}`} className="border-t border-slate-100 py-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-slate-500">{operationalDomainPresentation(queue.key).label}</p>
-                <Link href={stage.href} className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-slate-950 hover:text-amber-800">
-                  {stage.label}<ArrowUpRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                </Link>
-                <p className="mt-1 text-xs text-slate-500"><strong className="font-semibold text-slate-900">{stage.count}</strong> / {queue.activeCount} việc mở đang ở giai đoạn này</p>
-              </div>
-              <span className="shrink-0 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold tabular-nums text-amber-800">Tập trung {Math.round(stage.count / queue.activeCount * 100)}%</span>
-            </div>
-            <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-slate-100 pt-4 sm:grid-cols-3">
-              {stage.metrics?.map(metric => (
-                <div key={metric.label} title={metric.detail}>
-                  <dt className="text-xs leading-4 text-slate-500">{metric.label}</dt>
-                  <dd aria-label={`${metric.value}. ${metric.detail}`} className="mt-1 text-base font-semibold tabular-nums text-slate-900">{metric.value}</dd>
-                </div>
-              ))}
-            </dl>
-            <details className="mt-4 text-xs text-slate-500">
-              <summary className="w-fit cursor-pointer hover:text-slate-800">Cách tính chỉ số</summary>
-              <ul className="mt-2 space-y-2 leading-5">
-                {stage.metrics?.map(metric => <li key={metric.label}><strong className="font-medium text-slate-700">{metric.label}:</strong> {metric.detail}</li>)}
-                <li>Tỷ trọng cao thể hiện khối lượng tập trung; cần kết hợp thời gian chờ và ngoại lệ để đánh giá điểm nghẽn.</li>
-                {!stage.metrics?.some(metric => metric.label.startsWith("TG xử lý")) && <li>Chưa có lịch sử workflow để tính thời gian xử lý và tỷ lệ hoàn tất của giai đoạn này.</li>}
-              </ul>
-            </details>
-          </article>
-        ))}
-      </div>
-    </details>
-  );
+  return <section className="border-t border-slate-100 pt-5" aria-labelledby="stage-concentration-title">
+    <h2 id="stage-concentration-title" className="text-sm font-bold text-slate-950">Điểm tập trung</h2>
+    <p className="mt-1 text-xs text-slate-500">Giai đoạn có ≥ 3 việc và chiếm ≥ 60% việc mở.</p>
+    {hotspots.length ? <>
+      {hotspots.slice(0, 3).map(({ queue, stage }) => <Hotspot key={`${queue.key}:${stage.key}`} queue={queue} stage={stage} />)}
+      {hotspots.length > 3 && <details><summary className="cursor-pointer rounded py-2 text-xs text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{hotspots.length - 3} giai đoạn khác</summary>{hotspots.slice(3).map(({ queue, stage }) => <Hotspot key={`${queue.key}:${stage.key}`} queue={queue} stage={stage} />)}</details>}
+    </> : <p className="py-4 text-xs text-slate-500">Chưa có giai đoạn tập trung nhiều việc.</p>}
+  </section>;
 }

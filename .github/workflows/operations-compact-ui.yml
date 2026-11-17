@@ -5,6 +5,9 @@ on:
       - 'src/domains/admin-home/**'
       - 'src/domains/shared/ui/admin-design-contract/**'
       - 'scripts/smoke-operations-compact-ui.cjs'
+      - 'scripts/smoke-operations-execution.ts'
+      - 'src/domains/projection/server/media-operation-board.projection.ts'
+      - 'src/domains/projection/server/technical-issue-board.projection.ts'
       - '.github/workflows/operations-compact-ui.yml'
 permissions:
   contents: read
@@ -12,6 +15,26 @@ jobs:
   operations-browser:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: synthetic-fixture-only
+          POSTGRES_DB: operations_ui_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fixture -d operations_ui_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/operations_ui_test
+      DIRECT_URL: postgresql://fixture:synthetic-fixture-only@127.0.0.1:5432/operations_ui_test
+      OPERATIONS_FIXTURE_DB: '1'
+      S3_BUCKET: synthetic-operations-media
+      APP_URL: http://127.0.0.1:3015
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,8 +42,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx eslint src/domains/admin-home/ui/*.tsx
+      - run: npx eslint src/domains/admin-home/ui/*.tsx src/domains/admin-home/shared/execution-summary.ts src/domains/admin-home/application/execution-summary.query.ts src/domains/admin-home/application/get-operations-dashboard.application.ts scripts/smoke-operations-execution.ts
       - run: node --import tsx --test src/domains/admin-home/application/*.test.ts
+      - run: npx prisma db push --skip-generate
+      - run: node --import tsx scripts/smoke-operations-execution.ts
+      - run: npx tsc --noEmit
       - run: npx tailwindcss -i src/app/globals.css -o /tmp/operations-ui.css --minify
       - run: npm install --prefix /tmp/operations-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/operations-browser/node_modules/.bin/playwright install --with-deps chromium
@@ -30,3 +56,4 @@ jobs:
         with:
           name: operations-dashboard-preview
           path: /tmp/operations-compact/dashboard-*.png
+      - run: npm run build

@@ -1,42 +1,26 @@
-.queueRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 0.75rem;
-}
-
-.queueIdentity {
-  grid-column: 1;
-  grid-row: 1;
-  min-width: 0;
-}
-
-.queueCount {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: start;
-}
-
-.queueDetails {
-  grid-column: 1 / -1;
-  min-width: 0;
-  padding-left: 2.75rem;
-}
-
-@media (min-width: 1024px) {
-  .queueRow {
-    grid-template-columns: minmax(200px, 0.65fr) minmax(0, 1.6fr) auto;
-    align-items: center;
-    column-gap: 1.5rem;
-  }
-
-  .queueDetails {
-    grid-column: 2;
-    grid-row: 1;
-    padding-left: 0;
-  }
-
-  .queueCount {
-    grid-column: 3;
-    align-self: center;
-  }
+.mainLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 12px; }
+.queueRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; }
+.queueIdentity { grid-column: 1; grid-row: 1; }
+.queueCount { grid-column: 2; grid-row: 1; }
+.queueDetails { grid-column: 1 / -1; min-width: 0; padding-left: 42px; }
+.insightPanel { min-width: 0; border-top: 1px solid #f1f5f9; }
+.volumeChart { --label-width: 96px; --label-gap: 10px; position: relative; margin-top: 18px; padding-bottom: 24px; padding-right: 36px; }
+.volumeRow { position: relative; display: grid; grid-template-columns: var(--label-width) minmax(0, 1fr); gap: var(--label-gap); align-items: center; min-height: 44px; }
+.volumePlot { position: relative; height: 32px; }
+.volumeBar { position: absolute; left: 0; top: 11px; height: 10px; border-radius: 2px; opacity: .75; }
+.volumeValue { position: absolute; top: 6px; white-space: nowrap; font-size: 12px; font-variant-numeric: tabular-nums; line-height: 20px; color: #334155; }
+.volumeGrid { position: absolute; top: 0; right: 36px; bottom: 24px; left: calc(var(--label-width) + var(--label-gap)); pointer-events: none; }
+.volumeGrid > span { position: absolute; top: 0; bottom: 0; border-left: 1px solid #f1f5f9; }
+.volumeGrid > span:first-child { border-color: #cbd5e1; }
+.volumeAxis { position: absolute; right: 36px; bottom: 0; left: calc(var(--label-width) + var(--label-gap)); height: 24px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 11px; font-variant-numeric: tabular-nums; }
+.volumeAxis > span { position: absolute; top: 5px; transform: translateX(-50%); }
+.volumeAxis > span:first-child { transform: none; }
+.volumeAxis > span:last-child { transform: translateX(-100%); }
+@media (min-width: 1280px) {
+  .mainLayout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; }
+  .queueRow { grid-template-columns: minmax(150px, .9fr) minmax(0, 1.4fr) 42px; gap: 0 16px; }
+  .queueDetails { grid-column: 2; grid-row: 1; padding-left: 0; }
+  .queueCount { grid-column: 3; }
+  .insightPanel { border-top: 0; border-left: 1px solid #f1f5f9; padding-left: 26px; }
+  .insightPanel > summary { display: none; }
 }
