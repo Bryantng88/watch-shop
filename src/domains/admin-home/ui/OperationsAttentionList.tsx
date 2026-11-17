@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowUpRight, ChevronDown } from "lucide-react";
-import { AdminUserAvatar, ADMIN_DOMAIN_TONE } from "@/domains/shared/ui/admin-design-contract";
+import { AdminUserAvatar, ADMIN_DOMAIN_TONE, ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import type { OperationsDashboardAttentionItem } from "../shared";
@@ -22,7 +22,7 @@ function ItemImage({ item }: { item: OperationsDashboardAttentionItem }) {
 
 export function OperationsAttentionList({ items }: { items: OperationsDashboardAttentionItem[] }) {
   return <section className={styles.attentionSection} aria-labelledby="intervention-title">
-    <div className={styles.attentionHeading}><div><h2 id="intervention-title" className="text-base font-bold text-slate-950">Việc cần can thiệp</h2><p className="mt-1 text-xs text-slate-500">Cần kiểm tra, quá hạn hoặc chưa có người nhận</p></div><span className="text-xs tabular-nums text-slate-500">{items.length} mục</span></div>
+    <div className={styles.attentionHeading}><div><h2 id="intervention-title" className={ADMIN_UI.sectionTitle}>Việc cần can thiệp</h2><p className="mt-1 text-xs text-slate-500">Cần kiểm tra, quá hạn hoặc chưa có người nhận</p></div><span className="text-xs tabular-nums text-slate-500">{items.length} mục</span></div>
     {!items.length ? <p className="py-6 text-xs text-slate-500">Chưa có mục cần can thiệp theo tiêu chí hiện tại.</p> : <>
       <div aria-hidden="true" className={styles.attentionColumns}><span>Mục cần xử lý</span><span>Lý do cần chú ý</span><span className="text-right">Không cập nhật</span><span /></div>
       <div className="divide-y divide-slate-100">{items.map(item => <details key={item.id} className={styles.attentionItem} data-attention-item={item.id}>

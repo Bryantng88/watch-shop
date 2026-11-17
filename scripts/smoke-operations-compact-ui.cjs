@@ -41,6 +41,12 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
       if(width<1280)await page.getByText('Insight vận hành',{exact:true}).click();
       await page.getByRole('heading',{name:'Khối lượng đang mở',exact:true}).waitFor();
       assert.ok(await page.locator('[data-volume-chart]').isVisible());
+      const completion=page.getByRole('region',{name:'Nhịp hoàn tất đơn hàng · 7 ngày'});
+      assert.ok(await completion.isVisible());
+      assert.equal(await completion.locator('dd').first().textContent(),'2');
+      const fonts=await page.locator('h1, h2').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).fontFamily));
+      assert.equal(new Set(fonts).size,1,'dashboard headings share one font family');
+      assert.equal(await page.locator('#intervention-title').evaluate(el=>getComputedStyle(el).fontSize),await page.locator('#operation-queues-title').evaluate(el=>getComputedStyle(el).fontSize));
       assert.equal(await page.getByRole('navigation',{name:'Cần chú ý trước'}).getByRole('link').count(),3);
       assert.equal(await page.locator('[data-attention-item]').count(),6);
       const intervention=page.locator('[data-attention-item="attention-0"]');

@@ -56,6 +56,10 @@ before borders or color are needed.
   avatars through AdminUserAvatar and meaningful icon fallbacks when absent.
   Never use prototype names, photos or counts as runtime filler.
 - Reminder aggregates are separate domain links, not a summed severity KPI.
+- Dashboard headings inherit one explicit sans-serif stack and use the shared
+  section-title token. Do not add decorative accent strokes above sections.
+- Show the seven-day order completion series in its own always-visible compact
+  card, with a heading, day labels and actual counts; no disclosure is required.
 
 ### Typography
 

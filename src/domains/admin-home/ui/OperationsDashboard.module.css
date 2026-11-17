@@ -1,3 +1,6 @@
+.dashboard { font-family: Arial, Helvetica, sans-serif; }
+.dashboard h1, .dashboard h2, .dashboard h3 { font-family: inherit; }
+.completionCard { padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; }
 .mainLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 12px; }
 .workColumn { min-width: 0; display: flex; flex-direction: column; gap: 28px; }
 .quickAttention { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
@@ -21,8 +24,7 @@
 .insightPanel section[aria-labelledby="stage-concentration-title"] { border-top: 0; padding-top: 0; }
 .insightPanel > summary { border-radius: 0; }
 .attentionSection { container: attention-list / inline-size; min-width: 0; }
-.attentionHeading { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 14px; margin-bottom: 14px; }
-.attentionHeading::before { content: ""; position: absolute; top: 0; left: 0; width: 28px; height: 2px; background: #0f172a; }
+.attentionHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .attentionColumns, .attentionSummary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 88px 14px; align-items: center; gap: 12px; }
 .attentionColumns { padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 12px; }
 .attentionSummary { min-height: 64px; padding: 12px 0; list-style: none; cursor: pointer; }

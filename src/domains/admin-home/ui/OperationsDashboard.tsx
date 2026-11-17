@@ -41,7 +41,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
 
 export default function OperationsDashboard({ data }: { data: OperationsDashboardData }) {
   const priorities = quickAttention(data.queues);
-  return <AdminPageCanvas className="mx-auto w-full min-w-0 !max-w-none pb-8 sm:px-4 lg:px-5 xl:px-6">
+  return <AdminPageCanvas className={cn(styles.dashboard, "mx-auto w-full min-w-0 !max-w-none pb-8 sm:px-4 lg:px-5 xl:px-6")}>
     <AdminPageHeader title="Trung tâm điều hành" description="Việc đang mở và những điểm cần chú ý." meta={
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-slate-500"><span><strong className="text-lg font-semibold tabular-nums text-slate-950">{number(data.totalActive)}</strong> việc đang mở</span><span>Toàn shop</span></div>
     } />
@@ -60,10 +60,14 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
       <OperationsInsightPanel>
         <div className={cn(styles.chartSurface, ADMIN_UI.insightSurface)} data-chart-surface><OperationsVolumeChart queues={data.queues} /></div>
         <StageConcentrationInsights queues={data.queues} />
-        <details className="border-t border-slate-100 pt-3">
-          <summary className="cursor-pointer rounded py-2 text-xs font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Nhịp hoàn tất đơn hàng · 7 ngày</summary>
-          <div className="mt-3 grid grid-cols-7 gap-2 text-center text-xs tabular-nums">{data.completionTrend.map(item => <div key={item.date}><span className="block font-semibold text-slate-900">{number(item.count)}</span><span className="text-slate-500">{item.label}</span></div>)}</div>
-        </details>
+        <section className={styles.completionCard} aria-labelledby="completion-title">
+          <h2 id="completion-title" className={ADMIN_UI.sectionTitle}>Nhịp hoàn tất đơn hàng · 7 ngày</h2>
+          <p className="mt-1 text-xs text-slate-500">Số đơn hoàn tất theo ngày</p>
+          <dl className="mt-4 grid grid-cols-7 gap-1 text-center text-xs tabular-nums">{data.completionTrend.map(item => <div key={item.date}>
+            <dt className="text-slate-500"><time dateTime={item.date}>{item.label}</time></dt>
+            <dd className="mt-2 text-base font-semibold text-blue-700">{number(item.count)}</dd>
+          </div>)}</dl>
+        </section>
       </OperationsInsightPanel>
     </div>
     <p className="border-t border-slate-100 pt-4 text-right text-xs text-slate-500">Cập nhật lúc {new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(data.generatedAt))}</p>
