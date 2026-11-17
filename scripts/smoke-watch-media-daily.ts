@@ -121,6 +121,8 @@ async function main(){
  await assert.rejects(getWatchMediaWorkspaceContext(product.id,undefined,randomUUID()));
  assert.equal((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson && JSON.stringify((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson).includes('"currentState":"DONE"'),false);
  await prisma.product.update({where:{id:product.id},data:{primaryImageUrl:'synthetic-cover.jpg'}});
+ // Gallery mutation tests generate a real INLINE projection; isolate the later thumbnail fixture.
+ await prisma.productImage.deleteMany({where:{productId:product.id,role:'INLINE'}});
  await prisma.productImage.create({data:{productId:product.id,fileKey:'synthetic-inline.jpg',role:'INLINE',isForAdmin:true}});
  const input={requestKey:randomUUID(),productId:product.id,assigneeUserId:staff.id,day:'2026-11-13',part:'image',request:'Chỉnh sáng gallery cho Watch này'};
  const pair=await Promise.all([addDailyMediaWork(user.id,input),addDailyMediaWork(user.id,input)]);
