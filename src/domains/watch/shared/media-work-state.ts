@@ -41,12 +41,22 @@ export function mediaPartSnapshot(
         ? mediaContentValues(values.content)
         : part === "cover"
           ? key(values.media.coverImage)
-          : {
-              gallery: values.media.galleryImages.map(key),
-              pool: [...new Set(values.media.poolImages.map(key))].sort(),
-            };
+          : values.media.galleryImages.map(key);
   return JSON.stringify(sorted(value));
 }
+/** Draft pool edits must still be saved, but do not undo approved Gallery work. */
+export function mediaPartSaveSnapshot(
+  values: WatchFormValues,
+  part: MediaWorkPart,
+) {
+  return part === "image"
+    ? JSON.stringify({
+        gallery: mediaPartSnapshot(values, part),
+        pool: [...new Set(values.media.poolImages.map(mediaObjectKey))].sort(),
+      })
+    : mediaPartSnapshot(values, part);
+}
+
 export function effectiveMediaParts(
   done: Record<MediaWorkPart, boolean>,
   current: WatchFormValues,
@@ -101,7 +111,8 @@ export function mergeWatchSaveReceipt(
     },
   };
   const unchanged = (part: MediaWorkPart) =>
-    mediaPartSnapshot(current, part) === mediaPartSnapshot(submitted, part);
+    mediaPartSaveSnapshot(current, part) ===
+    mediaPartSaveSnapshot(submitted, part);
   return {
     saved,
     current: {
@@ -112,12 +123,20 @@ export function mergeWatchSaveReceipt(
       imageReviewStatus: saved.imageReviewStatus,
       media: {
         ...current.media,
-        ...(unchanged("image")
+        ...(mediaPartSnapshot(current, "image") ===
+        mediaPartSnapshot(submitted, "image")
           ? {
               galleryImages: saved.media.galleryImages,
-              poolImages: saved.media.poolImages,
               imageCount: saved.media.imageCount,
             }
+          : {}),
+        ...(JSON.stringify(
+          [...new Set(current.media.poolImages.map(mediaObjectKey))].sort(),
+        ) ===
+        JSON.stringify(
+          [...new Set(submitted.media.poolImages.map(mediaObjectKey))].sort(),
+        )
+          ? { poolImages: saved.media.poolImages }
           : {}),
       },
     },

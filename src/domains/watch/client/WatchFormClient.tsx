@@ -1,7 +1,7 @@
 "use client";
 
 import { currentMediaEditor, registerMediaEditor, type MediaDraft, type MediaEditor } from "@/domains/ai-assistant/media-editor";
-import { confirmMediaParts, effectiveMediaParts, invalidateChangedMediaParts, mergeLoadedMediaPool, mediaPartSnapshot, mergeWatchSaveReceipt } from "../shared/media-work-state";
+import { confirmMediaParts, effectiveMediaParts, invalidateChangedMediaParts, mergeLoadedMediaPool, mediaPartSaveSnapshot, mergeWatchSaveReceipt } from "../shared/media-work-state";
 import BenContentPreview from "../ui/edit/BenContentPreview";
 import { suggestWatchSpecWithOpenAIAction } from "./form/watch-ai-spec.actions";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -142,7 +142,7 @@ function MediaWorkDoneButton({ label, done, dirty, ready, statusUnknown, onReche
   if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><button type="button" disabled={disabled} onClick={onRecheck} className="h-9 rounded-lg border border-slate-300 px-3 text-slate-700">Kiểm tra lại</button></div>;
   if (!ready) return <span role="status" className="text-xs text-slate-500">Đang tải kho ảnh…</span>;
   return <div className="flex flex-wrap items-center gap-2">
-    <span role="status" className={done?"text-xs font-medium text-emerald-700":"text-xs text-slate-500"}>{done?"Đã hoàn tất":dirty?"Có thay đổi chưa lưu":"Đã lưu · chưa hoàn tất"}</span>
+    <span role="status" className={done?"text-xs font-medium text-emerald-700":"text-xs text-slate-500"}>{done?(dirty?"Đã hoàn tất · chưa lưu":"Đã hoàn tất"):dirty?"Có thay đổi chưa lưu":"Đã lưu · chưa hoàn tất"}</span>
     <button type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</button>
     <button type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-9 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</button>
   </div>;
@@ -384,7 +384,7 @@ export default function WatchFormClient({
   const initialPool = useRef(initialValues.media.poolImages).current;
   const mediaSaveVersion = useRef(0);
   const mediaWorkDone = effectiveMediaParts(storedMediaWorkDone, values, completionValues);
-  const mediaDirty = Object.fromEntries((["profile", "content", "image", "cover"] as const).map(part => [part, mediaPartSnapshot(values, part) !== mediaPartSnapshot(savedValues, part)])) as Record<MediaWorkPart, boolean>;
+  const mediaDirty = Object.fromEntries((["profile", "content", "image", "cover"] as const).map(part => [part, mediaPartSaveSnapshot(values, part) !== mediaPartSaveSnapshot(savedValues, part)])) as Record<MediaWorkPart, boolean>;
   const mediaSession = useMemo(() => ({productId: values.productId}), [values.productId]);
   const [mediaDraft, setMediaDraft] = useState<{productId: string; draft: MediaDraft}>();
   const [activeMediaSection, setActiveMediaSection] = useState<
