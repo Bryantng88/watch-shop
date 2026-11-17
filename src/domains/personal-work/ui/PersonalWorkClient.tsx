@@ -469,7 +469,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             event.preventDefault();
             const nextTitle = title.trim();
             if (!nextTitle) {
-              setMessage("Vui lòng nhập nội dung công việc cần làm");
+              setMessageIsError(true);
+                setMessage("Vui lòng nhập nội dung công việc cần làm");
               return;
             }
             run(
@@ -933,6 +934,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               if(editingItem.checklistOnly)return;
               const nextTitle = editTitle.trim();
               if (!nextTitle) {
+                setMessageIsError(true);
                 setMessage("Vui lòng nhập nội dung công việc cần làm");
                 return;
               }
@@ -1372,7 +1374,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
               {editingItem.calendar.synced && (
                 <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                  Thay đổi sẽ được cập nhật vào sự kiện Google Calendar hiện có.
+                  Công việc được lưu trước; hệ thống sẽ thử đồng bộ lên sự kiện Google Calendar hiện có.
                 </p>
               )}
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
@@ -1491,7 +1493,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         event={selectedCalendarEvent}
         saveEvent={updateGoogleCalendarEventAction}
         onClose={() => setSelectedCalendarEvent(null)}
-        onSaved={updated => { calendar.updateEvent(updated); setSelectedCalendarEvent(null); setMessage("Đã lưu thay đổi lên Google Calendar"); void calendar.reload(); }}
+        onSaved={updated => { calendar.updateEvent(updated); setSelectedCalendarEvent(null); setMessageIsError(false); setMessage("Đã lưu thay đổi lên Google Calendar"); void calendar.reload(); }}
       />}
 
       {calendarCreateOpen && (
