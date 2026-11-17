@@ -137,7 +137,7 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await phone.goto(origin+'/?view=list&item=item-23');
     await phone.getByRole('dialog').waitFor();
     await phone.evaluate(()=>{window.__calendarStatus='FAILED'});
-    await phone.getByLabel('Nội dung cập nhật',{exact:true}).fill('500.000');
+    await phone.getByLabel(/^Nội dung cập nhật/).fill('500.000');
     await phone.getByRole('button',{name:'Lưu thay đổi',exact:true}).tap();
     await phone.getByRole('dialog').waitFor({state:'hidden'});
     assert.ok(await phone.getByText('Đã lưu công việc. Chưa đồng bộ Google Calendar; bạn có thể thử lại.',{exact:true}).isVisible());
@@ -150,11 +150,11 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await phone.goto(origin+'/?view=list&item=item-23');
     await phone.getByRole('dialog').waitFor();
     await phone.evaluate(()=>{window.__saveError=true});
-    await phone.getByLabel('Nội dung cập nhật',{exact:true}).fill('Giữ nội dung khi lỗi');
+    await phone.getByLabel(/^Nội dung cập nhật/).fill('Giữ nội dung khi lỗi');
     await phone.getByRole('button',{name:'Lưu thay đổi',exact:true}).tap();
     await phone.getByRole('dialog').getByRole('alert').waitFor();
     assert.match(await phone.getByRole('dialog').getByRole('alert').innerText(),/tải lại danh sách/);
-    assert.equal(await phone.getByLabel('Nội dung cập nhật',{exact:true}).inputValue(),'Giữ nội dung khi lỗi');
+    assert.equal(await phone.getByLabel(/^Nội dung cập nhật/).inputValue(),'Giữ nội dung khi lỗi');
     await touch.close();
     assert.deepEqual(errors, []);
     console.log('PASS: actual personal-work client at 320/390/768/1440; category/title and reference placement; view/scope/category filters; event and viewer restrictions; schedule/context/update popovers; completion payload and read-only open; desktop calendar layout.');
