@@ -232,5 +232,5 @@ test('post selection carries form separately and teaches Vietnamese shape intent
   api:async(op,body)=>{calls.push([op,body]);return op==='lookup'?{evidence:{request:body.lookup,result:{matches:[],selection:JSON.parse(body.lookup.query)}}}:{accepted:true}}
  });
  const query=JSON.parse(calls[0][1].lookup.query);assert.deepEqual(query.caseShapes,['ROUND']);assert.deepEqual(query.keywords,[]);
- for(const text of ['SHAPE FILTERS','never literal title keywords','unknown shapes are excluded','preserve these criteria','4–6 million VND'])assert.ok(prompt.includes(text),text);
+ for(const text of ['SHAPE FILTERS','chữ nhật/rectangle/rectangular -> RECTANGULAR','tank -> TANK','TV/tivi/dáng TV -> TV','never literal title keywords','unknown shapes are excluded','preserve these criteria','4–6 million VND'])assert.ok(prompt.includes(text),text);
 });

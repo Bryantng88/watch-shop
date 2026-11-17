@@ -1,3 +1,4 @@
+import { WATCH_CASE_SHAPE_LABELS } from "@/domains/watch/shared/watch-case-shape.options";
 import { WATCH_STYLE_EN_LABELS } from "@/domains/watch/shared/watch-style.options";
 import type { CaseType, MovementType, WatchStyle } from "@prisma/client";
 
@@ -16,19 +17,7 @@ export const MEDIA_POST_MOVEMENT_OPTIONS = enumOptions<MovementType>({
   HYBRID: "Hybrid",
 });
 
-export const MEDIA_POST_CASE_SHAPE_OPTIONS = enumOptions<CaseType>({
-  ROUND: "Tròn",
-  TANK: "Chữ nhật / Tank",
-  SQUARE: "Vuông",
-  TONNEAU: "Tonneau",
-  CUSHION: "Cushion",
-  OVAL: "Oval",
-  ASYMMETRICAL: "Bất đối xứng",
-  OCTAGON: "Bát giác",
-  POLYGON: "Đa giác",
-  SPECIAL: "Đặc biệt",
-  OTHER: "Khác",
-});
+export const MEDIA_POST_CASE_SHAPE_OPTIONS = enumOptions<CaseType>(WATCH_CASE_SHAPE_LABELS);
 
 export const MEDIA_POST_STYLE_OPTIONS = enumOptions<WatchStyle>(WATCH_STYLE_EN_LABELS);
 

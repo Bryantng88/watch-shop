@@ -1,5 +1,6 @@
 "use client";
 
+import { WATCH_CASE_SHAPE_OPTIONS as CASE_SHAPE_OPTIONS } from "@/domains/watch/shared/watch-case-shape.options";
 import { Loader2, Settings2, Sparkles } from "lucide-react";
 import type { WatchWorkbenchValues } from "@/domains/watch/client/workbench/types";
 import { updateValues } from "@/domains/watch/client/workbench/workbench-utils";
@@ -7,19 +8,7 @@ import { PostTargetMultiSelect } from "@/domains/shared/ui/post-target/PostTarge
 import { Field, inputClass, OperationShell, operationButtonClass, textareaClass } from "../shared/OperationShell";
 
 const MOVEMENT_OPTIONS = ["QUARTZ", "AUTOMATIC", "MANUAL", "MECA_QUARTZ"];
-const CASE_SHAPE_OPTIONS = [
-    "ROUND",
-    "TANK",
-    "SQUARE",
-    "SPECIAL",
-    "OTHER",
-    "TONNEAU",
-    "CUSHION",
-    "OVAL",
-    "ASYMMETRICAL",
-    "OCTAGON",
-    "POLYGON",
-];
+
 const CRYSTAL_OPTIONS = ["SAPPHIRE", "ACRYLIC", "MINERAL", "HARDLEX", "AR_COATED"];
 const MATERIAL_PROFILE_OPTIONS = [
     { value: "SINGLE_MATERIAL", label: "Single material" },
@@ -151,7 +140,7 @@ export default function SpecBlock({
                         <Field label="Thickness (mm)">
                             <input className={inputClass} value={values.spec.thicknessMM} onChange={(event) => setSpec({ thicknessMM: event.target.value })} placeholder="11" />
                         </Field>
-                        <SelectField label="Case form" value={values.spec.caseShape} options={CASE_SHAPE_OPTIONS} onChange={(value) => setSpec({ caseShape: value })} />
+                        <SelectField label="Dáng vỏ" value={values.spec.caseShape} options={CASE_SHAPE_OPTIONS} onChange={(value) => setSpec({ caseShape: value })} />
                         <SelectField label="Crystal" value={values.spec.crystal} options={CRYSTAL_OPTIONS} onChange={(value) => setSpec({ crystal: value })} />
                         <Field label="Year text">
                             <input className={inputClass} value={values.basic.yearText} onChange={(event) => setBasic({ yearText: event.target.value })} placeholder="1970s / 1990s / ..." />

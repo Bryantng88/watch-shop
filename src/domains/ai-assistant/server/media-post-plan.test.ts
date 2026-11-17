@@ -42,7 +42,7 @@ const authority = (...permissions: string[]) => ({
 test("shape terms select canonical forms without requiring words in the title or dropping other filters", () => {
   for (const [term, shape] of [
     ["tròn", "ROUND"], ["mặt tròn", "ROUND"], ["form tròn", "ROUND"],
-    ["ROUND", "ROUND"], ["vuông", "SQUARE"], ["chữ nhật", "TANK"],
+    ["ROUND", "ROUND"], ["vuông", "SQUARE"], ["chữ nhật", "RECTANGULAR"], ["rectangular", "RECTANGULAR"], ["Tank", "TANK"], ["dáng TV", "TV"],
     ["bầu dục", "OVAL"], ["tonneau", "TONNEAU"], ["cushion", "CUSHION"],
     ["bát giác", "OCTAGON"], ["đa giác", "POLYGON"], ["bất đối xứng", "ASYMMETRICAL"],
   ]) {
@@ -55,8 +55,8 @@ test("shape terms select canonical forms without requiring words in the title or
     assert.equal(where.AND instanceof Array && where.AND.length, 1);
     assert.ok(!JSON.stringify(where).includes('caseType'));
   }
-  const parsed = watchSelectionSchema.parse({ brand: "Seiko", keywords: ["Round Trip", "diver"], caseShapes: ["ROUND", "SQUARE", "ROUND"], count: 5 });
-  assert.deepEqual(parsed.keywords, ["Round Trip", "diver"]);
+  const parsed = watchSelectionSchema.parse({ brand: "Seiko", keywords: ["Round Trip", "TV Dial", "diver"], caseShapes: ["ROUND", "SQUARE", "ROUND"], count: 5 });
+  assert.deepEqual(parsed.keywords, ["Round Trip", "TV Dial", "diver"]);
   assert.deepEqual(parsed.caseShapes, ["ROUND", "SQUARE"]);
   assert.equal(watchSelectionSchema.safeParse({ ...selection, caseShapes: ["CIRCLE"] }).success, false);
   assert.deepEqual(watchSelectionSchema.parse({brand:"Seiko",count:1}).caseShapes, []);

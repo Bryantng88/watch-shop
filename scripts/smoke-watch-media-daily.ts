@@ -1,3 +1,5 @@
+import {CaseTypeSchema} from "../src/features/__generated__/zod/schemas/enums/CaseType.schema";
+import {mediaCaseShapeSchema} from "../src/domains/ai-assistant/media-case-shape";
 import {publicCatalogQuerySchema} from "../src/domains/storefront/contracts/public-catalog.contract";
 import {WatchStyleSchema} from "../src/features/__generated__/zod/schemas/enums/WatchStyle.schema";
 import {setWatchCoverApplication} from "../src/domains/watch/application/set-watch-cover.application";
@@ -50,6 +52,13 @@ async function main(){
   assert.equal(mapWatchDetailToFormValues(await getWatchEditDetail(product.id)).basic.style,style);
  }
 
+ for(const shape of ['CUSHION','RECTANGULAR','TV'] as const){
+  assert.equal(CaseTypeSchema.parse(shape),shape);assert.equal(mediaCaseShapeSchema.parse(shape),shape);
+  values.spec.caseShape=shape;
+  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+  assert.equal((await prisma.watchSpecV2.findUniqueOrThrow({where:{watchId:watch.id}})).caseShape,shape);
+  assert.equal(mapWatchDetailToFormValues(await getWatchEditDetail(product.id)).spec.caseShape,shape);
+ }
  // Completing another tab resubmits the original form values. Canonical
  // defaults and decimal formatting must not invalidate an already saved part.
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});

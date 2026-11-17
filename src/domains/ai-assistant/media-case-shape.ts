@@ -1,19 +1,13 @@
+import { WATCH_CASE_SHAPE_VALUES, WATCH_CASE_SHAPE_LABELS } from "@/domains/watch/shared/watch-case-shape.options";
 import { z } from "zod";
 
-export const mediaCaseShapeSchema = z.enum([
-  "ROUND", "TANK", "SQUARE", "SPECIAL", "OTHER", "TONNEAU", "CUSHION",
-  "OVAL", "ASYMMETRICAL", "OCTAGON", "POLYGON",
-]);
+export const mediaCaseShapeSchema = z.enum(WATCH_CASE_SHAPE_VALUES);
 export type MediaCaseShape = z.infer<typeof mediaCaseShapeSchema>;
-export const mediaCaseShapeLabels: Record<MediaCaseShape, string> = {
-  ROUND: "Tròn", TANK: "Chữ nhật / Tank", SQUARE: "Vuông", SPECIAL: "Đặc biệt",
-  OTHER: "Khác", TONNEAU: "Tonneau / Thùng", CUSHION: "Cushion / Gối",
-  OVAL: "Oval / Bầu dục", ASYMMETRICAL: "Bất đối xứng", OCTAGON: "Bát giác",
-  POLYGON: "Đa giác",
-};
+export const mediaCaseShapeLabels: Record<MediaCaseShape, string> = WATCH_CASE_SHAPE_LABELS;
 const aliases: Record<string, MediaCaseShape> = {
   tron: "ROUND", round: "ROUND", vuong: "SQUARE", square: "SQUARE",
-  "chu nhat": "TANK", tank: "TANK", rectangular: "TANK", rectangle: "TANK",
+  "chu nhat": "RECTANGULAR", tank: "TANK", rectangular: "RECTANGULAR", rectangle: "RECTANGULAR",
+  tv: "TV", television: "TV", tivi: "TV", "chu nhat ngang": "TV",
   oval: "OVAL", "bau duc": "OVAL", tonneau: "TONNEAU", thung: "TONNEAU",
   cushion: "CUSHION", goi: "CUSHION", "bat giac": "OCTAGON", octagon: "OCTAGON",
   octagonal: "OCTAGON", "da giac": "POLYGON", polygon: "POLYGON",

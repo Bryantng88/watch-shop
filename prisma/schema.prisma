@@ -3198,6 +3198,8 @@ enum CaseType {
   ASYMMETRICAL
   OCTAGON
   POLYGON
+  RECTANGULAR
+  TV
 }
 
 enum Category {
