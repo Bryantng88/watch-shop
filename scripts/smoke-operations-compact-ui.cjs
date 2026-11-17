@@ -12,7 +12,7 @@ async function main() {
   await fs.mkdir(output, { recursive: true });
   const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import Dashboard from './src/domains/admin-home/ui/OperationsDashboard';
 const keys=['orders','purchase-requests','media','technical','payments','personal-work'];
-const labels=['Chờ xử lý','Đang xử lý với tên giai đoạn dài để kiểm tra trên điện thoại','Đã sẵn sàng'];
+const labels=['Chờ xử lý','Đang xử lý','Đã sẵn sàng'];
 const queues=keys.map((key,i)=>({key,label:key,description:'Mô tả khu vực',href:'/admin/'+key,activeCount:10,actionLabel:'Mở',insights:[{key:'wait',label:'việc cần kiểm tra',count:3,href:'/admin/'+key+'?attention=1',severity:'attention'}],stages:labels.map((label,n)=>({key:key+n,label,count:[7,3,0][n],href:'/admin/'+key+'?stage='+n,actionLabel:'Mở',metrics:[{label:'Thời gian chờ',value:'3 ngày',detail:'Dữ liệu mẫu'}]}))}));
 const data={generatedAt:'2026-11-17T03:00:00Z',totalActive:60,queues,completionTrend:[{date:'2026-11-17',label:'17/11',count:2}],attention:[],priorityAction:null};
 window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).render(<Dashboard data={empty?{...data,totalActive:0,queues:[]}:data}/>);window.renderFixture(new URLSearchParams(location.search).has('empty'));`;

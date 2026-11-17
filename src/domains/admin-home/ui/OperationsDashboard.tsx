@@ -59,7 +59,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
   });
   const primaryInsight = insights[0];
   return (
-    <li className={cn(styles.queueRow, "group rounded-lg px-2 py-4 transition-colors hover:bg-slate-50 focus-within:bg-slate-50")}>
+    <li className={cn(styles.queueRow, "group px-2 py-3 transition-colors hover:bg-slate-50 focus-within:bg-slate-50")}>
       <div className={styles.queueIdentity}>
         <Link href={queue.href} title={queue.description} className="flex min-h-10 min-w-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
           <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", queueTones[queue.key].soft)}>
