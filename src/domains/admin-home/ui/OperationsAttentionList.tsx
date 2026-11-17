@@ -29,7 +29,7 @@ export function OperationsAttentionList({ items }: { items: OperationsDashboardA
         <summary className={styles.attentionSummary}>
           <span className={styles.attentionObject}><ItemImage key={item.imageUrl ?? item.id} item={item} /><span className="min-w-0"><span className="block text-sm font-semibold leading-5 text-slate-900">{item.title}</span><span className="mt-0.5 block text-xs leading-5 text-slate-500">{[item.reference, operationalDomainPresentation(item.domain.toLowerCase().replaceAll("_", "-")).label].filter(Boolean).join(" · ")}</span></span></span>
           <span className={styles.attentionReason}>{item.reason}</span>
-          <span className={cn(styles.attentionAge, ADMIN_UI.attentionValue)}>{item.ageLabel}</span><ChevronDown className={styles.attentionArrow} aria-hidden="true" />
+          <span className={styles.attentionAge}>{item.ageLabel.split(/(\d+)/).map((part, index) => <span key={index} className={/^\d+$/.test(part) ? cn("font-semibold", ADMIN_UI.attentionValue) : undefined}>{part}</span>)}</span><ChevronDown className={styles.attentionArrow} aria-hidden="true" />
         </summary>
         <div className={styles.attentionDetail}><p className="text-xs leading-5 text-slate-600">{item.ownerLabel}</p><Link href={item.href} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{item.actionLabel}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link></div>
       </details>)}</div>

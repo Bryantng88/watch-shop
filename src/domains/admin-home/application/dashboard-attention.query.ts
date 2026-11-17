@@ -7,6 +7,7 @@ import { selectAttentionItems } from "./attention-selection";
 
 const text = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : null;
 const record = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const mediaReasons: Record<string, string> = { PHOTOGRAPHY: "Chụp ảnh chưa cập nhật", MEDIA_PROCESSING: "Xử lý media chưa cập nhật", PUBLISH: "Xuất bản chưa cập nhật" };
 const days = (value: Date, now: Date) => Math.max(0, Math.floor((now.getTime() - value.getTime()) / 86400000));
 
 /** Full-source, bounded candidate selection; independent of paginated board data. */
@@ -48,7 +49,7 @@ export async function queryDashboardAttention(db: DB, now: Date): Promise<Operat
     const stage = row.status.toLowerCase().replaceAll("_", "-");
     const href = media ? (productId ? `/admin/watches/${encodeURIComponent(productId)}/edit?mode=media&focus=image` : text(data.targetType) === "MEDIA_POST" ? `/admin/media-posts/${id}` : `/admin/coordination/operation?view=media-production-flow&flowStage=${stage}&flowQuery=${encodeURIComponent(text(data.sku) ?? row.entityId)}`)
       : serviceId ? `/admin/services/${encodeURIComponent(serviceId)}` : `/admin/coordination/operation?view=technical-issue-flow&flowStage=${stage}&flowQuery=${encodeURIComponent(text(service.refNo) ?? row.entityId)}`;
-    items.push({ id: `${media ? "media" : "technical"}-${row.entityId}`, domain: media ? "MEDIA" : "TECHNICAL", title: (media ? text(data.title) : text(service.productTitle) ?? text(data.summary)) ?? (media ? "Media cần kiểm tra" : "Phiếu kỹ thuật"), reference: (media ? text(data.sku) : text(service.refNo)), imageUrl: (media ? text(data.imageUrl) : text(service.imageUrl)), reason: media ? `Không cập nhật ${age} ngày` : `Kỹ thuật quá hạn ${Math.max(1, days(row.overdueAt ?? row.activityAt, now))} ngày`, ageLabel: age === 0 ? "Hôm nay" : `${age} ngày`, ageDays: age, ownerLabel: "Chưa có thông tin người phụ trách", actionLabel: media ? "Mở xử lý media" : "Mở phiếu kỹ thuật", href, tone: media ? "violet" : "blue", severity: !media || age >= 30 ? "risk" : "attention" });
+    items.push({ id: `${media ? "media" : "technical"}-${row.entityId}`, domain: media ? "MEDIA" : "TECHNICAL", title: (media ? text(data.title) : text(service.productTitle) ?? text(data.summary)) ?? (media ? "Media cần kiểm tra" : "Phiếu kỹ thuật"), reference: (media ? text(data.sku) : text(service.refNo)), imageUrl: (media ? text(data.imageUrl) : text(service.imageUrl)), reason: media ? (mediaReasons[row.status] ?? "Media chưa cập nhật") : `Kỹ thuật quá hạn ${Math.max(1, days(row.overdueAt ?? row.activityAt, now))} ngày`, ageLabel: age === 0 ? "Hôm nay" : `${age} ngày`, ageDays: age, ownerLabel: "Chưa có thông tin người phụ trách", actionLabel: media ? "Mở xử lý media" : "Mở phiếu kỹ thuật", href, tone: media ? "violet" : "blue", severity: !media || age >= 30 ? "risk" : "attention" });
   }
   for (const request of [...overdueRequests, ...unassignedRequests]) {
     const overdue = request.followUpAt && request.followUpAt < now;
