@@ -1,3 +1,4 @@
+import { WATCH_STYLE_VALUES } from "@/domains/watch/shared/watch-style.options";
 import { z } from "zod";
 
 export const PUBLIC_CATALOG_DEFAULT_PAGE_SIZE = 24;
@@ -20,7 +21,7 @@ export const publicCatalogQuerySchema = z
     brand: optionalQueryText(80),
     audience: z.enum(["ALL", "MEN", "WOMEN"]).optional(),
     collection: z.enum(["STANDARD", "COLLECTIBLE"]).optional(),
-    style: z.enum(["MILITARY", "DRESS", "SPORT", "TOOL", "CASUAL", "CLASSIC", "MINIMALIST", "LUXURY", "RETRO", "FUTURISTIC"]).optional(),
+    style: z.enum(WATCH_STYLE_VALUES).optional(),
     size: z.enum(["SMALL", "MEDIUM", "LARGE"]).optional(),
     movement: z.enum(["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"]).optional(),
     caseMaterial: z.enum(["STAINLESS_STEEL", "TITANIUM", "TUNGSTEN", "CERAMIC", "CARBON", "GOLD", "PLATINUM", "SILVER", "BRASS", "OTHER"]).optional(),
@@ -55,7 +56,7 @@ export type PublicCatalogQuery = z.infer<typeof publicCatalogQuerySchema>;
 
 export type PublicCatalogFacets = {
   brands: Array<{ slug: string; name: string; count: number }>;
-  styles: Array<{ value: "MILITARY" | "DRESS" | "SPORT" | "TOOL" | "CASUAL" | "CLASSIC" | "MINIMALIST" | "LUXURY" | "RETRO" | "FUTURISTIC"; count: number }>;
+  styles: Array<{ value: NonNullable<PublicCatalogQuery["style"]>; count: number }>;
   sizes: Array<{ value: "SMALL" | "MEDIUM" | "LARGE"; count: number }>;
   movements: Array<{ value: string; count: number }>;
   caseMaterials: Array<{ value: string; count: number }>;

@@ -1,5 +1,7 @@
 "use client";
 
+import { WATCH_CASE_SHAPE_OPTIONS as CASE_SHAPE_OPTIONS } from "../../shared/watch-case-shape.options";
+import { WATCH_STYLE_OPTIONS } from "../../shared/watch-style.options";
 import { useEffect, useState } from "react";
 import { Pencil, Sparkles } from "lucide-react";
 import { buildWatchTitleFromForm } from "../../shared/watch-title-sku.helpers";
@@ -76,33 +78,6 @@ const MATERIAL_OPTIONS = [
   "SILVER",
   "BRASS",
   "OTHER",
-].map((value) => ({ value, label: value }));
-
-const WATCH_STYLE_OPTIONS = [
-  "MILITARY",
-  "DRESS",
-  "SPORT",
-  "TOOL",
-  "CASUAL",
-  "CLASSIC",
-  "MINIMALIST",
-  "LUXURY",
-  "RETRO",
-  "FUTURISTIC",
-].map((value) => ({ value, label: value }));
-
-const CASE_SHAPE_OPTIONS = [
-  "ROUND",
-  "TANK",
-  "SQUARE",
-  "SPECIAL",
-  "OTHER",
-  "TONNEAU",
-  "CUSHION",
-  "OVAL",
-  "ASYMMETRICAL",
-  "OCTAGON",
-  "POLYGON",
 ].map((value) => ({ value, label: value }));
 
 const CRYSTAL_OPTIONS = [
@@ -718,14 +693,14 @@ export default function WatchBasicSection({
           </div>
 
           <div>
-            <FieldLabel>Hình dáng vỏ</FieldLabel>
+            <FieldLabel>Dáng vỏ</FieldLabel>
             <Select
               value={spec.caseShape}
               onChange={(event) =>
                 onSpecChange({ caseShape: event.target.value })
               }
               options={CASE_SHAPE_OPTIONS}
-              placeholder="Round / Square / Tank / ..."
+              placeholder="Chọn dáng vỏ"
             />
           </div>
 

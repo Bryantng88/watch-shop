@@ -144,6 +144,9 @@ function styleLabel(value?: string | null) {
     LUXURY: "luxury",
     RETRO: "retro",
     FUTURISTIC: "futuristic",
+    DIVER: "diver",
+    PILOT: "pilot",
+    RACING: "racing",
   };
 
   return map[normalizeEnum(value)] || "";

@@ -14,6 +14,7 @@ import {
     selectWatchGalleryImages,
     selectWatchPoolImages,
     watchMediaSelectionChanges,
+    mergeWatchMediaPoolItems,
 } from "../../server/media";
 import { updateWatchPricingWithDiff } from "../../server/pricing";
 import {
@@ -782,18 +783,19 @@ export async function submitWatchFormApplication(
     let normalizedGalleryImages = requestedGalleryImages;
     let normalizedPoolImages = remainingPoolImages;
 
-    if (imagesChanged || poolChanged) {
-        // NAS/media reconciliation is comparatively expensive. Run it whenever
-        // either durable pool membership or the Gallery overlay changes;
-        // content/progress-only saves must not reprocess existing media.
-        normalizedGalleryImages = await selectWatchGalleryImages(
-            requestedGalleryImages,
+    if (poolChanged && !imagesChanged) {
+        // Existing final Gallery assets must not be re-ingested or demoted to
+        // SELECTED just to repair/extend a legacy temporary pool.
+        const finalGalleryKeys = new Set(beforeImageKeys);
+        const temporaryItems = remainingPoolImages.filter(item => !finalGalleryKeys.has(mediaKey(item)));
+        normalizedPoolImages = mergeWatchMediaPoolItems(
+            await selectWatchPoolImages(temporaryItems, productId), requestedGalleryImages,
         );
+    }
 
-        normalizedPoolImages = await selectWatchPoolImages(
-            remainingPoolImages,
-            productId,
-        );
+    if (imagesChanged) {
+        normalizedGalleryImages = await selectWatchGalleryImages(requestedGalleryImages);
+        normalizedPoolImages = await selectWatchPoolImages(remainingPoolImages, productId);
 
         const galleryImageInputs = normalizedGalleryImages
             .map((item, index) => {

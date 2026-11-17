@@ -1,3 +1,7 @@
+import {CaseTypeSchema} from "../src/features/__generated__/zod/schemas/enums/CaseType.schema";
+import {mediaCaseShapeSchema} from "../src/domains/ai-assistant/media-case-shape";
+import {publicCatalogQuerySchema} from "../src/domains/storefront/contracts/public-catalog.contract";
+import {WatchStyleSchema} from "../src/features/__generated__/zod/schemas/enums/WatchStyle.schema";
 import {setWatchCoverApplication} from "../src/domains/watch/application/set-watch-cover.application";
 import {mediaStorage} from "../src/domains/media/storage";
 import {dailyMediaWorkForProducts} from "../src/domains/personal-work/server/media-daily-read.service";
@@ -39,6 +43,22 @@ async function main(){
  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
  assert.equal((await prisma.watchContent.findUniqueOrThrow({where:{watchId:watch.id}})).body,'WIP saved for later');assert.equal((await progress()).content,false);assert.equal((await progress()).profile,false);
  assert.equal((await getWatchMediaWorkspaceContext(product.id))?.parts.content,false);
+ for(const style of ['SPORT','DIVER','PILOT','RACING'] as const){
+  assert.equal(publicCatalogQuerySchema.parse({style}).style,style);
+  assert.equal(WatchStyleSchema.parse(style),style);
+  values.basic.style=style;
+  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+  assert.equal((await prisma.watch.findUniqueOrThrow({where:{id:watch.id}})).style,style);
+  assert.equal(mapWatchDetailToFormValues(await getWatchEditDetail(product.id)).basic.style,style);
+ }
+
+ for(const shape of ['CUSHION','RECTANGULAR','TV'] as const){
+  assert.equal(CaseTypeSchema.parse(shape),shape);assert.equal(mediaCaseShapeSchema.parse(shape),shape);
+  values.spec.caseShape=shape;
+  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+  assert.equal((await prisma.watchSpecV2.findUniqueOrThrow({where:{watchId:watch.id}})).caseShape,shape);
+  assert.equal(mapWatchDetailToFormValues(await getWatchEditDetail(product.id)).spec.caseShape,shape);
+ }
  // Completing another tab resubmits the original form values. Canonical
  // defaults and decimal formatting must not invalidate an already saved part.
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});
@@ -70,6 +90,28 @@ async function main(){
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true,content:true,image:true,cover:true}});
  await setWatchCoverApplication({productId:product.id,storageKey:coverKey,actorUserId:user.id,deferConsumers:()=>{}});
  const allDone={profile:true,content:true,image:true,cover:true};assert.deepEqual((await progress()),allDone,'same Cover must retain every completion');
+ // Production-like regression: final Gallery exists, legacy pool has no binding.
+ // A new Cover followed by its completion must not rewrite or re-ingest Gallery.
+ const galleryBefore=await prisma.productImage.findMany({where:{productId:product.id,role:'GALLERY'},select:{id:true,fileKey:true,sortOrder:true},orderBy:{sortOrder:'asc'}});
+ const galleryObject=await prisma.mediaObject.findUniqueOrThrow({where:{storageKey:galleryKey}});
+ await prisma.mediaBinding.deleteMany({where:{ownerType:'WATCH',ownerId:watch.id,role:'GALLERY'}});
+ await prisma.mediaBinding.create({data:{mediaObjectId:(await prisma.mediaObject.findUniqueOrThrow({where:{storageKey:coverKey}})).id,ownerType:'WATCH',ownerId:watch.id,role:'THUMBNAIL',audienceSegment:'MEN',lifecycle:'ATTACHED'}});
+ const newCoverKey='media/objects/'+suffix+'/original/new-cover.jpg';
+ await prisma.mediaObject.create({data:{bucket:'synthetic-text-review-media',storageKey:newCoverKey,availability:'AVAILABLE'}});
+ const storageReads:string[]=[];
+ mediaStorage.stat=async key=>{storageReads.push(key);assert.ok([coverKey,newCoverKey].includes(key),'Cover/pool-only save must not read Gallery assets');return {key,sizeBytes:1,etag:'synthetic',contentType:'image/jpeg'};};
+ await setWatchCoverApplication({productId:product.id,storageKey:newCoverKey,actorUserId:user.id,deferConsumers:()=>{}});
+ assert.deepEqual(await progress(),{...allDone,cover:false});
+ withImage.media.coverImage={key:newCoverKey};withImage.media.poolImages=[];
+ const coverSave=await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.equal(coverSave.imagesChanged,false);assert.equal((await progress()).image,true,'new Cover completion must not clear Gallery when legacy pool differs');
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{cover:true}});
+ assert.deepEqual((await getWatchMediaWorkspaceContext(product.id,prisma,binding.id))?.parts,allDone);
+ assert.deepEqual(await prisma.productImage.findMany({where:{productId:product.id,role:'GALLERY'},select:{id:true,fileKey:true,sortOrder:true},orderBy:{sortOrder:'asc'}}),galleryBefore,'pool repair must preserve Gallery rows and order');
+ assert.ok(!storageReads.includes(galleryKey));
+ await prisma.mediaBinding.create({data:{mediaObjectId:galleryObject.id,ownerType:'WATCH',ownerId:watch.id,role:'GALLERY',audienceSegment:'MEN',lifecycle:'ATTACHED'}});
+ mediaStorage.stat=async key=>{assert.ok([coverKey,newCoverKey,galleryKey].includes(key));return {key,sizeBytes:1,etag:'synthetic',contentType:'image/jpeg'};};
+
  for(const part of ['profile','content','image','cover'] as const){
   await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
   await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{[part]:true}});
@@ -83,12 +125,24 @@ async function main(){
  await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
  assert.deepEqual((await progress()),{...allDone,content:false},'a content edit invalidates content only');
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{content:true}});
+ const secondGalleryKey='media/objects/'+suffix+'/original/second-gallery.jpg';
+ await prisma.mediaObject.create({data:{bucket:'synthetic-text-review-media',storageKey:secondGalleryKey,availability:'AVAILABLE'}});
+ mediaStorage.stat=async key=>{assert.ok([coverKey,newCoverKey,galleryKey,secondGalleryKey].includes(key));return {key,sizeBytes:1,etag:'synthetic',contentType:'image/jpeg'};};
+ withImage.media.galleryImages=[{key:galleryKey},{key:secondGalleryKey}];withImage.media.poolImages=[...withImage.media.galleryImages];
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.deepEqual(await progress(),{...allDone,image:false},'a real Gallery addition must still invalidate only images');
+ await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{image:true}});
+ withImage.media.galleryImages.reverse();
+ await submitWatchFormApplication(withImage,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+ assert.deepEqual(await progress(),{...allDone,image:false},'real Gallery reordering must still invalidate only images');
  mediaStorage.stat=oldStat;
 
 
  await assert.rejects(getWatchMediaWorkspaceContext(product.id,undefined,randomUUID()));
  assert.equal((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson && JSON.stringify((await prisma.taskExecution.findUniqueOrThrow({where:{id:binding.id}})).metadataJson).includes('"currentState":"DONE"'),false);
  await prisma.product.update({where:{id:product.id},data:{primaryImageUrl:'synthetic-cover.jpg'}});
+ // Gallery mutation tests generate a real INLINE projection; isolate the later thumbnail fixture.
+ await prisma.productImage.deleteMany({where:{productId:product.id,role:'INLINE'}});
  await prisma.productImage.create({data:{productId:product.id,fileKey:'synthetic-inline.jpg',role:'INLINE',isForAdmin:true}});
  const input={requestKey:randomUUID(),productId:product.id,assigneeUserId:staff.id,day:'2026-11-13',part:'image',request:'Chỉnh sáng gallery cho Watch này'};
  const pair=await Promise.all([addDailyMediaWork(user.id,input),addDailyMediaWork(user.id,input)]);

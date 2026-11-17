@@ -3119,6 +3119,9 @@ enum WatchStyle {
   LUXURY
   RETRO
   FUTURISTIC
+  DIVER
+  PILOT
+  RACING
 }
 
 enum WatchStrapSetType {
@@ -3195,6 +3198,8 @@ enum CaseType {
   ASYMMETRICAL
   OCTAGON
   POLYGON
+  RECTANGULAR
+  TV
 }
 
 enum Category {

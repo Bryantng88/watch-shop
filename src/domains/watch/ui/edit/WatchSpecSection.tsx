@@ -1,5 +1,6 @@
 "use client";
 
+import { WATCH_CASE_SHAPE_OPTIONS as CASE_SHAPE_OPTIONS } from "../../shared/watch-case-shape.options";
 import { Gem } from "lucide-react";
 import { FieldLabel, Input, SectionCard, Select, Toggle } from "./shared";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
@@ -8,20 +9,6 @@ type Props = {
   values: WatchFormValues["spec"];
   onChange: (patch: Partial<WatchFormValues["spec"]>) => void;
 };
-
-const CASE_SHAPE_OPTIONS = [
-  "ROUND",
-  "TANK",
-  "SQUARE",
-  "SPECIAL",
-  "OTHER",
-  "TONNEAU",
-  "CUSHION",
-  "OVAL",
-  "ASYMMETRICAL",
-  "OCTAGON",
-  "POLYGON",
-].map((x) => ({ value: x, label: x }));
 
 const CRYSTAL_OPTIONS = [
   "SAPPHIRE",
@@ -144,12 +131,12 @@ export default function WatchSpecSection({ values, onChange }: Props) {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <FieldLabel>Case form</FieldLabel>
+              <FieldLabel>Dáng vỏ</FieldLabel>
               <Select
                 value={values.caseShape}
                 onChange={(e) => onChange({ caseShape: e.target.value })}
                 options={CASE_SHAPE_OPTIONS}
-                placeholder="Round / Square / Tank / ..."
+                placeholder="Chọn dáng vỏ"
               />
             </div>
 

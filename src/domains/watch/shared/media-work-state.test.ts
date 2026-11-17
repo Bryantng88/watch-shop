@@ -7,6 +7,7 @@ import {
   invalidateChangedMediaParts,
   mergeWatchSaveReceipt,
   mergeLoadedMediaPool,
+  mediaPartSaveSnapshot,
 } from "./media-work-state";
 const base = () =>
   mapWatchDetailToFormValues({
@@ -35,7 +36,7 @@ test("only persisted explicit completion counts; editing each part removes its c
     if (part === "profile") next.basic.title = "Changed";
     if (part === "content") next.content.body = "WIP";
     if (part === "image")
-      next.media.poolImages = [{ key: "new.jpg", url: "/new.jpg" }];
+      next.media.galleryImages = [{ key: "new.jpg", url: "/new.jpg" }];
     if (part === "cover") next.media.coverImage = null;
     assert.deepEqual(effectiveMediaParts(complete, next, saved), {
       ...complete,
@@ -165,4 +166,32 @@ test("late initial pool reads preserve edits and hydrate untouched pool state", 
   );
   current.media.poolImages = [{ key: "typed.jpg" }];
   assert.equal(mergeLoadedMediaPool(current, [], serverPool), current);
+});
+
+test("Cover/pool reconciliation keeps Gallery complete while still tracking unsaved pool edits", () => {
+  const saved = base();
+  saved.media.galleryImages = [{ key: "gallery.jpg" }];
+  const draft = structuredClone(saved);
+  draft.media.poolImages = [{ key: "new-cover-source.jpg" }];
+  draft.media.coverImage = { key: "cover-new.jpg" };
+  assert.equal(effectiveMediaParts(complete, draft, saved).image, true);
+  assert.equal(effectiveMediaParts(complete, draft, saved).cover, false);
+  assert.notEqual(
+    mediaPartSaveSnapshot(draft, "image"),
+    mediaPartSaveSnapshot(saved, "image"),
+  );
+  const later = structuredClone(draft);
+  later.media.poolImages.push({ key: "typed-while-saving.jpg" });
+  const receipt = mergeWatchSaveReceipt(later, draft, {
+    media: {
+      poolImages: [{ key: "canonical.jpg" }],
+      galleryImages: [{ key: "canonical-gallery.jpg" }],
+    },
+  });
+  assert.equal(receipt.current.media.poolImages.length, 2);
+  assert.equal(
+    receipt.current.media.galleryImages[0].key,
+    "canonical-gallery.jpg",
+  );
+  assert.equal(invalidateChangedMediaParts(complete, saved, draft).image, true);
 });

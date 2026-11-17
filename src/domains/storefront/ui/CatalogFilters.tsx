@@ -1,5 +1,6 @@
 "use client";
 
+import { WATCH_STYLE_EN_LABELS } from "@/domains/watch/shared/watch-style.options";
 import { ChevronDown, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,18 +11,7 @@ import type { PublicCatalogFacets, PublicCatalogQuery } from "../contracts";
 import { useStorefrontLocale } from "./StorefrontLocale";
 import { formatStorefrontMoney } from "../shared/locale.utils";
 
-const styleLabels: Record<NonNullable<PublicCatalogQuery["style"]>, string> = {
-  MILITARY: "Military",
-  DRESS: "Dress",
-  SPORT: "Sport",
-  TOOL: "Tool",
-  CASUAL: "Casual",
-  CLASSIC: "Classic",
-  MINIMALIST: "Minimalist",
-  LUXURY: "Luxury",
-  RETRO: "Retro",
-  FUTURISTIC: "Futuristic",
-};
+const styleLabels = WATCH_STYLE_EN_LABELS;
 const movementLabels: Record<NonNullable<PublicCatalogQuery["movement"]>, string> = {
   AUTOMATIC: "Automatic",
   HAND_WOUND: "Manual Winding",
