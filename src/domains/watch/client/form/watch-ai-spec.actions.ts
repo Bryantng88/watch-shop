@@ -1,6 +1,7 @@
 "use server";
 
 import sharp from "sharp";
+import { WATCH_STYLE_VALUES } from "../../shared/watch-style.options";
 import { z } from "zod";
 
 import { PERMISSIONS } from "@/constants/permissions";
@@ -94,7 +95,7 @@ const jsonSchema = {
 
 const ALLOWED_VALUES = {
   movementType: ["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"],
-  style: ["MILITARY", "DRESS", "SPORT", "TOOL", "CASUAL", "CLASSIC", "MINIMALIST", "LUXURY", "RETRO", "FUTURISTIC"],
+  style: WATCH_STYLE_VALUES,
   caseShape: ["ROUND", "TANK", "SQUARE", "SPECIAL", "OTHER", "TONNEAU", "CUSHION", "OVAL", "ASYMMETRICAL", "OCTAGON", "POLYGON"],
   crystal: ["SAPPHIRE", "ACRYLIC", "MINERAL", "HARDLEX", "AR_COATED"],
   materialProfile: ["SINGLE_MATERIAL", "BIMETAL", "COATED", "OTHER"],

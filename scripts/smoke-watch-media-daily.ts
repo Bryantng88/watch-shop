@@ -1,3 +1,5 @@
+import {publicCatalogQuerySchema} from "../src/domains/storefront/contracts/public-catalog.contract";
+import {WatchStyleSchema} from "../src/features/__generated__/zod/schemas/enums/WatchStyle.schema";
 import {setWatchCoverApplication} from "../src/domains/watch/application/set-watch-cover.application";
 import {mediaStorage} from "../src/domains/media/storage";
 import {dailyMediaWorkForProducts} from "../src/domains/personal-work/server/media-daily-read.service";
@@ -39,6 +41,15 @@ async function main(){
  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
  assert.equal((await prisma.watchContent.findUniqueOrThrow({where:{watchId:watch.id}})).body,'WIP saved for later');assert.equal((await progress()).content,false);assert.equal((await progress()).profile,false);
  assert.equal((await getWatchMediaWorkspaceContext(product.id))?.parts.content,false);
+ for(const style of ['SPORT','DIVER','PILOT','RACING'] as const){
+  assert.equal(publicCatalogQuerySchema.parse({style}).style,style);
+  assert.equal(WatchStyleSchema.parse(style),style);
+  values.basic.style=style;
+  await submitWatchFormApplication(values,{userId:user.id,canReviewContent:true,canEditPrice:false,deferConsumers:()=>{}});
+  assert.equal((await prisma.watch.findUniqueOrThrow({where:{id:watch.id}})).style,style);
+  assert.equal(mapWatchDetailToFormValues(await getWatchEditDetail(product.id)).basic.style,style);
+ }
+
  // Completing another tab resubmits the original form values. Canonical
  // defaults and decimal formatting must not invalidate an already saved part.
  await saveWatchMediaWorkDraftFromQueueItem({bindingId:binding.id,actorUserId:user.id,parts:{profile:true}});

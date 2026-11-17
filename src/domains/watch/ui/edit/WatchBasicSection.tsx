@@ -1,5 +1,6 @@
 "use client";
 
+import { WATCH_STYLE_OPTIONS } from "../../shared/watch-style.options";
 import { useEffect, useState } from "react";
 import { Pencil, Sparkles } from "lucide-react";
 import { buildWatchTitleFromForm } from "../../shared/watch-title-sku.helpers";
@@ -76,19 +77,6 @@ const MATERIAL_OPTIONS = [
   "SILVER",
   "BRASS",
   "OTHER",
-].map((value) => ({ value, label: value }));
-
-const WATCH_STYLE_OPTIONS = [
-  "MILITARY",
-  "DRESS",
-  "SPORT",
-  "TOOL",
-  "CASUAL",
-  "CLASSIC",
-  "MINIMALIST",
-  "LUXURY",
-  "RETRO",
-  "FUTURISTIC",
 ].map((value) => ({ value, label: value }));
 
 const CASE_SHAPE_OPTIONS = [

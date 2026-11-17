@@ -3119,6 +3119,9 @@ enum WatchStyle {
   LUXURY
   RETRO
   FUTURISTIC
+  DIVER
+  PILOT
+  RACING
 }
 
 enum WatchStrapSetType {

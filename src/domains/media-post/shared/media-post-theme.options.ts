@@ -1,3 +1,4 @@
+import { WATCH_STYLE_EN_LABELS } from "@/domains/watch/shared/watch-style.options";
 import type { CaseType, MovementType, WatchStyle } from "@prisma/client";
 
 function enumOptions<T extends string>(labels: Record<T, string>) {
@@ -29,18 +30,7 @@ export const MEDIA_POST_CASE_SHAPE_OPTIONS = enumOptions<CaseType>({
   OTHER: "Khác",
 });
 
-export const MEDIA_POST_STYLE_OPTIONS = enumOptions<WatchStyle>({
-  MILITARY: "Military",
-  DRESS: "Dress",
-  SPORT: "Sport",
-  TOOL: "Tool",
-  CASUAL: "Casual",
-  CLASSIC: "Classic",
-  MINIMALIST: "Minimalist",
-  LUXURY: "Luxury",
-  RETRO: "Retro",
-  FUTURISTIC: "Futuristic",
-});
+export const MEDIA_POST_STYLE_OPTIONS = enumOptions<WatchStyle>(WATCH_STYLE_EN_LABELS);
 
 export const MEDIA_POST_STOCK_OPTIONS = [
   ["IN_STOCK", "Còn hàng"],
