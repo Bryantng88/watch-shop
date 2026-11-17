@@ -8,7 +8,7 @@ function Hotspot({ queue, stage }: { queue: OperationsDashboardQueue; stage: Ope
   return <details className="border-b border-slate-100 py-3 last:border-b-0">
     <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
       <span><span className="block text-xs font-semibold text-slate-900">{operationalDomainPresentation(queue.key).label}</span><span className="mt-1 block text-xs text-slate-500">{stage.label} · {stage.count.toLocaleString("vi-VN")}/{queue.activeCount.toLocaleString("vi-VN")} việc</span></span>
-      <span className="text-xs tabular-nums text-slate-900">{Math.round(stage.count / queue.activeCount * 100)}%</span>
+      <span className="shrink-0 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold tabular-nums text-blue-700">{Math.round(stage.count / queue.activeCount * 100)}%</span>
     </summary>
     <dl className="mt-3 space-y-3">{stage.metrics?.map(metric => <div key={metric.label}><dt className="text-xs text-slate-500">{metric.label}</dt><dd className="mt-0.5 text-sm font-semibold tabular-nums text-slate-900">{metric.value}<p className="mt-1 text-xs font-normal leading-5 text-slate-500">{metric.detail}</p></dd></div>)}</dl>
     <Link href={stage.href} className="mt-3 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold text-slate-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Mở giai đoạn<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link>
