@@ -1,9 +1,35 @@
 .mainLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 12px; }
-.queueRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; }
-.queueIdentity { grid-column: 1; grid-row: 1; }
-.queueCount { grid-column: 2; grid-row: 1; }
-.queueDetails { grid-column: 1 / -1; min-width: 0; padding-left: 42px; }
-.insightPanel { min-width: 0; border-top: 1px solid #f1f5f9; }
+.workColumn { min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+.quickAttention { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
+.queueRow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 4px; }
+.queueHeadline { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; }
+.queueCount { align-self: center; }
+.insightPanel { min-width: 0; padding: 16px; }
+.insightPanel > summary { border-radius: 0; }
+.attentionSection { container: attention-list / inline-size; min-width: 0; }
+.attentionHeading { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 14px; margin-bottom: 14px; }
+.attentionHeading::before { content: ""; position: absolute; top: 0; left: 0; width: 28px; height: 2px; background: #0f172a; }
+.attentionColumns, .attentionSummary { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 88px 14px; align-items: center; gap: 12px; }
+.attentionColumns { padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 12px; }
+.attentionSummary { min-height: 64px; padding: 12px 0; list-style: none; cursor: pointer; }
+.attentionSummary::-webkit-details-marker { display: none; }
+.attentionSummary:hover { background: #f8fafc; }
+.attentionSummary:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
+.attentionObject { display: flex; min-width: 0; gap: 12px; align-items: center; }
+.attentionReason { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; line-height: 20px; color: #64748b; }
+.attentionAge { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; color: #334155; }
+.attentionArrow { height: 14px; width: 14px; color: #94a3b8; }
+.attentionItem[open] .attentionArrow { transform: rotate(180deg); }
+.attentionDetail { padding: 0 12px 14px 48px; }
+@container attention-list (max-width: 520px) {
+  .attentionColumns { display: none; }
+  .attentionSummary { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
+  .attentionObject { grid-column: 1; grid-row: 1; }
+  .attentionArrow { grid-column: 2; grid-row: 1; justify-self: end; }
+  .attentionReason { grid-column: 1; grid-row: 2; padding-left: 48px; }
+  .attentionAge { grid-column: 2; grid-row: 2; }
+}
+@media (pointer: coarse) { .quickAttention a { min-height: 44px; } }
 .volumeChart { --label-width: 96px; --label-gap: 10px; position: relative; margin-top: 18px; padding-bottom: 24px; padding-right: 36px; }
 .volumeRow { position: relative; display: grid; grid-template-columns: var(--label-width) minmax(0, 1fr); gap: var(--label-gap); align-items: center; min-height: 44px; }
 .volumePlot { position: relative; height: 32px; }
@@ -18,9 +44,15 @@
 .volumeAxis > span:last-child { transform: translateX(-100%); }
 @media (min-width: 1280px) {
   .mainLayout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; }
-  .queueRow { grid-template-columns: minmax(150px, .9fr) minmax(0, 1.4fr) 42px; gap: 0 16px; }
-  .queueDetails { grid-column: 2; grid-row: 1; padding-left: 0; }
-  .queueCount { grid-column: 3; }
-  .insightPanel { border-top: 0; border-left: 1px solid #f1f5f9; padding-left: 26px; }
+  .insightPanel { padding: 20px; }
   .insightPanel > summary { display: none; }
 }
+@media (max-width: 639px) {
+  .queueHeadline { display: block; }
+  .workColumn { gap: 24px; }
+  .quickAttention { align-items: flex-start; gap: 0 16px; }
+  .quickAttention > span { width: 100%; }
+}
+
+.insightPanel .volumeGrid > span, .insightPanel .volumeAxis { border-color: #dbeafe; }
+.insightPanel .volumeGrid > span:first-child { border-color: #bfdbfe; }

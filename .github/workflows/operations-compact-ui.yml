@@ -42,7 +42,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx eslint src/domains/admin-home/ui/*.tsx src/domains/admin-home/shared/execution-summary.ts src/domains/admin-home/application/execution-summary.query.ts src/domains/admin-home/application/get-operations-dashboard.application.ts scripts/smoke-operations-execution.ts
+      - run: npx eslint src/domains/admin-home/ui/*.tsx src/domains/admin-home/shared/execution-summary.ts src/domains/admin-home/application/attention-selection.ts src/domains/admin-home/application/dashboard-attention.query.ts src/domains/admin-home/application/execution-summary.query.ts src/domains/admin-home/application/get-operations-dashboard.application.ts scripts/smoke-operations-execution.ts
       - run: node --import tsx --test src/domains/admin-home/application/*.test.ts
       - run: npx prisma db push --skip-generate
       - run: node --import tsx scripts/smoke-operations-execution.ts

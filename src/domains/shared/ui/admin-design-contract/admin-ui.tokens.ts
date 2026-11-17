@@ -10,6 +10,7 @@ export const ADMIN_UI = {
   metadata: "text-xs text-slate-500",
   metricValue: "font-bold tabular-nums text-slate-950",
   toolbar: "rounded-xl border border-slate-200/80 bg-slate-50/60 p-2",
+  insightSurface: "bg-blue-50",
   flatSurface: "rounded-xl bg-slate-50/70",
   raisedSurface: "rounded-xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_7px_20px_rgba(15,23,42,0.035)]",
   divider: "border-slate-100",

@@ -1,3 +1,4 @@
+import { queryDashboardAttention } from "./dashboard-attention.query";
 import { executionCounts } from "../shared/execution-summary";
 import { queryDashboardExecutionCounts } from "./execution-summary.query";
 import { isPersonalEvent } from "@/domains/personal-work/shared/personal-event";
@@ -18,7 +19,6 @@ import {
 } from "@/domains/projection/server/technical-issue-board.projection";
 import { ensureProjectionReady } from "@/domains/projection/server/projection-read.service";
 import type {
-  OperationsDashboardAttentionItem,
   OperationsDashboardData,
   OperationsDashboardQueue,
 } from "../shared/operations-dashboard.types";
@@ -26,16 +26,6 @@ import { bangkokDayBounds } from "./operations-dashboard-time";
 
 function count(map: Map<string, number>, key: string) {
   return map.get(key) ?? 0;
-}
-
-function ageInDays(value: string | Date | null | undefined, now: Date) {
-  if (!value) return 0;
-  return Math.max(0, Math.floor((now.getTime() - new Date(value).getTime()) / 86_400_000));
-}
-
-function ageLabel(days: number) {
-  if (days <= 0) return "Hôm nay";
-  return `${days} ngày`;
 }
 
 export async function getOperationsDashboardApplication(input: { canAssignPurchaseRequests?: boolean; userId?: string | null } = {}): Promise<OperationsDashboardData> {
@@ -48,15 +38,9 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
   const now = new Date();
   const today = bangkokDayBounds(now);
   const trendStart = new Date(today.start.getTime() - 6 * 86_400_000);
-  const [orders, purchaseRequestCounts, purchaseRequests, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems, orderStats, mediaStats, technicalStats, openStats, throughput, execution] = await Promise.all([
+  const [orders, purchaseRequestCounts, overdueRequestCount, unassignedRequestCount, media, mediaInsights, technical, technicalInsights, paymentCounts, completedOrders, personalItems, orderStats, mediaStats, technicalStats, openStats, throughput, execution, visibleAttention] = await Promise.all([
     queryOrderListProjection(prisma, { view: "all", subFilter: "", paymentType: "", sort: "updatedDesc", page: 1, pageSize: 1 }),
     prisma.purchaseRequest.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.purchaseRequest.findMany({
-      where: { status: { in: ["WAITING", "PROCESSING"] } },
-      orderBy: [{ followUpAt: "asc" }, { updatedAt: "asc" }],
-      take: 20,
-      select: { id: true, reference: true, customerName: true, status: true, assignedUserId: true, assignedUser: { select: { name: true } }, followUpAt: true, createdAt: true, updatedAt: true },
-    }),
     prisma.purchaseRequest.count({ where: { status: { in: ["WAITING", "PROCESSING"] }, followUpAt: { lt: now } } }),
     prisma.purchaseRequest.count({ where: { status: { in: ["WAITING", "PROCESSING"] }, assignedUserId: null } }),
     queryMediaOperationBoardProjection(prisma, { page: 1, pageSize: 100 }),
@@ -81,9 +65,9 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     queryOpenOperationStageStatistics(prisma, { now, todayStart: today.start, todayEnd: today.end, userId: input.userId ?? null }),
     queryStageThroughput(prisma, now),
     queryDashboardExecutionCounts(prisma),
+    queryDashboardAttention(prisma, now),
   ]);
 
-  const overdueRequests = purchaseRequests.filter((request) => request.followUpAt && request.followUpAt < now);
   const personalOverdue = personalItems.filter((item) => item.dueAt && item.dueAt < today.start).length;
   const personalDueToday = personalItems.filter((item) => item.dueAt && item.dueAt >= today.start && item.dueAt < today.end).length;
   const personalUpcoming = personalItems.filter((item) => item.dueAt && item.dueAt >= today.end).length;
@@ -219,19 +203,6 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     }
   }
 
-  const attention: OperationsDashboardAttentionItem[] = [];
-  for (const request of overdueRequests.slice(0, 3)) {
-    const overdueDays = Math.max(1, ageInDays(request.followUpAt, now));
-    const isUnassigned = !request.assignedUserId;
-    attention.push({ id: `pr-${request.id}`, domain: "PURCHASE_REQUEST", title: request.customerName || "Yêu cầu mua hàng", reference: request.reference, reason: `Follow-up quá hạn ${overdueDays} ngày`, ageLabel: ageLabel(ageInDays(request.updatedAt, now)), ownerLabel: request.assignedUser?.name || "Chưa phân công", actionLabel: isUnassigned ? (input.canAssignPurchaseRequests ? "Phân công xử lý" : "Tiếp nhận yêu cầu") : "Tiếp tục xử lý", href: `/admin/coordination/operation?view=purchase-request-operation-flow&flowStage=purchase-request-${String(request.status).toLowerCase()}`, tone: "rose" });
-  }
-  for (const item of technical.rows.filter((row) => Number(row.overdueDays ?? 0) > 0).sort((a, b) => Number(b.overdueDays ?? 0) - Number(a.overdueDays ?? 0)).slice(0, 2)) {
-    attention.push({ id: `technical-${item.id}`, domain: "TECHNICAL", title: item.serviceRequest.productTitle || item.summary, reference: item.serviceRequest.refNo, reason: `Kỹ thuật quá hạn ${item.overdueDays} ngày`, ageLabel: ageLabel(ageInDays(item.updatedAt, now)), ownerLabel: "Chưa phân công", actionLabel: "Kiểm tra kỹ thuật", href: `/admin/coordination/operation?view=technical-issue-flow&flowStage=${item.stage.toLowerCase()}`, tone: "rose" });
-  }
-  for (const item of media.rows.filter((row) => row.stage !== "DONE" && ageInDays(row.updatedAt, now) >= 3).sort((a, b) => ageInDays(b.updatedAt, now) - ageInDays(a.updatedAt, now)).slice(0, 3)) {
-    attention.push({ id: `media-${item.id}`, domain: "MEDIA", title: item.title, reference: item.sku, reason: `Không cập nhật ${ageInDays(item.updatedAt, now)} ngày`, ageLabel: ageLabel(ageInDays(item.updatedAt, now)), ownerLabel: "Chưa phân công", actionLabel: "Kiểm tra tiến độ", href: `/admin/coordination/operation?view=media-production-flow&flowStage=${item.stage.toLowerCase().replace("_", "-")}`, tone: "amber" });
-  }
-
   const totalActive = queues.reduce((sum, queue) => sum + queue.activeCount, 0);
   const dateKey = (date: Date) => new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit",
@@ -250,7 +221,6 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
       count: completedByDate.get(key) ?? 0,
     };
   });
-  const visibleAttention = attention.slice(0, 6);
   const statistics = [
     ...orderStats.map(row => ({ ...row, queueKey: "orders" })),
     ...mediaStats.map(row => ({ ...row, queueKey: "media" })),
