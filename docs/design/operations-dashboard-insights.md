@@ -39,3 +39,24 @@ queue population, rather than displaying contradictory totals.
 No workflow transitions, domain ownership, permissions, or production data are
 changed by this read-only dashboard. Synthetic UI/test data never enter runtime
 queries.
+
+## Density and actionable interventions
+
+The approved dense layout bounds the main reading area to 1320px. The queue list
+and up to six intervention records flow naturally in the left column; the
+independent blue insight region stays on the right. No matching enclosing cards.
+Queue titles and warnings share a compact headline; stage counts are secondary.
+Quick reminders show up to three nonzero domain insights in stable domain order
+(Media, Technical, Purchase Requests, then remaining domains); these are links,
+not a cross-domain severity score or a sum.
+
+Interventions use full-source candidate selection, independent of board pages:
+Media active records idle for at least 3 days (risk from 30 days), active
+Technical records past expected completion (excluding cancelled execution), and
+open Purchase Requests past follow-up or missing an assignee. Up to six
+candidates per source are selected deterministically before global deduplication
+and risk/idle-age ranking. Final list contains at most six genuine records.
+Empty results remain empty. “Không cập nhật” uses the last business update time,
+not total stage duration. Unknown ownership is explicit; last updater is never
+presented as the assignee. Thumbnail/owner avatar and routes come from the linked
+record. Expansion shows context and an existing destination link, with no write.

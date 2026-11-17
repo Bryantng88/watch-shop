@@ -36,6 +36,10 @@ export type OperationsDashboardAttentionItem = {
   reason: string;
   ageLabel: string;
   ownerLabel: string;
+  imageUrl?: string | null;
+  avatarUser?: { name: string | null; email?: string | null; avatarUrl: string | null } | null;
+  ageDays?: number;
+  severity?: "risk" | "attention" | "neutral";
   actionLabel: string;
   href: string;
   tone: DashboardTone;

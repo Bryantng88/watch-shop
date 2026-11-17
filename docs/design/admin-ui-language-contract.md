@@ -39,6 +39,22 @@ before borders or color are needed.
   with a visible outline or hover-lift animation.
 - Avoid nested cards and repeated rounded containers.
 
+### Operations dashboard regions
+
+- Bound the main desktop reading area to 1320px; retain a 2:1 working/insight
+  split where space permits. Group each queue name, warning and stage summary
+  together. Keep open totals tertiary.
+- Put actionable detail lists directly beneath the working list in the same
+  left column. They must not wait for the insight column's full height.
+- Keep work and intervention rows flat. Use spacing, type and a short section
+  accent; do not wrap each region in matching outlined cards.
+- Use `ADMIN_UI.insightSurface` (quiet blue) for the independent insight column.
+  No shadow or visible enclosing border. Preserve domain colors on chart marks.
+- An intervention thumbnail identifies the actual linked object; use stored
+  avatars through AdminUserAvatar and meaningful icon fallbacks when absent.
+  Never use prototype names, photos or counts as runtime filler.
+- Reminder aggregates are separate domain links, not a summed severity KPI.
+
 ### Typography
 
 - Page title: 24px, bold, `slate-950`. It describes the workspace, not the
