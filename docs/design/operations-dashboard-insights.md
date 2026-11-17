@@ -45,8 +45,10 @@ queries.
 The dense layout uses the full available admin content width with standard page
 padding, without a fixed desktop width cap. The queue list
 and up to six intervention records flow naturally in the left column; the
-independent blue insight region stays on the right. No matching enclosing cards.
-Queue titles and warnings share a compact headline; stage counts are secondary.
+independent insight region stays on the right, with blue behind the volume chart
+and white behind concentration details. No matching enclosing cards.
+Queue warnings align in a dedicated middle column on wide panes and stack on
+narrow panes; stage counts remain secondary beneath queue names.
 Quick reminders show up to three nonzero domain insights in stable domain order
 (Media, Technical, Purchase Requests, then remaining domains); these are links,
 not a cross-domain severity score or a sum.

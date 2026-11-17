@@ -43,13 +43,14 @@ before borders or color are needed.
 
 - Use the full available admin content width with standard page padding; do not
   center the dashboard in a fixed-width reading column. Retain a 2:1
-  working/insight split where space permits. Group each queue name, warning and stage summary
-  together. Keep open totals tertiary.
+  working/insight split where space permits. Align queue warnings in a dedicated
+  middle “Cần chú ý” column on wide panes; stack below the identity on narrow
+  panes. Keep stage summaries with the queue name and open totals at the right.
 - Put actionable detail lists directly beneath the working list in the same
   left column. They must not wait for the insight column's full height.
 - Keep work and intervention rows flat. Use spacing, type and a short section
   accent; do not wrap each region in matching outlined cards.
-- Use `ADMIN_UI.insightSurface` (quiet blue) for the independent insight column.
+- Use `ADMIN_UI.insightSurface` (quiet blue) only behind the volume chart. Keep concentration insights on white.
   No shadow or visible enclosing border. Preserve domain colors on chart marks.
 - An intervention thumbnail identifies the actual linked object; use stored
   avatars through AdminUserAvatar and meaningful icon fallbacks when absent.

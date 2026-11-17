@@ -1,10 +1,24 @@
 .mainLayout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 12px; }
 .workColumn { min-width: 0; display: flex; flex-direction: column; gap: 28px; }
 .quickAttention { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
+.queueSection { container: operation-queues / inline-size; min-width: 0; }
+.queueColumns { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 0 4px 12px; border-bottom: 1px solid #f1f5f9; }
+.warningColumnTitle { display: none; font-size: 12px; color: #64748b; }
+.queueWarning { grid-column: 2; min-width: 0; }
+.queueRow > :nth-child(2) { grid-column: 2; }
 .queueRow { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 4px; }
 .queueHeadline { display: flex; flex-wrap: wrap; align-items: center; gap: 0 12px; }
-.queueCount { align-self: center; }
-.insightPanel { min-width: 0; padding: 16px; }
+.queueCount { grid-column: 3; grid-row: 1 / 3; align-self: center; }
+@container operation-queues (min-width: 640px) {
+  .queueColumns, .queueRow { grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) 64px; }
+  .queueColumns h2 { grid-column: 1 / 3; }
+  .warningColumnTitle { display: block; }
+  .queueWarning { grid-column: 3; grid-row: 1; align-self: center; }
+  .queueCount { grid-column: 4; grid-row: 1; }
+}
+.insightPanel { min-width: 0; align-self: start; background: white; }
+.chartSurface { padding: 20px; }
+.insightPanel section[aria-labelledby="stage-concentration-title"] { border-top: 0; padding-top: 0; }
 .insightPanel > summary { border-radius: 0; }
 .attentionSection { container: attention-list / inline-size; min-width: 0; }
 .attentionHeading { position: relative; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 14px; margin-bottom: 14px; }
@@ -44,7 +58,6 @@
 .volumeAxis > span:last-child { transform: translateX(-100%); }
 @media (min-width: 1280px) {
   .mainLayout { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; }
-  .insightPanel { padding: 20px; }
   .insightPanel > summary { display: none; }
 }
 @media (max-width: 639px) {

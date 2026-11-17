@@ -71,7 +71,12 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
         assert.ok(attentionBox.y>=listBox.y+listBox.height&&attentionBox.y-(listBox.y+listBox.height)<50);
         assert.ok(attentionBox.x===listBox.x&&attentionBox.width<=listBox.width+1);
         assert.ok(attentionBox.y<chartBox.y+chartBox.height);
-        assert.equal(await page.locator('[data-insight-panel]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(239, 246, 255)');
+        assert.equal(await page.locator('[data-chart-surface]').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(239, 246, 255)');
+        assert.equal(await panel.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(255, 255, 255)');
+        const row=page.locator('section[aria-labelledby="operation-queues-title"] > ul > li').first();
+        const identity=await row.locator('h3').boundingBox();
+        const warning=await row.locator('[data-queue-warning]').boundingBox();
+        assert.ok(warning.x>identity.x+identity.width,'attention has its own middle column');
         const { canvas, container } = await page.locator('h1').evaluate(el => {
           const dashboard = el.closest('.min-h-screen');
           return {

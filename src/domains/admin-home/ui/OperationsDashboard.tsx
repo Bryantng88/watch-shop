@@ -25,13 +25,14 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
     <div className="min-w-0">
       <div className={styles.queueHeadline}>
         <Link href={queue.href} title={queue.description} className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"><h3 className={ADMIN_UI.rowTitle}>{visual.label}</h3></Link>
-        {insight && <Link href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
-          <AlertCircle aria-hidden="true" className={cn("h-3 w-3 shrink-0", insight.severity === "risk" ? "text-rose-500" : insight.severity === "attention" ? "text-amber-600" : "text-slate-400")} />
-          <span><strong className="font-semibold tabular-nums">{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
-        </Link>}
+
       </div>
       <QueueStageSummary stages={queue.stages} />
     </div>
+    <div className={styles.queueWarning} data-queue-warning>{insight && <Link href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+          <AlertCircle aria-hidden="true" className={cn("h-3 w-3 shrink-0", insight.severity === "risk" ? "text-rose-500" : insight.severity === "attention" ? "text-amber-600" : "text-slate-400")} />
+          <span><strong className="font-semibold tabular-nums">{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
+        </Link>}</div>
     <Link href={queue.href} className={cn(styles.queueCount, "flex min-h-10 items-center justify-end gap-1 rounded text-xs tabular-nums text-slate-500 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400")} aria-label={`Mở ${visual.label}: ${number(queue.activeCount)} việc đang mở`}>
       {number(queue.activeCount)}<ChevronRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
     </Link>
@@ -50,14 +51,14 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
     </nav>}
     <div className={styles.mainLayout}>
       <div className={styles.workColumn}>
-      <section className="min-w-0" aria-labelledby="operation-queues-title">
-        <div className="flex items-baseline justify-between border-b border-slate-100 px-2 pb-3"><h2 id="operation-queues-title" className={ADMIN_UI.sectionTitle}>Khu vực xử lý</h2><span className="text-xs text-slate-500">Đang mở</span></div>
+      <section className={styles.queueSection} aria-labelledby="operation-queues-title">
+        <div className={styles.queueColumns}><h2 id="operation-queues-title" className={ADMIN_UI.sectionTitle}>Khu vực xử lý</h2><span className={styles.warningColumnTitle}>Cần chú ý</span><span className="text-right text-xs text-slate-500">Đang mở</span></div>
         {data.queues.length ? <ul className="divide-y divide-slate-100">{data.queues.map(queue => <QueueRow key={queue.key} queue={queue} />)}</ul> : <p className="py-8 text-sm text-slate-500">Chưa có khu vực xử lý trong phạm vi truy cập của bạn.</p>}
       </section>
       <OperationsAttentionList items={data.attention} />
       </div>
       <OperationsInsightPanel>
-        <OperationsVolumeChart queues={data.queues} />
+        <div className={cn(styles.chartSurface, ADMIN_UI.insightSurface)} data-chart-surface><OperationsVolumeChart queues={data.queues} /></div>
         <StageConcentrationInsights queues={data.queues} />
         <details className="border-t border-slate-100 pt-3">
           <summary className="cursor-pointer rounded py-2 text-xs font-semibold text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Nhịp hoàn tất đơn hàng · 7 ngày</summary>
