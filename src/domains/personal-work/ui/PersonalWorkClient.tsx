@@ -1,4 +1,5 @@
 "use client";
+import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import {PersonalWorkListRow} from "./PersonalWorkListRow";
 import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
@@ -197,6 +198,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [quickEndTime, setQuickEndTime] = useState("10:00");
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageIsError, setMessageIsError] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
@@ -293,10 +295,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const eventsByDay = useMemo(() => groupCalendarEvents(visibleCalendarEvents, calendarDays.map(localDayKey)), [visibleCalendarEvents, calendarDays]);
 
   useEffect(() => {
-    if (!message) return;
+    if (!message || messageIsError) return;
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
-  }, [message]);
+  }, [message, messageIsError]);
 
   useEffect(() => {
     const textarea = editNoteRef.current;
@@ -311,17 +313,28 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditingItem(refreshed || null);
   }, [workItems, editingItemId]);
 
-  function run(action: () => Promise<unknown>, success?: string, onSuccess?: () => void, refresh = true) {
+  function run<T>(action: () => Promise<T>, success?: string | ((result: T) => string), onSuccess?: () => void, refresh = true) {
     setMessage(null);
+    setMessageIsError(false);
     startTransition(async () => {
       try {
-        await action();
+        const result = await action();
         onSuccess?.();
-        if (success) setMessage(success);
+        if (success) setMessage(typeof success === "function" ? success(result) : success);
         if (refresh) router.refresh();
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : "Không thể xử lý yêu cầu");
+        setMessageIsError(true);
+        setMessage(personalWorkActionFailure(error));
       }
+    });
+  }
+
+  function rememberCalendarSave(task: {id:string;title:string}, result: CalendarSaveResult) {
+    setCalendarSyncFailures(current => {
+      const next = {...current};
+      if (result.calendarSync === "FAILED") next[task.id] = task;
+      else delete next[task.id];
+      return next;
     });
   }
 
@@ -393,6 +406,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   const openTaskEdit = useCallback((item: PersonalWorkItem) => {
+    setMessage(null);
+    setMessageIsError(false);
     setEditingItem(item);
     setEditTitle(item.title);
     setEditReminder(item.reminderMinutes === undefined ? 0 : item.reminderMinutes);
@@ -454,7 +469,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             event.preventDefault();
             const nextTitle = title.trim();
             if (!nextTitle) {
-              setMessage("Vui lòng nhập nội dung công việc cần làm");
+              setMessageIsError(true);
+                setMessage("Vui lòng nhập nội dung công việc cần làm");
               return;
             }
             run(
@@ -713,8 +729,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         </aside>
       </section>
 
-      {message && (
-        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">{message}</div>
+      {message && !(editingItem && messageIsError) && (
+        <div role={messageIsError ? "alert" : "status"} className={messageIsError ? "rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" : "rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"}>{message}</div>
       )}
       {Object.values(calendarSyncFailures).map(task => (
         <div key={task.id} role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -891,7 +907,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
                 return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={late}
                   scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending} onOpen={() => openTaskEdit(item)}
-                  onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : run(() => updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }))} />;
+                  onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : run(async () => { const result = await updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }); rememberCalendarSave(item, result); return result; }, personalWorkSavedMessage)} />;
               })
             ) : (
               <div className="flex flex-col items-center py-16 text-center">
@@ -918,6 +934,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               if(editingItem.checklistOnly)return;
               const nextTitle = editTitle.trim();
               if (!nextTitle) {
+                setMessageIsError(true);
                 setMessage("Vui lòng nhập nội dung công việc cần làm");
                 return;
               }
@@ -932,7 +949,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               }
               run(
                 async () => {
-                  await updatePersonalWorkAction({
+                  const result = await updatePersonalWorkAction({
                     id: editingItem.id,
                     title: nextTitle,
                     reminderMinutes: editReminder,
@@ -946,13 +963,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     targets: editTargets,
                     updateBody: editUpdateBody,
                   });
+                  rememberCalendarSave(editingItem, result);
                   if (editingItem.access === "OWNER")
                     await replacePersonalWorkSharesAction({
                       taskItemId: editingItem.id,
                       shares: editShares.map((share) => ({ userId: share.user.id, accessLevel: share.accessLevel })),
                     });
+                  return result;
                 },
-                editingItem.calendar.synced ? "Đã cập nhật công việc và Google Calendar" : "Đã cập nhật công việc",
+                personalWorkSavedMessage,
                 () => setEditingItem(null),
               );
             }}
@@ -967,6 +986,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </div>
             </div>
             <div className="mt-5 space-y-4">
+              {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -1141,7 +1161,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         key: "checklist:finalize",
                         action: () => finalizePersonalWorkChecklistAction(editingItem.id),
                         successMessage: "Đã xác nhận hoàn thành và khóa danh sách đầu việc",
-                        onSuccess: () => {
+                        onSuccess: result => {
+                          rememberCalendarSave(editingItem, result);
                           setEditingItem(null);
                           router.refresh();
                         },
@@ -1353,7 +1374,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
               {editingItem.calendar.synced && (
                 <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                  Thay đổi sẽ được cập nhật vào sự kiện Google Calendar hiện có.
+                  Công việc được lưu trước; hệ thống sẽ thử đồng bộ lên sự kiện Google Calendar hiện có.
                 </p>
               )}
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
@@ -1472,7 +1493,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         event={selectedCalendarEvent}
         saveEvent={updateGoogleCalendarEventAction}
         onClose={() => setSelectedCalendarEvent(null)}
-        onSaved={updated => { calendar.updateEvent(updated); setSelectedCalendarEvent(null); setMessage("Đã lưu thay đổi lên Google Calendar"); void calendar.reload(); }}
+        onSaved={updated => { calendar.updateEvent(updated); setSelectedCalendarEvent(null); setMessageIsError(false); setMessage("Đã lưu thay đổi lên Google Calendar"); void calendar.reload(); }}
       />}
 
       {calendarCreateOpen && (

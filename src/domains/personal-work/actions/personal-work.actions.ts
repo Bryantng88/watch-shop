@@ -16,7 +16,6 @@ import {
   assertPersonalWorkAccess,
   createPersonalWorkItem,
   deletePersonalWorkChecklistItem,
-  finalizePersonalWorkChecklist,
   replacePersonalWorkShares,
   searchPersonalWorkTargets,
   setPersonalWorkChecklistItemDone,
@@ -27,12 +26,12 @@ import {
   deletePersonalTaskFromGoogle,
   googleCalendarAuthorizationUrl,
   syncPersonalTaskToGoogle,
-  syncPersonalTaskToGoogleIfLinked,
 } from "../server/google-calendar.service";
 import type { PersonalWorkDomain, PersonalWorkTarget, PersonalWorkTargetType } from "../shared/personal-work.types";
 import { savePersonalCategory, deletePersonalCategory } from "../server/personal-work-categories.service";
 import { listPersonalPhotoshootPlans, schedulePersonalWatchPhotoshoot } from "../server/personal-photoshoot.service";
 import type { PersonalPhotoshootInput } from "../shared/personal-photoshoot";
+import { updatePersonalWorkWithCalendar, finalizePersonalWorkWithCalendar } from "../server/personal-work-calendar-mutations";
 
 export async function savePersonalWorkCategoryAction(input: {key?:string;label:string;color:string}) {
   await savePersonalCategory(input, await auth());
@@ -112,12 +111,10 @@ export async function updatePersonalWorkAction(input: {
   const addingCodexTag = codexExecutionReadiness().ready && user.roles.includes("ADMIN") && input.tags?.some(tag => tag.trim().toLowerCase() === "codex");
   const tagOwner = addingCodexTag ? await assertPersonalWorkAccess(input.id, user, "EDIT") : null;
   const previousTags = addingCodexTag ? await hydrateTaskItemsWithTagsRepo(prisma, [{ id: input.id }]) : [];
-  await updatePersonalWorkItem(input, user);
+  const result = await updatePersonalWorkWithCalendar(input, user);
   if (addingCodexTag && tagOwner?.access === "OWNER" && !previousTags[0]?.tags.some(tag => tag.name.trim().toLowerCase() === "codex")) await requestPersonalCodexRun(input.id, user);
-  const userId = getAuthUserId(user);
-  if (userId) await syncPersonalTaskToGoogleIfLinked(userId, input.id);
   refresh();
-  return { ok: true };
+  return result;
 }
 
 export async function addPersonalWorkChecklistItemAction(input: { taskItemId: string; title: string }) {
@@ -150,11 +147,9 @@ export async function deletePersonalWorkChecklistItemAction(input: {
 
 export async function finalizePersonalWorkChecklistAction(taskItemId: string) {
   const user = await auth();
-  await finalizePersonalWorkChecklist(taskItemId, user);
-  const userId = getAuthUserId(user);
-  if (userId) await syncPersonalTaskToGoogleIfLinked(userId, taskItemId);
+  const result = await finalizePersonalWorkWithCalendar(taskItemId, user);
   refresh();
-  return { ok: true };
+  return result;
 }
 
 export async function deletePersonalWorkAction(id: string) {

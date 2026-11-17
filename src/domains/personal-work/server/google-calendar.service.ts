@@ -187,6 +187,7 @@ async function accessToken(userId: string, forceRefresh = false) {
       grant_type: "refresh_token",
     }),
     cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
   });
   if (!response.ok) throw new Error(`Google token refresh failed (${response.status})`);
   const refreshed = await response.json() as { access_token: string; expires_in?: number };
@@ -274,7 +275,9 @@ export async function syncPersonalTaskToGoogleIfLinked(userId: string, taskItemI
     where: { userId_taskItemId: { userId, taskItemId } },
     select: { id: true },
   });
-  if (link) await syncPersonalTaskToGoogle(userId, taskItemId);
+  if (!link) return false;
+  await syncPersonalTaskToGoogle(userId, taskItemId);
+  return true;
 }
 
 export async function deletePersonalTaskFromGoogle(userId: string, taskItemId: string) {
