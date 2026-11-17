@@ -33,7 +33,7 @@
 .attentionSummary:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
 .attentionObject { display: flex; min-width: 0; gap: 12px; align-items: center; }
 .attentionReason { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; line-height: 20px; color: #64748b; }
-.attentionAge { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; color: #b45309; }
+.attentionAge { text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
 .attentionArrow { height: 14px; width: 14px; color: #94a3b8; }
 .attentionItem[open] .attentionArrow { transform: rotate(180deg); }
 .attentionDetail { padding: 0 12px 14px 48px; }
