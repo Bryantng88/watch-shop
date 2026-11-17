@@ -18,7 +18,7 @@ const data={generatedAt:'2026-11-17T03:00:00Z',totalActive:60,queues,completionT
 window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).render(<Dashboard data={empty?{...data,totalActive:0,queues:[]}:data}/>);window.renderFixture(new URLSearchParams(location.search).has('empty'));`;
   await esbuild.build({stdin:{contents:entry,loader:'tsx',resolveDir:root},outfile:path.join(output,'app.js'),bundle:true,platform:'browser',jsx:'automatic',define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'fixture-link',setup(build){
     build.onResolve({filter:/^next\/link$/},()=>({path:'link',namespace:'fixture'}));
-    build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`import React from 'react';export default function Link(props){return <a {...props}/>}`,loader:'tsx'}));
+    build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:`import React from 'react';export default function Link(props){return <a {...props}/>}`,loader:'tsx',resolveDir:root}));
   }}]});
   const css=await fs.readFile(process.env.OPERATIONS_PREVIEW_CSS || '/tmp/operations-ui.css','utf8');
   const js=await fs.readFile(path.join(output,'app.js'),'utf8');
