@@ -41,8 +41,9 @@ before borders or color are needed.
 
 ### Operations dashboard regions
 
-- Bound the main desktop reading area to 1320px; retain a 2:1 working/insight
-  split where space permits. Group each queue name, warning and stage summary
+- Use the full available admin content width with standard page padding; do not
+  center the dashboard in a fixed-width reading column. Retain a 2:1
+  working/insight split where space permits. Group each queue name, warning and stage summary
   together. Keep open totals tertiary.
 - Put actionable detail lists directly beneath the working list in the same
   left column. They must not wait for the insight column's full height.
