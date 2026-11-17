@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowUpRight, ChevronDown } from "lucide-react";
+import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { AdminUserAvatar, ADMIN_DOMAIN_TONE, ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
@@ -28,7 +28,7 @@ export function OperationsAttentionList({ items }: { items: OperationsDashboardA
       <div className="divide-y divide-slate-100">{items.map(item => <details key={item.id} className={styles.attentionItem} data-attention-item={item.id}>
         <summary className={styles.attentionSummary}>
           <span className={styles.attentionObject}><ItemImage key={item.imageUrl ?? item.id} item={item} /><span className="min-w-0"><span className="block text-sm font-semibold leading-5 text-slate-900">{item.title}</span><span className="mt-0.5 block text-xs leading-5 text-slate-500">{[item.reference, operationalDomainPresentation(item.domain.toLowerCase().replaceAll("_", "-")).label].filter(Boolean).join(" · ")}</span></span></span>
-          <span className={styles.attentionReason}><AlertCircle aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0", item.severity === "risk" ? "text-rose-500" : "text-amber-600")} />{item.reason}</span>
+          <span className={styles.attentionReason}>{item.reason}</span>
           <span className={styles.attentionAge}>{item.ageLabel}</span><ChevronDown className={styles.attentionArrow} aria-hidden="true" />
         </summary>
         <div className={styles.attentionDetail}><p className="text-xs leading-5 text-slate-600">{item.ownerLabel}</p><Link href={item.href} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{item.actionLabel}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link></div>
