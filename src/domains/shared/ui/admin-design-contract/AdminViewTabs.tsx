@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import clsx from "clsx";
-import styles from "./AdminViewTabs.module.css";
+import { ADMIN_VIEW_TABS as styles } from "./admin-ui.tokens";
 
 export type AdminViewTab<Value extends string> = {
   value: Value;

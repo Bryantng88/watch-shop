@@ -545,3 +545,78 @@ a {
 .admin-ui form .gap-4 {
   gap: 0.875rem !important;
 }
+
+/* AdminViewTabs: shared view-filter presentation. */
+.admin-view-tabs {
+  container: admin-view-tabs / inline-size;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-view-tabs-strip {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid #f1f5f9;
+  scrollbar-width: thin;
+}
+
+.admin-view-tabs-item {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 8px 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: color 150ms;
+}
+
+.admin-view-tabs-item:hover:not(:disabled), .admin-view-tabs-item[aria-pressed="true"] { color: #0f172a; }
+.admin-view-tabs-item[aria-pressed="true"] { font-weight: 600; }
+.admin-view-tabs-item[aria-pressed="true"]::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  content: "";
+}
+.admin-view-tabs-item:disabled, .admin-view-tabs-select:disabled { cursor: not-allowed; opacity: .45; }
+.admin-view-tabs-item:focus-visible, .admin-view-tabs-select:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+.admin-view-tabs-select {
+  display: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  border: 0;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 0;
+  background-color: white;
+  padding: 6px 24px 6px 0;
+  color: #0f172a;
+  font-size: 12px;
+}
+
+@container admin-view-tabs (max-width: 519px) {
+  .admin-view-tabs[data-collapse] > .admin-view-tabs-strip { display: none; }
+  .admin-view-tabs[data-collapse] > .admin-view-tabs-select { display: block; }
+}
+@media (pointer: coarse) {
+  .admin-view-tabs-item, .admin-view-tabs-select { min-height: 44px; }
+  .admin-view-tabs-select { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .admin-view-tabs-item { transition: none; } }
