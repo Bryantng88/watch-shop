@@ -1,4 +1,5 @@
 "use client";
+import { boundedAssistantRequest } from "./live-request";
 import styles from "./BenChat.module.css";
 import BenConversationMessage,{type BenUserProfile} from "./BenConversationMessage";
 import OrderServicesDraftReview from "./OrderServicesDraftReview";
@@ -106,7 +107,7 @@ export default function AiAssistant({ userId, canManage, canViewTechnical = fals
       read.finish();
     }
   },[router,expireSession,fullPage]);
-  async function livePost(body:unknown){const response=await fetch("/api/admin/customer-assistant",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!response.ok)throw Error(data.error||"Chưa thực hiện được yêu cầu.");return data;}
+  async function livePost(body:unknown){return boundedAssistantRequest(async signal=>{const response=await fetch("/api/admin/customer-assistant",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),signal});if(response.status===401){expireSession();throw Error("Phiên đăng nhập đã hết hạn.");}const data=await response.json();if(!response.ok)throw Error(data.error||"Chưa thực hiện được yêu cầu.");return data;});}
   useEffect(()=>{
     if(!live||sessionExpired)return;
     const reads=liveReads.current;const sequenceRef=liveSequence;let disposed=false;

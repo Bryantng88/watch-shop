@@ -652,3 +652,18 @@ keyboard/focus behavior, mobile safe areas, viewport handling, session isolation
 server-authorized links and the separate assigned-work history. Show a concise
 “Duyệt hoặc nhắn ok” hint only for eligible reviews. Backend confirmation guards
 remain identical regardless of visual layout.
+
+
+## Bounded interactive runs
+
+An interactive turn waits at most two minutes in the queue and has a three-minute
+absolute budget from submission, regardless of worker heartbeats. Owner-scoped
+status reads recover abandoned turns and use a compare-and-set fence so newer
+turns or completed results always win. Worker callbacks reject expired turns.
+Already approved operations and independent code jobs are never cancelled by
+this read-side recovery. Acquisition quick-name jobs retain their own lifecycle.
+Browser commands, including response parsing, stop waiting after sixty seconds;
+this means outcome unknown, not rollback. Never replay a write automatically.
+Keep the original draft/request identity and reconcile with the server before
+retrying an approval. Timeout messages must not claim that business work failed
+or succeeded without its existing authoritative receipt.
