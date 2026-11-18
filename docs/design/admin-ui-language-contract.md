@@ -269,3 +269,20 @@ controls. Grouping never broadens permissions or changes destination routes.
   remain distinct 44px targets with a readable current saved state.
 - No fixed minimum editor height, outer shadow or nested page card. Use natural
   document scrolling; section changes preserve drafts and completion baselines.
+
+## Ben media workspace
+
+- The Media entry sits beside Work and Technical in full-page Ben, gated by
+  the existing `TASK_VIEW` permission. The list follows the technician workspace:
+  white canvas, compact header, one search/stage toolbar and flat thumbnail rows.
+- Default to Media Processing. Stages mean Photography, Media Processing, Publish
+  and Done; do not relabel a stage as an execution status. Filter/search before
+  pagination; show actual result counts, including the full explicit Done archive.
+- Watch completion is a count of four independently confirmed sections, not
+  approval of the workflow. Do not apply that denominator to Media Post records.
+- Open the existing authorized editor with its exact binding and return URL.
+  Returning restores the query, stage, page and list scroll. Media from Ben uses
+  a full-page shell; its form stays outside assistant chat and retains unsaved
+  change guards, per-section completion, and existing transition permissions.
+- Keep native 44px search/filter controls, clear empty/loading/error states, and
+  an icon fallback for missing or failed images. No decorative metric cards.

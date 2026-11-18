@@ -32,11 +32,13 @@ export default function AdminShell({ user, children, assistantSimulation = false
     const isBen = pathname === "/admin/ben";
     const isBenWorkList = pathname === "/admin/personal-work" && searchParams.get("view") === "list";
     const isTechnicianWorkspace = pathname === "/admin/services/technician";
+    const isBenMediaList = pathname === "/admin/ben/media";
+    const isBenMediaEditor = /^\/admin\/watches\/[^/]+\/edit$/.test(pathname) && searchParams.get("mode") === "media" && searchParams.get("source") === "ben-media";
     const isEmbedded = searchParams.get("embedded") === "1";
 
     return (
         <AdminNavigationHistoryProvider>
-        {isBen || isEmbedded || isBenWorkList || isTechnicianWorkspace ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
+        {isBen || isEmbedded || isBenWorkList || isTechnicianWorkspace || isBenMediaList || isBenMediaEditor ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
@@ -70,8 +72,8 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 </main>
             </div>
         </div>)}
-        <div hidden={isEmbedded || isBenWorkList || isTechnicianWorkspace || (isBen && !assistantLive)}>
-        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canViewTechnical={!!user.roles?.includes("ADMIN") || user.permissions.includes("SERVICE_VIEW")} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
+        <div hidden={isEmbedded || isBenWorkList || isTechnicianWorkspace || isBenMediaList || (isBen && !assistantLive)}>
+        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canViewMedia={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_VIEW")} canViewTechnical={!!user.roles?.includes("ADMIN") || user.permissions.includes("SERVICE_VIEW")} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </div>
         </AdminNavigationHistoryProvider>
     );
