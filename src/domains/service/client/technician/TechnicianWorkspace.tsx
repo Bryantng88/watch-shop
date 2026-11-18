@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { BenNavigationPending } from "@/domains/ai-assistant/BenNavigationPending";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -485,10 +486,12 @@ export default function TechnicianWorkspace({
     <AdminPageCanvas className="mx-auto max-w-3xl !px-4 pb-24">
       <Link
         href={fromBen ? "/admin/ben" : "/admin/dashboard"}
+        prefetch={fromBen ? true : undefined}
         className="inline-flex min-h-9 items-center gap-1 text-xs text-slate-500"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {fromBen ? "Ben" : "Admin"}
+        {fromBen && <BenNavigationPending />}
       </Link>
       <AdminPageHeader
         title="Phiếu kỹ thuật"
