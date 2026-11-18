@@ -8,6 +8,8 @@ export type AdminViewTab<Value extends string> = {
   value: Value;
   label: string;
   disabled?: boolean;
+  accessibleLabel?: string;
+  indicator?: "complete" | "incomplete" | "unknown";
 };
 
 /** Controlled view filters, not ARIA tab panels. Domain code owns the selection. */
@@ -58,9 +60,10 @@ export function AdminViewTabs<Value extends string>({
         type="button"
         disabled={disabled || item.disabled}
         aria-pressed={item.value === value}
+        aria-label={item.accessibleLabel}
         className={styles.item}
         onClick={() => onValueChange(item.value)}
-      >{item.label}</button>)}
+      >{item.label}{item.indicator && <span aria-hidden="true" className={`ml-1.5 inline-block h-1.5 w-1.5 rounded-full ${item.indicator === "complete" ? "bg-emerald-500" : item.indicator === "unknown" ? "bg-amber-500" : "bg-slate-300"}`} />}</button>)}
     </div>
     {items.length > 4 && <select
       aria-label={label}

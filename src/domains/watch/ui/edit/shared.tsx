@@ -165,26 +165,26 @@ export function SectionCard({
                     : "overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm"
             }
         >
-            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div className={surface === "flat" ? "flex flex-col gap-3 border-b border-slate-100 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5" : "flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4"}>
                 <div className="flex min-w-0 items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700">
                         {icon}
                     </div>
 
                     <div className="min-w-0">
-                        <h2 className="font-semibold text-slate-950">
+                        <h2 className={surface === "flat" ? "text-sm font-bold text-slate-950" : "font-semibold text-slate-950"}>
                             {title}
                         </h2>
 
                         {subtitle ? (
-                            <p className="mt-0.5 text-sm text-slate-500">
+                            <p className={surface === "flat" ? "mt-0.5 text-xs text-slate-500" : "mt-0.5 text-sm text-slate-500"}>
                                 {subtitle}
                             </p>
                         ) : null}
                     </div>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                     {actions}
 
                     {collapsible ? (

@@ -15,6 +15,9 @@ on:
       - 'scripts/smoke-storefront-home-browser.cjs'
       - 'docs/design/admin-ui-language-contract.md'
       - 'src/server/auth/admin-api-policy.ts'
+      - 'ops/nginx/storefront-production.conf'
+      - 'ops/deployment/nginx-storefront*.conf*'
+      - 'scripts/check-storefront-proxy.cjs'
       - 'package*.json'
       - '.github/workflows/storefront-home-contract.yml'
 permissions:
@@ -30,6 +33,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/check-storefront-proxy.cjs
       - run: npm run storefront:smoke-content
       - run: >-
           npx eslint src/domains/storefront/content
