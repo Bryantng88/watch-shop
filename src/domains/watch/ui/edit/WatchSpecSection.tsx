@@ -11,15 +11,12 @@ type Props = {
 };
 
 const CRYSTAL_OPTIONS = [
-  "SAPPHIRE",
-  "ACRYLIC",
-  "MINERAL",
-  "HARDLEX",
-  "AR_COATED",
-].map((x) => ({
-  value: x,
-  label: x,
-}));
+  { value: "SAPPHIRE", label: "Sapphire (Kính sapphire)" },
+  { value: "ACRYLIC", label: "Acrylic (Kính acrylic)" },
+  { value: "MINERAL", label: "Mineral (Kính khoáng)" },
+  { value: "HARDLEX", label: "Hardlex" },
+  { value: "AR_COATED", label: "AR-coated (Phủ chống phản xạ)" },
+];
 
 const MATERIAL_PROFILE_OPTIONS = [
   { value: "SINGLE_MATERIAL", label: "Single material" },
