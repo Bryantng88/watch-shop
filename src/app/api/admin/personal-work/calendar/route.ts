@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { calendarLoadFailure } from "@/domains/personal-work/server/google-calendar-error";
+import { NextResponse } from "next/server";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getPersonalWorkPageData } from "@/domains/personal-work/server/personal-work.service";
@@ -10,11 +11,11 @@ export async function POST() {
   if (user instanceof NextResponse) return user;
   let events = null;
   let loadError: string | null = null;
+  let reconnectRequired = false;
   try {
     events = await listPersonalGoogleCalendarEvents(user.id);
-  } catch {
-    loadError =
-      "Không thể tải dữ liệu mới từ Google Calendar. Các công việc trong ứng dụng vẫn có thể xem và chỉnh sửa.";
+  } catch (error) {
+    ({ loadError, reconnectRequired } = calendarLoadFailure(error));
   }
   const data = await getPersonalWorkPageData(user);
   return NextResponse.json(
@@ -23,6 +24,7 @@ export async function POST() {
       items: data.items,
       lastSyncedAt: data.calendar.lastSyncedAt,
       loadError,
+      reconnectRequired,
     },
     { headers: { "Cache-Control": "private, no-store" } },
   );

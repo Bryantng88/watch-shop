@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
@@ -12,6 +12,7 @@ type CalendarResponse = {
   items: PersonalWorkItem[];
   lastSyncedAt: string | null;
   loadError: string | null;
+  reconnectRequired?: boolean;
 };
 
 export function usePersonalCalendar(data: PersonalWorkPageData) {
@@ -19,6 +20,8 @@ export function usePersonalCalendar(data: PersonalWorkPageData) {
   latest.current = data;
   const request = useRef<AbortController | null>(null);
   const lastAttempt = useRef(0);
+  const [reconnectRequired, setReconnectRequired] = useState(false);
+  const reconnect = useRef(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<{
@@ -65,6 +68,8 @@ export function usePersonalCalendar(data: PersonalWorkPageData) {
       });
       setLastSyncedAt(result.lastSyncedAt);
       setError(result.loadError);
+      reconnect.current = Boolean(result.reconnectRequired);
+      setReconnectRequired(reconnect.current);
     } catch (e) {
       if (!controller.signal.aborted)
         setError(e instanceof Error ? e.message : "Không thể tải lại lịch");
@@ -80,7 +85,7 @@ export function usePersonalCalendar(data: PersonalWorkPageData) {
     void reload();
     const refresh = () => {
       if (
-        document.visibilityState === "visible" &&
+        !reconnect.current && document.visibilityState === "visible" &&
         Date.now() - lastAttempt.current >= 5000
       )
         void reload();
@@ -115,6 +120,7 @@ export function usePersonalCalendar(data: PersonalWorkPageData) {
       eventSnapshot.userId === data.currentUserId ? eventSnapshot.events : [],
     loading: data.calendar.connected && loading,
     error,
+    reconnectRequired,
     reload,
     updateEvent,
     lastSyncedAt,
