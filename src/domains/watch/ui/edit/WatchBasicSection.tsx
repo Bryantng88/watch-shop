@@ -81,12 +81,12 @@ const MATERIAL_OPTIONS = [
 ].map((value) => ({ value, label: value }));
 
 const CRYSTAL_OPTIONS = [
-  "SAPPHIRE",
-  "ACRYLIC",
-  "MINERAL",
-  "HARDLEX",
-  "AR_COATED",
-].map((value) => ({ value, label: value }));
+  { value: "SAPPHIRE", label: "Sapphire (Kính sapphire)" },
+  { value: "ACRYLIC", label: "Acrylic (Kính acrylic)" },
+  { value: "MINERAL", label: "Mineral (Kính khoáng)" },
+  { value: "HARDLEX", label: "Hardlex" },
+  { value: "AR_COATED", label: "AR-coated (Phủ chống phản xạ)" },
+];
 
 const MATERIAL_PROFILE_OPTIONS = [
   { value: "SINGLE_MATERIAL", label: "Single material" },

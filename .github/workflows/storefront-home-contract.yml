@@ -6,6 +6,8 @@ on:
       - 'src/app/(admin)/admin/storefront/home/**'
       - 'src/app/api/admin/storefront/content/**'
       - 'src/app/(public)/storefront.css'
+      - 'src/app/(legal)/privacy-policy/**'
+      - 'src/domains/storefront/ui/PublicFooter.tsx'
       - 'src/app/(admin)/admin/_client/AdmidSideBar.tsx'
       - 'src/app/(admin)/admin/_client/ReportMenu.tsx'
       - 'src/app/(admin)/admin/_client/AdminShell.tsx'
@@ -37,4 +39,6 @@ jobs:
           'src/app/(admin)/admin/_client/ReportMenu.tsx'
           'src/app/(admin)/admin/_client/AdminShell.tsx'
           scripts/seed-storefront-home-browser.ts
+          'src/app/(legal)/privacy-policy/page.tsx'
+          src/domains/storefront/ui/PublicFooter.tsx
       - run: npx tsc --noEmit

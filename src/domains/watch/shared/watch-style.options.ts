@@ -37,7 +37,7 @@ export const WATCH_STYLE_LABELS: Record<
 
 export const WATCH_STYLE_OPTIONS = WATCH_STYLE_VALUES.map((value) => ({
   value,
-  label: WATCH_STYLE_LABELS[value].vi,
+  label: `${WATCH_STYLE_LABELS[value].en} (${WATCH_STYLE_LABELS[value].vi.replace(/ \((?:Diver|Pilot|Racing)\)$/, "")})`,
 }));
 export const WATCH_STYLE_EN_LABELS = Object.fromEntries(
   WATCH_STYLE_VALUES.map((value) => [value, WATCH_STYLE_LABELS[value].en]),

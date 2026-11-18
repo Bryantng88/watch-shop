@@ -30,7 +30,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
       <QueueStageSummary stages={queue.stages} />
     </div>
     <div className={styles.queueWarning} data-queue-warning>{insight && <Link href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
-          <span><strong className={cn("font-semibold tabular-nums", ADMIN_UI.attentionValue)}>{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
+          <span><strong className={styles.attentionBadge}>{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
         </Link>}</div>
     <Link href={queue.href} className={cn(styles.queueCount, "flex min-h-10 items-center justify-end gap-1 rounded text-sm font-semibold tabular-nums text-blue-700 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400")} aria-label={`Mở ${visual.label}: ${number(queue.activeCount)} việc đang mở`}>
       {number(queue.activeCount)}<ChevronRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
