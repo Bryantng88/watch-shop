@@ -394,7 +394,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         });
         router.refresh();
       },
-      onError: () => setCalendarSyncFailures(current => ({...current, [task.id]:task})),
+      onError: () => {
+        setCalendarSyncFailures(current => ({...current, [task.id]:task}));
+        void calendar.reload();
+      },
       errorMessage: `Công việc “${task.title}” đã được lưu, nhưng chưa đồng bộ Google Calendar. Bạn có thể thử đồng bộ lại.`,
     });
   }
@@ -688,8 +691,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             </div>
             <div className="flex items-center gap-2">
               {data.calendar.connected && (
-                <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
-                  ĐÃ KẾT NỐI
+                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${calendar.error ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                  {calendar.reconnectRequired ? "CẦN KẾT NỐI LẠI" : calendar.error ? "LỖI ĐỒNG BỘ" : calendar.loading ? "ĐANG KIỂM TRA" : "ĐÃ LIÊN KẾT"}
                 </span>
               )}
               <ChevronDown
@@ -698,12 +701,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             </div>
           </button>
           <AsyncActionButton
-            pending={data.calendar.connected ? calendar.loading : pending}
+            pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
             title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
-            pendingLabel={data.calendar.connected ? "Đang tải lịch…" : "Đang kết nối…"}
+            pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
             disabled={!data.calendar.configured}
             onClick={() =>
-              data.calendar.connected
+              data.calendar.connected && !calendar.reconnectRequired
                 ? void calendar.reload()
                 : run(async () => {
                     const result = await getGoogleCalendarConnectUrlAction();
@@ -712,13 +715,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             }
             className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-50 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:text-slate-400"
           >
-            {data.calendar.connected ? (
+            {data.calendar.connected && !calendar.reconnectRequired ? (
               <>
                 <RefreshCw className="h-4 w-4" /> Tải lại lịch
               </>
             ) : (
               <>
-                <ExternalLink className="h-4 w-4" /> Kết nối Google Calendar
+                <ExternalLink className="h-4 w-4" /> {calendar.reconnectRequired ? "Kết nối lại Google Calendar" : "Kết nối Google Calendar"}
               </>
             )}
           </AsyncActionButton>

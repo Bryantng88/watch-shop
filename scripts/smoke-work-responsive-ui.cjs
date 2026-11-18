@@ -18,6 +18,7 @@ const general={key:'GENERAL',label:'Cá nhân',domain:'GENERAL',color:'#64748b',
 const specs=[['Tính tiền phí dịch vụ đồng hồ của An, Nam',23,'08:00',0,2],['Làm lại UI phiếu nhập WatchShop và tối ưu thao tác cho màn hình nhỏ với tiêu đề rất dài',28,'10:00',1,4],['Hoàn thành tối ưu web push cho PWA WatchShop',24,'10:00',3,5],['Tự động kết nối nhà vận chuyển',29,'14:00',0,0],['Nâng cấp vận hành cho Ben ở điện thoại',32,'09:00',0,1],['Tối ưu performance của trang quản lý công việc',31,'09:00',0,1],['GVU vs DK',26,'19:00',0,0],['GVU JR vs TCP',27,'20:00',0,0]];
 const data={currentUserId:'long',availableUsers:[vi,nam,hoa],categories:[general,work],canManageDefaultCategories:false,codex:{ready:false,reason:'Dữ liệu mẫu',canDispatch:false},calendar:{configured:false,connected:false,accountEmail:null,lastSyncedAt:null,events:[],loadError:null},items:specs.map(([title,number,time,done,total],i)=>({id:'item-'+number,title,personalWorkNumber:number,createdAt:new Date(now-7*86400000).toISOString(),updatedAt:new Date(now-20*60000).toISOString(),note:'Ghi chú đầy đủ của công việc mẫu',status:'TODO',priority:'MEDIUM',dueAt:(i<2?yesterday:today)+'T'+time+':00+07:00',scheduledEndAt:i<2?(i===0?today:yesterday)+'T17:00:00+07:00':null,estimatedDays:i<2?2:1,completedAt:null,domain:i>=6?'GENERAL':'WATCHSHOP',category:i>=6?general:work,workType:i>=6?'EVENT':'GENERAL_TASK',targets:i===0?[{type:'ORDER',id:'order',label:'OD-MẪU',secondary:'Đơn hàng liên quan',href:'/admin/orders/order'}]:i===1?[workObject]:[],progressPercent:total?Math.round(done/total*100):0,progressMode:total?'CHECKLIST':'MANUAL',checklistLockedAt:null,activities:[{id:'activity-'+i,title:'Cập nhật tiến độ',body:'Đã kiểm tra dữ liệu · Chờ xác nhận từ người phụ trách',occurredAt:new Date(now-20*60000).toISOString(),actor:owner}],checklist:Array.from({length:total},(_,n)=>({id:'step-'+i+'-'+n,title:'Đầu việc '+(n+1),isDone:n<done,...(n===0?{object:workObject,mediaContext:{productId:'product-fixture',label:'Seiko Diver',secondary:'SEI-001',href:'/admin/watches/product-fixture/edit?mode=media&focus=image',request:'Chụp ảnh'}}:{})})),tags:i===0?['media','theo dõi']:[],calendar:{synced:false,htmlLink:null,lastSyncedAt:null},owner,assignee:owner,access:'OWNER',sharedWith:i===0?[{user:vi,accessLevel:'EDITOR'},{user:nam,accessLevel:'VIEWER'},{user:hoa,accessLevel:'VIEWER'}]:[]}))};
 data.items.push(checklistOnlyWork({...data.items[0],id:'shared',personalWorkNumber:40,title:'Đầu việc được chia sẻ chỉ xem',owner:vi},[{id:'visible-step',title:'Đầu việc của bạn',isDone:false,access:new URLSearchParams(location.search).has('entryEditor')?'EDITOR':'VIEWER'}]));
+if(new URLSearchParams(location.search).has('calendarFault'))Object.assign(data.calendar,{configured:true,connected:true,accountEmail:'fixture@example.invalid'});
 window.__fixture=data;const root=createRoot(document.getElementById('root'));window.__renderFixture=()=>root.render(<PersonalWorkClient data={window.__fixture}/>);window.__renderFixture();`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, outfile: '/tmp/work-responsive/app.js', bundle: true, platform: 'browser', jsx: 'automatic', write: false, define: { 'process.env.NODE_ENV': '"production"' }, plugins: [{ name: 'fixture', setup(build) {
     build.onResolve({ filter: /^next\/(navigation|link|image)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
@@ -156,6 +157,20 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.match(await phone.getByRole('dialog').getByRole('alert').innerText(),/tải lại danh sách/);
     assert.equal(await phone.getByLabel(/^Nội dung cập nhật/).inputValue(),'Giữ nội dung khi lỗi');
     await touch.close();
+    let calendarMode='reconnect';
+    await page.route('**/api/admin/personal-work/calendar',async route=>{
+      const fixture=await page.evaluate(()=>window.__fixture);
+      await route.fulfill({json:{events:calendarMode==='ok'?[]:null,items:fixture.items,lastSyncedAt:null,loadError:calendarMode==='ok'?null:calendarMode==='reconnect'?'Quyền truy cập đã hết hạn. Hãy kết nối lại.':'Google Calendar tạm thời chưa phản hồi.',reconnectRequired:calendarMode==='reconnect'}});
+    });
+    await page.goto(origin+'/?full=1&calendarFault=1');
+    await page.getByText('CẦN KẾT NỐI LẠI',{exact:true}).waitFor();
+    assert.ok(await page.getByRole('button',{name:'Kết nối lại Google Calendar',exact:true}).isVisible());
+    assert.ok(await page.locator('[data-work-row="item-31"]').isVisible());
+    calendarMode='temporary';await page.reload();
+    await page.getByText('LỖI ĐỒNG BỘ',{exact:true}).waitFor();
+    assert.ok(await page.getByRole('button',{name:'Tải lại lịch',exact:true}).isVisible());
+    calendarMode='ok';await page.getByRole('button',{name:'Tải lại lịch',exact:true}).click();
+    await page.getByText('ĐÃ LIÊN KẾT',{exact:true}).waitFor();
     assert.deepEqual(errors, []);
     console.log('PASS: actual personal-work client at 320/390/768/1440; category/title and reference placement; view/scope/category filters; event and viewer restrictions; schedule/context/update popovers; completion payload and read-only open; desktop calendar layout.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

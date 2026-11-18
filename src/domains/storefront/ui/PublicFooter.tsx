@@ -24,6 +24,7 @@ export function PublicFooterContent({ general }: { general: HomeContent["general
             <Link href="/products">Đồng hồ đang có</Link>
             <Link href="/stories">Chuyện đồng hồ</Link>
             <Link href="/#collections">Bộ sưu tập</Link>
+            <Link href="/privacy-policy">Chính sách quyền riêng tư</Link>
             {general.links.map((link, i) => (
               <a key={i} href={link.href}>
                 {link.label}

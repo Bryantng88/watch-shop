@@ -1,3 +1,4 @@
+import { GoogleCalendarConnectionError, calendarRefreshFailure } from "./google-calendar-error";
 import {personalEventTiming} from "../shared/personal-event";
 import { googleCalendarReadiness, requireGoogleCalendarRedirectUri } from "./google-calendar-config";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
@@ -169,13 +170,18 @@ export async function exchangeGoogleCalendarCode(userId: string, code: string) {
   });
 }
 
+function readConnectionToken(cipher: string) {
+  try { return decryptCalendarToken(cipher); }
+  catch { throw new GoogleCalendarConnectionError("RECONNECT_REQUIRED"); }
+}
+
 async function accessToken(userId: string, forceRefresh = false) {
   const connection = await prisma.googleCalendarConnection.findUnique({ where: { userId } });
-  if (!connection) throw new Error("Google Calendar chưa được kết nối");
+  if (!connection) throw new GoogleCalendarConnectionError("RECONNECT_REQUIRED");
   if (!forceRefresh && (!connection.tokenExpiresAt || connection.tokenExpiresAt.getTime() > Date.now() + 60_000)) {
-    return { connection, token: decryptCalendarToken(connection.accessTokenCipher) };
+    return { connection, token: readConnectionToken(connection.accessTokenCipher) };
   }
-  if (!connection.refreshTokenCipher) throw new Error("Kết nối Google Calendar đã hết hạn; vui lòng kết nối lại");
+  if (!connection.refreshTokenCipher) throw new GoogleCalendarConnectionError("RECONNECT_REQUIRED");
   const value = config();
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: "POST",
@@ -183,13 +189,13 @@ async function accessToken(userId: string, forceRefresh = false) {
     body: new URLSearchParams({
       client_id: value.clientId,
       client_secret: value.clientSecret,
-      refresh_token: decryptCalendarToken(connection.refreshTokenCipher),
+      refresh_token: readConnectionToken(connection.refreshTokenCipher),
       grant_type: "refresh_token",
     }),
     cache: "no-store",
     signal: AbortSignal.timeout(8_000),
   });
-  if (!response.ok) throw new Error(`Google token refresh failed (${response.status})`);
+  if (!response.ok) throw await calendarRefreshFailure(response);
   const refreshed = await response.json() as { access_token: string; expires_in?: number };
   const next = await prisma.googleCalendarConnection.update({
     where: { id: connection.id },
@@ -216,6 +222,7 @@ async function fetchGoogleWithTokenRetry(
     auth = await accessToken(userId, true);
     response = await request(auth.token);
   }
+  if (response.status === 401) throw new GoogleCalendarConnectionError("RECONNECT_REQUIRED", 401);
   return { auth, response };
 }
 
