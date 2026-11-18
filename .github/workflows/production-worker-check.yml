@@ -1,0 +1,18 @@
+name: Production worker attachment
+on:
+  pull_request:
+    paths:
+      - "ops/deployment/**"
+      - ".github/workflows/production-worker-check.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bash -n ops/deployment/deploy-production-runner.sh
+      - run: node --test ops/deployment/reattach-ben-worker.test.cjs

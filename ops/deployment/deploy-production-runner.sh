@@ -97,6 +97,13 @@ compose --profile tools run --rm migrate
 log "Refreshing the Watch List projection"
 compose --profile tools run --rm migrate npm run projection:rebuild-watch-list
 
+reattach_ben() {
+  "$docker_bin" run --rm --network none --user 0 --entrypoint node \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$release_dir/ops/deployment/reattach-ben-worker.cjs:/reattach-ben-worker.cjs:ro" \
+    "watch-shop:$image_tag" /reattach-ben-worker.cjs
+}
+
 log "Starting application image watch-shop:$image_tag"
 compose up -d --no-deps app
 
@@ -116,10 +123,32 @@ if [[ "$healthy" != true ]]; then
     log "Rolling the application image back to $previous_image"
     "$docker_bin" tag "$previous_image" "watch-shop:$image_tag"
     compose up -d --no-deps --force-recreate app
+    for _ in $(seq 1 20); do
+      status="$($docker_bin inspect "$container_name" --format='{{.State.Health.Status}}' 2>/dev/null || true)"
+      [[ "$status" == healthy ]] && break
+      sleep 3
+    done
+    reattach_ben || log "ERROR: Ben worker recovery needs attention"
   else
     log "No previous application image is available for automatic rollback"
   fi
   die "Deployment failed health checks"
+fi
+
+log "Attaching Ben worker to current application"
+if ! reattach_ben; then
+  if [[ -n "$previous_image" ]] && "$docker_bin" image inspect "$previous_image" >/dev/null 2>&1; then
+    log "Rolling back after Ben worker verification failed"
+    "$docker_bin" tag "$previous_image" "watch-shop:$image_tag"
+    compose up -d --no-deps --force-recreate app
+    for _ in $(seq 1 20); do
+      status="$($docker_bin inspect "$container_name" --format='{{.State.Health.Status}}' 2>/dev/null || true)"
+      [[ "$status" == healthy ]] && break
+      sleep 3
+    done
+    reattach_ben || log "ERROR: Ben worker recovery needs attention"
+  fi
+  die "Deployment failed Ben worker verification"
 fi
 
 log "Starting notification worker"

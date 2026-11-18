@@ -6,7 +6,7 @@ const path=require('node:path');
 const root=process.cwd();
 const requireApp=createRequire(path.join(root,'package.json'));
 const {build}=requireApp('esbuild');
-const {chromium}=requireApp('playwright');
+const {chromium}=requireApp(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const http=require('node:http');
 const assert=require('node:assert/strict');
 (async()=>{
@@ -17,7 +17,7 @@ const fixture=()=>{
  window.fetch=async(url,options={})=>{
   if(!String(url).startsWith('/api/admin/customer-assistant'))throw Error('Unexpected API '+url);
   if(options.method==='POST'){
-   const body=JSON.parse(options.body);f.posts.push(body.action);if(body.action!=='send'&&body.action!=='cancel')throw Error('Unexpected business write');
+   const body=JSON.parse(options.body);f.posts.push(body.action);if(f.hangPost)return new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true}));if(body.action!=='send'&&body.action!=='cancel')throw Error('Unexpected business write');
    const current=f.rows.find(r=>r.id===body.id)||f.rows[0];
    if(body.action==='send'){current.runStatus='QUEUED';current.messages.push({id:body.requestKey,role:'user',text:body.text});setTimeout(()=>{if(current.runStatus!=='QUEUED')return;current.runStatus='NEEDS_INFO';current.messages.push({id:'completed',role:'assistant',text:'Fresh answer completed'});},f.completeAfter);}
    else current.runStatus='CANCELLED';
@@ -30,7 +30,7 @@ const fixture=()=>{
   try{if(delay)await new Promise(r=>setTimeout(r,delay));return new Response(f.status===200?snapshot:JSON.stringify({error:'Synthetic server failure'}),{status:f.status});}finally{f.active--;}
  };
 };
-const bundle=await build({absWorkingDir:root,stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import Ben from './src/domains/ai-assistant/AiAssistant';(${fixture.toString()})();createRoot(document.getElementById('root')).render(<Ben userId="synthetic-user" canManage={false} live fullPage/>);`,resolveDir:root,loader:'tsx'},bundle:true,write:false,jsx:'automatic',define:{'process.env.NODE_ENV':'"test"'},plugins:[{name:'fixture-adapters',setup(b){b.onResolve({filter:/^(next\/navigation|next\/link|next\/image)$|^\.\/BenMessage$/},a=>({path:a.path,namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},a=>({loader:'jsx',resolveDir:root,contents:a.path==='next/navigation'?`const router={push(path){window.navigationPath=path}};export const useRouter=()=>router;export const usePathname=()=>'/admin/ben';`:a.path==='./BenMessage'?`import React from 'react';export default function Message({text}){return <p>{text}</p>}`:a.path==='next/link'?`import React from 'react';export default function Link(props){return <a {...props}/>} `:`import React from 'react';export default function Image({fill,unoptimized,priority,...props}){return <img {...props}/>} `}));}}]});
+const bundle=await build({absWorkingDir:root,stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import Ben from './src/domains/ai-assistant/AiAssistant';(${fixture.toString()})();createRoot(document.getElementById('root')).render(<Ben userId="synthetic-user" canManage={false} live fullPage/>);`,resolveDir:root,loader:'tsx'},bundle:true,write:false,outfile:'/tmp/ben-performance/app.js',jsx:'automatic',define:{'process.env.NODE_ENV':'"test"'},plugins:[{name:'fixture-adapters',setup(b){b.onResolve({filter:/^(next\/navigation|next\/link|next\/image)$|^\.\/BenMessage$/},a=>({path:a.path,namespace:'fixture'}));b.onLoad({filter:/.*/,namespace:'fixture'},a=>({loader:'jsx',resolveDir:root,contents:a.path==='next/navigation'?`const router={push(path){window.navigationPath=path}};export const useRouter=()=>router;export const usePathname=()=>'/admin/ben';`:a.path==='./BenMessage'?`import React from 'react';export default function Message({text}){return <p>{text}</p>}`:a.path==='next/link'?`import React from 'react';export default function Link(props){return <a {...props}/>} `:`import React from 'react';export default function Image({fill,unoptimized,priority,...props}){return <img {...props}/>} `}));}}]});
 const server=http.createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/app.js'?'application/javascript':'text/html');res.end(req.url==='/app.js'?bundle.outputFiles[0].contents:'<!doctype html><html><body><div id="root"></div><script src="/app.js"></script></body></html>');});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 try{
@@ -44,7 +44,12 @@ try{
  await context.setOffline(true);count=await page.evaluate(()=>fixture.gets);await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);await context.setOffline(false);await page.waitForFunction(n=>fixture.gets>n,count);
  await page.evaluate(()=>{fixture.delayNext=1400;window.dispatchEvent(new Event('pageshow'));});await page.getByRole('button',{name:'Trao đổi mới'}).click();await page.waitForTimeout(1600);assert.equal(await page.getByText('Fresh answer completed',{exact:true}).count(),0,'old reads cannot restore a replaced chat');
  await page.getByRole('button',{name:'Lịch sử trao đổi'}).click();await page.getByRole('button').filter({hasText:'Conversation B'}).click();await page.getByText('Answer B',{exact:true}).waitFor();assert.equal(await page.getByText('Answer A',{exact:true}).count(),0);
- await page.evaluate(()=>{fixture.status=401;window.dispatchEvent(new Event('pageshow'));});await page.getByRole('heading',{name:'Đăng nhập lại để tiếp tục với Ben'}).waitFor();count=await page.evaluate(()=>fixture.gets);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);assert.deepEqual(await page.evaluate(()=>fixture.posts),['send','send','cancel']);assert.deepEqual(errors,[]);
+ await page.clock.install();await page.evaluate(()=>{fixture.hangPost=true});
+ await page.getByRole('textbox',{name:'Tin nhắn cho Ben'}).fill('Synthetic hung search');await page.getByRole('button',{name:'Gửi tin nhắn'}).click();
+ await page.clock.fastForward(60001);await page.getByText(/Chưa xác nhận được kết quả vì kết nối chờ quá lâu/).waitFor();
+ assert.equal(await page.getByRole('textbox',{name:'Tin nhắn cho Ben'}).isEnabled(),true);
+ assert.deepEqual(await page.evaluate(()=>fixture.posts),['send','send','cancel','send'],'timed out commands are not replayed');
+ await page.evaluate(()=>{fixture.status=401;window.dispatchEvent(new Event('pageshow'));});await page.getByRole('heading',{name:'Đăng nhập lại để tiếp tục với Ben'}).waitFor();count=await page.evaluate(()=>fixture.gets);await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));await page.waitForTimeout(2200);assert.equal(await page.evaluate(()=>fixture.gets),count);assert.deepEqual(await page.evaluate(()=>fixture.posts),['send','send','cancel','send']);assert.deepEqual(errors,[]);
  console.log('Actual Ben client transport: idle/hidden/offline suppression, single-flight resume, response delivery, new chat/history fencing, cancellation, 401 cleanup and zero write replay passed. Next routing and text rendering are fixture adapters; no server/business data is used.');
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,3 +1,5 @@
+import { recoverStaleAssistantRun } from "./run-recovery";
+import { assistantRunTimeout } from "../run-timeout";
 import { recordPersonalChecklistCreated } from "@/domains/personal-work/server/personal-work-events";
 import { quickNameWorker } from "@/domains/acquisition/server/quick-name.service";
 import {codeCommand} from "./code-jobs";
@@ -161,7 +163,7 @@ async function dto(row:CustomerAssistantConversation,requestActor?:Awaited<Retur
  if(rawReview&&visibleReview&&rawReview.kind===visibleReview.kind&&!businessDenied&&!(rawReview.kind==="code"&&!codeEnabled(actor))&&!(rawReview.kind==="order"&&s.orderDraft&&orderDeniedPermission(actor,s.orderDraft.plan)))s.pendingReview=rawReview;else delete s.pendingReview;
  return {...s,updatedAt:row.updatedAt.toISOString(),revision:row.revision,runStatus:row.status,errorCode:row.errorCode,approved:!!row.approvedAt,capabilities:assistantCapabilities(actor)};
 }
-export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId,state:{path:["messages"],array_contains:[]}},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(row=>dto(row,actor)))};}
+export async function listAssistant(userId:string,id?:string){const actor=await assistantActor(prisma,userId);const rows=id?[await owned(prisma,id,userId)]:await prisma.customerAssistantConversation.findMany({where:{ownerId:userId,state:{path:["messages"],array_contains:[]}},orderBy:{updatedAt:"desc"},take:20});return {partial:!!id,conversations:await Promise.all(rows.map(async row=>dto(await recoverStaleAssistantRun(prisma,row),actor)))};}
 export async function sendAssistant(userId:string,input:{id?:string;requestKey:string;text:string;productId?:string|null;screenPath?:string|null;imageBase64?:string;personalWorkApprovalRevision?:number;reviewApproval?:ReviewBinding},defer?: (work:()=>Promise<void>)=>void){
  const sender=await assistantActor(prisma,userId);
  if(input.imageBase64!==undefined&&(process.env.BEN_IMAGE_SEARCH_ENABLED!=="1"||!hasAssistantPermission(sender,"PRODUCT_VIEW")))
@@ -201,7 +203,7 @@ export async function sendAssistant(userId:string,input:{id?:string;requestKey:s
  return dto(await owned(prisma,result.id,userId));
 }
 export async function cancelAssistant(userId:string,id:string){await assistantActor(prisma,userId);return transaction(async tx=>{await lock(tx,id);const row=await owned(tx,id,userId);if(["QUEUED","RUNNING"].includes(row.status))await tx.customerAssistantConversation.update({where:{id},data:{status:row.approvedAt?"APPLIED":"CANCELLED",leaseToken:null,leaseExpiresAt:null,plan:row.approvedAt?undefined:Prisma.DbNull,state:json(message(withoutImage(state(row)),"Đã hủy lượt xử lý. Không giao thêm công việc."))}});return {ok:true};});}
-async function leased(tx:Tx,id:string,token:string){const row=await tx.customerAssistantConversation.findFirst({where:{id,leaseToken:token,status:"RUNNING",leaseExpiresAt:{gt:new Date()}}});if(!row || (row.state as Prisma.JsonObject).purpose === "ACQUISITION_QUICK_NAME")throw new AssistantError("Lượt xử lý đã hết hiệu lực.",409);await assistantActor(tx,row.ownerId);return row;}
+async function leased(tx:Tx,id:string,token:string){const row=await tx.customerAssistantConversation.findFirst({where:{id,leaseToken:token,status:"RUNNING",leaseExpiresAt:{gt:new Date()}}});if(!row || (row.state as Prisma.JsonObject).purpose === "ACQUISITION_QUICK_NAME" || assistantRunTimeout(row))throw new AssistantError("Lượt xử lý đã hết hiệu lực.",409);await assistantActor(tx,row.ownerId);return row;}
 export async function assistantWorker(operation:string,body:Record<string,unknown>){
  if(body.kind === "acquisition-quick-name")return quickNameWorker(operation,body);
  if(operation === "claim" && body.acquisitionQuickName === true && body.imageInput === true){const preview=await quickNameWorker("claim",body);if(preview.run)return preview;}

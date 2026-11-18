@@ -287,7 +287,7 @@ export function mapWatchDetail(row: any): WatchDetailModel {
                 hookText: row.watchContent.hookText ?? null,
                 body: row.watchContent.body ?? null,
                 bulletSpecs: row.watchContent.bulletSpecs ?? [],
-                hashtags: row.watchContent.hashtags ?? null,
+                hashtags: row.watchContent.hashTags ?? row.watchContent.hashtags ?? null,
                 seoTitle: row.watchContent.seoTitle ?? null,
                 seoDescription: row.watchContent.seoDescription ?? null,
             }

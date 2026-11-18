@@ -176,7 +176,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarSyncFailures, setCalendarSyncFailures] = useState<Record<string, {id:string;title:string}>>({});
   const [pending, startTransition] = useTransition();
   const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE" | "EVENTS" | "OVERDUE">(listOnly ? "ALL" : "TODAY");
-  const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("MINE");
+  const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("ALL");
   const [domain, setDomain] = useState<string>("ALL");
   const [newCategoryKey, setNewCategoryKey] = useState("GENERAL");
   const [editCategoryKey, setEditCategoryKey] = useState("GENERAL");

@@ -567,9 +567,20 @@ export default function WatchFormClient({
 
     let persistedForAttempt: WatchFormValues | undefined;
     try {
-      const result = await submitWatchForm(submitValues);
-      updateValuesAfterSave(result, submitValues);
-      const persisted = mergeWatchSaveReceipt(submitValues, submitValues, result).saved;
+      let persisted: WatchFormValues;
+      if (part === "cover") {
+        // Cover selection is already persisted by the storefront-image API.
+        // Confirming it must never re-submit stale profile/content/pricing drafts.
+        persisted = {
+          ...savedValues,
+          media: { ...savedValues.media, coverImage: submitValues.media.coverImage },
+        };
+        setSavedValues(persisted);
+      } else {
+        const result = await submitWatchForm(submitValues);
+        updateValuesAfterSave(result, submitValues);
+        persisted = mergeWatchSaveReceipt(submitValues, submitValues, result).saved;
+      }
       persistedForAttempt = persisted;
 
       const progressResult = await saveWatchMediaWorkDraftFromWatchAction({
