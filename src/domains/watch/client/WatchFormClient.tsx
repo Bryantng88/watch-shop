@@ -6,7 +6,7 @@ import BenContentPreview from "../ui/edit/BenContentPreview";
 import { suggestWatchSpecWithOpenAIAction } from "./form/watch-ai-spec.actions";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Camera, ClipboardList, Images } from "lucide-react";
+import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import {
@@ -139,12 +139,12 @@ function missingRequiredMediaWorkPartLabels(doneState: Record<MediaWorkPart, boo
 function MediaWorkDoneButton({ label, done, dirty, ready, statusUnknown, onRecheck, disabled, onSaveDraft, onComplete }: {
   label: string; done: boolean; dirty: boolean; ready: boolean; statusUnknown: boolean; onRecheck: () => void; disabled?: boolean; onSaveDraft: () => void; onComplete: () => void;
 }) {
-  if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><button type="button" disabled={disabled} onClick={onRecheck} className="h-9 rounded-lg border border-slate-300 px-3 text-slate-700">Kiểm tra lại</button></div>;
+  if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><button type="button" disabled={disabled} onClick={onRecheck} className="h-11 rounded-lg border border-slate-300 px-3 text-slate-700">Kiểm tra lại</button></div>;
   if (!ready) return <span role="status" className="text-xs text-slate-500">Đang tải kho ảnh…</span>;
-  return <div className="flex flex-wrap items-center gap-2">
-    <span role="status" className={done?"text-xs font-medium text-emerald-700":"text-xs text-slate-500"}>{done?(dirty?"Đã hoàn tất · chưa lưu":"Đã hoàn tất"):dirty?"Có thay đổi chưa lưu":"Đã lưu · chưa hoàn tất"}</span>
-    <button type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</button>
-    <button type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-9 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</button>
+  return <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+    <span role="status" className={done?"w-full text-xs font-medium text-emerald-700 sm:w-auto":"w-full text-xs text-slate-500 sm:w-auto"}>{done?(dirty?"Đã hoàn tất · chưa lưu":"Đã hoàn tất"):dirty?"Có thay đổi chưa lưu":"Đã lưu · chưa hoàn tất"}</span>
+    <button type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</button>
+    <button type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-11 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</button>
   </div>;
 }
 
@@ -1660,7 +1660,7 @@ export default function WatchFormClient({
           type="button"
           disabled={mediaSubmitPending || isMediaWorkspaceReturned}
           onClick={() => setReshootNoteOpen(true)}
-          className="inline-flex h-9 items-center justify-center rounded-full border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center rounded-lg border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Yêu cầu chụp lại
         </button>
@@ -1887,8 +1887,9 @@ export default function WatchFormClient({
 
   if (isMediaMode) {
     return (
-      <div className={embedded ? "space-y-4 p-4" : "space-y-6"}>
+      <div data-media-workspace className={embedded ? "min-w-0 space-y-4 bg-white p-3 sm:p-4" : "min-w-0 space-y-4 bg-white"}>
         <WatchEditHeader
+          compact
           values={values}
           brands={brandOptions}
           inlineImage={inlineImage}
@@ -1919,100 +1920,24 @@ export default function WatchFormClient({
             }));
           }}
         />
-        <div className="min-h-[560px] overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
-          <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
-            <div className="flex gap-2 overflow-x-auto">
-              {[
-                {
-                  key: "basic" as const,
-                  title: "Thông tin chính",
-                  subtitle: "Spec, giá và định danh",
-                  done: mediaWorkDone.profile,
-                  icon: ClipboardList,
-                },
-                {
-                  key: "content" as const,
-                  title: "Content",
-                  subtitle: "Hook, body và bullet",
-                  done: mediaWorkDone.content,
-                  icon: BookOpen,
-                },
-                {
-                  key: "image" as const,
-                  title: "Hình ảnh",
-                  subtitle: "Gallery và chụp lại",
-                  done: mediaWorkDone.image,
-                  icon: Camera,
-                },
-                {
-                  key: "cover" as const,
-                  title: "Cover storefront",
-                  subtitle: "Ảnh đại diện storefront",
-                  done: mediaWorkDone.cover,
-                  icon: Images,
-                },
-              ].map((item, index) => {
-                const Icon = item.icon;
-                const active = activeMediaSection === item.key;
-                const stateLabel = mediaStatusUnknown ? "Chưa xác nhận trạng thái" : item.done ? "Đã hoàn tất" : mediaDirty[item.key === "basic" ? "profile" : item.key] ? "Có thay đổi chưa lưu" : "Đã lưu, chưa hoàn tất";
-
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => scrollToMediaSection(item.key)}
-                    aria-current={active ? "step" : undefined}
-                    aria-label={`${index + 1} ${item.title}: ${stateLabel}`}
-                    title={`${item.title}: ${stateLabel}`}
-                    className={[
-                      "group inline-flex h-11 min-w-max items-center gap-2 rounded-lg border px-3 text-sm font-semibold transition",
-                      active
-                        ? "border-blue-200 bg-blue-50 text-blue-700 shadow-sm"
-                        : "border-transparent bg-white text-slate-600 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900",
-                    ].join(" ")}
-                  >
-                    <span
-                      className={[
-                        "inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ring-1",
-                        active
-                          ? "bg-white text-blue-700 ring-blue-200"
-                          : "bg-slate-50 text-slate-500 ring-slate-200 group-hover:text-slate-700",
-                      ].join(" ")}
-                    >
-                      {item.key === "basic"
-                        ? "1"
-                        : item.key === "content"
-                          ? "2"
-                          : item.key === "image"
-                            ? "3"
-                            : "4"}
-                    </span>
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                    <span>{item.title}</span>
-                    <span
-                      className={[
-                        "h-2 w-2 rounded-full ring-4",
-                        mediaStatusUnknown
-                          ? "bg-amber-500 ring-amber-50"
-                          : item.done
-                          ? "bg-emerald-500 ring-emerald-50"
-                          : "bg-slate-300 ring-slate-50",
-                      ].join(" ")}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="hidden">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between px-3 py-2 text-left font-medium hover:text-slate-800"
-              >
-                <span>Thông tin nâng cao</span>
-                <span className="text-slate-400">⌄</span>
-              </button>
-            </div>
+        <div className="min-w-0 bg-white">
+          <div className="sticky top-0 z-20 bg-white">
+            <AdminViewTabs
+              label="Mục xử lý media"
+              value={activeMediaSection}
+              onValueChange={scrollToMediaSection}
+              items={([
+                {value: "basic", label: "Thông tin", fullLabel: "Thông tin chính", part: "profile"},
+                {value: "content", label: "Content", fullLabel: "Content", part: "content"},
+                {value: "image", label: "Hình ảnh", fullLabel: "Hình ảnh", part: "image"},
+                {value: "cover", label: "Cover", fullLabel: "Cover storefront", part: "cover"},
+              ] as const).map((item, index) => ({
+                value: item.value,
+                label: item.label,
+                accessibleLabel: `${index + 1} ${item.fullLabel}: ${mediaStatusUnknown ? "Chưa xác nhận trạng thái" : mediaWorkDone[item.part] ? "Đã hoàn tất" : mediaDirty[item.part] ? "Có thay đổi chưa lưu" : "Đã lưu, chưa hoàn tất"}`,
+                indicator: mediaStatusUnknown ? "unknown" : mediaWorkDone[item.part] ? "complete" : "incomplete",
+              }))}
+            />
           </div>
 
           <div className="min-w-0 bg-white">

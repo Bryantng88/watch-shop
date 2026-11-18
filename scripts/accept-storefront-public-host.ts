@@ -12,7 +12,7 @@ async function get(path: string) {
 }
 
 async function main() {
-  const publicPaths = ["/products", "/request", "/offline", "/manifest.webmanifest", "/sw.js"];
+  const publicPaths = ["/privacy-policy", "/products", "/request", "/offline", "/manifest.webmanifest", "/sw.js"];
   const publicResults: Record<string, number> = {};
   for (const path of publicPaths) {
     const response = await get(path);

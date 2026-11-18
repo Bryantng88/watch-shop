@@ -444,7 +444,7 @@ export default function WatchBasicSection({
       surface={surface}
     >
       <div className="space-y-6">
-        <div className="sticky top-0 z-10 -mx-5 -mt-5 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+        <div className={surface === "flat" ? "hidden border-b border-slate-100 bg-white px-5 py-3 sm:block" : "sticky top-0 z-10 -mx-5 -mt-5 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur"}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">

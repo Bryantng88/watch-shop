@@ -257,3 +257,15 @@ containing only permitted Overview/Finance/Sales destinations. Use normal links,
 visible focus, keyboard access and Escape dismissal. A collapsed rail must not
 render three unlabeled report icons. Expanded navigation must not cover editing
 controls. Grouping never broadens permissions or changes destination routes.
+
+## Media editing on mobile
+
+- Use the same white canvas, compact sans-serif hierarchy and `AdminViewTabs` as
+  personal work and the dashboard. Keep four short section labels on one strip;
+  completion dots have accessible textual states and never confirm work.
+- Keep the full product title and SKU readable. Put secondary tools behind an
+  explicit disclosure instead of deleting capabilities on narrow screens.
+- Flat section headers stack identity and actions on mobile. Save and complete
+  remain distinct 44px targets with a readable current saved state.
+- No fixed minimum editor height, outer shadow or nested page card. Use natural
+  document scrolling; section changes preserve drafts and completion baselines.

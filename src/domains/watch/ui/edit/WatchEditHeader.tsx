@@ -18,6 +18,7 @@ type SimpleOption = {
 };
 
 type Props = {
+    compact?: boolean;
     values: WatchFormValues;
     inlineImage?: PickedMediaItem | null;
     brands?: SimpleOption[];
@@ -86,7 +87,7 @@ function HeaderImage({
                 type="button"
                 onClick={() => src && setOpen(true)}
                 disabled={!src}
-                className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 disabled:cursor-default"
+                className="group relative h-14 w-14 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 disabled:cursor-default"
                 title={src ? "Bấm để xem ảnh lớn" : undefined}
             >
                 {src ? (
@@ -137,6 +138,7 @@ function HeaderImage({
 
 export default function WatchEditHeader({
     values,
+    compact = false,
     brands = [],
     pending = false,
     message = "",
@@ -161,24 +163,24 @@ export default function WatchEditHeader({
         : [{ label: "Watches", href: "/admin/watches" }, { label: title }];
 
     return (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className={compact ? "min-w-0 border-b border-slate-100 bg-white pb-4" : "rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"}>
+            <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
-                    <AdminBreadcrumbs items={items} />
+                    <div className={compact ? "hidden sm:block" : undefined}><AdminBreadcrumbs items={items} /></div>
 
-                    <div className="mt-4 flex items-start gap-4">
+                    <div className={compact ? "flex items-start gap-3 sm:mt-3" : "mt-4 flex items-start gap-4"}>
                         <HeaderImage image={inlineImage} title={title} />
 
                         <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="truncate text-3xl font-semibold tracking-tight text-slate-950">
+                                <h1 className={compact ? "break-words text-lg font-bold leading-snug text-slate-950 sm:text-2xl" : "truncate text-3xl font-semibold tracking-tight text-slate-950"}>
                                     {title}
                                 </h1>
 
                                 <ReviewBadge label={getOverallReviewStatus(values)} />
                             </div>
 
-                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 break-all text-xs text-slate-500">
                                 <span>
                                     SKU: <span className="font-medium text-slate-700">{sku}</span>
                                 </span>
@@ -189,7 +191,7 @@ export default function WatchEditHeader({
                                         {brandName}
                                     </span>
                                 </span>
-                                <span>
+                                <span className={compact ? "hidden sm:inline" : undefined}>
                                     Product ID:{" "}
                                     <span className="font-mono text-xs font-medium text-slate-700">
                                         {productId}
@@ -214,7 +216,7 @@ export default function WatchEditHeader({
                     ) : null}
                 </div>
 
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                <div className={compact ? "flex min-w-0 flex-wrap items-center gap-2 lg:justify-end [&_button]:min-h-11" : "flex shrink-0 flex-wrap items-center justify-end gap-2"}>
                     {!hideBack ? (
                     <button
                         type="button"
@@ -228,6 +230,8 @@ export default function WatchEditHeader({
                     ) : null}
 
                     {productId ? (
+                      <details className={compact ? "relative" : "contents"} open={compact ? undefined : true}>
+                        {compact && <summary className="flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-blue-600">Công cụ sản phẩm</summary>}
                         <RegenerateTitleSkuButton
                             values={values}
                             brands={brands}
@@ -244,6 +248,7 @@ export default function WatchEditHeader({
                                 });
                             }}
                         />
+                      </details>
                     ) : null}
 
                     {headerActions}
