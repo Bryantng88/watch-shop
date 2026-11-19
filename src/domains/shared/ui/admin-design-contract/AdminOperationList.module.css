@@ -10,7 +10,7 @@
 .mediaTable .statusColumn { width: 96px; }
 .mediaTable .progressColumn { width: 112px; }
 .mediaTable .channelColumn { width: 176px; }
-.mediaTable .actionColumn { width: 128px; }
+.mediaTable .actionColumn { width: 152px; }
 .mediaTable .userColumn { width: 112px; }
 .mediaTable .updatedColumn { width: 144px; }
 .mediaTable .previewColumn { width: 32px; }
@@ -23,11 +23,15 @@
 .activity:hover { color: var(--admin-list-body); text-decoration: underline; }
 .activity:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
 .mediaTable .time { display: block; white-space: nowrap; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-variant-numeric: tabular-nums; }
-.mediaTable [data-row-action] > button, .mediaTable [data-row-action] > a { border-color: var(--admin-list-controlBorder); background: var(--admin-list-canvas); color: var(--admin-list-body); box-shadow: none; }
-.mediaTable [data-row-action] > button:hover:not(:disabled), .mediaTable [data-row-action] > a:hover { border-color: var(--admin-list-controlBorder); background: var(--admin-list-softSurface); }
-.mediaTable [data-row-action] > button:focus-visible, .mediaTable [data-row-action] > a:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
+/* Explicit trigger class: never style buttons inside the editor's overlay. */
+.mediaTable .rowAction { display: inline-flex; align-items: center; justify-content: center; gap: var(--admin-list-action-gap); min-height: var(--admin-list-action-height); max-width: 100%; padding: 0 var(--admin-list-action-padding); border: 1px solid var(--admin-list-controlBorder); border-radius: var(--admin-list-action-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 600; white-space: nowrap; box-shadow: none; }
+.mediaTable .rowAction:hover:not(:disabled) { background: var(--admin-list-softSurface); }
+.mediaTable .rowAction:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
+.mediaTable .rowAction:disabled { opacity: .5; cursor: wait; }
 .previewButton { display: grid; width: 32px; min-height: 32px; place-items: center; border-radius: 8px; color: var(--admin-list-tertiary); }
 .previewButton:hover { background: var(--admin-list-divider); color: var(--admin-list-body); }
 .previewButton:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: -2px; }
-@media (pointer: coarse) { .mediaTable [data-row-action] > button, .mediaTable [data-row-action] > a, .previewButton { min-height: var(--admin-list-touch); } }
+@media (pointer: coarse) { .mediaTable .rowAction, .previewButton { min-height: var(--admin-list-touch); } }
 @media (prefers-reduced-motion: reduce) { .mediaTable tr { transition: none; } }
+
+.mediaTable.withChannels .actionColumn { width: 176px; }

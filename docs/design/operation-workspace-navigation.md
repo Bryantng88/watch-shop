@@ -87,3 +87,20 @@ Accept Media navigation, empty/loading/error states, keyboard use, narrow panes
 and return navigation before redesigning each remaining area's working content.
 Authenticated database/action acceptance and whole-app checks remain required for
 a release; fixture preview checks alone do not establish production behavior.
+
+## Compact actions and progress
+
+Media list triggers use the shared rowAction variant: white/slate-200 outline,
+slate-700 text at 12/16px semibold, 32px height, 8px radius, 12px horizontal
+padding, quiet hover and visible blue focus. Coarse pointers use 44px targets.
+Keep full action labels, without repeated external-link icons. Pending mutations
+show a spinner and “Đang xử lý…” with aria-busy and existing duplicate-submit
+protection. OpenTargetAction's icon remains the default for other consumers.
+
+ProgressMetric's opt-in quiet appearance uses a 4px neutral track, blue fill
+and emerald completion; fraction and percentage are plain 12px tabular text
+above the track, without a colored percentage badge. Geometry and colors come
+from ADMIN_UI_FOUNDATION. Progress remains an accessible current/max value;
+100% section completion does not approve or complete the workflow. Missing
+denominators retain the list's unavailable marker. Legacy progress consumers
+keep their default appearance.

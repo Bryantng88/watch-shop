@@ -1,0 +1,8 @@
+.quiet { display: inline-flex; flex-direction: column; gap: var(--progress-gap); min-width: 0; width: 100%; vertical-align: middle; font-size: var(--progress-font-size); line-height: var(--progress-line); font-weight: 400; font-variant-numeric: tabular-nums; }
+.values { display: flex; align-items: baseline; justify-content: space-between; gap: var(--progress-gap); color: var(--progress-muted); }
+.caption { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.percentage { flex-shrink: 0; color: var(--progress-body); font-weight: 500; }
+.track { display: block; width: 100%; overflow: hidden; border-radius: var(--progress-radius); background: var(--progress-track); height: var(--progress-height); }
+.fill { display: block; height: 100%; border-radius: inherit; background: var(--progress-fill); }
+.complete .fill { background: var(--progress-success); }
+.complete .percentage { color: var(--progress-success-text); }

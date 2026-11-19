@@ -72,6 +72,7 @@ export const ADMIN_UI_FOUNDATION = {
     drawerWidth: 480, drawerWideWidth: 640, overlayOpacity: 0.25,
     overlayBlur: 1, maxHeightViewportGutter: 32,
   },
+  progress: { quietTrackHeight: 4, quietGap: 6, fill: "#2563eb", successFill: "#10b981" },
   motion: { fastMs: 150, panelMs: 200 },
   layers: { base: 0, sticky: 10, navigation: 20, popover: 30, overlay: 40, dialog: 50, dialogPopover: 60, toast: 70, tooltip: 80 },
   breakpoints: { mobileMax: 639, tabletMin: 640, desktopMin: 1024, wideMin: 1280 },
