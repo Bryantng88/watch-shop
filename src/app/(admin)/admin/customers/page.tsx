@@ -6,5 +6,5 @@ export const metadata = { title: "Khách hàng · Danh bạ" };
 export default async function CustomersPage() {
   const user = await requirePermission(PERMISSIONS.CUSTOMER_VIEW);
   const access = contactAccess(user, "customers");
-  return <ContactDirectory kind="customers" canCreate={access.create} canUpdate={access.update} />;
+  return <ContactDirectory key="customers" kind="customers" canCreate={access.create} canUpdate={access.update} />;
 }

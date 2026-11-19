@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, RefreshCw, Search } from "lucide-react";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { AdminManagementPage, AdminManagementButton as Button, AdminManagementField as Field, ADMIN_MANAGEMENT as s } from "@/domains/shared/ui/admin-design-contract/AdminManagement";
@@ -12,6 +13,7 @@ const roleNames: Record<string,string> = { SUPPLIER: "Nhà cung cấp", SERVICE:
 export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind: ContactKind; canCreate: boolean; canUpdate: boolean }) {
   const title = kind === "customers" ? "Khách hàng" : "Nhà cung cấp / Vendor";
   const dialog = useAppDialog();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -44,6 +46,21 @@ export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind:
     window.addEventListener("beforeunload", guard); return () => window.removeEventListener("beforeunload", guard);
   }, [dirty]);
   const canLeave = useCallback(async () => !dirty || await dialog.confirm({ title: "Bỏ thay đổi chưa lưu?", message: "Nội dung liên hệ đang sửa chưa được lưu.", confirmText: "Bỏ thay đổi", cancelText: "Tiếp tục sửa" }), [dirty, dialog]);
+  useEffect(() => {
+    if (!dirty) return;
+    const navigate = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
+      const link = event.target.closest<HTMLAnchorElement>("a[href]");
+      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+      const destination = new URL(link.href, window.location.href);
+      if (destination.origin !== window.location.origin || (destination.pathname === window.location.pathname && destination.search === window.location.search)) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (savingRef.current) return;
+      void (async () => { if (await canLeave()) { setDraft(null); router.push(destination.pathname + destination.search + destination.hash); } })();
+    };
+    document.addEventListener("click", navigate, true);
+    return () => document.removeEventListener("click", navigate, true);
+  }, [dirty, canLeave, router]);
   async function open(item?: DirectoryContact) {
     if (savingRef.current || !await canLeave()) return;
     const value = item ? { id: item.id, updatedAt: item.updatedAt, name: item.name, phone: item.phone || "", email: item.email || "", address: item.address || "" } : empty();
