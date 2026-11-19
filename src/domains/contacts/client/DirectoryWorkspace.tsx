@@ -8,9 +8,9 @@ import type { DirectoryEntry } from "../shared/directory-navigation";
 
 export default function DirectoryWorkspace({ entries, selected, children }: { entries: DirectoryEntry[]; selected: string; children: ReactNode }) {
   const ref = useAdminSplitWorkspace<HTMLDivElement>();
-  return <AdminManagementPage title="Danh bạ">
+  return <AdminManagementPage title="Danh bạ" description="Tra cứu và quản lý thông tin người dùng, khách hàng, nhà cung cấp.">
     <div ref={ref} className={s.layout} style={ADMIN_SPLIT_WORKSPACE_STYLE}>
-      <aside data-admin-pane="sidebar"><AdminWorkspaceNavigation label="Danh sách" entries={entries} selected={selected} /></aside>
+      <aside data-admin-pane="sidebar"><AdminWorkspaceNavigation label="Nhóm liên hệ" entries={entries} selected={selected} /></aside>
       <div data-admin-pane="content">{children}</div>
     </div>
   </AdminManagementPage>;

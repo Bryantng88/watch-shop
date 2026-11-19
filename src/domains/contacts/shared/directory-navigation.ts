@@ -9,6 +9,6 @@ export function directoryEntries(user: { roles?: string[]; permissions: string[]
   return [
     { href: "/admin/users", label: "Người dùng", allowed: user.roles?.includes("ADMIN") || USER_DIRECTORY_READ_PERMISSIONS.some(p => user.permissions.includes(p)) },
     { href: "/admin/customers", label: "Khách hàng", allowed: contactAccess(user, "customers").read },
-    { href: "/admin/vendors", label: "Nhà cung cấp / Vendor", allowed: contactAccess(user, "vendors").read },
+    { href: "/admin/vendors", label: "Nhà cung cấp", allowed: contactAccess(user, "vendors").read },
   ].filter(entry => entry.allowed).map(({ href, label }) => ({ href, label }));
 }

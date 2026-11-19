@@ -859,6 +859,16 @@ toolbar tìm kiếm ngay dưới. Danh sách phẳng, count/filter/pagination th
 không thêm card hoặc KPI. Mỗi mục chỉ xuất hiện khi đủ quyền đọc, không suy ra
 quyền sửa từ khả năng mở workspace. Không đổi API, role grant hoặc access policy.
 
-Runtime mới dùng AdminManagementSection và AdminWorkspaceNavigation. Phạm vi
-hiện đại hóa là shell và danh sách; form tài khoản/role hiện hữu tiếp tục dùng
-nghiệp vụ cũ, không được tuyên bố toàn bộ drawer/role editor đã migrate v2.
+Runtime dùng AdminManagementSection và AdminWorkspaceNavigation. Header dùng
+variant workspace như Home; menu chọn nền focusSurface như Vận hành. Toolbar
+tìm kiếm đơn giản dùng variant phẳng, kết quả/count và Làm mới hiện trực tiếp.
+Danh sách có heading cột, nhận diện người dùng bằng AdminUserAvatar, thiếu dữ
+liệu dùng dấu —; trên mobile bỏ heading cột và giữ thứ tự đọc từng liên hệ.
+
+Form người dùng dùng inline editor cùng vùng nội dung như khách hàng/nhà cung
+cấp để đối chiếu danh sách; không mở drawer legacy. Field/button lấy từ shared
+AdminManagement, vai trò dùng checkbox native, không card màu cho từng vai trò.
+PageEditingState ở heading form; lỗi lưu ở trong form và giữ dữ liệu, thành công
+chỉ toast một lần. Hủy/chuyển route/chọn bản ghi khác kiểm tra dirty draft trước.
+API, role grant và semantics lưu không thay đổi. Trang quản lý vai trò riêng
+không thuộc phạm vi chuẩn hóa này.

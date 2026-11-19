@@ -1,11 +1,28 @@
 .page { font-family: var(--am-font); color: var(--am-text); padding: 20px 24px; }
 .flow { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .flow > header { align-items: start; }
-.flow > header h1 { font-size: 24px; line-height: 32px; font-weight: 700; }
-.flow > header p:first-child { letter-spacing: .08em; }
 .flow > header > div:last-child { min-width: 0; flex-wrap: wrap; }
 .toolbar, .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .toolbar { padding: 8px; background: var(--am-soft); border: 1px solid var(--am-border); border-radius: 12px; }
+.plainToolbar { min-height: 48px; padding: 0; background: transparent; border: 0; border-radius: 0; }
+.searchField { flex: 1 1 240px; min-width: 0; }
+.resultCount { margin-left: auto; font-variant-numeric: tabular-nums; }
+.columnHeader { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.5fr) auto; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--am-line); color: var(--am-muted); font: 500 12px/16px var(--am-font); }
+.columnHeader > :last-child { min-width: 60px; text-align: right; }
+.row:hover, .row:focus-within { background: var(--am-soft); }
+.rowAction { justify-self: end; }
+.identity { display: flex; align-items: start; gap: 8px; }
+.identity > div { min-width: 0; }
+.roleList { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.editorHeading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.checkList { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 16px; }
+.checkRow { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid var(--am-line); color: var(--am-body); font: 400 14px/20px var(--am-font); }
+.checkRow input { width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--am-primary); }
+.checkRow span { min-width: 0; }
+.checkRow strong { display: block; font-weight: 600; }
+.status { display: inline-flex; align-items: center; gap: 6px; }
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+@media(max-width:639px) { .columnHeader { display: none; } .checkList { grid-template-columns: minmax(0,1fr); } .resultCount { margin-left: 0; } }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--am-control); padding: 8px 16px; border: 1px solid var(--am-border); border-radius: var(--am-radius); background: var(--am-canvas); color: var(--am-body); font: 600 14px/20px var(--am-font); cursor: pointer; }
 .button:hover:not(:disabled) { background: var(--am-soft); }
 .button:disabled { opacity: .5; cursor: default; }
@@ -26,7 +43,8 @@
 .sectionHeader { display: flex; align-items: start; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-width: 0; }
 .sectionHeader > div { min-width: 0; }
 .sectionHeader > div > p { margin-top: 4px; }
-.userRow { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto; }
+.row.userRow, .columnHeader.userRow { grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 60px; }
+.sectionHeader h2.sectionTitle, .editorHeading h3.sectionTitle { font: 700 14px/20px var(--am-font); }
 .metadata { margin: 0; color: var(--am-muted); font: 400 12px/16px var(--am-font); overflow-wrap: anywhere; }
 .error { color: var(--am-error); font: 400 12px/16px var(--am-font); }
 .errorBox { padding: 12px 0; color: var(--am-error); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
@@ -51,6 +69,7 @@
 @media(max-width: 1023px) { .mediaLayout { grid-template-columns: minmax(0,1fr); gap: 24px; } .folders { flex-direction: row; flex-wrap: wrap; } .images { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width: 639px) { .page { padding: 12px 16px; } .flow > header h1 { font-size: 20px; line-height: 28px; } .grid { grid-template-columns: minmax(0,1fr); } .row { grid-template-columns: minmax(0,1fr) auto; } .row > div:nth-child(2), .row > div:nth-child(3) { grid-column: 1; } .row > button { grid-column: 2; grid-row: 1; } .images { gap: 16px; } .image .actions { flex-direction: column; align-items: stretch; } .imageView { aspect-ratio: 1; } }
 @media(pointer:coarse) { .button, .input { min-height: var(--am-touch); } .input { font-size: 16px; } }
+@media(max-width:639px) { .row.userRow { grid-template-columns: minmax(0,1fr) auto; } }
 
 @media(pointer:coarse) { .page [data-admin-form] .input.input.input { min-height: var(--am-touch) !important; } }
 
