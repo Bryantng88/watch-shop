@@ -1,0 +1,78 @@
+/**
+ * Admin UI contract v2: canonical target measurements, in CSS px unless noted.
+ * Existing pages are migrated incrementally; exporting this spec does not apply
+ * CSS, implement a dialog, or make legacy components compliant automatically.
+ * Use ADMIN_UI / ADMIN_DOMAIN_TONE for existing class and domain adapters.
+ * See docs/design/admin-ui-language-contract.md for semantics and adoption.
+ */
+export const ADMIN_UI_FOUNDATION = {
+  version: 2,
+  fontFamily: 'var(--font-geist-sans), Arial, Helvetica, sans-serif',
+  spacing: { micro: 2, tight: 4, inline: 6, control: 8, related: 12, block: 16, panel: 20, section: 24, pane: 28, major: 32 },
+  typography: {
+    pageTitle: { size: 24, lineHeight: 32, weight: 700 },
+    pageTitleMobile: { size: 20, lineHeight: 28, weight: 700 },
+    dialogTitle: { size: 18, lineHeight: 28, weight: 700 },
+    focusTitle: { size: 16, lineHeight: 24, weight: 600 },
+    sectionTitle: { size: 14, lineHeight: 20, weight: 700 },
+    rowTitle: { size: 14, lineHeight: 20, weight: 600 },
+    body: { size: 14, lineHeight: 20, weight: 400 },
+    metadata: { size: 12, lineHeight: 16, weight: 400 },
+    label: { size: 12, lineHeight: 16, weight: 500 },
+    eyebrow: { size: 12, lineHeight: 16, weight: 600, trackingEm: 0.08 },
+    badge: { size: 12, lineHeight: 16, weight: 600 },
+    microBadge: { size: 10, lineHeight: 14, weight: 600 },
+    chartAnnotation: { size: 11, lineHeight: 16, weight: 400 },
+    metric: { size: 20, lineHeight: 28, weight: 600 },
+  },
+  colors: {
+    canvas: '#ffffff', text: '#020617', body: '#334155', muted: '#64748b', tertiary: '#94a3b8',
+    primary: '#020617', primaryHover: '#1e293b', link: '#1d4ed8',
+    softSurface: '#f8fafc', focusSurface: '#eff6ff', focusLabel: '#2563eb',
+    divider: '#f1f5f9', controlBorder: '#e2e8f0', focusDivider: '#dbeafe', focusRing: '#60a5fa',
+    success: '#047857', successSurface: '#ecfdf5', successDot: '#10b981',
+    attention: '#c2410c', attentionSurface: '#fff7ed', attentionDot: '#f59e0b',
+    danger: '#be123c', dangerSurface: '#fff1f2', dangerDot: '#f43f5e',
+    unknown: '#b45309', unknownSurface: '#fffbeb', neutralDot: '#cbd5e1',
+  },
+  radius: { mark: 2, badge: 6, control: 8, surface: 12, floating: 16, pill: 9999 },
+  border: { hairline: 1, selectedUnderline: 2, focusRing: 2, focusOffset: 2 },
+  page: {
+    desktopPaddingX: 24, desktopPaddingY: 20, mobilePaddingX: 16, mobilePaddingY: 12,
+    regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
+    splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
+  },
+  focusPanel: {
+    padding: 20, mobilePadding: 16, titleGap: 4, chipsGap: 6,
+    metadataGap: 8, actionsGap: 8, actionsMarginTop: 16, chartGap: 16,
+    chipPaddingX: 10, chipPaddingY: 4,
+  },
+  tabs: {
+    compact: { fontSize: 12, lineHeight: 17, weight: 400, activeWeight: 600, minHeight: 36, paddingX: 0, paddingTop: 8, paddingBottom: 10, gap: 16 },
+    comfortable: { fontSize: 14, lineHeight: 20, weight: 400, activeWeight: 600, minHeight: 44, paddingX: 12, paddingTop: 12, paddingBottom: 14, gap: 12 },
+    dotSize: 6, dotGap: 6, iconSize: 16, iconGap: 8, countGap: 6,
+    underlineHeight: 2, selectThreshold: 520, selectWhenOptionsExceed: 4,
+  },
+  controls: {
+    height: 40, compactHeight: 32, touchMinHeight: 44, inputPaddingX: 12,
+    buttonPaddingX: 16, compactPaddingX: 12, iconGap: 8,
+    disabledOpacity: 0.5, textareaMinHeight: 112, fieldGap: 16, labelGap: 6, helpGap: 4,
+    checkboxSize: 16,
+  },
+  row: { paddingY: 12, paddingX: 0, gap: 12, metadataGap: 6, titleMetadataGap: 4, workDensePaddingY: 10, minHeight: 56, objectMinHeight: 64 },
+  table: { headerHeight: 36, cellPaddingX: 12, cellPaddingY: 12, minRowHeight: 44, selectionWidth: 40 },
+  icon: { metadata: 14, inline: 16, heading: 20, strokeWidth: 1.75, tileSize: 32, tileRadius: 8 },
+  badge: { minHeight: 24, paddingX: 8, paddingY: 4, gap: 4, dotSize: 6, denseMinHeight: 20 },
+  avatar: { xs: 20, sm: 28, md: 32, stackOverlap: 4, stackMax: 3, inlineMax: 2, nameGap: 4, groupGap: 8 },
+  thumbnail: { row: 36, detail: 64, radius: 8 },
+  floating: {
+    viewportGutter: 16, mobileViewportGutter: 8, headerPadding: 20, bodyPadding: 20, footerPadding: 20,
+    sectionGap: 20, footerGap: 8, popoverGap: 8, popoverPadding: 12, popoverWidth: 288,
+    modalSmallWidth: 400, modalWidth: 560, modalLargeWidth: 800, workspaceWidth: 1200,
+    drawerWidth: 480, drawerWideWidth: 640, overlayOpacity: 0.25,
+    overlayBlur: 1, maxHeightViewportGutter: 32,
+  },
+  motion: { fastMs: 150, panelMs: 200 },
+  layers: { base: 0, sticky: 10, navigation: 20, popover: 30, overlay: 40, dialog: 50, dialogPopover: 60, toast: 70, tooltip: 80 },
+  breakpoints: { mobileMax: 639, tabletMin: 640, desktopMin: 1024, wideMin: 1280 },
+} as const;
