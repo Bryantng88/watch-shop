@@ -746,3 +746,20 @@ còn sai lệch. Không lấy ảnh chụp làm nguồn pixel hoặc status dữ
 ## Reports navigation group
 
 Reports is a peer group alongside Business, Storefront and System. Expanded and mobile headings share typography, alignment, dividers and disclosure behavior. In the collapsed rail, one Reports icon opens permitted Overview/Finance/Sales links. Keep rail flyout and expanded disclosure state independent, shortcuts visible, keyboard access, Escape dismissal and focus return.
+
+## Ben media workspace
+
+- The Media entry sits beside Work and Technical in full-page Ben, gated by
+  the existing `TASK_VIEW` permission. The list follows the technician workspace:
+  white canvas, compact header, one search/stage toolbar and flat thumbnail rows.
+- Default to Media Processing. Stages mean Photography, Media Processing, Publish
+  and Done; do not relabel a stage as an execution status. Filter/search before
+  pagination; show actual result counts, including the full explicit Done archive.
+- Watch completion is a count of four independently confirmed sections, not
+  approval of the workflow. Do not apply that denominator to Media Post records.
+- Open the existing authorized editor with its exact binding and return URL.
+  Returning restores the query, stage, page and list scroll. Media from Ben uses
+  a full-page shell; its form stays outside assistant chat and retains unsaved
+  change guards, per-section completion, and existing transition permissions.
+- Keep native 44px search/filter controls, clear empty/loading/error states, and
+  an icon fallback for missing or failed images. No decorative metric cards.
