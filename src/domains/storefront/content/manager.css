@@ -569,3 +569,8 @@
 
 
 .sfc-home > header { margin-bottom: 0; }
+
+
+/* The document footer owns global save/preview/publish commands. */
+.sfc-document-actions .sfc-actions { margin-left: auto; justify-content: flex-end; align-items: center; }
+.sfc-document-actions > h2 { margin-right: auto; }

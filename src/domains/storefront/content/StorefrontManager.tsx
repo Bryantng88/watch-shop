@@ -5,7 +5,7 @@ import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeed
 import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import {AdminPageCanvas,AdminPageHeader,AdminFlatToolbar} from "@/domains/shared/ui/admin-design-contract";
+import {AdminPageCanvas,AdminPageHeader,AdminDocumentFooter} from "@/domains/shared/ui/admin-design-contract";
 import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
 import {AsyncActionButton} from "@/domains/shared/ui/mutation/AsyncActionButton";
 import {useAppDialog} from "@/domains/shared/feedback/AppDialogProvider";
@@ -501,53 +501,7 @@ export default function StorefrontManager({
         <p role="status">Đang tải nội dung…</p>
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
-          <AdminFlatToolbar variant="actions" className="sfc-document-actions">
-            {!homeOnly && <h2 className="text-sm font-semibold">{record.kind === "HOME" ? "Trang chủ" : article?.title}</h2>}
-            {needsReload&&<button type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</button>}
-            <div className="sfc-actions">
-              <PageEditingState dirty={dirty} saving={busy && pendingAction === "save"} uploading={uploading} />
-              <details className="text-xs text-slate-500">
-                <summary className="cursor-pointer py-2">{record.publishedAt ? "Đã xuất bản" : "Chưa xuất bản"}</summary>
-                <span className="block py-2 tabular-nums">Phiên bản {record.revision}{record.publishedAt ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}` : ""}</span>
-              </details>
-              <AsyncActionButton type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
-                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
-                Lưu nháp
-              </AsyncActionButton>
-              <AsyncActionButton
-                type="button"
-                pending={busy&&pendingAction==="preview"}
-                pendingLabel="Đang mở…"
-                disabled={busy || uploading}
-                onClick={() => void save("save", true)}
-              >
-                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
-                Xem trước
-              </AsyncActionButton>
-              <AsyncActionButton
-                type="button"
-                className="primary"
-                pending={busy&&pendingAction==="publish"}
-                pendingLabel="Đang xuất bản…"
-                disabled={busy || uploading}
-                onClick={() => void save("publish")}
-              >
-                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
-                Xuất bản
-              </AsyncActionButton>
-              {record.publishedAt && !homeOnly ? (
-                <button
-                  type="button"
-                  disabled={busy || uploading}
-                  onClick={() => {
-                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
-                  }}
-                >
-                  Gỡ xuất bản
-                </button>
-              ) : null}
-            </div>
-          </AdminFlatToolbar>
+
           <fieldset ref={splitRef} style={home&&homeOnly?ADMIN_SPLIT_WORKSPACE_STYLE:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout}`:""}`}>
             {home ? (
               <>
@@ -1036,6 +990,53 @@ export default function StorefrontManager({
               </section>
             ) : null}
           </fieldset>
+          <AdminDocumentFooter className="sfc-document-actions">
+            {!homeOnly && <h2 className="text-sm font-semibold">{record.kind === "HOME" ? "Trang chủ" : article?.title}</h2>}
+            {needsReload&&<button type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</button>}
+            <div className="sfc-actions">
+              <PageEditingState dirty={dirty} saving={busy && pendingAction === "save"} uploading={uploading} />
+              <details className="text-xs text-slate-500">
+                <summary className="cursor-pointer py-2">{record.publishedAt ? "Đã xuất bản" : "Chưa xuất bản"}</summary>
+                <span className="block py-2 tabular-nums">Phiên bản {record.revision}{record.publishedAt ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}` : ""}</span>
+              </details>
+              <AsyncActionButton type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
+                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
+                Lưu nháp
+              </AsyncActionButton>
+              <AsyncActionButton
+                type="button"
+                pending={busy&&pendingAction==="preview"}
+                pendingLabel="Đang mở…"
+                disabled={busy || uploading}
+                onClick={() => void save("save", true)}
+              >
+                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
+                Xem trước
+              </AsyncActionButton>
+              <AsyncActionButton
+                type="button"
+                className="primary"
+                pending={busy&&pendingAction==="publish"}
+                pendingLabel="Đang xuất bản…"
+                disabled={busy || uploading}
+                onClick={() => void save("publish")}
+              >
+                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
+                Xuất bản
+              </AsyncActionButton>
+              {record.publishedAt && !homeOnly ? (
+                <button
+                  type="button"
+                  disabled={busy || uploading}
+                  onClick={() => {
+                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
+                  }}
+                >
+                  Gỡ xuất bản
+                </button>
+              ) : null}
+            </div>
+          </AdminDocumentFooter>
         </>
       ) : null}
       {preview ? (

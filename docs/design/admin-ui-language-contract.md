@@ -787,7 +787,7 @@ không bọc count/refresh bằng “Thêm”. Search co giãn, controls wrap kh
 Nhãn hiển thị tiếng Việt: Thanh toán, Đã đối soát, Tất cả công việc. Không đổi key,
 URL, nguồn count hoặc phép tính nghiệp vụ để dịch nhãn.
 
-Website giữ action Lưu nháp/Xem trước/Xuất bản ở document action bar vì chúng
+Website đặt action Lưu nháp/Xem trước/Xuất bản ở AdminDocumentFooter cuối vùng làm việc vì chúng
 áp dụng toàn tài liệu, không phải từng khối. Đây là khác biệt có chủ đích với
 hành động theo khu vực của Vận hành. Card/board kỹ thuật chưa được hiện đại hóa
 bởi thay đổi layout này; không tuyên bố toàn bộ nội dung mọi domain đã migrate.
@@ -840,6 +840,25 @@ Phản hồi lưu thất bại giữ bản nháp và dùng action lưu hiện c�
 Không thêm hàng trạng thái vào Vận hành chỉ để giống Website. Hai trang dùng cùng
 semantics/component khi có feedback, còn trạng thái nghiệp vụ khác nhau là có chủ
 đích. Lần migrate này áp dụng Website; không tuyên bố mọi consumer đã chuyển.
+
+
+
+### Document commands belong in a footer, not the workspace header
+
+Vùng đầu trang dùng cấu trúc chung: page title → mô tả → split workspace; không
+chèn thêm một hàng Lưu nháp/Xem trước/Xuất bản hoặc trạng thái xuất bản giữa
+header và hai pane. Website dùng AdminDocumentFooter sau editor trong DOM, nền
+trắng, line trên slate-100, padding dọc 12px kèm safe-area. Footer ở normal flow,
+hiện khi đến cuối editor; không fixed đè field cuối hoặc phụ thuộc scroll owner
+khác nhau của từng admin shell.
+
+Action global của tài liệu căn phải, gap 8px; thông tin xuất bản/phiên bản và
+trạng thái dirty/pending ở cùng footer, không xuất hiện ở header. Mobile wrap,
+buttons tối thiểu 44px coarse pointer, không ẩn action hay làm tràn body. Thông
+báo lỗi theo PageNotice ở vùng bị ảnh hưởng; success theo toast. Domain vẫn giữ
+callback, quyền, pending lock, revision và dirty guard như trước. Vận hành không
+thêm footer giả khi không có tài liệu đang chỉnh sửa.
+
 ## Danh bạ workspace
 
 Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
