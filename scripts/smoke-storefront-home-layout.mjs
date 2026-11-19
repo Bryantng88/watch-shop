@@ -26,7 +26,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const notifications = [];
   const bundle = await esbuild.build({
     stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import Manager from './src/domains/storefront/content/StorefrontManager';createRoot(document.getElementById('root')).render(<Manager homeOnly storefrontUrl="/public-fixture"/>);`, resolveDir: root, loader: 'tsx' },
-    bundle: true, platform: 'browser', jsx: 'automatic', write: false, loader: { '.css': 'empty' },
+    bundle: true, platform: 'browser', jsx: 'automatic', write: false, outfile: '/tmp/storefront-home-layout/app.js', loader: { '.css': 'empty', '.module.css': 'local-css' },
     define: { 'process.env.NODE_ENV': '"production"' },
     plugins: [{ name: 'synthetic-ports', setup(build) {
       build.onResolve({ filter: /^next\/image$/ }, () => ({ path: 'image', namespace: 'fixture' }));
@@ -38,11 +38,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
         : `export const useAppDialog=()=>({confirm:async()=>true});` }));
       build.onResolve({ filter: /^@\// }, ({ path: source }) => ({ path: source === '@/domains/shared/ui/admin-design-contract'
         ? path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx')
-        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') ? '.ts' : '.tsx') }));
+        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') || source.endsWith('AdminSplitWorkspace') ? '.ts' : '.tsx') }));
     } }],
   });
   const tailwindCss = await postcss([tailwind({ content: [path.join(root, 'src/domains/storefront/content/StorefrontManager.tsx'), path.join(root, 'src/domains/shared/ui/admin-design-contract/*.{ts,tsx}')], corePlugins: { preflight: true } })]).process('@tailwind base;@tailwind utilities;', { from: undefined });
-  const css = tailwindCss.css + '\n' + await fs.readFile(path.join(root, 'src/domains/storefront/content/manager.css'), 'utf8');
+  const css = tailwindCss.css + '\n' + bundle.outputFiles.filter(file => file.path.endsWith('.css')).map(file => file.text).join('\n') + '\n' + await fs.readFile(path.join(root, 'src/domains/storefront/content/manager.css'), 'utf8');
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/api/admin/storefront/content')) return reply({ record, articles: [] });
     if (req.url === '/api/admin/storefront/media') return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], truncated: false });
