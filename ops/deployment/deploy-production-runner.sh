@@ -77,10 +77,10 @@ compose() {
 previous_image="$($docker_bin inspect "$container_name" --format='{{.Config.Image}}' 2>/dev/null || true)"
 printf '%s\n' "$previous_image" > PREVIOUS_IMAGE
 
-log "Building application and operations images"
+log "Building application and operations images sequentially"
 build_ok=false
 for attempt in 1 2 3; do
-  if compose build app migrate; then
+  if compose build app && compose build migrate; then
     build_ok=true
     break
   fi
