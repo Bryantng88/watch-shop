@@ -1,4 +1,5 @@
 "use client";
+import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 import { useMediaDailyState } from "@/domains/watch/client/media-work/use-media-daily-state";
 
@@ -21,7 +22,6 @@ import { WorkflowStatusSignal } from "@/domains/shared/ui/signals";
 import { ProgressMetric } from "@/domains/shared/ui/progress";
 import {
   applyQueueItemManualTransitionsAction,
-  submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import {
   isOpenTargetTransition,

@@ -13,6 +13,8 @@ on:
       - 'src/app/(admin)/admin/_client/AdminShell.tsx'
       - 'scripts/seed-storefront-home-browser.ts'
       - 'scripts/smoke-storefront-home-browser.cjs'
+      - 'scripts/smoke-storefront-home-layout.mjs'
+      - 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx'
       - 'docs/design/admin-ui-language-contract.md'
       - 'src/server/auth/admin-api-policy.ts'
       - 'ops/nginx/storefront-production.conf'
@@ -45,4 +47,28 @@ jobs:
           scripts/seed-storefront-home-browser.ts
           'src/app/(legal)/privacy-policy/page.tsx'
           src/domains/storefront/ui/PublicFooter.tsx
+          src/domains/shared/ui/admin-design-contract/AdminPage.tsx
+          scripts/smoke-storefront-home-layout.mjs
       - run: npx tsc --noEmit
+
+  editor-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.62.1
+      - run: npx playwright install --with-deps chromium
+      - run: node scripts/smoke-storefront-home-layout.mjs
+        env:
+          HOME_LAYOUT_SCREENSHOT_DIR: ${{ runner.temp }}/storefront-home-layout
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: storefront-home-layout
+          path: ${{ runner.temp }}/storefront-home-layout
+          if-no-files-found: ignore

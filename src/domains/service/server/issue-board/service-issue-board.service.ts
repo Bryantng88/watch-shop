@@ -646,6 +646,8 @@ export async function completeTechnicalIssue(input: {
     }
 
     const completion = await withDbTransaction(db, async (tx) => {
+        // Serialize completion across every caller, including the operation board.
+        await tx.$queryRaw`SELECT "id" FROM "TechnicalIssue" WHERE "id" = ${id} FOR UPDATE`;
         const issue = await tx.technicalIssue.findUnique({
             where: { id },
             select: {
@@ -653,12 +655,18 @@ export async function completeTechnicalIssue(input: {
                 technicalDetailCatalogId: true,
                 executionStatus: true,
                 serviceRequestId: true,
-            } as any,
+            },
         });
 
         if (!issue) throw new Error("Không tìm thấy issue.");
+        if (issue.executionStatus === "DONE") {
+            throw new Error("Phiếu đã hoàn tất. Tải lại danh sách để kiểm tra chi phí và khoản thanh toán; không cần hoàn tất lại.");
+        }
+        if (issue.executionStatus === "CANCELED") {
+            throw new Error("Phiếu đã hủy, không thể hoàn tất xử lý.");
+        }
 
-        if (!(issue as any).technicalDetailCatalogId) {
+        if (!issue.technicalDetailCatalogId) {
             throw new Error("Issue chưa có chi tiết kỹ thuật. Vui lòng bắt đầu xử lý đúng luồng trước khi hoàn tất.");
         }
 

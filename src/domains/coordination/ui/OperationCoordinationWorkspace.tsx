@@ -1,7 +1,9 @@
 "use client";
+import { isUnknownOperationalAction } from "@/domains/task/shared/operational-action-response";
+import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 
-import { Fragment, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -20,7 +22,6 @@ import {
   CalendarClock,
   CheckCircle2,
   ClipboardList,
-  ChevronDown,
   ChevronRight,
   BookOpen,
   CreditCard,
@@ -39,8 +40,9 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
-import { operationalDomainPresentation, operationalStageIcon, operationalStagePresentation } from "@/domains/shared/ui/signals";
+import { operationalStageIcon, operationalStagePresentation } from "@/domains/shared/ui/signals";
 import {
   loadSpaceSharingAction,
   updateSpaceSharingAction,
@@ -50,7 +52,6 @@ import {
   applyQueueItemManualTransitionAction,
   changeTaskItemStatusAction,
   createTaskItemAction,
-  submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import type {
   OperationalBlueprintAction,
@@ -823,7 +824,6 @@ export default function OperationCoordinationWorkspace({
   const [workspacePage, setWorkspacePage] = useState(1);
   const [workspacePageSize, setWorkspacePageSize] = useState(10);
   const [updatingAdHocItemId, setUpdatingAdHocItemId] = useState<string | null>(null);
-  const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isViewPending, startViewTransition] = useTransition();
   const flowItemsRequestId = useRef(0);
@@ -907,10 +907,8 @@ export default function OperationCoordinationWorkspace({
 
   function changeActiveViewMode(nextModeKey: string) {
     if (nextModeKey === activeViewModeKey) {
-      setIsViewMenuOpen(false);
       return;
     }
-    setIsViewMenuOpen(false);
     startViewTransition(() => {
       setActiveViewModeKey(nextModeKey);
       setFlowItemsModeKey("");
@@ -1147,8 +1145,6 @@ export default function OperationCoordinationWorkspace({
     const params = new URLSearchParams();
     params.set("context", data.context);
     params.set("taskId", data.cycle.id);
-    const date = searchParams.get("date");
-    if (date) params.set("date", date);
     return `/api/admin/coordination/operation/flows/${encodeURIComponent(
       activeViewMode?.key ?? activeViewModeKey,
     )}?${params.toString()}`;
@@ -1157,7 +1153,6 @@ export default function OperationCoordinationWorkspace({
     activeViewModeKey,
     data.context,
     data.cycle.id,
-    searchParams,
   ]);
   const handleBoardResult = useCallback((result: unknown) => {
     const source = coordinationReadResponseSource(result);
@@ -1775,7 +1770,6 @@ export default function OperationCoordinationWorkspace({
   const canShowMediaBoard = isMediaFlowMode && Boolean(asyncMediaBoard);
   const isMediaBoardView = workTicketView === "MEDIA_BOARD" && canShowMediaBoard;
   const isOperationalBoardView = isTechnicalIssueBoardView || isMediaBoardView;
-  const HeaderDomainIcon = operationalDomainPresentation(activeCoreFlow?.key ?? activeViewMode?.key).icon;
   const technicalIssueBoardItems = useMemo(
     () => asyncTechnicalIssueBoard?.items ?? [],
     [asyncTechnicalIssueBoard?.items],
@@ -1840,12 +1834,6 @@ export default function OperationCoordinationWorkspace({
     activeViewMode?.rowModel === "WORKSPACE"
       ? emptyStateText(data.viewConfig.emptyState, "WORKSPACE")
       : emptyStateText(data.viewConfig.emptyState, activeViewMode?.rowModel);
-
-  function updateDate(date: string) {
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("date", date);
-    router.push(`/admin/coordination/${contextPath(data.context)}?${next.toString()}`);
-  }
 
   async function createWorkTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1913,10 +1901,9 @@ export default function OperationCoordinationWorkspace({
             ? modeLabel(activeViewMode)
             : data.contextLabel
       }
-      headerVariant="compact"
-      headerIcon={<HeaderDomainIcon className="h-5 w-5" />}
+      headerVariant="workspace"
       meta={
-        <span className="font-medium text-slate-600">Vận hành</span>
+        <span>{activeCoreFlow ? coreFlowDescription(activeCoreFlow) : activeViewMode ? displayText(activeViewMode.description) : "Theo dõi và xử lý công việc vận hành."}</span>
       }
       actions={
         <div className="flex items-center gap-2">
@@ -1937,81 +1924,28 @@ export default function OperationCoordinationWorkspace({
           }}
         />
         {adHocWorkCreate.modal}
-        <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.055)]">
-          <div className="border-b border-slate-200 px-5 py-4">
+        <section className="min-w-0 max-w-full bg-white">
+          <div className="border-b border-slate-100 pb-4">
             {activeViewMode ? (
-              <div className="rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]">
-                <div className="grid gap-4 xl:grid-cols-[minmax(320px,1fr)_auto] xl:items-center">
+              <div className="text-xs text-slate-700">
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="m-0 text-lg font-extrabold text-[#07113d]">
-                        {activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}
-                      </h2>
-                      <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-0.5 font-semibold text-violet-700">
-                        {activeViewMode.key === data.viewConfig.defaultModeKey ? "Mặc định" : "View"}
-                      </span>
                       {data.viewConfig.modes.length > 1 ? (
-                        <div
-                          className="relative ml-1"
-                          onBlur={(event) => {
-                            if (!event.currentTarget.contains(event.relatedTarget)) {
-                              setIsViewMenuOpen(false);
-                            }
-                          }}
-                        >
-                          <button
-                            type="button"
+                        <label className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                          Chế độ xem
+                          <select
                             aria-label="Chế độ xem Space"
-                            aria-haspopup="listbox"
-                            aria-expanded={isViewMenuOpen}
-                            onClick={() => setIsViewMenuOpen((open) => !open)}
-                            className="inline-flex h-8 min-w-48 items-center justify-between gap-3 rounded-md border border-violet-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm outline-none transition duration-150 hover:border-violet-300 hover:bg-violet-50/40 focus-visible:ring-2 focus-visible:ring-violet-200"
+                            value={activeViewMode.key}
+                            disabled={isViewPending}
+                            onChange={(event) => changeActiveViewMode(event.target.value)}
+                            className="h-10 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 disabled:opacity-50"
                           >
-                            <span>{modeLabel(activeViewMode)}</span>
-                            {isViewPending ? (
-                              <LoaderCircle className="h-3.5 w-3.5 animate-spin text-violet-500" />
-                            ) : (
-                              <ChevronDown className={cn("h-3.5 w-3.5 text-slate-400 transition-transform duration-150", isViewMenuOpen && "rotate-180")} />
-                            )}
-                          </button>
-                          <div
-                            role="listbox"
-                            aria-label="Chế độ xem Space"
-                            className={cn(
-                              "absolute left-0 top-full z-40 mt-1.5 min-w-full origin-top overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-[0_12px_30px_rgba(15,23,42,0.14)] transition duration-150",
-                              isViewMenuOpen
-                                ? "visible translate-y-0 scale-100 opacity-100"
-                                : "invisible -translate-y-1 scale-[0.98] opacity-0",
-                            )}
-                          >
-                            {data.viewConfig.modes.map((mode) => {
-                              const selected = mode.key === activeViewMode.key;
-                              return (
-                                <button
-                                  key={mode.key}
-                                  type="button"
-                                  role="option"
-                                  aria-selected={selected}
-                                  onClick={() => changeActiveViewMode(mode.key)}
-                                  className={cn(
-                                    "flex w-full items-center justify-between gap-4 whitespace-nowrap rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors",
-                                    selected
-                                      ? "bg-violet-50 text-violet-700"
-                                      : "text-slate-700 hover:bg-slate-50",
-                                  )}
-                                >
-                                  <span>{modeLabel(mode)}</span>
-                                  {selected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
+                            {data.viewConfig.modes.map((mode) => <option key={mode.key} value={mode.key}>{modeLabel(mode)}</option>)}
+                          </select>
+                        </label>
                       ) : null}
                     </div>
-                    <p className="mt-2 text-sm text-[#6f7a96]">
-                      {activeCoreFlow ? coreFlowDescription(activeCoreFlow) : displayText(activeViewMode.description)}
-                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -2019,7 +1953,7 @@ export default function OperationCoordinationWorkspace({
                       <button
                         type="button"
                         onClick={adHocWorkCreate.open}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo việc</span>
@@ -2045,7 +1979,7 @@ export default function OperationCoordinationWorkspace({
                       <button
                         type="button"
                         onClick={() => setIsMediaPostCreateOpen((value) => !value)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo Media Post</span>
@@ -2060,7 +1994,7 @@ export default function OperationCoordinationWorkspace({
                           setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
                           setIsCreateFormOpen(true);
                         }}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Workspace</span>
@@ -2139,9 +2073,6 @@ export default function OperationCoordinationWorkspace({
               <SpaceFilterBar
                 frameless
                 filterBadgeCount={unreadMentionBadgeCount}
-                weekValue={data.timeRange.periodKey}
-                weekOptions={data.filters.weekOptions}
-                dateValue={data.filters.selectedDate}
                 searchValue={filterQuery}
                 searchPlaceholder={isOperationalBoardView
                   ? "Tìm item, mã tham chiếu..."
@@ -2272,11 +2203,6 @@ export default function OperationCoordinationWorkspace({
                     },
                   }] : []),
                 ]}
-                onWeekChange={(value) => {
-                  const option = data.filters.weekOptions.find((item) => item.value === value);
-                  if (option) updateDate(option.date);
-                }}
-                onDateChange={updateDate}
               >
                 {isTechnicalIssueBoardView ? (
                   <TechnicalIssueBoardControlStrip
@@ -2304,91 +2230,33 @@ export default function OperationCoordinationWorkspace({
                 />
               </SpaceFilterBar>
               {!isOperationalBoardView && isTaskItemListMode ? (
-                <div className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5" aria-label="Lọc theo trạng thái công việc">
-                  {(activeViewMode.taskItemStages ?? []).map((stage, index) => {
-                    const isActive = stage.key === activeTaskItemStage;
-                    return (
-                      <Fragment key={stage.key}>
-                        {index > 0 ? <ChevronRight className="mx-1.5 h-4 w-4 shrink-0 text-violet-300" strokeWidth={1.5} /> : null}
-                        <button
-                          type="button"
-                          onClick={() => changeTaskItemStage(stage.key)}
-                          aria-current={isActive ? "step" : undefined}
-                          className={cn(
-                            "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200",
-                            isActive ? "border-violet-300 bg-violet-50 text-violet-700 shadow-sm" : "border-transparent text-slate-500 hover:border-slate-200 hover:bg-white/80 hover:text-slate-800",
-                          )}
-                        >
-                          <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold", isActive ? "bg-violet-600 text-white" : "bg-slate-200 text-slate-600")}>{index + 1}</span>
-                          <span className="min-w-0">
-                            <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70">Bước {index + 1}</span>
-                            <span className="block truncate text-xs font-semibold">{stage.label}</span>
-                          </span>
-                          <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold", isActive ? "bg-violet-100 text-violet-700" : "bg-slate-100 text-slate-500")}>{taskItemStageCounts[stage.key]}</span>
-                        </button>
-                      </Fragment>
-                    );
-                  })}
-                </div>
+                <AdminViewTabs
+                  className="mt-3"
+                  density="comfortable"
+                  label="Lọc theo trạng thái công việc"
+                  value={activeTaskItemStage}
+                  onValueChange={changeTaskItemStage}
+                  items={(activeViewMode.taskItemStages ?? []).map((stage) => ({
+                    value: stage.key,
+                    label: stage.label,
+                    count: taskItemStageCounts[stage.key],
+                  }))}
+                />
               ) : null}
               {!isOperationalBoardView && orderedFlowStages.length ? (
-                <div
-                  className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5"
-                  aria-label="Lọc theo bước"
-                >
-                  {orderedFlowStages.map((stage, index) => {
-                    const isActive = stage.key === activeFlowListStage;
-                    return (
-                      <Fragment key={stage.key}>
-                      {index > 0 ? (
-                        <span
-                          aria-hidden="true"
-                          className="mx-1.5 flex w-3 shrink-0 items-center justify-center text-violet-300"
-                        >
-                          <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
-                        </span>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => changeFlowListStage(stage.key)}
-                        aria-current={isActive ? "step" : undefined}
-                        className={cn(
-                          "group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-200",
-                          isActive
-                            ? "border-violet-300 bg-violet-50 text-violet-700 shadow-sm"
-                            : "border-transparent text-slate-500 hover:border-slate-200 hover:bg-white/80 hover:text-slate-800",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors duration-200",
-                            isActive
-                              ? "bg-violet-600 text-white"
-                              : "bg-slate-200 text-slate-600 group-hover:bg-slate-300",
-                          )}
-                        >
-                          {index + 1}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-[10px] font-bold uppercase tracking-wide opacity-70">
-                            Bước {index + 1}
-                          </span>
-                          <span className="block truncate text-xs font-semibold">{stage.label}</span>
-                        </span>
-                        <span className={cn(
-                          "ml-auto shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
-                          isActive
-                            ? "bg-violet-100 text-violet-700"
-                            : "bg-slate-100 text-slate-500",
-                        )}>
-                          {flowListStageCounts.get(stage.key) ??
-                            (isActive && isFlowItemsLoading ? "…" : "—")}
-                        </span>
-                      </button>
-                      </Fragment>
-                    );
-                  })}
-                </div>
+                <AdminViewTabs
+                  className="mt-3"
+                  density="comfortable"
+                  label="Lọc theo giai đoạn vận hành"
+                  value={activeFlowListStage}
+                  onValueChange={changeFlowListStage}
+                  items={orderedFlowStages.map((stage) => ({
+                    value: stage.key,
+                    label: stage.label,
+                    count: flowListStageCounts.get(stage.key) ??
+                      (stage.key === activeFlowListStage && isFlowItemsLoading ? "…" : "—"),
+                  }))}
+                />
               ) : null}
             </div>
             {isCreateFormOpen && selectedBlueprint ? (
@@ -2857,7 +2725,7 @@ export default function OperationCoordinationWorkspace({
               </button>
             }
           >
-            Gợi ý: kéo thả để đổi thứ tự stage. Nhấp vào Workspace để xem chi tiết item và hoạt động.
+            Chọn cách hiển thị hoặc giai đoạn để xem item. Mở Workspace để xem chi tiết và hoạt động.
           </SpaceViewFooterTip>
         </section>
         {isTechnicalIntakeOpen ? (
@@ -3538,6 +3406,8 @@ function TechnicalIssueBoardView({
   const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
   const [additionalIssues, setAdditionalIssues] = useState<TechnicalBoardAdditionalIssue[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [moveUncertain, setMoveUncertain] = useState(false);
+  const moveInFlight = useRef(false);
   const [priorityIssueId, setPriorityIssueId] = useState<string | null>(null);
   const [boardItems, setBoardItems] = useState(items);
   const [isMovePending, startMoveTransition] = useTransition();
@@ -3597,6 +3467,8 @@ function TechnicalIssueBoardView({
     issueId: string,
     droppedStage: TechnicalIssueBoardStage,
   ) {
+    if (moveInFlight.current) return;
+    setMoveUncertain(false);
     const item = visibleItems.find((candidate) => candidate.id === issueId) ?? null;
     setOverStage(null);
 
@@ -3638,7 +3510,7 @@ function TechnicalIssueBoardView({
   }
 
   function submitMove() {
-    if (!moveRequest?.action) return;
+    if (!moveRequest?.action || moveInFlight.current || moveUncertain) return;
     const { item, action, targetStage } = moveRequest;
     if (!item.workspaceTaskItemId) {
       setMoveError("TI này chưa có Workspace stage hiện tại nên không thể đóng bộ workflow.");
@@ -3702,8 +3574,10 @@ function TechnicalIssueBoardView({
       steps: moveProgressSteps,
     });
 
+    moveInFlight.current = true;
     setMoveError(null);
     startMoveTransition(async () => {
+      let committed = false;
       try {
         const deliveryResults: unknown[] = [];
         deliveryResults.push(await submitOperationalBlueprintActionAction({
@@ -3713,6 +3587,7 @@ function TechnicalIssueBoardView({
           targetId: item.id,
           fields: actionFields,
         }));
+        committed = true;
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "move" ? { ...step, status: "done" } : step);
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" && normalizedAdditionalIssues.length ? { ...step, status: "running" } : step);
         progress.update({ message: "Đã chuyển stage, đang xử lý dữ liệu liên quan.", percent: normalizedAdditionalIssues.length ? 55 : 75, steps: moveProgressSteps });
@@ -3794,17 +3669,21 @@ function TechnicalIssueBoardView({
         progress.update({ message: "Đã cập nhật card. Board đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
         window.setTimeout(() => progress.hide(), 1000);
       } catch (error) {
+        setMoveUncertain(committed || isUnknownOperationalAction(error));
         moveProgressSteps = moveProgressSteps.map((step) => step.status === "running" ? { ...step, status: "error" } : step);
         progress.update({ message: error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.", steps: moveProgressSteps });
         window.setTimeout(() => progress.hide(), 1400);
         setMoveError(
           error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.",
         );
+      } finally {
+        moveInFlight.current = false;
       }
     });
   }
 
   function submitCostApproval() {
+    if (moveInFlight.current || moveUncertain) return;
     if (!moveRequest?.action || moveRequest.action.command !== "service.completeTechnicalIssue") return;
     const actualCost = Number(moveValues.actualCost);
     if (!Number.isFinite(actualCost) || actualCost < 0) {
@@ -3812,6 +3691,7 @@ function TechnicalIssueBoardView({
       return;
     }
 
+    moveInFlight.current = true;
     setMoveError(null);
     startCostApprovalTransition(async () => {
       try {
@@ -3835,6 +3715,8 @@ function TechnicalIssueBoardView({
         await onReloadRequested();
       } catch (error) {
         setMoveError(error instanceof Error ? error.message : "Không thể gửi duyệt chi phí.");
+      } finally {
+        moveInFlight.current = false;
       }
     });
   }
@@ -3910,6 +3792,16 @@ function TechnicalIssueBoardView({
         values={moveValues}
         additionalIssues={additionalIssues}
         error={moveError}
+        uncertain={moveUncertain}
+        onReconcile={() => startMoveTransition(async () => {
+          try {
+            await onReloadRequested();
+            setMoveRequest(null);
+            setMoveUncertain(false);
+          } catch {
+            setMoveError("Chưa tải được danh sách mới. Giữ nguyên thông tin và thử tải lại; không gửi hoàn tất lần nữa.");
+          }
+        })}
         pending={isMovePending || isCostApprovalPending}
         costApprovalPending={isCostApprovalPending}
         vendorOptions={vendorOptions}
@@ -4595,6 +4487,8 @@ function TechnicalIssueBoardMoveModal({
   values,
   additionalIssues,
   error,
+  uncertain,
+  onReconcile,
   pending,
   costApprovalPending,
   vendorOptions,
@@ -4609,6 +4503,8 @@ function TechnicalIssueBoardMoveModal({
   values: Record<string, TechnicalBoardFieldValue>;
   additionalIssues: TechnicalBoardAdditionalIssue[];
   error: string | null;
+  uncertain: boolean;
+  onReconcile: () => void;
   pending: boolean;
   costApprovalPending: boolean;
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
@@ -4631,10 +4527,10 @@ function TechnicalIssueBoardMoveModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+      <div role="dialog" aria-modal="true" aria-labelledby="technical-board-move-title" className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-950">
+            <div id="technical-board-move-title" className="text-sm font-semibold text-slate-950">
               {action?.label ?? "Không thể chuyển trạng thái"}
             </div>
             <div className="mt-1 truncate text-xs text-slate-500">
@@ -4654,7 +4550,7 @@ function TechnicalIssueBoardMoveModal({
           className="space-y-4 px-5 py-5"
           onSubmit={(event) => {
             event.preventDefault();
-            onSubmit();
+            if (!pending && !uncertain) onSubmit();
           }}
         >
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
@@ -4775,8 +4671,9 @@ function TechnicalIssueBoardMoveModal({
             </div>
           ) : null}
           {error ? (
-            <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+            <div role="alert" className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
               {error}
+              {uncertain && <button type="button" disabled={pending} onClick={onReconcile} className="mt-2 block min-h-11 rounded-lg border border-rose-200 bg-white px-3 font-semibold disabled:opacity-50">Tải lại danh sách để kiểm tra</button>}
             </div>
           ) : null}
           <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
@@ -4792,7 +4689,7 @@ function TechnicalIssueBoardMoveModal({
               {action?.command === "service.completeTechnicalIssue" ? (
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={pending || uncertain}
                   onClick={onRequestCostApproval}
                   className="inline-flex h-9 items-center rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -4801,7 +4698,7 @@ function TechnicalIssueBoardMoveModal({
               ) : null}
               <button
                 type="submit"
-                disabled={pending || !action}
+                disabled={pending || uncertain || !action}
                 className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {pending && !costApprovalPending ? "Đang xử lý" : action ? technicalBoardSubmitLabel(action) : "Không khả dụng"}
