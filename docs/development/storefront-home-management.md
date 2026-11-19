@@ -62,8 +62,8 @@ checking. Never use production credentials for this script.
 
 The editor follows docs/design/admin-ui-language-contract.md and the shared
 mutation-feedback contract: white flat canvas/header/toolbar, section list on the
-left and one active editor on the right, natural stacking on mobile, compact image
-notes with direct section actions, low-frequency link/focal controls collapsed,
+left and one active editor on the right, natural stacking on mobile, conditional image
+helpers beside the relevant image selector, low-frequency link/focal controls collapsed,
 keyed pending states and accessible async buttons. Expanded navigation pushes the
 workspace rather than covering its controls. Reports is one menu with the same
 three authorized destination links; child permissions and direct route policies
@@ -71,7 +71,7 @@ remain unchanged. No content, assets or production publication is changed merely
 by deploying these presentation improvements.
 
 
-Verified locally for this revision: 27 content/catalog/shared tests, scoped ESLint,
+Original implementation validation (#71): 27 content/catalog/shared tests, scoped ESLint,
 TypeScript and production build passed. Real Chromium exercised both synthetic
 accounts, section edits surviving switching, keyboard file chooser with a fixture
 upload response, failed-save preservation/retry, desktop/mobile private preview,
@@ -81,3 +81,23 @@ API/media/preview replies are fixtures; unit tests cover server publication rule
 No live object-storage or production mutation was performed. Cleanup accounts with
 `node --import tsx scripts/seed-storefront-home-browser.ts --cleanup` against the
 same loopback test database, then stop the temporary app/database.
+
+
+The document action row uses `AdminFlatToolbar variant="actions"`: a flat white
+row with a bottom divider, saved state/revision on the left and draft/preview/publish
+actions on the right. Its default `filters` variant remains unchanged for grouped
+controls. On the dedicated Home route, the repeated “Trang chủ” title is omitted.
+Image fallback guidance belongs beside the corresponding image selector, linked
+through aria-describedby and visible only for an empty slot. There is no aggregate
+image-guidance block above the editor. Optional-image fallback/publication rules
+remain unchanged.
+
+Run `node scripts/smoke-storefront-home-layout.mjs` with installed Playwright and
+Chromium for a standalone, synthetic-HTTP regression of the real editor/shared
+primitives. `BEN_PWA_CHROMIUM` selects a local Chromium executable;
+`PLAYWRIGHT_MODULE_PATH` may point to a Playwright module when it is not installed
+locally. `HOME_LAYOUT_SCREENSHOT_DIR` optionally captures screenshots. This suite
+needs no auth token/database: it checks contextual hints, accessible associations,
+flat actions, draft preservation, save failure/retry, private preview versus explicit
+publication, and 320/390/768/1280/1440px layouts. It does not replace authenticated
+routing, live object-storage or server publication acceptance.

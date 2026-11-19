@@ -69,7 +69,14 @@ const fs = require("fs/promises"),
     );
     await page.goto("http://127.0.0.1:3016/admin/storefront/home");
     await page.getByRole("heading", { name: "Trang chủ website", exact: true }).waitFor();
-    await page.getByText(/lưu ý về cách hiển thị ảnh/).waitFor();
+    assert.equal(await page.getByText(/lưu ý về cách hiển thị ảnh/).count(), 0);
+    const actionBar = page.locator(".sfc-document-actions");
+    await actionBar.waitFor();
+    assert.deepEqual(await actionBar.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return [style.backgroundColor, style.borderTopWidth, style.borderRadius];
+    }), ["rgb(255, 255, 255)", "0px", "0px"]);
+    assert.equal(await actionBar.getByText("Trang chủ", { exact: true }).count(), 0);
     const sectionNav=page.getByRole("region",{name:"Các khối trang chủ"});
     assert.equal(await sectionNav.locator(".sfc-section-row").count(),6);
     assert.equal(await page.locator(".sfc-section-editor:visible").count(),1);
@@ -84,7 +91,10 @@ const fs = require("fs/promises"),
     await page.waitForFunction(value=>document.querySelector('select[aria-label="Chọn Ảnh desktop"]').value===value,uploadedKey);
     await page.getByLabel("Chọn Ảnh desktop", { exact: true }).selectOption(key);
     await sectionNav.getByRole("button",{name:/^Về Vintic/}).click();
+    await page.locator("#home-editor-about").getByText("Ảnh không bắt buộc. Chưa chọn ảnh: phần giới thiệu hiển thị dạng văn bản gọn.", { exact: true }).waitFor();
     await page.locator("#home-editor-about").getByLabel("Tiêu đề",{exact:true}).fill("Nội dung giới thiệu đã sửa");
+    await sectionNav.getByRole("button", { name: /^Bộ sưu tập/ }).click();
+    await page.locator("#home-editor-collections").getByText("Ảnh không bắt buộc. Chưa chọn ảnh: nhóm hiển thị thành liên kết gọn.", { exact: true }).first().waitFor();
     assert.equal(await page.locator(".sfc-section-editor:visible").count(),1);
     await sectionNav.getByRole("button",{name:/^Ảnh mở đầu/}).click();
     assert.equal(await page.getByLabel("Tông màu khối mở đầu").inputValue(),"charcoal");
@@ -97,7 +107,8 @@ const fs = require("fs/promises"),
     assert.equal(await page.getByRole("link",{name:"Tài chính",exact:true}).count(),1);
     await page.keyboard.press("Escape");assert.equal(await reports.getAttribute("aria-expanded"),"false");
     await page.getByRole("button",{name:"Mở rộng thanh điều hướng",exact:true}).click();
-    await reports.click();await page.getByRole("link",{name:"Bán hàng & truy cập",exact:true}).waitFor();
+    if(await reports.getAttribute("aria-expanded")!=="true")await reports.click();
+    await page.getByRole("link",{name:"Bán hàng & truy cập",exact:true}).waitFor();
     await reports.click();
     const left=await sectionNav.boundingBox();assert.ok(left.x>=240,"expanded sidebar must not cover the editor");
     failNextSave=true;
@@ -142,7 +153,8 @@ const fs = require("fs/promises"),
     await page.screenshot({path:process.env.HOME_EDITOR_MOBILE_SCREENSHOT||"/tmp/storefront-home-mobile.png",fullPage:true});
     // Mobile nav exposes the same grouped reports, with readable labels.
     await page.getByRole("button",{name:"Menu",exact:true}).click();
-    await page.getByRole("button",{name:"Báo cáo",exact:true}).click();
+    const mobileReports=page.getByRole("button",{name:"Báo cáo",exact:true});
+    if(await mobileReports.getAttribute("aria-expanded")!=="true")await mobileReports.click();
     await page.getByRole("link",{name:"Tài chính",exact:true}).waitFor();
     await page.getByRole("button",{name:"Close menu",exact:true}).click();
     const restricted=await browser.newContext({viewport:{width:1440,height:1000}});
