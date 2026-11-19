@@ -6,7 +6,7 @@ import { AsyncActionButton } from "../mutation/AsyncActionButton";
 import styles from "./AdminManagement.module.css";
 export { styles as ADMIN_MANAGEMENT };
 
-export function AdminManagementPage({ title, eyebrow, description, actions, children }: { title: string; eyebrow: string; description?: string; actions?: ReactNode; children: ReactNode }) {
+export function AdminManagementPage({ title, eyebrow, description, actions, children }: { title: string; eyebrow?: string; description?: string; actions?: ReactNode; children: ReactNode }) {
   const variables = {
     "--am-font": f.fontFamily, "--am-text": f.colors.text, "--am-body": f.colors.body, "--am-muted": f.colors.muted,
     "--am-line": f.colors.divider, "--am-border": f.colors.controlBorder, "--am-soft": f.colors.softSurface,
@@ -21,6 +21,13 @@ export function AdminManagementPage({ title, eyebrow, description, actions, chil
       {children}
     </div></AdminPageCanvas>
   </div>;
+}
+/** A workspace pane owns its heading/actions; the surrounding page owns padding. */
+export function AdminManagementSection({ title, description, actions, children }: { title: string; description?: string; actions?: ReactNode; children: ReactNode }) {
+  return <section className={styles.flow} aria-label={title}>
+    <div className={styles.sectionHeader}><div><h2 className={styles.sectionTitle}>{title}</h2>{description && <p className={styles.metadata}>{description}</p>}</div>{actions && <div className={styles.actions}>{actions}</div>}</div>
+    {children}
+  </section>;
 }
 export function AdminManagementButton({ primary, pending, pendingLabel, className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; pending?: boolean; pendingLabel?: string }) {
   return <AsyncActionButton type="button" className={`${styles.button} ${primary ? styles.primary : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} {...props} />;

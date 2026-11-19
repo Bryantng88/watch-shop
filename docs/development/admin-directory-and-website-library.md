@@ -1,9 +1,25 @@
 # Contact directory and website image library
 
-Routes: `/admin/customers`, `/admin/vendors`, `/admin/storefront/media`.
-The sidebar groups customers/vendors under Danh bạ and website images under
-Storefront. Pages use the shared, opt-in AdminManagement adapter backed by the
-v2 foundation and the existing canvas/header; other admin pages keep their styles.
+Routes: `/admin/directory` selects the first permitted destination among
+`/admin/users`, `/admin/customers` and `/admin/vendors`. The original URLs,
+search parameters and user APIs remain intact. The sidebar has one Danh bạ
+link (including active state for all those routes), with Người dùng / Khách hàng /
+Nhà cung cấp in its left workspace menu. There is no duplicate Users in System.
+The right pane owns the list heading, create action, search and flat rows.
+Users retain existing USER_VIEW/MANAGE read and CREATE/UPDATE/MANAGE write
+capabilities; write-only grants do not imply permission to open the list.
+
+Shared AdminSplitWorkspace uses the exact geometry/hook introduced in open
+PR #124: 280px sidebar including 16px inset, 28px gap, no containment, native
+selector below 960px available width. Only the small foundation property and
+shared adapter are reused; Operations/Home changes from #124 are not copied.
+Wide links and native selection follow the same route/draft guard. Unsaved
+contact and user edits require discard confirmation and pending saves block
+conflicting navigation. User-list shell/rows migrate here; its existing role
+editor/drawer presentation remains legacy and is not claimed as fully v2.
+
+Website images stay under Storefront at `/admin/storefront/media`. Pages use the shared, opt-in AdminManagement adapter backed by the
+v2 foundation and the existing canvas/header; unrelated admin pages keep their styles.
 Directory rows are flat, forms expand inline, and small screens stack the fields.
 The new adapter narrowly overrides the legacy `.admin-ui form` control reset;
 it does not remove or change that reset for existing forms.
@@ -51,7 +67,9 @@ valid. Private signed previews can be renewed with Làm mới.
 - `node scripts/check-admin-management-ui.mjs`: actual clients/shared components
   and current global CSS with synthetic HTTP/provider ports. Covers paging/search,
   dirty cancel, save failure/retry, readonly, upload failure/retry, folder paging,
-  older-image Home handoff and focus without saves. Checks 320/390/768/1280/1440px.
+  older-image Home handoff and focus without saves. Also covers unified directory
+  navigation, read permissions, user-list layouts, dirty native selection and user
+  draft close cancellation. Checks 320/390/768/1280/1440px.
   Optional PLAYWRIGHT_MODULE_PATH, BEN_PWA_CHROMIUM and MANAGEMENT_SCREENSHOT_DIR
   select local tooling/captures. Screenshots contain only synthetic fixture data.
 - `.github/workflows/admin-management.yml` runs scoped lint, full TypeScript,

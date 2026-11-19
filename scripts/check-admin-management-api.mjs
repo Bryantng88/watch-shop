@@ -88,3 +88,13 @@ response=await upload.POST(uploadRequest('hero'));assert.equal(response.status,2
 state.user={roles:[],permissions:['PRODUCT_VIEW']};assert.equal((await upload.POST(uploadRequest('hero'))).status,403);
 const policy=await load('src/server/auth/admin-api-policy.ts');assert.ok(policy.getAdminApiPolicy('/api/admin/contacts','GET'));assert.ok(policy.getAdminPagePolicy('/admin/vendors'));assert.deepEqual(Array.from(policy.getAdminPagePolicy('/admin/storefront/media').anyOf),['PRODUCT_UPDATE']);assert.deepEqual(Array.from(policy.getAdminApiPolicy('/api/admin/storefront/media','POST').anyOf),['PRODUCT_UPDATE']);
 console.log('PASS actual APIs with synthetic DB/storage: per-directory auth and write gates, strict fields, paging, duplicate phone, stale-update fencing and field preservation; website-only keys, folder validation, cursors and legacy/default+Hero upload conversion. No real database/storage writes or production data.');
+
+const navigation=await load('src/domains/contacts/shared/directory-navigation.ts');
+assert.deepEqual(Array.from(navigation.directoryEntries({roles:[],permissions:[]})),[]);
+for(const [permissions,href] of [[['USER_VIEW'],'/admin/users'],[['USER_MANAGE'],'/admin/users'],[['CUSTOMER_VIEW'],'/admin/customers'],[['PRODUCT_VIEW'],'/admin/vendors']]){
+ assert.deepEqual(Array.from(navigation.directoryEntries({roles:[],permissions})).map(i=>i.href),[href]);
+}
+assert.equal(navigation.directoryEntries({roles:['ADMIN'],permissions:[]}).length,3);
+assert.equal(navigation.directoryEntries({roles:[],permissions:['USER_CREATE','USER_UPDATE']}).length,0,'write grants do not imply existing user list read access');
+assert.deepEqual(Array.from(policy.getAdminPagePolicy('/admin/directory').anyOf),Array.from(navigation.DIRECTORY_READ_PERMISSIONS));
+console.log('PASS directory navigation: existing read grants, ADMIN bypass and destination policy agreement.');

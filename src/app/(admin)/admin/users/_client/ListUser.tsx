@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, KeyRound, Pencil, Plus, Search, Shield, UserRound, X } from "lucide-react";
+import { Check, KeyRound, Plus, Shield, X } from "lucide-react";
 
+import { AdminManagementSection, AdminManagementButton as Button, ADMIN_MANAGEMENT as s } from "@/domains/shared/ui/admin-design-contract/AdminManagement";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 
 type Role = { id: string; name: string; description: string | null; permissions: string[] };
@@ -39,12 +41,7 @@ type PageProps = {
 };
 
 function dateText(value: string) {
-    return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-}
-
-function initials(user: UserItem) {
-    const source = user.name?.trim() || user.email;
-    return source.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+    return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(value));
 }
 
 function paramsFromRecord(raw: PageProps["rawSearchParams"]) {
@@ -134,12 +131,40 @@ export default function UserListPageClient(props: PageProps) {
     const { items, roles, total, page, totalPages, rawSearchParams, canCreate, canUpdate, canManageRoles } = props;
     const router = useRouter();
     const notify = useNotify();
+    const dialog = useAppDialog();
     const [editor, setEditor] = useState<EditorState | null>(() =>
-        rawSearchParams.create === "1"
+        canCreate && rawSearchParams.create === "1"
             ? { email: "", name: "", password: "", roleIds: roles[0] ? [roles[0].id] : [], isActive: true }
             : null
     );
     const [busy, setBusy] = useState(false);
+    const busyRef = useRef(false);
+    const initial = useRef(JSON.stringify(editor));
+    const dirty = editor !== null && JSON.stringify(editor) !== initial.current;
+    const canLeave = useCallback(async () => !busyRef.current && (!dirty || await dialog.confirm({ title: "Bỏ thay đổi chưa lưu?", message: "Thông tin người dùng đang sửa chưa được lưu.", confirmText: "Bỏ thay đổi", cancelText: "Tiếp tục sửa" })), [dirty, dialog]);
+    useEffect(() => {
+        if (!dirty) return;
+        const guard = (event: BeforeUnloadEvent) => event.preventDefault();
+        window.addEventListener("beforeunload", guard);
+        return () => window.removeEventListener("beforeunload", guard);
+    }, [dirty]);
+    useEffect(() => {
+        if (!editor) return;
+        const navigate = (event: MouseEvent) => {
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
+            const link = event.target.closest<HTMLAnchorElement>("a[href]");
+            if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+            const destination = new URL(link.href, location.href);
+            if (destination.origin !== location.origin || (destination.pathname === location.pathname && destination.search === location.search)) return;
+            event.preventDefault(); event.stopImmediatePropagation();
+            void (async () => { if (await canLeave()) { setEditor(null); router.push(destination.pathname + destination.search + destination.hash); } })();
+        };
+        document.addEventListener("click", navigate, true);
+        return () => document.removeEventListener("click", navigate, true);
+    }, [editor, canLeave, router]);
+    function openEditor(value: EditorState) { initial.current = JSON.stringify(value); setEditor(value); }
+    async function closeEditor() { if (await canLeave()) setEditor(null); }
+
     const currentQuery = Array.isArray(rawSearchParams.q) ? rawSearchParams.q[0] : rawSearchParams.q;
 
     function pageHref(nextPage: number) {
@@ -149,20 +174,20 @@ export default function UserListPageClient(props: PageProps) {
     }
 
     function createUser() {
-        setEditor({ email: "", name: "", password: "", roleIds: roles[0] ? [roles[0].id] : [], isActive: true });
+        openEditor({ email: "", name: "", password: "", roleIds: roles[0] ? [roles[0].id] : [], isActive: true });
     }
 
     function editUser(user: UserItem) {
-        setEditor({ id: user.id, email: user.email, name: user.name ?? "", password: "", roleIds: user.roles.map((role) => role.id), isActive: user.isActive });
+        openEditor({ id: user.id, email: user.email, name: user.name ?? "", password: "", roleIds: user.roles.map((role) => role.id), isActive: user.isActive });
     }
 
     async function saveUser() {
-        if (!editor) return;
+        if (!editor || busyRef.current) return;
         if (!editor.email.trim() || (!editor.id && editor.password.length < 8) || !editor.roleIds.length) {
             notify.error("Vui lòng nhập email, mật khẩu hợp lệ và chọn ít nhất một role");
             return;
         }
-        setBusy(true);
+        busyRef.current = true; setBusy(true);
         try {
             const response = await fetch(editor.id ? `/api/admin/users/${editor.id}` : "/api/admin/users", {
                 method: editor.id ? "PATCH" : "POST",
@@ -177,37 +202,29 @@ export default function UserListPageClient(props: PageProps) {
         } catch (error) {
             notify.error(error instanceof Error ? error.message : "Không thể lưu người dùng");
         } finally {
-            setBusy(false);
+            busyRef.current = false; setBusy(false);
         }
     }
 
-    return (
-        <div className="min-h-full bg-slate-50/60">
-            <header className="border-b bg-white px-5 py-5 lg:px-7">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div><h1 className="text-xl font-semibold text-slate-950">Người dùng</h1><p className="mt-1 text-sm text-slate-500">Quản lý tài khoản, trạng thái và quyền truy cập nội bộ.</p></div>
-                    <div className="flex gap-2">
-                        {canManageRoles ? <Link href="/admin/users/roles" className="inline-flex h-10 items-center gap-2 rounded-md border bg-white px-3 text-sm font-medium hover:bg-slate-50"><Shield size={16} /> Role & quyền</Link> : null}
-                        {canCreate ? <button type="button" onClick={createUser} className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-medium text-white"><Plus size={16} /> Tạo người dùng</button> : null}
-                    </div>
-                </div>
-                <form action="/admin/users" className="mt-5 flex max-w-xl gap-2"><div className="relative flex-1"><Search className="absolute left-3 top-2.5 text-slate-400" size={17} /><input name="q" defaultValue={currentQuery ?? ""} className="h-10 w-full rounded-md border bg-white pl-10 pr-3 text-sm outline-none focus:border-slate-500" placeholder="Tìm theo tên, email hoặc role" /></div><button className="h-10 rounded-md border bg-white px-4 text-sm font-medium">Tìm</button>{currentQuery ? <Link href="/admin/users" className="grid h-10 w-10 place-items-center rounded-md border bg-white" title="Xóa bộ lọc"><X size={16} /></Link> : null}</form>
-            </header>
-
-            <main className="px-5 py-5 lg:px-7">
-                <div className="overflow-hidden rounded-md border bg-white">
-                    <div className="grid grid-cols-[minmax(260px,1.4fr)_minmax(190px,1fr)_120px_170px_52px] gap-4 border-b bg-slate-50 px-4 py-3 text-xs font-semibold uppercase text-slate-500"><span>Tài khoản</span><span>Role</span><span>Trạng thái</span><span>Cập nhật</span><span /></div>
-                    {items.length ? items.map((user) => <div key={user.id} className="grid grid-cols-[minmax(260px,1.4fr)_minmax(190px,1fr)_120px_170px_52px] items-center gap-4 border-b px-4 py-3 last:border-0 hover:bg-slate-50/70">
-                        <div className="flex min-w-0 items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-slate-100 text-xs font-bold text-slate-600">{initials(user)}</span><span className="min-w-0"><b className="block truncate text-sm text-slate-900">{user.name || "Chưa đặt tên"}</b><span className="block truncate text-xs text-slate-500">{user.email}</span></span></div>
-                        <div className="flex flex-wrap gap-1.5">{user.roles.map((role) => <span key={role.id} className="rounded border bg-white px-2 py-1 text-xs font-medium text-slate-700">{role.name}</span>)}</div>
-                        <span className={`w-fit rounded px-2 py-1 text-xs font-semibold ${user.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{user.isActive ? "Hoạt động" : "Đã khóa"}</span>
-                        <span className="text-xs text-slate-500">{dateText(user.updatedAt)}</span>
-                        {canUpdate ? <button type="button" onClick={() => editUser(user)} className="grid h-9 w-9 place-items-center rounded-md border text-slate-600 hover:bg-white" title="Chỉnh sửa người dùng"><Pencil size={15} /></button> : null}
-                    </div>) : <div className="grid place-items-center py-16 text-center"><UserRound className="mb-3 text-slate-300" size={32} /><p className="text-sm font-medium text-slate-700">Không tìm thấy người dùng</p></div>}
-                </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-slate-500"><span>{total} người dùng · Trang {page}/{totalPages}</span><div className="flex gap-2"><Link href={pageHref(Math.max(1, page - 1))} aria-disabled={page <= 1} className={`grid h-9 w-9 place-items-center rounded-md border bg-white ${page <= 1 ? "pointer-events-none opacity-40" : ""}`} title="Trang trước"><ChevronLeft size={16} /></Link><Link href={pageHref(Math.min(totalPages, page + 1))} aria-disabled={page >= totalPages} className={`grid h-9 w-9 place-items-center rounded-md border bg-white ${page >= totalPages ? "pointer-events-none opacity-40" : ""}`} title="Trang sau"><ChevronRight size={16} /></Link></div></div>
-            </main>
-            {editor ? <UserEditor state={editor} roles={roles} busy={busy} onChange={(patch) => setEditor((current) => current ? { ...current, ...patch } : current)} onClose={() => !busy && setEditor(null)} onSave={saveUser} /> : null}
-        </div>
-    );
+    return <AdminManagementSection title="Người dùng" description="Tài khoản, trạng thái và quyền truy cập nội bộ." actions={<>
+        {canManageRoles && <Link href="/admin/users/roles" className={s.button}><Shield aria-hidden="true" />Role & quyền</Link>}
+        {canCreate && <Button primary onClick={createUser}><Plus aria-hidden="true" />Tạo người dùng</Button>}
+    </>}>
+        <form data-admin-form action="/admin/users" className={s.toolbar} role="search">
+            <label style={{ flex: "1 1 240px", minWidth: 0 }}><span className="sr-only">Tìm theo tên, email hoặc role</span><input type="search" name="q" defaultValue={currentQuery ?? ""} className={s.input} placeholder="Tìm theo tên, email hoặc role…" /></label>
+            <Button type="submit">Tìm</Button>{currentQuery && <Link href="/admin/users" className={s.button}>Xóa tìm</Link>}
+        </form>
+        <p className={s.metadata}>{total.toLocaleString("vi-VN")} người dùng{currentQuery ? ` · Kết quả cho “${currentQuery}”` : ""}</p>
+        {items.length ? <ul className={s.list} aria-label="Danh sách người dùng">{items.map(user => <li key={user.id} className={`${s.row} ${s.userRow}`}>
+            <div><h3 className={s.rowTitle}>{user.name || "Chưa đặt tên"}</h3><p className={s.metadata}>{user.email}</p></div>
+            <div className={s.metadata}>{user.roles.map(role => role.name).join(" · ") || "Chưa gán role"}</div>
+            <div><p className={s.metadata}>{user.isActive ? "Hoạt động" : "Đã khóa"}</p><p className={s.metadata}>Cập nhật {dateText(user.updatedAt)}</p></div>
+            {canUpdate && <Button aria-label={`Sửa ${user.name || user.email}`} onClick={() => editUser(user)}>Sửa</Button>}
+        </li>)}</ul> : <p className={s.metadata}>{currentQuery ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng."}</p>}
+        <div className={s.footer}><p className={s.metadata}>Trang {page.toLocaleString("vi-VN")} / {totalPages.toLocaleString("vi-VN")}</p><div className={s.actions}>
+            {page > 1 ? <Link href={pageHref(page - 1)} className={s.button}>Trước</Link> : <Button disabled>Trước</Button>}
+            {page < totalPages ? <Link href={pageHref(page + 1)} className={s.button}>Sau</Link> : <Button disabled>Sau</Button>}
+        </div></div>
+        {editor && <UserEditor state={editor} roles={roles} busy={busy} onChange={patch => setEditor(current => current ? { ...current, ...patch } : current)} onClose={() => void closeEditor()} onSave={() => void saveUser()} />}
+    </AdminManagementSection>;
 }

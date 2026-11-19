@@ -6,6 +6,11 @@ on:
       - 'src/domains/storefront/media/**'
       - 'src/domains/storefront/content/StorefrontManager.tsx'
       - 'src/domains/shared/ui/admin-design-contract/AdminManagement*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminSplitWorkspace*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation*'
+      - 'src/app/(admin)/admin/users/**'
+      - 'src/app/(admin)/admin/directory/**'
+      - 'src/app/(admin)/admin/_client/AdminActiveLink.tsx'
       - 'src/app/(admin)/admin/customers/**'
       - 'src/app/(admin)/admin/vendors/**'
       - 'src/app/(admin)/admin/storefront/media/**'
@@ -45,6 +50,14 @@ jobs:
       - run: >-
           npx eslint src/domains/contacts src/domains/storefront/media
           src/domains/shared/ui/admin-design-contract/AdminManagement.tsx
+          src/domains/shared/ui/admin-design-contract/AdminSplitWorkspace.ts
+          src/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation.tsx
+          src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts
+          src/domains/shared/ui/admin-design-contract/index.ts
+          'src/app/(admin)/admin/users/page.tsx'
+          'src/app/(admin)/admin/users/_client/ListUser.tsx'
+          'src/app/(admin)/admin/directory/page.tsx'
+          'src/app/(admin)/admin/_client/AdminActiveLink.tsx'
           'src/app/(admin)/admin/customers/page.tsx'
           'src/app/(admin)/admin/vendors/page.tsx'
           'src/app/(admin)/admin/storefront/media/page.tsx'

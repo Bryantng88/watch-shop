@@ -4,4 +4,6 @@ export * from "./AdminUserAvatar";
 export * from "../progress";
 export * from "./AdminViewTabs";
 export * from "./admin-ui.foundation";
-
+export * from "./AdminManagement";
+export * from "./AdminSplitWorkspace";
+export * from "./AdminWorkspaceNavigation";

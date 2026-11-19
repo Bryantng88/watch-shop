@@ -1,5 +1,6 @@
 import { PERMISSIONS } from "@/constants/permissions";
 import { expandPermissions } from "./permission-implications";
+import { DIRECTORY_READ_PERMISSIONS } from "@/domains/contacts/shared/directory-navigation";
 
 export type AdminAccessPolicy = {
     anyOf: readonly string[];
@@ -225,6 +226,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 }
 
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
+    if (pathname === "/admin/directory") return anyOf(...DIRECTORY_READ_PERMISSIONS);
     if (pathname === "/admin/ben") return publicToAuthenticatedUser();
     if (/^\/admin\/ben\/work\/[^/]+$/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
     if (pathname === "/admin" || pathname.startsWith("/admin/dashboard")) return anyOf(PERMISSIONS.DASHBOARD_VIEW);
