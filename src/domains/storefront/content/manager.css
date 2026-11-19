@@ -562,3 +562,10 @@
 @media (max-width: 639px) { .sfc-home { padding: 12px 16px; } }
 
 .sfc-home .sfc-section-row .sfc-section-select { font-size: 14px; line-height: 20px; }
+
+/* Document metadata is one wrapping line, separate from document actions. */
+.sfc-document-state-inline { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; }
+.sfc-document-state-inline > .sfc-save-state, .sfc-document-state-inline > small { margin: 0; font-size: 12px; line-height: 16px; }
+
+
+.sfc-home > header { margin-bottom: 0; }

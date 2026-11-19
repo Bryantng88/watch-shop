@@ -791,3 +791,17 @@ Website giữ action Lưu nháp/Xem trước/Xuất bản ở document action ba
 áp dụng toàn tài liệu, không phải từng khối. Đây là khác biệt có chủ đích với
 hành động theo khu vực của Vận hành. Card/board kỹ thuật chưa được hiện đại hóa
 bởi thay đổi layout này; không tuyên bố toàn bộ nội dung mọi domain đã migrate.
+
+
+### Workspace header and view selector refinement
+
+Trang chủ website dùng AdminPageHeader variant workspace: không eyebrow lặp mục đích,
+tiêu đề 24/32px desktop hoặc 20/28px mobile, mô tả 14/20px một câu chỉ dẫn ngắn.
+Trạng thái lưu, phiên bản và mốc xuất bản tạo một dòng metadata 12/16px có wrap;
+không gộp dirty state với trạng thái xuất bản hoặc bỏ timestamp thực. Khoảng cách
+header do page flow sở hữu, không cộng thêm margin-bottom cục bộ.
+
+Bảng/Danh sách là chế độ hiển thị, không là giai đoạn. SpaceFilterBar đặt selector
+native cùng hàng search/filter/count/refresh, giữ value/callback và disabled từ
+domain. Chỉ hiện khi có ít nhất hai lựa chọn khả dụng; không chiếm một hàng tab
+riêng hoặc thay đổi stage khi chỉ chuyển cách hiển thị.

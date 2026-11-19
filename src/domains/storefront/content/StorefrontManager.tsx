@@ -404,7 +404,7 @@ export default function StorefrontManager({
   }
   return (
     <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
-      <AdminPageHeader eyebrow="Website" title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn một khối để sửa. Lưu nháp → xem trước → xuất bản.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
+      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
       {!homeOnly && (
         <div className="sfc-tabs">
           <button
@@ -480,11 +480,12 @@ export default function StorefrontManager({
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
           <AdminFlatToolbar variant="actions" className="sfc-document-actions">
-            <div className="sfc-document-state">
+            <div className={homeOnly ? "sfc-document-state sfc-document-state-inline" : "sfc-document-state"}>
               {!homeOnly && <strong>{record.kind === "HOME" ? "Trang chủ" : article?.title}</strong>}
               <p className="sfc-save-state" aria-live="polite">
                 {uploading ? "Đang tải ảnh…" : dirty ? "Có thay đổi chưa lưu" : "Đã lưu nháp"}
               </p>
+              {homeOnly && <span aria-hidden="true" className="text-xs text-slate-400">·</span>}
               <small className="tabular-nums">
                 Phiên bản {record.revision}
                 {record.publishedAt

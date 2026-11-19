@@ -12,7 +12,9 @@ export function AdminPageHeader({
   description,
   meta,
   className,
+  variant = "default",
 }: {
+  variant?: "default" | "workspace";
   eyebrow?: string;
   title: string;
   description?: string;
@@ -22,8 +24,8 @@ export function AdminPageHeader({
   return <header className={clsx("flex flex-wrap items-end justify-between gap-4", className)}>
     <div>
       {eyebrow ? <p className={ADMIN_UI.eyebrow}>{eyebrow}</p> : null}
-      <h1 className={ADMIN_UI.pageTitle}>{title}</h1>
-      {description ? <p className={ADMIN_UI.pageDescription}>{description}</p> : null}
+      <h1 className={variant === "workspace" ? "m-0 text-xl font-bold leading-7 text-slate-950 sm:text-2xl sm:leading-8" : ADMIN_UI.pageTitle}>{title}</h1>
+      {description ? <p className={variant === "workspace" ? "mt-1 text-sm font-normal leading-5 text-slate-500" : ADMIN_UI.pageDescription}>{description}</p> : null}
     </div>
     {meta ? <div className="flex items-center gap-5 text-sm">{meta}</div> : null}
   </header>;

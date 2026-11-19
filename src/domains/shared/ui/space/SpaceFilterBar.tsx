@@ -177,8 +177,14 @@ export default function SpaceFilterBar({
         ) : null}
 
         {children}
-        {viewOptions.length ? (
-          <SpaceViewSwitch activeView={activeView} options={viewOptions} onChange={onViewChange} />
+        {viewOptions.filter((option) => !option.disabled).length > 1 ? (
+          <label className="inline-flex h-11 shrink-0 items-center">
+            <span className="sr-only">Cách hiển thị</span>
+            <select value={activeView ?? ""} onChange={(event) => onViewChange?.(event.target.value)}
+              className="h-11 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400">
+              {viewOptions.map((option) => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
+            </select>
+          </label>
         ) : null}
       </div>
     </div>

@@ -2121,9 +2121,9 @@ export default function OperationCoordinationWorkspace({
                 onViewChange={changeWorkTicketView}
                 viewOptions={[
                   ...(isMediaFlowMode
-                    ? [{ value: "MEDIA_BOARD", label: "Board Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
-                    : [{ value: "TI_BOARD", label: "Board", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
-                  { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
+                    ? [{ value: "MEDIA_BOARD", label: "Bảng Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
+                    : [{ value: "TI_BOARD", label: "Bảng", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
+                  { value: "LIST", label: "Danh sách", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
                   ...(isTaskItemListMode || isTechnicalIssueFlowMode ? [] : [{
