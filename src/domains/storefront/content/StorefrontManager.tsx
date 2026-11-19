@@ -342,16 +342,36 @@ export default function StorefrontManager({
       if (request === loadCounter.current) setLoading(false);
     }
   }, []);
+  const libraryRequest = useRef(0);
   const loadLibrary = useCallback(async () => {
+    const request = ++libraryRequest.current;
     setLibraryError("");
     try {
       const result = await jsonRequest("/api/admin/storefront/media");
+      if (request !== libraryRequest.current) return;
       if (!Array.isArray(result.items)) throw new Error("Không thể tải thư viện ảnh. Vui lòng thử lại.");
-      setLibrary(result.items);
-      setLibraryNotice(result.truncated ? "Thư viện đang hiển thị 300 ảnh mới nhất. Ảnh đã chọn vẫn được giữ nguyên." : "");
-    } catch (error) { setLibraryError(uiFeedbackMessage(error, "Không thể tải thư viện ảnh. Vui lòng thử lại.")); }
+      const items: LibraryImage[] = result.items;
+      setLibrary(items);
+      const selectedKey = new URL(window.location.href).searchParams.get("libraryImage");
+      let selected: LibraryImage | undefined;
+      if (selectedKey) {
+        const lookup = await jsonRequest(`/api/admin/storefront/media/library?key=${encodeURIComponent(selectedKey)}`);
+        selected = lookup.item;
+      }
+      if (request !== libraryRequest.current) return;
+      setLibrary(selected ? [selected, ...items.filter(item => item.key !== selected.key)] : items);
+      setLibraryNotice(selected ? "Ảnh từ thư viện đã sẵn trong bộ chọn. Chọn vị trí ảnh và lưu nháp khi đã sẵn sàng." : result.truncated ? "Thư viện đang hiển thị 300 ảnh mới nhất. Mở Thư viện ảnh website để tìm ảnh cũ hơn." : "");
+    } catch (reason) {
+      if (request === libraryRequest.current) setLibraryError(uiFeedbackMessage(reason, "Không thể tải thư viện ảnh. Vui lòng thử lại."));
+    }
   }, []);
-  useEffect(() => { void load("home"); void loadLibrary(); }, [load, loadLibrary]);
+  useEffect(() => {
+    void load("home");
+    void loadLibrary();
+    const focus = () => { void loadLibrary(); };
+    window.addEventListener("focus", focus);
+    return () => { libraryRequest.current += 1; window.removeEventListener("focus", focus); };
+  }, [load, loadLibrary]);
   useEffect(() => {
     const listener = (e: BeforeUnloadEvent) => {
       if (dirty) e.preventDefault();
@@ -374,6 +394,7 @@ export default function StorefrontManager({
     return await uploadMutation.run({key:"media-upload",notifyOnError:false,onError:(error)=>setError(error instanceof Error?error.message:"Không thể tải ảnh. Vui lòng thử lại."),action:async()=>{
       const data=new FormData();data.append("file",file);
       const result=await jsonRequest("/api/admin/storefront/media",{method:"POST",body:data});
+      libraryRequest.current += 1;
       setLibrary(value=>[result.item,...value]);return result.item as LibraryImage;
     }}) || null;
   }
@@ -387,7 +408,7 @@ export default function StorefrontManager({
       if(openPreview)setPreview(`/storefront-preview?${record.kind==="ARTICLE"?`article=${record.id}&`:""}v=${result.record.revision}`);
       // The mutation result is authoritative. A separate list refresh must not
       // turn a committed publication into a false save failure.
-      if(record.kind==="ARTICLE")setArticles(rows=>rows.map(row=>row.id===result.record.id?{id:row.id,content:result.record.draft,publishedAt:result.record.publishedAt}:row));
+      if(record.kind==="ARTICLE")setArticles(rows=>rows.map(row=>row.id===result.record.id?{id:row.id,content:result.record.draft as ArticleContent,publishedAt:result.record.publishedAt}:row));
       return result;
     }});
   }
@@ -411,7 +432,7 @@ export default function StorefrontManager({
   }
   return (
     <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
-      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
+      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<><a href="/admin/storefront/media" target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Thư viện ảnh website ↗</a><a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a></>}/>
       {!homeOnly && (
         <div className="sfc-tabs">
           <button

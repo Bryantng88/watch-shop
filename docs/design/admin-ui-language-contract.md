@@ -840,3 +840,25 @@ Phản hồi lưu thất bại giữ bản nháp và dùng action lưu hiện c�
 Không thêm hàng trạng thái vào Vận hành chỉ để giống Website. Hai trang dùng cùng
 semantics/component khi có feedback, còn trạng thái nghiệp vụ khác nhau là có chủ
 đích. Lần migrate này áp dụng Website; không tuyên bố mọi consumer đã chuyển.
+## Danh bạ workspace
+
+Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
+Người dùng / Khách hàng / Nhà cung cấp (Vendor) theo quyền đọc hiện hữu; không
+đưa Users vào System lần thứ hai. Các URL danh sách cũ giữ nguyên để không phá
+bookmark, search, pagination và form hiện hữu. `/admin/directory` đi tới mục đầu
+được phép; active state sidebar theo cả workspace và các route danh sách.
+
+Dùng geometry `ADMIN_UI_FOUNDATION.splitWorkspace` và `AdminSplitWorkspace`
+đang được áp dụng cho Vận hành / Home ở PR #124: menu 280px gồm inset phải
+16px, gap 28px, line slate-100. Đo available width bằng hook chung; dưới 960px,
+menu thành native selector cùng các destination. Selector kích hoạt cùng route
+link để giữ kiểm tra dirty draft. Không containment hoặc padding page lồng nhau.
+
+Một h1 Danh bạ; heading vùng phải là tên danh sách, action tạo ở cạnh heading,
+toolbar tìm kiếm ngay dưới. Danh sách phẳng, count/filter/pagination theo domain;
+không thêm card hoặc KPI. Mỗi mục chỉ xuất hiện khi đủ quyền đọc, không suy ra
+quyền sửa từ khả năng mở workspace. Không đổi API, role grant hoặc access policy.
+
+Runtime mới dùng AdminManagementSection và AdminWorkspaceNavigation. Phạm vi
+hiện đại hóa là shell và danh sách; form tài khoản/role hiện hữu tiếp tục dùng
+nghiệp vụ cũ, không được tuyên bố toàn bộ drawer/role editor đã migrate v2.
