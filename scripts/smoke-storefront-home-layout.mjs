@@ -34,7 +34,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
       build.onResolve({ filter: /AppDialogProvider$/ }, () => ({ path: 'dialog', namespace: 'fixture' }));
       build.onLoad({ filter: /.*/, namespace: 'fixture' }, ({ path: name }) => ({ loader: 'tsx', resolveDir: root, contents: name === 'image'
         ? `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`
-        : name === 'toast' ? `const notify={success(){},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
+        : name === 'toast' ? `const notify={success(message){
+ const status=document.getElementById('fixture-toast')||document.body.appendChild(document.createElement('p'));
+ status.id='fixture-toast';status.setAttribute('role','status');status.textContent=message;
+},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
         : `export const useAppDialog=()=>({confirm:async()=>true});` }));
       build.onResolve({ filter: /^@\// }, ({ path: source }) => source === '@/domains/shared/ui/admin-design-contract'
         ? { path: path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx') }

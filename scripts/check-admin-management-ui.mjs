@@ -76,9 +76,9 @@ try{
  const directoryNav=page.getByRole('navigation',{name:'Nhóm liên hệ',exact:true});
  await directoryNav.getByRole('link',{name:'Người dùng',exact:true}).click();await page.getByRole('list',{name:'Danh sách người dùng'}).waitFor();
  assert.equal(await page.getByRole('heading',{level:1}).count(),1);
- await page.getByRole('button',{name:/^Sửa Người dùng mẫu/}).click();const userDialog=page.getByRole('dialog');await userDialog.getByLabel('Tên hiển thị').fill('Đang sửa người dùng');
- await page.evaluate(()=>window.__confirm=false);await userDialog.getByRole('button',{name:'Hủy',exact:true}).click();assert.equal(await userDialog.isVisible(),true);
- await page.evaluate(()=>window.__confirm=true);await userDialog.getByRole('button',{name:'Hủy',exact:true}).click();await userDialog.waitFor({state:'detached'});
+ await page.getByRole('button',{name:/^Sửa Người dùng mẫu/}).click();const userEditor=page.getByRole('form',{name:'Chỉnh sửa người dùng',exact:true});await userEditor.getByLabel('Tên hiển thị').fill('Đang sửa người dùng');
+ await page.evaluate(()=>window.__confirm=false);await userEditor.getByRole('button',{name:'Hủy',exact:true}).click();assert.equal(await userEditor.isVisible(),true);
+ await page.evaluate(()=>window.__confirm=true);await userEditor.getByRole('button',{name:'Hủy',exact:true}).click();await userEditor.waitFor({state:'detached'});
  await directoryNav.getByRole('link',{name:'Nhà cung cấp / Vendor',exact:true}).click();await page.getByRole('heading',{name:'Nhà cung cấp / Vendor',exact:true}).waitFor();
  await directoryNav.getByRole('link',{name:'Khách hàng',exact:true}).click();await page.getByRole('list',{name:'Danh sách liên hệ'}).waitFor();
  for(const width of [320,390,768,1280,1440]){
