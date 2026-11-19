@@ -13,6 +13,7 @@ type RunUiMutationOptions<TResult, TSnapshot> = {
   onSuccess?: (result: TResult) => void | Promise<void>;
   onError?: (error: unknown) => void;
   successMessage?: string;
+  notifyOnError?: boolean;
   errorMessage?: string | ((error: unknown) => string);
 };
 
@@ -40,6 +41,7 @@ export function useUiMutation() {
       onSuccess,
       onError,
       successMessage,
+      notifyOnError = true,
       errorMessage,
     }: RunUiMutationOptions<TResult, TSnapshot>): Promise<TResult | undefined> => {
       if (pendingKeysRef.current.has(key)) return undefined;
@@ -61,7 +63,7 @@ export function useUiMutation() {
         if (!committed && optimistic && rollback) rollback(snapshot as TSnapshot, error);
         onError?.(error);
         setPhases((current) => ({ ...current, [key]: "error" }));
-        notify.error(typeof errorMessage === "function" ? errorMessage(error) : errorMessage || defaultErrorMessage(error));
+        if (notifyOnError) notify.error(typeof errorMessage === "function" ? errorMessage(error) : errorMessage || defaultErrorMessage(error));
         return undefined;
       } finally {
         pendingKeysRef.current.delete(key);

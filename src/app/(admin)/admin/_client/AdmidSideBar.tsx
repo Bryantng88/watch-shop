@@ -5,7 +5,6 @@ import {
     LayoutDashboard,
     Package,
     Tags,
-    User,
     Menu,
     ChevronDown,
     ClipboardList,
@@ -22,10 +21,13 @@ import {
     MessageSquare,
     Globe,
     Wrench,
+    ContactRound,
+    Images,
 } from "lucide-react";
 
 import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
+import { DIRECTORY_READ_PERMISSIONS, DIRECTORY_ROUTES } from "@/domains/contacts/shared/directory-navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 
 type Props = {
@@ -44,6 +46,7 @@ type NavItem = {
     label: string;
     icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
+    activePaths?: string[];
     permission?: string;
     permissionsAny?: string[];
     permissionsAll?: string[];
@@ -122,6 +125,7 @@ const NAV: NavEntry[] = [
                 icon: Workflow,
                 permission: PERMISSIONS.TASK_VIEW,
             },
+            { type: "item", href: "/admin/directory", label: "Danh bạ", icon: ContactRound, permissionsAny: [...DIRECTORY_READ_PERMISSIONS], activePaths: DIRECTORY_ROUTES },
             {
                 type: "item",
                 href: "/admin/personal-work",
@@ -163,7 +167,10 @@ const NAV: NavEntry[] = [
         type: "group",
         label: "Storefront",
         defaultOpen: true,
-        children: [{type:"item",href:"/admin/storefront/home",label:"Trang chủ website",icon:Globe,permission:PERMISSIONS.PRODUCT_UPDATE}],
+        children: [
+            { type: "item", href: "/admin/storefront/home", label: "Trang chủ website", icon: Globe, permission: PERMISSIONS.PRODUCT_UPDATE },
+            { type: "item", href: "/admin/storefront/media", label: "Thư viện ảnh website", icon: Images, permission: PERMISSIONS.PRODUCT_UPDATE },
+        ],
     },
     {
         type: "group",
@@ -183,13 +190,6 @@ const NAV: NavEntry[] = [
                 label: "Activity",
                 icon: Activity,
                 permission: PERMISSIONS.ACTIVITY_READ,
-            },
-            {
-                type: "item",
-                href: "/admin/users",
-                label: "Users",
-                icon: User,
-                permissionsAny: [PERMISSIONS.USER_VIEW, PERMISSIONS.USER_CREATE, PERMISSIONS.USER_UPDATE, PERMISSIONS.USER_MANAGE],
             },
         ],
     },
@@ -300,6 +300,7 @@ export default function AdminSidebar({
                     title={item.label}
                     onNavigate={() => { if (isMobile) setOpen(false); }}
                     exact={item.exact}
+                    activePaths={item.activePaths}
                     expanded={isMobile || desktopExpanded}
                 >
                     <Icon size={18} className="shrink-0 opacity-80" />

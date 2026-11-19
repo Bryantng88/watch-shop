@@ -42,6 +42,7 @@ export const ADMIN_UI_FOUNDATION = {
     regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
   },
+  splitWorkspace: { sidebarWidth: 280, sidebarInset: 16, collapseWidth: 960 },
   focusPanel: {
     padding: 20, mobilePadding: 16, titleGap: 4, chipsGap: 6,
     metadataGap: 8, actionsGap: 8, actionsMarginTop: 16, chartGap: 16,
@@ -72,6 +73,7 @@ export const ADMIN_UI_FOUNDATION = {
     drawerWidth: 480, drawerWideWidth: 640, overlayOpacity: 0.25,
     overlayBlur: 1, maxHeightViewportGutter: 32,
   },
+  progress: { quietTrackHeight: 4, quietGap: 6, fill: "#2563eb", successFill: "#10b981" },
   motion: { fastMs: 150, panelMs: 200 },
   layers: { base: 0, sticky: 10, navigation: 20, popover: 30, overlay: 40, dialog: 50, dialogPopover: 60, toast: 70, tooltip: 80 },
   breakpoints: { mobileMax: 639, tabletMin: 640, desktopMin: 1024, wideMin: 1280 },

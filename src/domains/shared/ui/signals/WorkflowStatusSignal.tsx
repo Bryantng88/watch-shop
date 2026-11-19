@@ -1,3 +1,4 @@
+import { ADMIN_UI_FOUNDATION as F } from "../admin-design-contract/admin-ui.foundation";
 import {
   VisualStatusSignal,
   type VisualStatusIcon,
@@ -117,12 +118,21 @@ export function WorkflowStatusSignal({
   status,
   label,
   completedIcon,
+  compact = false,
+  marker = false,
 }: {
   status?: string | null;
   label?: string | null;
   completedIcon?: VisualStatusIcon;
+  compact?: boolean;
+  marker?: boolean;
 }) {
   const presentation = workflowStatusPresentation(status, label, completedIcon);
+  if (compact) return <span className="inline-flex max-w-full items-center gap-1.5 text-xs font-medium leading-4 text-slate-600" title={[presentation.label, presentation.detail].filter(Boolean).join(" · ")}>
+    {marker && <span aria-hidden="true" className="shrink-0 rounded-full" style={{ width: F.badge.dotSize, height: F.badge.dotSize, backgroundColor: ({ slate: F.colors.neutralDot, blue: F.colors.focusLabel, emerald: F.colors.successDot, amber: F.colors.attentionDot, rose: F.colors.dangerDot, violet: F.colors.focusLabel })[presentation.tone] }} />}
+    <span className="truncate">{presentation.label}</span>
+  </span>;
+
 
   return (
     <VisualStatusSignal

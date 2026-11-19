@@ -23,6 +23,7 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
     platform: "browser",
     jsx: "automatic",
     write: false,
+    outfile: "/tmp/technician-workspace/app.js",
     define: { "process.env.NODE_ENV": '"production"' },
     plugins: [
       {
@@ -57,7 +58,7 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
     await fs.writeFile(process.env.TECHNICIAN_EXPORT, js);
     return;
   }
-  const css = await fs.readFile(
+  const css = built.outputFiles.filter(file => file.path.endsWith(".css")).map(file => file.text).join("\n") + "\n" + await fs.readFile(
     process.env.TECHNICIAN_CSS || "/tmp/technician.css",
     "utf8",
   );

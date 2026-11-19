@@ -1,8 +1,11 @@
 "use client";
 
+import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
+import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeedback";
+import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import {AdminPageCanvas,AdminPageHeader,AdminFlatToolbar} from "@/domains/shared/ui/admin-design-contract";
+import {AdminPageCanvas,AdminPageHeader,AdminDocumentFooter} from "@/domains/shared/ui/admin-design-contract";
 import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
 import {AsyncActionButton} from "@/domains/shared/ui/mutation/AsyncActionButton";
 import {useAppDialog} from "@/domains/shared/feedback/AppDialogProvider";
@@ -33,14 +36,18 @@ const names = {
 };
 type HomeSectionId = HomeContent["sections"][number]["id"];
 function HomeSection({id,title,homeOnly,active,children}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode}){
- return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} className="sfc-section-editor" aria-label={title}><h2>{title}</h2>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><summary>{title}</summary>{children}</details>;
+ return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><h2>{title}</h2>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><summary>{title}</summary>{children}</details>;
 }
-async function jsonRequest(url: string, init?: RequestInit) {
-  const res = await fetch(url, { cache: "no-store", ...init });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || json.message || "Không thể thực hiện. Hãy thử lại.");
-  return json;
+async function jsonRequest<T = { record: ContentRecord; articles: ArticleItem[]; items: LibraryImage[]; item: LibraryImage; truncated?: boolean }>(url: string, init?: RequestInit): Promise<T> {
+  const fallback = "Không thể tải hoặc lưu dữ liệu website. Vui lòng thử lại.";
+  try {
+    const res = await fetch(url, { cache: "no-store", ...init });
+    const result = await readUiResponse(res, fallback);
+    if (url.startsWith("/api/admin/storefront/content") && (!result.record || typeof result.record !== "object" || !("id" in result.record) || !("draft" in result.record))) throw new Error(fallback);
+    return result as T;
+  } catch (error) { throw new Error(uiFeedbackMessage(error, fallback)); }
 }
+
 function Field({
   label,
   value,
@@ -188,7 +195,7 @@ function ProductPicker({ ids, onChange }: { ids: string[]; onChange: (v: string[
   useEffect(() => {
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      void jsonRequest(`/api/admin/storefront/products?q=${encodeURIComponent(q)}`, {
+      void jsonRequest<{ items: PublicWatchCard[] }>(`/api/admin/storefront/products?q=${encodeURIComponent(q)}`, {
         signal: controller.signal,
       })
         .then((r) => {
@@ -210,7 +217,7 @@ function ProductPicker({ ids, onChange }: { ids: string[]; onChange: (v: string[
       return;
     }
     const controller = new AbortController();
-    void jsonRequest(`/api/admin/storefront/products?ids=${encodeURIComponent(ids.join(","))}`, {
+    void jsonRequest<{ items: PublicWatchCard[] }>(`/api/admin/storefront/products?ids=${encodeURIComponent(ids.join(","))}`, {
       signal: controller.signal,
     })
       .then((r) => setSelected(r.items))
@@ -302,9 +309,11 @@ export default function StorefrontManager({
   const [pendingAction,setPendingAction]=useState<"save"|"preview"|"publish"|"unpublish"|"create">("save");
   const [needsReload,setNeedsReload]=useState(false);
   const [activeSection,setActiveSection]=useState<HomeSectionId>("hero");
+  const splitRef = useAdminSplitWorkspace<HTMLFieldSetElement>(homeOnly && Boolean(record));
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
-  const [message, setMessage] = useState("");
+  const [libraryNotice, setLibraryNotice] = useState("");
+  const [libraryError, setLibraryError] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
   const [mobile, setMobile] = useState(false);
@@ -325,7 +334,7 @@ export default function StorefrontManager({
       setNeedsReload(false);
       setArticles(r.articles);
       setDirty(false);
-      setMessage("");
+      
     } catch (e) {
       if (request === loadCounter.current)
         setError(e instanceof Error ? e.message : "Không tải được nội dung.");
@@ -333,16 +342,37 @@ export default function StorefrontManager({
       if (request === loadCounter.current) setLoading(false);
     }
   }, []);
+  const libraryRequest = useRef(0);
+  const refreshLibrary = useCallback(async () => {
+    setLibraryError("");
+    const request = ++libraryRequest.current;
+    try {
+      const result = await jsonRequest("/api/admin/storefront/media");
+      if (request !== libraryRequest.current) return;
+      const items: LibraryImage[] = result.items;
+      setLibrary(items);
+      const selectedKey = new URL(window.location.href).searchParams.get("libraryImage");
+      let selected: LibraryImage | undefined;
+      if (selectedKey) {
+        const lookup = await jsonRequest(`/api/admin/storefront/media/library?key=${encodeURIComponent(selectedKey)}`);
+        selected = lookup.item;
+      }
+      if (request !== libraryRequest.current) return;
+      setLibrary(selected ? [selected, ...items.filter(item => item.key !== selected.key)] : items);
+      if (!result.truncated && !selected) setLibraryNotice("");
+      if (result.truncated && !selected) setLibraryNotice("Thư viện đang hiển thị 300 ảnh mới nhất. Mở Thư viện ảnh website để tìm ảnh cũ hơn.");
+      if (selected) setLibraryNotice("Ảnh từ thư viện đã sẵn trong bộ chọn. Chọn vị trí ảnh và lưu nháp khi đã sẵn sàng.");
+    } catch (reason) {
+      if (request === libraryRequest.current) setLibraryError(uiFeedbackMessage(reason, "Không tải được thư viện ảnh."));
+    }
+  }, []);
   useEffect(() => {
     void load("home");
-    void jsonRequest("/api/admin/storefront/media")
-      .then((r) => {
-        setLibrary(r.items);
-        if (r.truncated)
-          setMessage("Thư viện đang hiển thị 300 ảnh mới nhất. Ảnh đã chọn vẫn được giữ nguyên.");
-      })
-      .catch((e) => setError(e.message));
-  }, [load]);
+    void refreshLibrary();
+    const focus = () => { void refreshLibrary(); };
+    window.addEventListener("focus", focus);
+    return () => { libraryRequest.current += 1; window.removeEventListener("focus", focus); };
+  }, [load, refreshLibrary]);
   useEffect(() => {
     const listener = (e: BeforeUnloadEvent) => {
       if (dirty) e.preventDefault();
@@ -358,34 +388,35 @@ export default function StorefrontManager({
     if (!record) return;
     setRecord({ ...record, draft: content });
     setDirty(true);
-    setMessage("");
+    
   }
   async function upload(file: File) {
     setError("");
-    return await uploadMutation.run({key:"media-upload",action:async()=>{
+    return await uploadMutation.run({key:"media-upload",notifyOnError:false,onError:(error)=>setError(error instanceof Error?error.message:"Không thể tải ảnh. Vui lòng thử lại."),action:async()=>{
       const data=new FormData();data.append("file",file);
       const result=await jsonRequest("/api/admin/storefront/media",{method:"POST",body:data});
+      libraryRequest.current += 1;
       setLibrary(value=>[result.item,...value]);return result.item as LibraryImage;
     }}) || null;
   }
   async function save(action: "save" | "publish" | "unpublish", openPreview = false) {
     if (!record || uploading) return;
-    setPendingAction(openPreview?"preview":action);setError("");setMessage("");
-    await documentMutation.run({key:"document",onError:()=>setNeedsReload(true),action:async()=>{
+    setPendingAction(openPreview?"preview":action);setError("");
+    await documentMutation.run({key:"document",notifyOnError:false,successMessage:action==="publish"?"Đã xuất bản phiên bản mới.":action==="unpublish"?"Đã gỡ xuất bản. Bản nháp được giữ.":"Đã lưu nháp.",onError:(error)=>{setNeedsReload(true);setError(error instanceof Error?error.message:"Không thể lưu nội dung. Vui lòng thử lại.");},action:async()=>{
       const result=await jsonRequest("/api/admin/storefront/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:record.id,revision:record.revision,action,...(homeOnly?{scope:"home"}:{}),content:record.draft})});
       setRecord(result.record);setDirty(false);setNeedsReload(false);
-      setMessage(action==="publish"?"Đã xuất bản phiên bản mới.":action==="unpublish"?"Đã gỡ xuất bản. Bản nháp được giữ.":"Đã lưu nháp · website chưa thay đổi.");
+
       if(openPreview)setPreview(`/storefront-preview?${record.kind==="ARTICLE"?`article=${record.id}&`:""}v=${result.record.revision}`);
       // The mutation result is authoritative. A separate list refresh must not
       // turn a committed publication into a false save failure.
-      if(record.kind==="ARTICLE")setArticles(rows=>rows.map(row=>row.id===result.record.id?{id:row.id,content:result.record.draft,publishedAt:result.record.publishedAt}:row));
+      if(record.kind==="ARTICLE" && result.record.kind==="ARTICLE")setArticles(rows=>rows.map(row=>row.id===result.record.id?{id:row.id,content:result.record.draft as ArticleContent,publishedAt:result.record.publishedAt}:row));
       return result;
     }});
   }
   async function create() {
     if(busy||uploading||(dirty&&!await dialog.confirm({title:"Tạo bài mới?",message:"Các thay đổi chưa lưu sẽ bị bỏ.",confirmText:"Tạo bài",cancelText:"Ở lại"})))return;
     setPendingAction("create");setError("");
-    await documentMutation.run({key:"document",action:async()=>{
+    await documentMutation.run({key:"document",notifyOnError:false,onError:(error)=>setError(error instanceof Error?error.message:"Không thể tạo bài viết. Vui lòng thử lại."),action:async()=>{
       const result=await jsonRequest("/api/admin/storefront/content",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"create"})});
       await load(result.record.id);setTab("articles");return result;
     }});
@@ -402,7 +433,7 @@ export default function StorefrontManager({
   }
   return (
     <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
-      <AdminPageHeader eyebrow="Website" title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn một khối để sửa. Lưu nháp → xem trước → xuất bản.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
+      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
       {!homeOnly && (
         <div className="sfc-tabs">
           <button
@@ -426,9 +457,7 @@ export default function StorefrontManager({
           </button>
         </div>
       )}
-      {error ? (
-        <div className="sfc-error" role="alert">
-          {error}
+      {error && <PageNotice title="Chưa thể hoàn tất yêu cầu" action={(!record || needsReload) ? (
           <button
             type="button"
             onClick={() => {
@@ -437,13 +466,9 @@ export default function StorefrontManager({
           >
             Tải lại nội dung
           </button>
-        </div>
-      ) : null}
-      {message ? (
-        <p role="status" className="sfc-success">
-          {message}
-        </p>
-      ) : null}
+      ) : undefined}>{error}</PageNotice>}
+      {libraryError && <PageNotice title="Không tải được thư viện ảnh" action={<button type="button" disabled={busy || uploading} onClick={() => void refreshLibrary()}>Thử lại</button>}>{libraryError}</PageNotice>}
+      {libraryNotice && <PageNotice tone="info" title="Thư viện ảnh">{libraryNotice}</PageNotice>}
       {tab === "articles" ? (
         <section className="sfc-card">
           <div className="sfc-row">
@@ -477,63 +502,11 @@ export default function StorefrontManager({
         <p role="status">Đang tải nội dung…</p>
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
-          <AdminFlatToolbar variant="actions" className="sfc-document-actions">
-            <div className="sfc-document-state">
-              {!homeOnly && <strong>{record.kind === "HOME" ? "Trang chủ" : article?.title}</strong>}
-              <p className="sfc-save-state" aria-live="polite">
-                {uploading ? "Đang tải ảnh…" : dirty ? "Có thay đổi chưa lưu" : "Đã lưu nháp"}
-              </p>
-              <small className="tabular-nums">
-                Phiên bản {record.revision}
-                {record.publishedAt
-                  ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh"})}`
-                  : " · Chưa xuất bản"}
-              </small>
-            </div>
-            {needsReload&&<button type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</button>}
-            <div className="sfc-actions">
-              <AsyncActionButton type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
-                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
-                Lưu nháp
-              </AsyncActionButton>
-              <AsyncActionButton
-                type="button"
-                pending={busy&&pendingAction==="preview"}
-                pendingLabel="Đang mở…"
-                disabled={busy || uploading}
-                onClick={() => void save("save", true)}
-              >
-                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
-                Xem trước
-              </AsyncActionButton>
-              <AsyncActionButton
-                type="button"
-                className="primary"
-                pending={busy&&pendingAction==="publish"}
-                pendingLabel="Đang xuất bản…"
-                disabled={busy || uploading}
-                onClick={() => void save("publish")}
-              >
-                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
-                Xuất bản
-              </AsyncActionButton>
-              {record.publishedAt && !homeOnly ? (
-                <button
-                  type="button"
-                  disabled={busy || uploading}
-                  onClick={() => {
-                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
-                  }}
-                >
-                  Gỡ xuất bản
-                </button>
-              ) : null}
-            </div>
-          </AdminFlatToolbar>
-          <fieldset disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?"sfc-home-layout":""}`}>
+
+          <fieldset ref={splitRef} style={home&&homeOnly?ADMIN_SPLIT_WORKSPACE_STYLE:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout}`:""}`}>
             {home ? (
               <>
-                <section className="sfc-section-nav" aria-label="Các khối trang chủ">
+                <section data-admin-pane="sidebar" className="sfc-section-nav" aria-label="Các khối trang chủ">
                   <h2>Các khối trang chủ</h2>
                   <p className="sfc-help">
                     Chọn khối để sửa · kéo để sắp xếp.
@@ -1018,6 +991,53 @@ export default function StorefrontManager({
               </section>
             ) : null}
           </fieldset>
+          <AdminDocumentFooter className="sfc-document-actions">
+            {!homeOnly && <h2 className="text-sm font-semibold">{record.kind === "HOME" ? "Trang chủ" : article?.title}</h2>}
+            {needsReload&&<button type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</button>}
+            <div className="sfc-actions">
+              <PageEditingState dirty={dirty} saving={busy && pendingAction === "save"} uploading={uploading} />
+              <details className="text-xs text-slate-500">
+                <summary className="cursor-pointer py-2">{record.publishedAt ? "Đã xuất bản" : "Chưa xuất bản"}</summary>
+                <span className="block py-2 tabular-nums">Phiên bản {record.revision}{record.publishedAt ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}` : ""}</span>
+              </details>
+              <AsyncActionButton type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
+                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
+                Lưu nháp
+              </AsyncActionButton>
+              <AsyncActionButton
+                type="button"
+                pending={busy&&pendingAction==="preview"}
+                pendingLabel="Đang mở…"
+                disabled={busy || uploading}
+                onClick={() => void save("save", true)}
+              >
+                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
+                Xem trước
+              </AsyncActionButton>
+              <AsyncActionButton
+                type="button"
+                className="primary"
+                pending={busy&&pendingAction==="publish"}
+                pendingLabel="Đang xuất bản…"
+                disabled={busy || uploading}
+                onClick={() => void save("publish")}
+              >
+                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
+                Xuất bản
+              </AsyncActionButton>
+              {record.publishedAt && !homeOnly ? (
+                <button
+                  type="button"
+                  disabled={busy || uploading}
+                  onClick={() => {
+                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
+                  }}
+                >
+                  Gỡ xuất bản
+                </button>
+              ) : null}
+            </div>
+          </AdminDocumentFooter>
         </>
       ) : null}
       {preview ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { ChevronDown, MoreHorizontal, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 
 import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 import { cn } from "@/lib/utils";
@@ -176,22 +176,15 @@ export default function SpaceFilterBar({
           </details>
         ) : null}
 
-        {children || viewOptions.length ? (
-          <details data-dismissible-popover className="group relative shrink-0">
-            <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-              <MoreHorizontal className="h-4 w-4 text-slate-500" />
-              <span>Thêm</span>
-              <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
-            </summary>
-            <div className="absolute right-0 top-full z-40 mt-2 flex w-[min(540px,calc(100vw-7rem))] flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl [&>*]:min-w-0">
-              {children}
-              {viewOptions.length ? (
-                <div className="shrink-0 border-l border-slate-200 pl-2">
-                  <SpaceViewSwitch activeView={activeView} options={viewOptions} onChange={onViewChange} />
-                </div>
-              ) : null}
-            </div>
-          </details>
+        {children}
+        {viewOptions.filter((option) => !option.disabled).length > 1 ? (
+          <label className="inline-flex h-11 shrink-0 items-center">
+            <span className="sr-only">Cách hiển thị</span>
+            <select value={activeView ?? ""} onChange={(event) => onViewChange?.(event.target.value)}
+              className="h-11 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400">
+              {viewOptions.map((option) => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
+            </select>
+          </label>
         ) : null}
       </div>
     </div>

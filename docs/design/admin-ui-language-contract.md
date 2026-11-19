@@ -763,3 +763,131 @@ Reports is a peer group alongside Business, Storefront and System. Expanded and 
   change guards, per-section completion, and existing transition permissions.
 - Keep native 44px search/filter controls, clear empty/loading/error states, and
   an icon fallback for missing or failed images. No decorative metric cards.
+
+
+## Split workspace and action ownership
+
+Áp dụng cho Vận hành và trình sửa trang chủ website. Geometry dùng chung từ
+`ADMIN_UI_FOUNDATION.splitWorkspace` và adapter `AdminSplitWorkspace`: menu 280px
+(bao gồm inset phải 16px), gap pane 28px, divider 1px slate-100. Cả hai dùng cùng
+hook đo chiều rộng thực của vùng làm việc; dưới 960px chuyển về một cột với
+selector native của domain. Không dùng CSS containment vì sẽ giữ sai vị trí
+fixed modal. Không ép menu website bỏ checkbox/sắp xếp hoặc menu vận hành thêm
+control đó; semantics riêng, geometry chung. Heading menu 14/20px weight 700.
+
+Page title mô tả mục đích; UI Vận hành không hiển thị breadcrumb quản lý Space,
+nút tạo Workspace hoặc chia sẻ Space. Model/backend và quyền không bị xóa.
+Heading vùng phải đi cùng action nghiệp vụ ở bên phải, gap 8px, cao 40px
+(44px coarse pointer); một primary theo khu vực: Tiếp nhận kỹ thuật, Tạo Media
+Post hoặc Thêm khoản thu / chi. Quyền tạo giữ từ domain. Không đặt cùng action
+ở cả page header và heading vùng phải. Nút tạo chung của index dùng “Tạo việc”.
+
+Dòng tìm kiếm bên dưới chỉ gồm search, Bộ lọc, số kết quả và Làm mới trực tiếp;
+không bọc count/refresh bằng “Thêm”. Search co giãn, controls wrap khi hẹp.
+Nhãn hiển thị tiếng Việt: Thanh toán, Đã đối soát, Tất cả công việc. Không đổi key,
+URL, nguồn count hoặc phép tính nghiệp vụ để dịch nhãn.
+
+Website đặt action Lưu nháp/Xem trước/Xuất bản ở AdminDocumentFooter cuối vùng làm việc vì chúng
+áp dụng toàn tài liệu, không phải từng khối. Đây là khác biệt có chủ đích với
+hành động theo khu vực của Vận hành. Card/board kỹ thuật chưa được hiện đại hóa
+bởi thay đổi layout này; không tuyên bố toàn bộ nội dung mọi domain đã migrate.
+
+
+### Workspace header and view selector refinement
+
+Trang chủ website dùng AdminPageHeader variant workspace: không eyebrow lặp mục đích,
+tiêu đề 24/32px desktop hoặc 20/28px mobile, mô tả 14/20px một câu chỉ dẫn ngắn.
+Trạng thái lưu, phiên bản và mốc xuất bản tạo một dòng metadata 12/16px có wrap;
+không gộp dirty state với trạng thái xuất bản hoặc bỏ timestamp thực. Khoảng cách
+header do page flow sở hữu, không cộng thêm margin-bottom cục bộ.
+
+Bảng/Danh sách là chế độ hiển thị, không là giai đoạn. SpaceFilterBar đặt selector
+native cùng hàng search/filter/count/refresh, giữ value/callback và disabled từ
+domain. Chỉ hiện khi có ít nhất hai lựa chọn khả dụng; không chiếm một hàng tab
+riêng hoặc thay đổi stage khi chỉ chuyển cách hiển thị.
+
+
+## Page feedback: state, outcome and actionable error
+
+Một cơ chế phản hồi dùng chung cho Website, Vận hành và các trang admin khi migrate:
+
+| Loại | Component / cơ chế | Vị trí / thời gian |
+| --- | --- | --- |
+| Đang sửa / đang gửi | PageEditingState | Cạnh nhóm hành động liên quan; chỉ có dirty/pending/uploading, clean không hiện “Đã lưu” mặc định |
+| Kết quả thành công | useUiMutation.successMessage → AppToastProvider | Toast chung, tạm thời theo provider; chỉ sau khi API xác nhận thành công, không lặp bằng banner trên trang |
+| Lỗi cần can thiệp | PageNotice tone error | Inline trước vùng bị ảnh hưởng, role alert; không tự hết giờ, có retry đúng nguồn khi khả dụng |
+| Thông tin giới hạn dữ liệu | PageNotice tone info | Inline gần vùng liên quan, role status; giữ khi điều kiện còn đúng |
+| Trạng thái nghiệp vụ | Nhãn của domain | Ví dụ Chưa xuất bản/Chờ duyệt; không dùng để xác nhận đã lưu |
+| Phiên bản / lịch sử | Disclosure thông tin tài liệu | Chỉ mở khi cần; giữ revision và timestamp thật |
+
+PageNotice là biến thể shared nhẹ, không icon tile/shadow và không CSS thông báo
+riêng trong từng page. InlineNotice legacy chưa tự đổi default; migrate từng
+consumer có kiểm tra. Màu semantic rose cho lỗi, blue cho thông tin; icon Lucide
+16px stroke 1.75; text 14/20px, padding 12px dọc/16px ngang, gap 12px, radius 8px.
+Thông báo wrap và action không làm tràn pane. Không che nút thao tác bằng overlay.
+
+useUiMutation giữ mặc định toast lỗi cho consumer cũ. Consumer có lỗi inline
+persistent dùng notifyOnError=false và onError để lưu lỗi; không phát hai thông
+báo cùng nghĩa. Không nuốt lỗi, không đánh dấu saved/complete để làm UI gọn hơn.
+Dirty guard, retry, quyền và chống submit lặp vẫn thuộc logic hiện có.
+
+readUiResponse xử lý phản hồi rỗng, HTML, null và lỗi JSON bằng lời nhắc tiếng Việt;
+uiFeedbackMessage chuẩn hóa lỗi mạng/parser. Không đưa exception thô vào UI.
+Website tách lỗi tải thư viện ảnh khỏi tải nội dung; retry thư viện chỉ tải thư
+viện, không bỏ bản nháp. Retry nội dung cần giữ xác nhận bỏ thay đổi chưa lưu.
+Phản hồi lưu thất bại giữ bản nháp và dùng action lưu hiện có để thử lại.
+
+Không thêm hàng trạng thái vào Vận hành chỉ để giống Website. Hai trang dùng cùng
+semantics/component khi có feedback, còn trạng thái nghiệp vụ khác nhau là có chủ
+đích. Lần migrate này áp dụng Website; không tuyên bố mọi consumer đã chuyển.
+
+
+
+### Document commands belong in a footer, not the workspace header
+
+Vùng đầu trang dùng cấu trúc chung: page title → mô tả → split workspace; không
+chèn thêm một hàng Lưu nháp/Xem trước/Xuất bản hoặc trạng thái xuất bản giữa
+header và hai pane. Website dùng AdminDocumentFooter sau editor trong DOM, nền
+trắng, line trên slate-100, padding dọc 12px kèm safe-area. Footer ở normal flow,
+hiện khi đến cuối editor; không fixed đè field cuối hoặc phụ thuộc scroll owner
+khác nhau của từng admin shell.
+
+Action global của tài liệu căn phải, gap 8px; thông tin xuất bản/phiên bản và
+trạng thái dirty/pending ở cùng footer, không xuất hiện ở header. Mobile wrap,
+buttons tối thiểu 44px coarse pointer, không ẩn action hay làm tràn body. Thông
+báo lỗi theo PageNotice ở vùng bị ảnh hưởng; success theo toast. Domain vẫn giữ
+callback, quyền, pending lock, revision và dirty guard như trước. Vận hành không
+thêm footer giả khi không có tài liệu đang chỉnh sửa.
+
+## Danh bạ workspace
+
+Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
+Người dùng / Khách hàng / Nhà cung cấp (Vendor) theo quyền đọc hiện hữu; không
+đưa Users vào System lần thứ hai. Các URL danh sách cũ giữ nguyên để không phá
+bookmark, search, pagination và form hiện hữu. `/admin/directory` đi tới mục đầu
+được phép; active state sidebar theo cả workspace và các route danh sách.
+
+Dùng geometry `ADMIN_UI_FOUNDATION.splitWorkspace` và `AdminSplitWorkspace`
+đang được áp dụng cho Vận hành / Home ở PR #124: menu 280px gồm inset phải
+16px, gap 28px, line slate-100. Đo available width bằng hook chung; dưới 960px,
+menu thành native selector cùng các destination. Selector kích hoạt cùng route
+link để giữ kiểm tra dirty draft. Không containment hoặc padding page lồng nhau.
+
+Một h1 Danh bạ; heading vùng phải là tên danh sách, action tạo ở cạnh heading,
+toolbar tìm kiếm ngay dưới. Danh sách phẳng, count/filter/pagination theo domain;
+không thêm card hoặc KPI. Mỗi mục chỉ xuất hiện khi đủ quyền đọc, không suy ra
+quyền sửa từ khả năng mở workspace. Không đổi API, role grant hoặc access policy.
+
+Runtime dùng AdminManagementSection và AdminWorkspaceNavigation. Header dùng
+variant workspace như Home; menu chọn nền focusSurface như Vận hành. Toolbar
+tìm kiếm đơn giản dùng variant phẳng, kết quả/count và Làm mới hiện trực tiếp.
+Danh sách có heading cột, nhận diện người dùng bằng AdminUserAvatar, thiếu dữ
+liệu dùng dấu —; trên mobile bỏ heading cột và giữ thứ tự đọc từng liên hệ.
+
+Form người dùng dùng inline editor cùng vùng nội dung như khách hàng/nhà cung
+cấp để đối chiếu danh sách; không mở drawer legacy. Field/button lấy từ shared
+AdminManagement, vai trò dùng checkbox native, không card màu cho từng vai trò.
+PageEditingState ở heading form; lỗi lưu ở trong form và giữ dữ liệu, thành công
+chỉ toast một lần. Hủy/chuyển route/chọn bản ghi khác kiểm tra dirty draft trước.
+API, role grant và semantics lưu không thay đổi. Trang quản lý vai trò riêng
+không thuộc phạm vi chuẩn hóa này.

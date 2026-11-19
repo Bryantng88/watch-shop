@@ -1,0 +1,26 @@
+.layout { min-width: 0; }
+.desktop { display: none; }
+.content { min-width: 0; }
+.mobile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; }
+.mobile > label:only-child { grid-column: 1 / -1; }
+.mobile label { display: flex; min-width: 0; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 500; color: #64748b; }
+.mobile select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; background: #fff; color: #334155; font: inherit; font-size: 14px; }
+.navigationTitle { margin: 0 0 12px; font-size: 14px; font-weight: 700; line-height: 20px; color: #020617; }
+.group + .group { margin-top: 4px; }
+.groupButton, .stageButton { display: flex; width: 100%; min-width: 0; align-items: center; gap: 8px; min-height: 40px; border: 0; border-radius: 8px; background: transparent; padding: 10px 12px; text-align: left; font: inherit; font-size: 14px; line-height: 20px; color: #475569; cursor: pointer; }
+.groupButton > span, .stageButton > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.groupButton:hover, .stageButton:hover { background: #f8fafc; color: #0f172a; }
+.groupButton[aria-current="page"] { font-weight: 600; color: #020617; }
+.groupButton[aria-current="page"]:not([data-has-stages]), .stageButton[aria-pressed="true"] { background: #eff6ff; color: #020617; font-weight: 600; }
+.icon { width: 16px; height: 16px; flex-shrink: 0; color: #64748b; }
+.stages { margin: 4px 0 8px 20px; padding-left: 8px; border-left: 1px solid #f1f5f9; }
+.stageButton { gap: 12px; justify-content: space-between; padding: 8px 10px; font-size: 12px; line-height: 16px; }
+.count { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; color: #64748b; }
+.groupButton:focus-visible, .stageButton:focus-visible, .mobile select:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
+.layout[data-wide="true"] .desktop { display: block; position: sticky; top: 16px; max-height: calc(100dvh - 160px); overflow-y: auto; }
+.layout[data-wide="true"] .mobile { display: none; }
+.layout[data-narrow="true"] .mobile { grid-template-columns: minmax(0, 1fr); }
+@media (pointer: coarse) {
+  .groupButton, .stageButton { min-height: 44px; }
+  .mobile select { font-size: 16px; }
+}

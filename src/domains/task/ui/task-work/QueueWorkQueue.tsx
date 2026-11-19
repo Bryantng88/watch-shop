@@ -1009,6 +1009,8 @@ export function OpenTargetAction({
   className,
   iconClassName = "h-3.5 w-3.5",
   iconOnly = false,
+  showIcon = true,
+  triggerContent,
   onActivate,
   triggerRef,
   onTransitionApplied,
@@ -1019,6 +1021,8 @@ export function OpenTargetAction({
   className: string;
   iconClassName?: string;
   iconOnly?: boolean;
+  showIcon?: boolean;
+  triggerContent?: ReactNode;
   onActivate?: () => void;
   triggerRef?: Ref<() => void>;
   onTransitionApplied?: (outcome: WorkspaceTransitionOutcome) => void;
@@ -1123,9 +1127,9 @@ export function OpenTargetAction({
 
   if (!modal) {
     return (
-      <Link href={href} onClick={onActivate} className={className} title={iconOnly ? "Xem ảnh hiện có" : undefined} aria-label={iconOnly ? "Xem ảnh hiện có" : undefined}>
-        {iconOnly ? <Images className={iconClassName} /> : <ExternalLink className={iconClassName} />}
-        {iconOnly ? null : label}
+      <Link href={href} onClick={onActivate} className={className} title={iconOnly ? "Xem ảnh hiện có" : triggerContent ? label : undefined} aria-label={iconOnly ? "Xem ảnh hiện có" : undefined}>
+        {iconOnly ? <Images className={iconClassName} /> : showIcon ? <ExternalLink className={iconClassName} aria-hidden="true" /> : null}
+        {iconOnly ? null : triggerContent ?? label}
       </Link>
     );
   }
@@ -1136,11 +1140,11 @@ export function OpenTargetAction({
         type="button"
         onClick={activate}
         className={className}
-        title={iconOnly ? "Xem ảnh hiện có" : undefined}
+        title={iconOnly ? "Xem ảnh hiện có" : triggerContent ? label : undefined}
         aria-label={iconOnly ? "Xem ảnh hiện có" : undefined}
       >
-        {iconOnly ? <Images className={iconClassName} /> : <ExternalLink className={iconClassName} />}
-        {iconOnly ? null : label}
+        {iconOnly ? <Images className={iconClassName} /> : showIcon ? <ExternalLink className={iconClassName} aria-hidden="true" /> : null}
+        {iconOnly ? null : triggerContent ?? label}
       </button>
 
       {open ? (
