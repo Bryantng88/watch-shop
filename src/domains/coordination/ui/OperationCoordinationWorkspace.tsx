@@ -3,7 +3,7 @@ import { isUnknownOperationalAction } from "@/domains/task/shared/operational-ac
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { type FormEvent, type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -85,6 +85,7 @@ import {
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
+import { ADMIN_OPERATION_LIST as operationListStyles, ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
 import { OperationWorkspaceLayout } from "./OperationWorkspaceLayout";
 import FlowItemListView from "./FlowItemListView";
 import TechnicalIssueListView from "./TechnicalIssueListView";
@@ -93,6 +94,7 @@ import {
   technicalIssueLayoutUrl,
   technicalIssueMatches,
   technicalIssueViewSelection,
+  technicalIssueListNavigation,
   type TechnicalIssueListState,
 } from "../shared/technical-issue-list";
 import { useUiMutation } from "@/domains/shared/ui/mutation/use-ui-mutation";
@@ -756,6 +758,7 @@ export default function OperationCoordinationWorkspace({
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [technicalFilterResetKey, setTechnicalFilterResetKey] = useState(0);
+  const [technicalListState, setTechnicalListState] = useState<TechnicalIssueListState>(DEFAULT_TI_LIST_STATE);
   const [technicalLayout, setTechnicalLayout] = useState<"board" | "list">(
     () => searchParams.get("tiLayout") === "list" ? "list" : "board",
   );
@@ -1776,7 +1779,7 @@ export default function OperationCoordinationWorkspace({
   const isMediaBoardView = workTicketView === "MEDIA_BOARD" && canShowMediaBoard;
   const isOperationalBoardView = isTechnicalIssueBoardView || isMediaBoardView;
   const isUnifiedOperation = data.context === "OPERATION";
-  const navigationStages = isOperationalBoardView ? [] : isTaskItemListMode
+  const flowNavigationStages = isOperationalBoardView ? [] : isTaskItemListMode
     ? (activeViewMode.taskItemStages ?? []).map((stage) => ({ key: stage.key, label: stage.label, count: taskItemStageCounts[stage.key] }))
     : orderedFlowStages.map((stage) => ({
         key: stage.key,
@@ -1814,23 +1817,27 @@ export default function OperationCoordinationWorkspace({
           : mediaBoardItems;
     return [...filtered].sort((left, right) => Number(right.unreadMentionCount > 0) - Number(left.unreadMentionCount > 0));
   }, [mediaBoardItems, technicalIssueCommentFilter]);
-  const visibleTechnicalIssueBoardSummary = useMemo(() => {
+  const visibleTechnicalIssueItems = useMemo(() => {
     const visibleItems =
       technicalIssuePriorityFilter === "ALL"
         ? technicalIssueBoardItems
         : technicalIssueBoardItems.filter(
           (item) => technicalIssuePriorityValue(item.priority) === technicalIssuePriorityFilter,
         );
-    return technicalBoardSummary(
-      (technicalIssueCommentFilter === "COMMENTED"
+    return (technicalIssueCommentFilter === "COMMENTED"
         ? visibleItems.filter((item) => item.commentCount > 0)
         : technicalIssueCommentFilter === "MENTIONED_ME"
           ? visibleItems.filter((item) => item.mentionedMeCount > 0)
           : technicalIssueCommentFilter === "UNREAD_MENTION"
             ? visibleItems.filter((item) => item.unreadMentionCount > 0)
-          : visibleItems).filter(item=>technicalIssueMatches(item,filterQuery)),
-    );
+          : visibleItems).filter(item=>technicalIssueMatches(item,filterQuery));
   }, [technicalIssueBoardItems, technicalIssueCommentFilter, technicalIssuePriorityFilter,filterQuery]);
+  const visibleTechnicalIssueBoardSummary = useMemo(() => technicalBoardSummary(visibleTechnicalIssueItems), [visibleTechnicalIssueItems]);
+  const technicalStagesInMenu = isUnifiedOperation && isTechnicalIssueBoardView && technicalLayout === "list";
+  const navigationStages = technicalStagesInMenu
+    ? technicalIssueListNavigation(visibleTechnicalIssueItems, asyncTechnicalIssueBoard?.columnPagination ?? {}, technicalListState, !!filterQuery || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL")
+    : flowNavigationStages;
+
   useEffect(() => {
     if (activeViewMode?.key !== "technical-issue-flow" && workTicketView === "TI_BOARD") {
       setWorkTicketView("LIST");
@@ -1945,9 +1952,12 @@ export default function OperationCoordinationWorkspace({
           activeGroup={activeViewMode?.key ?? activeViewModeKey}
           onGroupChange={changeActiveViewMode}
           stages={navigationStages}
-          activeStage={isTaskItemListMode ? activeTaskItemStage : activeFlowListStage}
+          activeStage={technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : activeFlowListStage}
           onStageChange={(key) => {
-            if (isTaskItemListMode) {
+            if (technicalStagesInMenu) {
+              const stage = navigationStages.find(candidate => candidate.key === key);
+              if (stage) { setFocusedTechnicalIssueId(null); setTechnicalListState(current => ({ ...current, scope: stage.key as TechnicalIssueListState["scope"], page: 1 })); }
+            } else if (isTaskItemListMode) {
               const stage = activeViewMode.taskItemStages?.find((candidate) => candidate.key === key);
               if (stage) changeTaskItemStage(stage.key);
             } else if (orderedFlowStages.some((stage) => stage.key === key)) {
@@ -1960,7 +1970,7 @@ export default function OperationCoordinationWorkspace({
             {activeViewMode ? (
               <div className="text-xs text-slate-700">
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                  {isUnifiedOperation && <h2 className="m-0 text-sm font-bold text-slate-950">{activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}</h2>}
+                  {isUnifiedOperation && <h2 className="m-0 text-sm font-bold text-slate-950">{technicalStagesInMenu ? navigationStages.find(stage => stage.key === technicalListState.scope)?.label : activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}</h2>}
                   <div className={isUnifiedOperation ? "hidden" : "min-w-0"}>
                     <div className="flex flex-wrap items-center gap-2">
                       {!isUnifiedOperation && data.viewConfig.modes.length > 1 ? (
@@ -2245,6 +2255,7 @@ export default function OperationCoordinationWorkspace({
               >
                 {isTechnicalIssueBoardView ? (
                   <TechnicalIssueBoardControlStrip
+                    compact={technicalLayout === "list"}
                     summary={technicalIssueBoardSummary}
                     visibleSummary={visibleTechnicalIssueBoardSummary}
                   />
@@ -2485,6 +2496,9 @@ export default function OperationCoordinationWorkspace({
           {isTechnicalIssueBoardView ? (
             <TechnicalIssueBoardView
               layout={technicalLayout}
+              listState={technicalListState}
+              setListState={setTechnicalListState}
+              stageNavigation={technicalStagesInMenu ? "external" : "inline"}
               filterResetKey={technicalFilterResetKey}
               loading={isBoardRefreshing}
               query={filterQuery}
@@ -3395,6 +3409,9 @@ function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoard
 
 function TechnicalIssueBoardView({
   layout,
+  listState,
+  setListState,
+  stageNavigation,
   query,
   loading,
   filterResetKey,
@@ -3414,6 +3431,9 @@ function TechnicalIssueBoardView({
   onDoneRangeChange,
 }: {
   layout: "board" | "list";
+  listState: TechnicalIssueListState;
+  setListState: Dispatch<SetStateAction<TechnicalIssueListState>>;
+  stageNavigation: "inline" | "external";
   query: string;
   loading: boolean;
   filterResetKey: number;
@@ -3438,11 +3458,10 @@ function TechnicalIssueBoardView({
 }) {
   const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
-  const [listState, setListState] = useState<TechnicalIssueListState>(DEFAULT_TI_LIST_STATE);
   useEffect(() => {
     setListState(current => current.attention === "ALL" && current.page === 1
       ? current : { ...current, attention: "ALL", page: 1 });
-  }, [filterResetKey]);
+  }, [filterResetKey, setListState]);
   const priorityMutation = useUiMutation();
   const listFocusMemory = useRef("");
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
@@ -3768,6 +3787,7 @@ function TechnicalIssueBoardView({
   return (
     <div className={cn("min-w-0 max-w-full border-t border-slate-100 px-3 py-4 sm:px-4",layout==="list"?"bg-white":"bg-slate-50/80")}>
       {layout === "list" ? <TechnicalIssueListView
+        stageNavigation={stageNavigation}
         items={visibleItems}
         state={listState}
         focusMemory={listFocusMemory}
@@ -4114,12 +4134,15 @@ function fieldKindLabel(kind: OperationalBlueprintActionField["kind"]) {
 }
 
 function TechnicalIssueBoardControlStrip({
+  compact = false,
   summary,
   visibleSummary,
 }: {
+  compact?: boolean;
   summary: ReturnType<typeof technicalBoardSummary>;
   visibleSummary: ReturnType<typeof technicalBoardSummary>;
 }) {
+  if (compact) return <span className={operationListStyles.progressSummary} style={ADMIN_OPERATION_LIST_STYLE}><span>{visibleSummary.done.toLocaleString("vi-VN")} / {visibleSummary.total.toLocaleString("vi-VN")} đã xong</span>{summary.urgent > 0 && <span>· {summary.urgent.toLocaleString("vi-VN")} gấp</span>}</span>;
   const segments = [
     { key: "INSPECT", label: "Kiểm tra", value: visibleSummary.stageCounts.INSPECT, className: operationalStagePresentation("INSPECT").barClassName },
     { key: "READY", label: "Chờ xử lý", value: visibleSummary.stageCounts.READY, className: operationalStagePresentation("READY").barClassName },

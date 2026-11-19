@@ -859,6 +859,25 @@ báo lỗi theo PageNotice ở vùng bị ảnh hưởng; success theo toast. Do
 callback, quyền, pending lock, revision và dirty guard như trước. Vận hành không
 thêm footer giả khi không có tài liệu đang chỉnh sửa.
 
+
+### Technical stages and Media row actions
+
+Trong Vận hành, chế độ Danh sách Kỹ thuật dùng stage dưới mục Kỹ thuật ở menu
+trái: Đang mở (tổng hợp), Kiểm tra, Chờ xử lý, Đang xử lý, Đã xong. Vùng phải
+không lặp dãy stage. Cùng state/callback điều khiển menu desktop và selector
+native khi hẹp; đổi stage về trang 1 nhưng giữ query, attention và sort. Chuyển
+Bảng/Danh sách giữ lựa chọn danh sách; Bảng vẫn hiện các cột workflow hiện hữu.
+Route Kỹ thuật riêng tiếp tục có stage inline khi không có menu Vận hành.
+Count dùng cùng công thức, phân biệt tổng server với kết quả lọc trên TI đã tải.
+Tiến độ trong list là dòng phụ gọn, không chiếm một khối biểu đồ trong toolbar.
+
+Media chỉ có một control trạng thái/xử lý trong mỗi hàng. Một action dùng
+control trực tiếp; nhiều action dùng cùng control với chevron mở các nhãn cụ thể,
+không có nút dấu ba chấm cạnh bên. Dùng AdminRowActionMenu ở shared; popup portal
+không bị table clipping, hỗ trợ keyboard/Escape/outside/focus return và pending.
+Các editor launcher luôn được mount bên ngoài popup để đóng menu không làm mất
+editor. Giữ nguyên action keys, binding, quyền, confirmation và dirty guards.
+
 ## Danh bạ workspace
 
 Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
