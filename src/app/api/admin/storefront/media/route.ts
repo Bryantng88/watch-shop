@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { mediaStorage } from "@/domains/media/storage";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
+import { websiteFolder } from "@/domains/storefront/media/website-media";
 import { editorialKey } from "@/domains/storefront/content/contract";
 export const maxDuration = 60;
 export async function GET() {
@@ -37,7 +38,10 @@ export async function POST(req: NextRequest) {
   try {
     const length = Number(req.headers.get("content-length") || 0);
     if (length > 21 * 1024 * 1024) throw new Error("Ảnh tối đa 20 MB.");
-    const file = (await req.formData()).get("file");
+    const form = await req.formData();
+    const folder = websiteFolder.safeParse(form.get("folder") || "editorial");
+    if (!folder.success) throw new Error("Thư mục ảnh không hợp lệ.");
+    const file = form.get("file");
     if (
       !(file instanceof File) ||
       file.size > 20 * 1024 * 1024 ||
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
       .resize({ width: 2560, height: 2560, fit: "inside", withoutEnlargement: true })
       .webp({ quality: 88 })
       .toBuffer();
-    const key = `storefront/editorial/${randomUUID()}.webp`;
+    const key = `storefront/${folder.data}/${randomUUID()}.webp`;
     await mediaStorage.write({ key, bytes: output, contentType: "image/webp" });
     return NextResponse.json({
       item: { key, name: file.name, url: await mediaStorage.sign(key, 600) },

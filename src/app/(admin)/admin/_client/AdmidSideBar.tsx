@@ -22,6 +22,9 @@ import {
     MessageSquare,
     Globe,
     Wrench,
+    UsersRound,
+    ContactRound,
+    Images,
 } from "lucide-react";
 
 import ReportMenu from "./ReportMenu";
@@ -161,9 +164,21 @@ const NAV: NavEntry[] = [
     },
     {
         type: "group",
+        label: "Danh bạ",
+        defaultOpen: true,
+        children: [
+            { type: "item", href: "/admin/customers", label: "Khách hàng", icon: UsersRound, permission: PERMISSIONS.CUSTOMER_VIEW },
+            { type: "item", href: "/admin/vendors", label: "Nhà cung cấp / Vendor", icon: ContactRound, permissionsAny: [PERMISSIONS.SERVICE_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW, PERMISSIONS.PRODUCT_VIEW] },
+        ],
+    },
+    {
+        type: "group",
         label: "Storefront",
         defaultOpen: true,
-        children: [{type:"item",href:"/admin/storefront/home",label:"Trang chủ website",icon:Globe,permission:PERMISSIONS.PRODUCT_UPDATE}],
+        children: [
+            { type: "item", href: "/admin/storefront/home", label: "Trang chủ website", icon: Globe, permission: PERMISSIONS.PRODUCT_UPDATE },
+            { type: "item", href: "/admin/storefront/media", label: "Thư viện ảnh website", icon: Images, permission: PERMISSIONS.PRODUCT_UPDATE },
+        ],
     },
     {
         type: "group",

@@ -58,6 +58,11 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
         return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
     }
 
+    if (pathname === "/api/admin/contacts") {
+        // The endpoint checks the requested directory and create/update rights again.
+        return anyOf(PERMISSIONS.CUSTOMER_VIEW, PERMISSIONS.SERVICE_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW, PERMISSIONS.PRODUCT_VIEW);
+    }
+
     if (/^\/api\/admin\/storefront(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_UPDATE);
 
     if (pathname === "/api/admin/settings/storefront-hero") {
@@ -248,6 +253,8 @@ export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
     if (pathname === "/admin/users/new") return anyOf(PERMISSIONS.USER_CREATE, PERMISSIONS.USER_MANAGE);
     if (pathname === "/admin/users/roles") return anyOf(PERMISSIONS.USER_MANAGE);
     if (/^\/admin\/users(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.USER_VIEW, PERMISSIONS.USER_MANAGE);
+    if (pathname === "/admin/storefront/media") return anyOf(PERMISSIONS.PRODUCT_UPDATE);
+    if (pathname === "/admin/vendors") return anyOf(PERMISSIONS.SERVICE_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW, PERMISSIONS.PRODUCT_VIEW);
     if (pathname === "/admin/storefront/home") return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (/^\/admin\/settings\/storefront(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.PRODUCT_UPDATE);
     if (pathname === "/admin/settings/storefront-hero") return anyOf(PERMISSIONS.PRODUCT_UPDATE);
