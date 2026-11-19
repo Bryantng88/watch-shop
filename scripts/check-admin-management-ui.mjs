@@ -73,7 +73,7 @@ try{
  await page.getByRole('button',{name:'Tải thêm ảnh'}).click();await page.waitForFunction(()=>document.querySelectorAll('figure').length===3);await page.getByRole('link',{name:'Dùng trên Home',exact:true}).last().click();await page.getByRole('heading',{name:'Trang chủ website',exact:true}).waitFor();await page.getByRole('combobox',{name:'Chọn Ảnh desktop',exact:true}).getByRole('option',{name:'Ảnh cũ ngoài trang đầu'}).waitFor({state:'attached'});
  const before=writes.length;await page.getByLabel('Tông màu khối mở đầu').selectOption('charcoal');await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await page.waitForTimeout(100);assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(),'charcoal');assert.equal(writes.length,before,'library selection/focus never saves or publishes');
  await page.goto(url+'/admin/customers');await page.getByRole('list',{name:'Danh sách liên hệ'}).waitFor();
- const directoryNav=page.getByRole('navigation',{name:'Danh sách',exact:true});
+ const directoryNav=page.getByRole('navigation',{name:'Nhóm liên hệ',exact:true});
  await directoryNav.getByRole('link',{name:'Người dùng',exact:true}).click();await page.getByRole('list',{name:'Danh sách người dùng'}).waitFor();
  assert.equal(await page.getByRole('heading',{level:1}).count(),1);
  await page.getByRole('button',{name:/^Sửa Người dùng mẫu/}).click();const userDialog=page.getByRole('dialog');await userDialog.getByLabel('Tên hiển thị').fill('Đang sửa người dùng');
