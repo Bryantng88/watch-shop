@@ -1,4 +1,6 @@
 "use client";
+import { isUnknownOperationalAction } from "@/domains/task/shared/operational-action-response";
+import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 
 import { Fragment, type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -50,7 +52,6 @@ import {
   applyQueueItemManualTransitionAction,
   changeTaskItemStatusAction,
   createTaskItemAction,
-  submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import type {
   OperationalBlueprintAction,
@@ -3538,6 +3539,8 @@ function TechnicalIssueBoardView({
   const [moveValues, setMoveValues] = useState<Record<string, TechnicalBoardFieldValue>>({});
   const [additionalIssues, setAdditionalIssues] = useState<TechnicalBoardAdditionalIssue[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [moveUncertain, setMoveUncertain] = useState(false);
+  const moveInFlight = useRef(false);
   const [priorityIssueId, setPriorityIssueId] = useState<string | null>(null);
   const [boardItems, setBoardItems] = useState(items);
   const [isMovePending, startMoveTransition] = useTransition();
@@ -3597,6 +3600,8 @@ function TechnicalIssueBoardView({
     issueId: string,
     droppedStage: TechnicalIssueBoardStage,
   ) {
+    if (moveInFlight.current) return;
+    setMoveUncertain(false);
     const item = visibleItems.find((candidate) => candidate.id === issueId) ?? null;
     setOverStage(null);
 
@@ -3638,7 +3643,7 @@ function TechnicalIssueBoardView({
   }
 
   function submitMove() {
-    if (!moveRequest?.action) return;
+    if (!moveRequest?.action || moveInFlight.current || moveUncertain) return;
     const { item, action, targetStage } = moveRequest;
     if (!item.workspaceTaskItemId) {
       setMoveError("TI này chưa có Workspace stage hiện tại nên không thể đóng bộ workflow.");
@@ -3702,8 +3707,10 @@ function TechnicalIssueBoardView({
       steps: moveProgressSteps,
     });
 
+    moveInFlight.current = true;
     setMoveError(null);
     startMoveTransition(async () => {
+      let committed = false;
       try {
         const deliveryResults: unknown[] = [];
         deliveryResults.push(await submitOperationalBlueprintActionAction({
@@ -3713,6 +3720,7 @@ function TechnicalIssueBoardView({
           targetId: item.id,
           fields: actionFields,
         }));
+        committed = true;
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "move" ? { ...step, status: "done" } : step);
         moveProgressSteps = moveProgressSteps.map((step) => step.id === "additional" && normalizedAdditionalIssues.length ? { ...step, status: "running" } : step);
         progress.update({ message: "Đã chuyển stage, đang xử lý dữ liệu liên quan.", percent: normalizedAdditionalIssues.length ? 55 : 75, steps: moveProgressSteps });
@@ -3794,17 +3802,21 @@ function TechnicalIssueBoardView({
         progress.update({ message: "Đã cập nhật card. Board đang đồng bộ nền.", percent: 90, steps: moveProgressSteps });
         window.setTimeout(() => progress.hide(), 1000);
       } catch (error) {
+        setMoveUncertain(committed || isUnknownOperationalAction(error));
         moveProgressSteps = moveProgressSteps.map((step) => step.status === "running" ? { ...step, status: "error" } : step);
         progress.update({ message: error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.", steps: moveProgressSteps });
         window.setTimeout(() => progress.hide(), 1400);
         setMoveError(
           error instanceof Error ? error.message : "Không thể chuyển trạng thái TI.",
         );
+      } finally {
+        moveInFlight.current = false;
       }
     });
   }
 
   function submitCostApproval() {
+    if (moveInFlight.current || moveUncertain) return;
     if (!moveRequest?.action || moveRequest.action.command !== "service.completeTechnicalIssue") return;
     const actualCost = Number(moveValues.actualCost);
     if (!Number.isFinite(actualCost) || actualCost < 0) {
@@ -3812,6 +3824,7 @@ function TechnicalIssueBoardView({
       return;
     }
 
+    moveInFlight.current = true;
     setMoveError(null);
     startCostApprovalTransition(async () => {
       try {
@@ -3835,6 +3848,8 @@ function TechnicalIssueBoardView({
         await onReloadRequested();
       } catch (error) {
         setMoveError(error instanceof Error ? error.message : "Không thể gửi duyệt chi phí.");
+      } finally {
+        moveInFlight.current = false;
       }
     });
   }
@@ -3910,6 +3925,16 @@ function TechnicalIssueBoardView({
         values={moveValues}
         additionalIssues={additionalIssues}
         error={moveError}
+        uncertain={moveUncertain}
+        onReconcile={() => startMoveTransition(async () => {
+          try {
+            await onReloadRequested();
+            setMoveRequest(null);
+            setMoveUncertain(false);
+          } catch {
+            setMoveError("Chưa tải được danh sách mới. Giữ nguyên thông tin và thử tải lại; không gửi hoàn tất lần nữa.");
+          }
+        })}
         pending={isMovePending || isCostApprovalPending}
         costApprovalPending={isCostApprovalPending}
         vendorOptions={vendorOptions}
@@ -4595,6 +4620,8 @@ function TechnicalIssueBoardMoveModal({
   values,
   additionalIssues,
   error,
+  uncertain,
+  onReconcile,
   pending,
   costApprovalPending,
   vendorOptions,
@@ -4609,6 +4636,8 @@ function TechnicalIssueBoardMoveModal({
   values: Record<string, TechnicalBoardFieldValue>;
   additionalIssues: TechnicalBoardAdditionalIssue[];
   error: string | null;
+  uncertain: boolean;
+  onReconcile: () => void;
   pending: boolean;
   costApprovalPending: boolean;
   vendorOptions: NonNullable<CoordinationDashboardDTO["technicalIssueBoard"]>["vendorOptions"];
@@ -4631,10 +4660,10 @@ function TechnicalIssueBoardMoveModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
-      <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
+      <div role="dialog" aria-modal="true" aria-labelledby="technical-board-move-title" className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-950">
+            <div id="technical-board-move-title" className="text-sm font-semibold text-slate-950">
               {action?.label ?? "Không thể chuyển trạng thái"}
             </div>
             <div className="mt-1 truncate text-xs text-slate-500">
@@ -4654,7 +4683,7 @@ function TechnicalIssueBoardMoveModal({
           className="space-y-4 px-5 py-5"
           onSubmit={(event) => {
             event.preventDefault();
-            onSubmit();
+            if (!pending && !uncertain) onSubmit();
           }}
         >
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
@@ -4775,8 +4804,9 @@ function TechnicalIssueBoardMoveModal({
             </div>
           ) : null}
           {error ? (
-            <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
+            <div role="alert" className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
               {error}
+              {uncertain && <button type="button" disabled={pending} onClick={onReconcile} className="mt-2 block min-h-11 rounded-lg border border-rose-200 bg-white px-3 font-semibold disabled:opacity-50">Tải lại danh sách để kiểm tra</button>}
             </div>
           ) : null}
           <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
@@ -4792,7 +4822,7 @@ function TechnicalIssueBoardMoveModal({
               {action?.command === "service.completeTechnicalIssue" ? (
                 <button
                   type="button"
-                  disabled={pending}
+                  disabled={pending || uncertain}
                   onClick={onRequestCostApproval}
                   className="inline-flex h-9 items-center rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -4801,7 +4831,7 @@ function TechnicalIssueBoardMoveModal({
               ) : null}
               <button
                 type="submit"
-                disabled={pending || !action}
+                disabled={pending || uncertain || !action}
                 className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {pending && !costApprovalPending ? "Đang xử lý" : action ? technicalBoardSubmitLabel(action) : "Không khả dụng"}

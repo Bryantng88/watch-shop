@@ -1,4 +1,5 @@
 "use client";
+import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition, type ReactNode, type Ref } from "react";
 import Link from "next/link";
@@ -38,7 +39,6 @@ import {
   applyQueueItemManualTransitionsAction,
   applyQueueItemManualTransitionAction,
   reloadTaskItemQueueAction,
-  submitOperationalBlueprintActionAction,
 } from "@/domains/task/actions/task.actions";
 import {
   resolveQueueRowPresentation,
