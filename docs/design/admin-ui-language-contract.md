@@ -797,4 +797,3 @@ PageEditingState ở heading form; lỗi lưu ở trong form và giữ dữ li�
 chỉ toast một lần. Hủy/chuyển route/chọn bản ghi khác kiểm tra dirty draft trước.
 API, role grant và semantics lưu không thay đổi. Trang quản lý vai trò riêng
 không thuộc phạm vi chuẩn hóa này.
-001b7b43 (Align directory workspace and editors with admin UI contract)
