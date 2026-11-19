@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { ADMIN_OPERATION_PAGE_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type SpaceViewPageProps = {
@@ -8,7 +9,7 @@ type SpaceViewPageProps = {
   meta?: ReactNode;
   actions?: ReactNode;
   headerIcon?: ReactNode;
-  headerVariant?: "default" | "compact";
+  headerVariant?: "default" | "compact" | "workspace";
   children: ReactNode;
 };
 
@@ -54,9 +55,10 @@ export function SpaceViewPage({
   children,
 }: SpaceViewPageProps) {
   const compactHeader = headerVariant === "compact";
+  const workspaceHeader = headerVariant === "workspace";
 
   return (
-    <main className={`${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
+    <main className={workspaceHeader ? `${ADMIN_OPERATION_PAGE_CLASS} min-w-0 bg-white px-4 py-3 font-sans text-slate-950 sm:px-6 sm:py-5` : `${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
       <div className="mx-auto flex w-full max-w-none min-w-0 flex-col gap-4">
         {breadcrumbs}
         <section
@@ -76,20 +78,23 @@ export function SpaceViewPage({
               </span>
             ) : null}
             <div className="min-w-0">
-              <div
-                className={
-                  compactHeader
-                    ? "flex flex-wrap items-center gap-2.5 text-2xl font-semibold tracking-[-0.02em] text-slate-950"
-                    : "flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-normal text-slate-950"
-                }
-              >
-                {title}
-                {status}
-              </div>
+              {workspaceHeader ? (
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h1 className="break-words text-xl font-bold leading-7 text-slate-950 sm:text-2xl sm:leading-8">{title}</h1>
+                  {status}
+                </div>
+              ) : (
+                <div className={compactHeader ? "flex flex-wrap items-center gap-2.5 text-2xl font-semibold tracking-[-0.02em] text-slate-950" : "flex flex-wrap items-center gap-3 text-3xl font-semibold tracking-normal text-slate-950"}>
+                  {title}
+                  {status}
+                </div>
+              )}
               {meta ? (
                 <div
                   className={
-                    compactHeader
+                    workspaceHeader
+                      ? ADMIN_UI.pageDescription
+                      : compactHeader
                       ? "mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500"
                       : "mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500"
                   }

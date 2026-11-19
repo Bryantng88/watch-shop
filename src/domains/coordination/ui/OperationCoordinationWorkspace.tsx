@@ -84,6 +84,7 @@ import {
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
+import { OperationWorkspaceLayout } from "./OperationWorkspaceLayout";
 import FlowItemListView from "./FlowItemListView";
 import TechnicalIssueListView from "./TechnicalIssueListView";
 import {
@@ -1776,6 +1777,16 @@ export default function OperationCoordinationWorkspace({
   const isMediaBoardView = workTicketView === "MEDIA_BOARD" && canShowMediaBoard;
   const isOperationalBoardView = isTechnicalIssueBoardView || isMediaBoardView;
   const HeaderDomainIcon = operationalDomainPresentation(activeCoreFlow?.key ?? activeViewMode?.key).icon;
+  const isUnifiedOperation = data.context === "OPERATION";
+  const navigationStages = isOperationalBoardView ? [] : isTaskItemListMode
+    ? (activeViewMode.taskItemStages ?? []).map((stage) => ({ key: stage.key, label: stage.label, count: taskItemStageCounts[stage.key] }))
+    : orderedFlowStages.map((stage) => ({
+        key: stage.key,
+        label: activeCoreFlow?.key === "media-production-flow" && stage.key === "done" ? "Hoàn tất" : stageLabel(stage.label),
+        count: flowListStageCounts.get(stage.key) ??
+          (stage.key === activeFlowListStage && isFlowItemsLoading ? "…" : "—"),
+      }));
+
   const technicalIssueBoardItems = useMemo(
     () => asyncTechnicalIssueBoard?.items ?? [],
     [asyncTechnicalIssueBoard?.items],
@@ -1841,12 +1852,6 @@ export default function OperationCoordinationWorkspace({
       ? emptyStateText(data.viewConfig.emptyState, "WORKSPACE")
       : emptyStateText(data.viewConfig.emptyState, activeViewMode?.rowModel);
 
-  function updateDate(date: string) {
-    const next = new URLSearchParams(searchParams.toString());
-    next.set("date", date);
-    router.push(`/admin/coordination/${contextPath(data.context)}?${next.toString()}`);
-  }
-
   async function createWorkTicket(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanTitle = title.trim();
@@ -1907,16 +1912,16 @@ export default function OperationCoordinationWorkspace({
         />
       }
       title={
-        activeCoreFlow
+        isUnifiedOperation ? "Vận hành" : activeCoreFlow
           ? coreFlowLabel(activeCoreFlow)
           : activeViewMode
             ? modeLabel(activeViewMode)
             : data.contextLabel
       }
-      headerVariant="compact"
-      headerIcon={<HeaderDomainIcon className="h-5 w-5" />}
+      headerVariant={isUnifiedOperation ? "workspace" : "compact"}
+      headerIcon={isUnifiedOperation ? undefined : <HeaderDomainIcon className="h-5 w-5" /> }
       meta={
-        <span className="font-medium text-slate-600">Vận hành</span>
+        <span className="font-medium text-slate-600">{isUnifiedOperation ? "Chọn khu vực và giai đoạn để xử lý công việc." : "Vận hành"}</span>
       }
       actions={
         <div className="flex items-center gap-2">
@@ -1937,20 +1942,36 @@ export default function OperationCoordinationWorkspace({
           }}
         />
         {adHocWorkCreate.modal}
-        <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.055)]">
-          <div className="border-b border-slate-200 px-5 py-4">
+        <OperationWorkspaceLayout
+          enabled={isUnifiedOperation}
+          groups={data.viewConfig.modes.map((mode) => ({ key: mode.key, label: displayText(mode.label), domainKey: mode.coreFlowKey ?? mode.key }))}
+          activeGroup={activeViewMode?.key ?? activeViewModeKey}
+          onGroupChange={changeActiveViewMode}
+          stages={navigationStages}
+          activeStage={isTaskItemListMode ? activeTaskItemStage : activeFlowListStage}
+          onStageChange={(key) => {
+            if (isTaskItemListMode) {
+              const stage = activeViewMode.taskItemStages?.find((candidate) => candidate.key === key);
+              if (stage) changeTaskItemStage(stage.key);
+            } else if (orderedFlowStages.some((stage) => stage.key === key)) {
+              changeFlowListStage(key);
+            }
+          }}
+        >
+        <section className={isUnifiedOperation ? "min-w-0 max-w-full bg-white" : "min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.055)]"}>
+          <div className={isUnifiedOperation ? "border-b border-slate-100 pb-4" : "border-b border-slate-200 px-5 py-4"}>
             {activeViewMode ? (
-              <div className="rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]">
-                <div className="grid gap-4 xl:grid-cols-[minmax(320px,1fr)_auto] xl:items-center">
+              <div className={isUnifiedOperation ? "text-xs text-slate-700" : "rounded-xl border border-sky-100 bg-gradient-to-b from-sky-50/80 to-[#f3f8ff] p-4 text-xs text-slate-700 shadow-[0_8px_24px_rgba(30,43,79,0.04)]"}>
+                <div className={isUnifiedOperation ? "flex min-w-0 flex-wrap items-start justify-between gap-3" : "grid gap-4 xl:grid-cols-[minmax(320px,1fr)_auto] xl:items-center"}>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="m-0 text-lg font-extrabold text-[#07113d]">
+                      <h2 className={isUnifiedOperation ? "m-0 text-sm font-bold text-slate-950" : "m-0 text-lg font-extrabold text-[#07113d]"}>
                         {activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}
                       </h2>
-                      <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-0.5 font-semibold text-violet-700">
+                      <span hidden={isUnifiedOperation} className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-0.5 font-semibold text-violet-700">
                         {activeViewMode.key === data.viewConfig.defaultModeKey ? "Mặc định" : "View"}
                       </span>
-                      {data.viewConfig.modes.length > 1 ? (
+                      {!isUnifiedOperation && data.viewConfig.modes.length > 1 ? (
                         <div
                           className="relative ml-1"
                           onBlur={(event) => {
@@ -2019,7 +2040,7 @@ export default function OperationCoordinationWorkspace({
                       <button
                         type="button"
                         onClick={adHocWorkCreate.open}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                        className={isUnifiedOperation ? "inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800" : "inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo việc</span>
@@ -2045,7 +2066,7 @@ export default function OperationCoordinationWorkspace({
                       <button
                         type="button"
                         onClick={() => setIsMediaPostCreateOpen((value) => !value)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"
+                        className={isUnifiedOperation ? "inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800" : "inline-flex h-9 items-center justify-center gap-2 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-violet-700"}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo Media Post</span>
@@ -2060,7 +2081,7 @@ export default function OperationCoordinationWorkspace({
                           setTitle(data.blueprints[0]?.workspaceDefinition.defaultName ?? "");
                           setIsCreateFormOpen(true);
                         }}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                        className={isUnifiedOperation ? "inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50" : "inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Workspace</span>
@@ -2139,9 +2160,6 @@ export default function OperationCoordinationWorkspace({
               <SpaceFilterBar
                 frameless
                 filterBadgeCount={unreadMentionBadgeCount}
-                weekValue={data.timeRange.periodKey}
-                weekOptions={data.filters.weekOptions}
-                dateValue={data.filters.selectedDate}
                 searchValue={filterQuery}
                 searchPlaceholder={isOperationalBoardView
                   ? "Tìm item, mã tham chiếu..."
@@ -2272,11 +2290,6 @@ export default function OperationCoordinationWorkspace({
                     },
                   }] : []),
                 ]}
-                onWeekChange={(value) => {
-                  const option = data.filters.weekOptions.find((item) => item.value === value);
-                  if (option) updateDate(option.date);
-                }}
-                onDateChange={updateDate}
               >
                 {isTechnicalIssueBoardView ? (
                   <TechnicalIssueBoardControlStrip
@@ -2303,7 +2316,7 @@ export default function OperationCoordinationWorkspace({
                   onRefresh={() => void refreshActiveData()}
                 />
               </SpaceFilterBar>
-              {!isOperationalBoardView && isTaskItemListMode ? (
+              {!isUnifiedOperation && !isOperationalBoardView && isTaskItemListMode ? (
                 <div className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5" aria-label="Lọc theo trạng thái công việc">
                   {(activeViewMode.taskItemStages ?? []).map((stage, index) => {
                     const isActive = stage.key === activeTaskItemStage;
@@ -2331,7 +2344,7 @@ export default function OperationCoordinationWorkspace({
                   })}
                 </div>
               ) : null}
-              {!isOperationalBoardView && orderedFlowStages.length ? (
+              {!isUnifiedOperation && !isOperationalBoardView && orderedFlowStages.length ? (
                 <div
                   className="mt-3 flex min-w-0 items-center overflow-x-auto rounded-xl border border-slate-200 bg-slate-50/70 p-1.5"
                   aria-label="Lọc theo bước"
@@ -2629,6 +2642,10 @@ export default function OperationCoordinationWorkspace({
             />
           ) : (
             <>
+          {isUnifiedOperation && activeCoreFlow && <div className="mb-3 mt-5 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-semibold text-slate-950">{navigationStages.find((stage) => stage.key === activeFlowListStage)?.label ?? "Danh sách"}</h3>
+            <span className="text-xs tabular-nums text-slate-500">{isFlowItemsLoading ? "Đang tải…" : `${flowListStageCounts.get(activeFlowListStage)?.toLocaleString("vi-VN") ?? "—"} item`}</span>
+          </div>}
           {activeCoreFlow ? <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}
             items={asyncFlowItems}
@@ -2860,6 +2877,7 @@ export default function OperationCoordinationWorkspace({
             Gợi ý: kéo thả để đổi thứ tự stage. Nhấp vào Workspace để xem chi tiết item và hoạt động.
           </SpaceViewFooterTip>
         </section>
+        </OperationWorkspaceLayout>
         {isTechnicalIntakeOpen ? (
           <TechnicalIntakeModal
             onClose={() => setIsTechnicalIntakeOpen(false)}

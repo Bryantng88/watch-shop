@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { CalendarDays, ChevronDown, MoreHorizontal, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, MoreHorizontal, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 
+import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 import { cn } from "@/lib/utils";
 import { useDismissibleDetails } from "@/domains/shared/ui/popover/useDismissibleDetails";
 
@@ -26,27 +27,12 @@ export function SpaceViewSwitch({
   onChange?: (value: string) => void;
 }) {
   return (
-    <div role="group" aria-label="Cách hiển thị" className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange?.(option.value)}
-          disabled={option.disabled}
-          aria-pressed={activeView===option.value}
-          className={cn(
-            "inline-flex h-8 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium transition",
-            activeView === option.value
-              ? "bg-violet-50 text-violet-700"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700",
-            option.disabled && "cursor-not-allowed opacity-50",
-          )}
-        >
-          {option.icon}
-          <span>{option.label}</span>
-        </button>
-      ))}
-    </div>
+    <AdminViewTabs
+      label="Cách hiển thị"
+      value={activeView ?? ""}
+      items={options.map((option) => ({ value: option.value, label: option.label, disabled: option.disabled }))}
+      onValueChange={(value) => onChange?.(value)}
+    />
   );
 }
 
@@ -87,32 +73,22 @@ export function SpaceDataRefreshButton({
 }
 
 export default function SpaceFilterBar({
-  weekValue,
-  weekOptions,
-  dateValue,
   activeView,
   searchValue = "",
   searchPlaceholder = "Tìm kiếm Workspace...",
   selectFilters = [],
   viewOptions = [],
-  onWeekChange,
-  onDateChange,
   onViewChange,
   onSearchChange,
   children,
   frameless = false,
   filterBadgeCount = 0,
 }: {
-  weekValue: string;
-  weekOptions: SpaceFilterOption[];
-  dateValue: string;
   activeView?: string;
   searchValue?: string;
   searchPlaceholder?: string;
   selectFilters?: SpaceSelectFilter[];
   viewOptions?: SpaceViewOption[];
-  onWeekChange: (value: string) => void;
-  onDateChange: (value: string) => void;
   onViewChange?: (value: string) => void;
   onSearchChange?: (value: string) => void;
   children?: ReactNode;
@@ -124,8 +100,6 @@ export default function SpaceFilterBar({
   const activeFilterCount = selectFilters.filter(
     (filter) => filter.value !== filter.options[0]?.value,
   ).length;
-  const activeWeekLabel =
-    weekOptions.find((option) => option.value === weekValue)?.label ?? "Chọn thời gian";
 
   return (
     <div ref={filterBarRef} className={cn(
@@ -134,46 +108,12 @@ export default function SpaceFilterBar({
         ? "border-0 p-0 shadow-none"
         : "border border-slate-200 p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]",
     )}>
-      <div className="flex flex-nowrap items-center gap-2">
-        <details data-dismissible-popover className="group relative shrink-0">
-          <summary className="flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-            <CalendarDays className="h-4 w-4 text-slate-500" />
-            <span className="max-w-[130px] truncate">{activeWeekLabel}</span>
-            <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
-          </summary>
-          <div className="absolute left-0 top-full z-40 mt-2 w-[300px] rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
-            <label className="block text-xs font-semibold text-slate-600">
-              Chọn tuần
-              <select
-                value={weekValue}
-                onChange={(event) => onWeekChange(event.target.value)}
-                className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-violet-300"
-                aria-label="Chọn tuần"
-              >
-                {weekOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <div className="my-3 flex items-center gap-2 text-[11px] text-slate-400">
-              <span className="h-px flex-1 bg-slate-100" />
-              hoặc chọn ngày tham chiếu
-              <span className="h-px flex-1 bg-slate-100" />
-            </div>
-            <input
-              type="date"
-              value={dateValue}
-              onChange={(event) => onDateChange(event.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-violet-300"
-              aria-label="Chọn ngày"
-            />
-          </div>
-        </details>
-
+      <div className="flex flex-wrap items-center gap-2">
         {onSearchChange ? (
-          <label className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-slate-400">
+          <label className="flex h-11 min-w-0 basis-full items-center sm:basis-0 sm:flex-1 gap-2 rounded-xl border border-slate-200 bg-white px-3 transition focus-within:border-slate-400">
             <Search className="h-4 w-4 shrink-0 text-slate-400" />
             <input
+              aria-label={searchPlaceholder}
               value={searchValue}
               onChange={(event) => onSearchChange(event.target.value)}
               placeholder={searchPlaceholder}
@@ -203,7 +143,7 @@ export default function SpaceFilterBar({
               ) : null}
               <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
             </summary>
-            <div className="absolute right-0 top-full z-40 mt-2 w-[320px] rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
+            <div className="absolute left-0 top-full z-40 mt-2 w-[min(320px,calc(100vw-32px))] sm:left-auto sm:right-0 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-sm font-bold text-slate-900">Bộ lọc</div>
                 {activeFilterCount ? (
