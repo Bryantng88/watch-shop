@@ -344,6 +344,7 @@ export default function StorefrontManager({
   }, []);
   const libraryRequest = useRef(0);
   const refreshLibrary = useCallback(async () => {
+    setLibraryError("");
     const request = ++libraryRequest.current;
     try {
       const result = await jsonRequest("/api/admin/storefront/media");
@@ -358,10 +359,11 @@ export default function StorefrontManager({
       }
       if (request !== libraryRequest.current) return;
       setLibrary(selected ? [selected, ...items.filter(item => item.key !== selected.key)] : items);
-      if (result.truncated && !selected) setMessage("Thư viện đang hiển thị 300 ảnh mới nhất. Mở Thư viện ảnh website để tìm ảnh cũ hơn.");
-      if (selected) setMessage("Ảnh từ thư viện đã sẵn trong bộ chọn. Chọn vị trí ảnh và lưu nháp khi đã sẵn sàng.");
+      if (!result.truncated && !selected) setLibraryNotice("");
+      if (result.truncated && !selected) setLibraryNotice("Thư viện đang hiển thị 300 ảnh mới nhất. Mở Thư viện ảnh website để tìm ảnh cũ hơn.");
+      if (selected) setLibraryNotice("Ảnh từ thư viện đã sẵn trong bộ chọn. Chọn vị trí ảnh và lưu nháp khi đã sẵn sàng.");
     } catch (reason) {
-      if (request === libraryRequest.current) setError(reason instanceof Error ? reason.message : "Không tải được thư viện ảnh.");
+      if (request === libraryRequest.current) setLibraryError(uiFeedbackMessage(reason, "Không tải được thư viện ảnh."));
     }
   }, []);
   useEffect(() => {
@@ -465,7 +467,7 @@ export default function StorefrontManager({
             Tải lại nội dung
           </button>
       ) : undefined}>{error}</PageNotice>}
-      {libraryError && <PageNotice title="Không tải được thư viện ảnh" action={<button type="button" disabled={busy || uploading} onClick={() => void loadLibrary()}>Thử lại</button>}>{libraryError}</PageNotice>}
+      {libraryError && <PageNotice title="Không tải được thư viện ảnh" action={<button type="button" disabled={busy || uploading} onClick={() => void refreshLibrary()}>Thử lại</button>}>{libraryError}</PageNotice>}
       {libraryNotice && <PageNotice tone="info" title="Thư viện ảnh">{libraryNotice}</PageNotice>}
       {tab === "articles" ? (
         <section className="sfc-card">

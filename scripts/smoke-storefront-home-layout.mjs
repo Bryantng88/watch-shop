@@ -78,7 +78,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     await bar.waitFor();
     assert.equal(await page.getByText(/lưu ý về cách hiển thị ảnh/).count(), 0);
     assert.equal(await bar.getByText('Trang chủ', { exact: true }).count(), 0);
-    assert.deepEqual(await bar.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.borderTopWidth, s.borderRadius, s.position]; }), ['rgb(255, 255, 255)', '0px', '0px', 'static']);
+    assert.deepEqual(await bar.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.borderTopWidth, s.borderRadius, s.position]; }), ['rgb(255, 255, 255)', '1px', '0px', 'static']);
     assert.equal(await page.locator('.sfc-section-editor:visible').count(), 1);
     await page.getByLabel('Tông màu khối mở đầu').selectOption('charcoal');
     await nav.getByRole('button', { name: /^Về Vintic/ }).click();
