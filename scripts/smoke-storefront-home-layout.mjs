@@ -36,9 +36,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
         ? `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`
         : name === 'toast' ? `const notify={success(){},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
         : `export const useAppDialog=()=>({confirm:async()=>true});` }));
-      build.onResolve({ filter: /^@\// }, ({ path: source }) => ({ path: source === '@/domains/shared/ui/admin-design-contract'
-        ? path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx')
-        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') || source.endsWith('AdminSplitWorkspace') ? '.ts' : '.tsx') }));
+      build.onResolve({ filter: /^@\// }, ({ path: source }) => source === '@/domains/shared/ui/admin-design-contract'
+        ? { path: path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx') }
+        : build.resolve(path.join(root, source.replace(/^@\//, 'src/')), { resolveDir: root, kind: 'import-statement' }));
     } }],
   });
   const tailwindCss = await postcss([tailwind({ content: [path.join(root, 'src/domains/storefront/content/StorefrontManager.tsx'), path.join(root, 'src/domains/shared/ui/admin-design-contract/*.{ts,tsx}')], corePlugins: { preflight: true } })]).process('@tailwind base;@tailwind utilities;', { from: undefined });

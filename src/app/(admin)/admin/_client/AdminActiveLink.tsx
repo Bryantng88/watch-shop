@@ -31,6 +31,7 @@ export default function ActiveLink({
     href,
     children,
     exact = false,
+    activePaths,
     className,
     activeClassName = "bg-gray-900 text-white",
     title,
@@ -41,6 +42,7 @@ export default function ActiveLink({
     href: string;
     children: React.ReactNode;
     exact?: boolean;
+    activePaths?: string[];
     className?: string;
     activeClassName?: string;
     title?: string;
@@ -49,7 +51,7 @@ export default function ActiveLink({
     onNavigate?: () => void;
 }) {
     const pathname = usePathname();
-    const isActive = exact ? pathname === href : pathname?.startsWith(href);
+    const isActive = activePaths ? activePaths.some(path => pathname === path || pathname?.startsWith(`${path}/`)) : exact ? pathname === href : pathname?.startsWith(href);
     return (
         <Link
             href={href}

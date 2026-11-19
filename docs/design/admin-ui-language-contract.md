@@ -858,3 +858,36 @@ buttons tối thiểu 44px coarse pointer, không ẩn action hay làm tràn bod
 báo lỗi theo PageNotice ở vùng bị ảnh hưởng; success theo toast. Domain vẫn giữ
 callback, quyền, pending lock, revision và dirty guard như trước. Vận hành không
 thêm footer giả khi không có tài liệu đang chỉnh sửa.
+
+## Danh bạ workspace
+
+Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
+Người dùng / Khách hàng / Nhà cung cấp (Vendor) theo quyền đọc hiện hữu; không
+đưa Users vào System lần thứ hai. Các URL danh sách cũ giữ nguyên để không phá
+bookmark, search, pagination và form hiện hữu. `/admin/directory` đi tới mục đầu
+được phép; active state sidebar theo cả workspace và các route danh sách.
+
+Dùng geometry `ADMIN_UI_FOUNDATION.splitWorkspace` và `AdminSplitWorkspace`
+đang được áp dụng cho Vận hành / Home ở PR #124: menu 280px gồm inset phải
+16px, gap 28px, line slate-100. Đo available width bằng hook chung; dưới 960px,
+menu thành native selector cùng các destination. Selector kích hoạt cùng route
+link để giữ kiểm tra dirty draft. Không containment hoặc padding page lồng nhau.
+
+Một h1 Danh bạ; heading vùng phải là tên danh sách, action tạo ở cạnh heading,
+toolbar tìm kiếm ngay dưới. Danh sách phẳng, count/filter/pagination theo domain;
+không thêm card hoặc KPI. Mỗi mục chỉ xuất hiện khi đủ quyền đọc, không suy ra
+quyền sửa từ khả năng mở workspace. Không đổi API, role grant hoặc access policy.
+
+Runtime dùng AdminManagementSection và AdminWorkspaceNavigation. Header dùng
+variant workspace như Home; menu chọn nền focusSurface như Vận hành. Toolbar
+tìm kiếm đơn giản dùng variant phẳng, kết quả/count và Làm mới hiện trực tiếp.
+Danh sách có heading cột, nhận diện người dùng bằng AdminUserAvatar, thiếu dữ
+liệu dùng dấu —; trên mobile bỏ heading cột và giữ thứ tự đọc từng liên hệ.
+
+Form người dùng dùng inline editor cùng vùng nội dung như khách hàng/nhà cung
+cấp để đối chiếu danh sách; không mở drawer legacy. Field/button lấy từ shared
+AdminManagement, vai trò dùng checkbox native, không card màu cho từng vai trò.
+PageEditingState ở heading form; lỗi lưu ở trong form và giữ dữ liệu, thành công
+chỉ toast một lần. Hủy/chuyển route/chọn bản ghi khác kiểm tra dirty draft trước.
+API, role grant và semantics lưu không thay đổi. Trang quản lý vai trò riêng
+không thuộc phạm vi chuẩn hóa này.
