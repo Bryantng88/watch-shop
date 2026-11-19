@@ -742,6 +742,11 @@ trong một lượt và không gắn nhãn “đồng nhất” khi mới cập 
 Reference là bằng chứng bố cục và hành vi; foundation/recipe là chuẩn khi reference
 còn sai lệch. Không lấy ảnh chụp làm nguồn pixel hoặc status dữ liệu runtime.
 
+
+## Reports navigation group
+
+Reports is a peer group alongside Business, Storefront and System. Expanded and mobile headings share typography, alignment, dividers and disclosure behavior. In the collapsed rail, one Reports icon opens permitted Overview/Finance/Sales links. Keep rail flyout and expanded disclosure state independent, shortcuts visible, keyboard access, Escape dismissal and focus return.
+
 ## Ben media workspace
 
 - The Media entry sits beside Work and Technical in full-page Ben, gated by
