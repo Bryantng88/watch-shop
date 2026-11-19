@@ -805,3 +805,38 @@ Bảng/Danh sách là chế độ hiển thị, không là giai đoạn. SpaceFi
 native cùng hàng search/filter/count/refresh, giữ value/callback và disabled từ
 domain. Chỉ hiện khi có ít nhất hai lựa chọn khả dụng; không chiếm một hàng tab
 riêng hoặc thay đổi stage khi chỉ chuyển cách hiển thị.
+
+
+## Page feedback: state, outcome and actionable error
+
+Một cơ chế phản hồi dùng chung cho Website, Vận hành và các trang admin khi migrate:
+
+| Loại | Component / cơ chế | Vị trí / thời gian |
+| --- | --- | --- |
+| Đang sửa / đang gửi | PageEditingState | Cạnh nhóm hành động liên quan; chỉ có dirty/pending/uploading, clean không hiện “Đã lưu” mặc định |
+| Kết quả thành công | useUiMutation.successMessage → AppToastProvider | Toast chung, tạm thời theo provider; chỉ sau khi API xác nhận thành công, không lặp bằng banner trên trang |
+| Lỗi cần can thiệp | PageNotice tone error | Inline trước vùng bị ảnh hưởng, role alert; không tự hết giờ, có retry đúng nguồn khi khả dụng |
+| Thông tin giới hạn dữ liệu | PageNotice tone info | Inline gần vùng liên quan, role status; giữ khi điều kiện còn đúng |
+| Trạng thái nghiệp vụ | Nhãn của domain | Ví dụ Chưa xuất bản/Chờ duyệt; không dùng để xác nhận đã lưu |
+| Phiên bản / lịch sử | Disclosure thông tin tài liệu | Chỉ mở khi cần; giữ revision và timestamp thật |
+
+PageNotice là biến thể shared nhẹ, không icon tile/shadow và không CSS thông báo
+riêng trong từng page. InlineNotice legacy chưa tự đổi default; migrate từng
+consumer có kiểm tra. Màu semantic rose cho lỗi, blue cho thông tin; icon Lucide
+16px stroke 1.75; text 14/20px, padding 12px dọc/16px ngang, gap 12px, radius 8px.
+Thông báo wrap và action không làm tràn pane. Không che nút thao tác bằng overlay.
+
+useUiMutation giữ mặc định toast lỗi cho consumer cũ. Consumer có lỗi inline
+persistent dùng notifyOnError=false và onError để lưu lỗi; không phát hai thông
+báo cùng nghĩa. Không nuốt lỗi, không đánh dấu saved/complete để làm UI gọn hơn.
+Dirty guard, retry, quyền và chống submit lặp vẫn thuộc logic hiện có.
+
+readUiResponse xử lý phản hồi rỗng, HTML, null và lỗi JSON bằng lời nhắc tiếng Việt;
+uiFeedbackMessage chuẩn hóa lỗi mạng/parser. Không đưa exception thô vào UI.
+Website tách lỗi tải thư viện ảnh khỏi tải nội dung; retry thư viện chỉ tải thư
+viện, không bỏ bản nháp. Retry nội dung cần giữ xác nhận bỏ thay đổi chưa lưu.
+Phản hồi lưu thất bại giữ bản nháp và dùng action lưu hiện có để thử lại.
+
+Không thêm hàng trạng thái vào Vận hành chỉ để giống Website. Hai trang dùng cùng
+semantics/component khi có feedback, còn trạng thái nghiệp vụ khác nhau là có chủ
+đích. Lần migrate này áp dụng Website; không tuyên bố mọi consumer đã chuyển.
