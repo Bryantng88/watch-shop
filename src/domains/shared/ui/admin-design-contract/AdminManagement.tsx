@@ -12,12 +12,13 @@ export function AdminManagementPage({ title, eyebrow, description, actions, chil
     "--am-line": f.colors.divider, "--am-border": f.colors.controlBorder, "--am-soft": f.colors.softSurface,
     "--am-ring": f.colors.focusRing, "--am-primary": f.colors.primary, "--am-hover": f.colors.primaryHover,
     "--am-error": f.colors.danger, "--am-link": f.colors.link, "--am-canvas": f.colors.canvas,
+    "--am-selected": f.colors.focusSurface,
     "--am-radius": `${f.radius.control}px`, "--am-control": `${f.controls.height}px`,
     "--am-touch": `${f.controls.touchMinHeight}px`, "--am-section": `${f.spacing.section}px`,
   } as CSSProperties;
   return <div style={variables}>
     <AdminPageCanvas className={styles.page}><div className={styles.flow}>
-      <AdminPageHeader title={title} eyebrow={eyebrow} description={description} meta={actions} />
+      <AdminPageHeader variant="workspace" title={title} eyebrow={eyebrow} description={description} meta={actions} />
       {children}
     </div></AdminPageCanvas>
   </div>;
