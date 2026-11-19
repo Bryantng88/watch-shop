@@ -40,7 +40,9 @@ export type AdminDomainTone = keyof typeof ADMIN_DOMAIN_TONE;
 /** Selectors for the canonical AdminViewTabs rules in app/globals.css. */
 export const ADMIN_VIEW_TABS = {
   root: "admin-view-tabs",
+  comfortable: "admin-view-tabs-comfortable",
   strip: "admin-view-tabs-strip",
   item: "admin-view-tabs-item",
+  count: "admin-view-tabs-count",
   select: "admin-view-tabs-select",
 } as const;
