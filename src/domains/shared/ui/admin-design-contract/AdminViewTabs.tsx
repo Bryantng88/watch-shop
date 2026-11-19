@@ -7,6 +7,7 @@ import { ADMIN_VIEW_TABS as styles } from "./admin-ui.tokens";
 export type AdminViewTab<Value extends string> = {
   value: Value;
   label: string;
+  count?: number | string;
   disabled?: boolean;
   accessibleLabel?: string;
   indicator?: "complete" | "incomplete" | "unknown";
@@ -61,10 +62,10 @@ export function AdminViewTabs<Value extends string>({
         type="button"
         disabled={disabled || item.disabled}
         aria-pressed={item.value === value}
-        aria-label={item.accessibleLabel}
+        aria-label={item.accessibleLabel ?? (item.count !== undefined ? `${item.label}: ${typeof item.count === "number" ? item.count.toLocaleString("vi-VN") : item.count}` : undefined)}
         className={styles.item}
         onClick={() => onValueChange(item.value)}
-      >{item.label}{item.indicator && <span aria-hidden="true" className={`ml-1.5 inline-block h-1.5 w-1.5 rounded-full ${item.indicator === "complete" ? "bg-emerald-500" : item.indicator === "unknown" ? "bg-amber-500" : "bg-slate-300"}`} />}</button>)}
+      ><span>{item.label}</span>{item.count !== undefined && <span aria-hidden="true" className={styles.count}>{typeof item.count === "number" ? item.count.toLocaleString("vi-VN") : item.count}</span>}{item.indicator && <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.indicator === "complete" ? "bg-emerald-500" : item.indicator === "unknown" ? "bg-amber-500" : "bg-slate-300"}`} />}</button>)}
     </div>
     {items.length > 4 && <select
       aria-label={label}
@@ -75,6 +76,6 @@ export function AdminViewTabs<Value extends string>({
         const item = items.find(option => option.value === event.target.value);
         if (item && !item.disabled) onValueChange(item.value);
       }}
-    >{items.map(item => <option key={item.value} value={item.value} disabled={item.disabled}>{item.label}</option>)}</select>}
+    >{items.map(item => <option key={item.value} value={item.value} disabled={item.disabled}>{item.label}{item.count !== undefined ? ` (${typeof item.count === "number" ? item.count.toLocaleString("vi-VN") : item.count})` : ""}</option>)}</select>}
   </div>;
 }

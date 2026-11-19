@@ -566,6 +566,10 @@ a {
 
 .admin-view-tabs-item {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: 0 0 auto;
   min-height: 36px;
   padding: 8px 0 10px;
@@ -627,4 +631,7 @@ a {
   min-height: 44px;
   padding: 12px 12px 14px;
   font-size: 14px;
+  line-height: 20px;
 }
+
+.admin-view-tabs-count { font-variant-numeric: tabular-nums; font-size: inherit; font-weight: inherit; }

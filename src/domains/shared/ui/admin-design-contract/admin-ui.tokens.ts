@@ -43,5 +43,6 @@ export const ADMIN_VIEW_TABS = {
   comfortable: "admin-view-tabs-comfortable",
   strip: "admin-view-tabs-strip",
   item: "admin-view-tabs-item",
+  count: "admin-view-tabs-count",
   select: "admin-view-tabs-select",
 } as const;
