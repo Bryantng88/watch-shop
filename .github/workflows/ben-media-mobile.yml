@@ -1,0 +1,33 @@
+name: Ben media mobile workspace
+on:
+  pull_request:
+    paths:
+      - 'src/app/(admin)/admin/ben/media/**'
+      - 'src/app/(admin)/admin/_client/AdminShell.tsx'
+      - 'src/domains/ai-assistant/AiAssistant.tsx'
+      - 'src/domains/ai-assistant/BenChat.module.css'
+      - 'src/domains/watch/client/media-workspace/**'
+      - 'src/domains/watch/server/media-workspace/**'
+      - 'src/domains/watch/shared/ben-media-workspace.ts'
+      - 'src/domains/projection/server/media-operation-board.projection.ts'
+      - 'tests/watch/ben-media-workspace*'
+      - '.github/workflows/ben-media-mobile.yml'
+permissions:
+  contents: read
+jobs:
+  media-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/watch/ben-media-workspace.test.cjs
+      - run: npx eslint src/domains/watch/client/media-workspace src/domains/watch/server/media-workspace src/domains/watch/shared/ben-media-workspace.ts 'src/app/(admin)/admin/ben/media'
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/ben-media.css --minify
+      - run: npm install --prefix /tmp/ben-media-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/ben-media-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/ben-media-browser/node_modules/playwright node tests/watch/ben-media-workspace-ui.cjs

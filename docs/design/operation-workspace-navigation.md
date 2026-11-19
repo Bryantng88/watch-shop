@@ -56,10 +56,32 @@ the viewport rather than being trapped inside the working pane.
 
 ## Dependencies and rollout
 
-This PR targets main independently. It includes the minimal flat workspace-header
-and week-free filter adapters also proposed by PR #120; it does not include that
-PR's technician, home-editor or product-summary changes. Review overlapping shared
-files when merging either PR. PR #121's detailed contract remains separate.
+The branch incorporates main 48e21633, including the merged contract and shared
+header/filter work from #120/#121. Preserve main's operational-action response
+handling, flat dedicated routes and shared horizontal tabs outside the hub.
+
+## Media list recipe
+
+Opt into the shared `AdminOperationList` adapter for `media-production-flow`.
+It reads colors, typography, cell spacing, thumbnail and touch dimensions from
+`ADMIN_UI_FOUNDATION`; the domain only chooses columns and their required widths.
+Other flow tables retain their existing presentation until explicitly migrated.
+`WorkflowStatusSignal.compact` reuses the existing state mapping, while Media
+operator identity uses `AdminUserAvatar` at size sm.
+
+- Flat white rows, horizontal slate-100 dividers, 12px cell padding, 36px object
+  thumbnails and 14/20px semibold titles with a two-line limit and full tooltip.
+- Remove the reshoot/request-note column from the list. Notes remain in the DTO
+  and backend; this is not a data deletion or workflow change.
+- Keep stage-relevant status/progress/channel columns and all existing actions.
+  Combine the activity link with the timestamp instead of a separate log column.
+  Raw dotted event keys are replaced visually with “Xem hoạt động”; retain their
+  tooltip and the original audit destination/target identifiers.
+- Neutral outlined compact row actions; quiet operator avatars and metadata.
+  Coarse-pointer actions have a 44px minimum height. Selected rows use blue tint.
+- Widths are intentionally domain-specific: base 760px, processing 960px,
+  publishing 1040px. Use the table's own horizontal scroll rather than squeeze
+  labels or overflow the page. Navigation responds to the available pane width.
 
 Accept Media navigation, empty/loading/error states, keyboard use, narrow panes
 and return navigation before redesigning each remaining area's working content.

@@ -9,10 +9,10 @@
 .header > div:first-child img { width: 44px; height: 44px; }
 .header button, .icon { color: #655e71; border-radius: 12px; }
 .header button:hover, .icon:hover { background: #f4effb; }
-.tabs { display: flex; align-items: center; margin: 0 20px 8px; border-bottom: 1px solid var(--ben-line); }
+.tabs { display: flex; min-width: 0; overflow-x: auto; align-items: center; margin: 0 20px 8px; border-bottom: 1px solid var(--ben-line); }
 .tabs > :is(button, a) { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; flex: 1; min-height: 44px; padding: 10px 8px; color: #6b6576; border-bottom: 3px solid transparent; font-size: 14px; }
 .tabs > button[aria-pressed="true"] { color: var(--ben-accent); border-bottom-color: #8b5cf6; font-weight: 650; }
-.tabs > button:last-child { flex: 0 0 36px; }
+.tabs > button:last-child { flex: 0 0 44px; }
 .badge { margin-left: 5px; border-radius: 999px; background: #ede5fa; color: #7242bb; padding: 2px 7px; font-size: 11px; }
 .scroll { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 18px 20px 24px; scroll-padding-bottom: 20px; }
 .panel [data-ben-review] { margin-top: 20px; border: 1px solid #e6def0; border-radius: 18px; background: rgba(255,255,255,.9); padding: 18px; box-shadow: 0 6px 24px #56398006; }

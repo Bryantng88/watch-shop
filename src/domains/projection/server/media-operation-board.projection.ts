@@ -571,11 +571,13 @@ export async function queryMediaOperationBoardProjection(
   db: DB,
   input: {
     requestedStage?: MediaOperationBoardStage | null;
+    query?: string;
     page: number;
     pageSize: number;
     doneRetentionDays?: number | null;
   },
 ) {
+  const query = (input.query ?? "").trim().toLocaleLowerCase("vi");
   const offset = (input.page - 1) * input.pageSize;
   const doneCutoff = operationBoardDoneCutoff(input.doneRetentionDays);
   const rows = await dbOrTx(db).$queryRaw<Array<{
@@ -595,13 +597,14 @@ export async function queryMediaOperationBoardProjection(
     eligible AS (
       SELECT "entityId", "status", "dataJson", "sortAt", "updatedAt"
       FROM latest
-      WHERE "status" <> 'DONE'
+      WHERE ("status" <> 'DONE'
         OR ${doneCutoff}::timestamptz IS NULL
-        OR COALESCE("sortAt", "updatedAt") >= ${doneCutoff}
+        OR COALESCE("sortAt", "updatedAt") >= ${doneCutoff})
+        AND (${query} = '' OR strpos(lower(concat_ws(' ', "dataJson"->>'title', "dataJson"->>'sku', "dataJson"->>'id')), ${query}) > 0)
     ),
     ranked AS (
       SELECT "status", "dataJson",
-        ROW_NUMBER() OVER (PARTITION BY "status" ORDER BY "sortAt" DESC NULLS LAST, "updatedAt" DESC) AS rn
+        ROW_NUMBER() OVER (PARTITION BY "status" ORDER BY "sortAt" DESC NULLS LAST, "updatedAt" DESC, "entityId" ASC) AS rn
       FROM eligible
     ),
     totals AS (

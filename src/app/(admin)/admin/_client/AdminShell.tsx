@@ -32,15 +32,17 @@ export default function AdminShell({ user, children, assistantSimulation = false
     const isBen = pathname === "/admin/ben";
     const isBenWorkList = pathname === "/admin/personal-work" && searchParams.get("view") === "list";
     const isTechnicianWorkspace = pathname === "/admin/services/technician";
+    const isBenMediaList = pathname === "/admin/ben/media";
+    const isBenMediaEditor = /^\/admin\/watches\/[^/]+\/edit$/.test(pathname) && searchParams.get("mode") === "media" && searchParams.get("source") === "ben-media";
     const isEmbedded = searchParams.get("embedded") === "1";
 
     return (
         <AdminNavigationHistoryProvider>
-        {isBen || isEmbedded || isBenWorkList || isTechnicianWorkspace ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
+        {isBen || isEmbedded || isBenWorkList || isBenMediaList || isBenMediaEditor ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
-        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]">
+        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className={`${isTechnicianWorkspace ? "h-[100dvh]" : "h-screen"} grid overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]`}>
             <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
                 <AdminSidebar
                     onExpandedChange={setSidebarExpanded}
@@ -48,7 +50,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 />
             </div>
 
-            <div className="lg:hidden">
+            <div className={isTechnicianWorkspace ? "hidden" : "lg:hidden"}>
                 <AdminSidebar
                     user={{ permissions: user.permissions, name: user.name, roles: user.roles }}
                     variant="mobile"
@@ -56,6 +58,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
             </div>
 
             <div className="flex min-w-0 flex-col overflow-hidden">
+                <div className={isTechnicianWorkspace ? "hidden lg:block" : undefined}>
                 <AdminTopbar
                     title="Admin"
                     user={{
@@ -64,14 +67,15 @@ export default function AdminShell({ user, children, assistantSimulation = false
                         avatarUrl: user.avatarUrl,
                     }}
                 />
+                </div>
 
                 <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50">
                     {children}
                 </main>
             </div>
         </div>)}
-        <div hidden={isEmbedded || isBenWorkList || isTechnicianWorkspace || (isBen && !assistantLive)}>
-        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canViewTechnical={!!user.roles?.includes("ADMIN") || user.permissions.includes("SERVICE_VIEW")} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
+        <div hidden={isEmbedded || isBenWorkList || isTechnicianWorkspace || isBenMediaList || (isBen && !assistantLive)}>
+        {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canViewMedia={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_VIEW")} canViewTechnical={!!user.roles?.includes("ADMIN") || user.permissions.includes("SERVICE_VIEW")} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}
         </div>
         </AdminNavigationHistoryProvider>
     );

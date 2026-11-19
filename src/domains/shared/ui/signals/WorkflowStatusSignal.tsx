@@ -117,12 +117,18 @@ export function WorkflowStatusSignal({
   status,
   label,
   completedIcon,
+  compact = false,
 }: {
   status?: string | null;
   label?: string | null;
   completedIcon?: VisualStatusIcon;
+  compact?: boolean;
 }) {
   const presentation = workflowStatusPresentation(status, label, completedIcon);
+  if (compact) return <span className="inline-block max-w-full truncate text-xs font-medium leading-4 text-slate-600" title={[presentation.label, presentation.detail].filter(Boolean).join(" · ")}>
+    {presentation.label}
+  </span>;
+
 
   return (
     <VisualStatusSignal

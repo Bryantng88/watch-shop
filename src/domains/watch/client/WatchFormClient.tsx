@@ -1924,6 +1924,7 @@ export default function WatchFormClient({
           <div className="sticky top-0 z-20 bg-white">
             <AdminViewTabs
               label="Mục xử lý media"
+              density="comfortable"
               value={activeMediaSection}
               onValueChange={scrollToMediaSection}
               items={([
