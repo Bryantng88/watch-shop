@@ -104,3 +104,16 @@ from ADMIN_UI_FOUNDATION. Progress remains an accessible current/max value;
 100% section completion does not approve or complete the workflow. Missing
 denominators retain the list's unavailable marker. Legacy progress consumers
 keep their default appearance.
+
+## Combined processing status/action
+
+Media lists have one “Xử lý” column instead of separate status and action columns.
+The compact shared WorkflowStatusSignal supplies a leading status dot and label
+from the existing workflow mapping; progress remains a separate section count.
+Open-target controls substitute only their trigger content: their original modal
+title, route, authorization and save/dirty handling remain intact. Direct commands
+open the existing AppDialog confirmation with the item title and explicit action
+verb before invoking the unchanged transition handler. Cancelling performs no
+mutation. Additional publishing commands retain their menu and explicit verbs.
+Rows without an enabled action show plain status text; do not infer workflow
+approval from 4/4 progress. Other domains retain separate status/action columns.

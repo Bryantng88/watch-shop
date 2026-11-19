@@ -38,6 +38,7 @@ import {
   manualTransitionOutcomeMovesOutOfCurrentStage,
 } from "@/domains/task/ui/task-work/manual-transition-feedback";
 import { useManualTransitionFeedback } from "@/domains/task/ui/task-work/use-manual-transition-feedback";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import { ResponsiveSelectionCheckbox } from "@/domains/shared/ui/selection/ResponsiveSelectionCheckbox";
 import { waitForOperationProjectionDeliveries } from "./operation-delivery.client";
@@ -508,10 +509,11 @@ export default function FlowItemListView({
       [normalize(stage.workspaceKey), stage],
     ]),
   ), [stages]);
+  const actionDialog = useAppDialog();
   const isMedia = presentation === "media";
   const showPaymentAmount = items.some((item) => Boolean(item.payment));
   const showStatusColumn =
-    !showPaymentAmount && !normalize(activeStage).includes("photography");
+    !isMedia && !showPaymentAmount && !normalize(activeStage).includes("photography");
   const showProgressColumn = normalize(activeStage).includes("media-processing");
   const showPublishChannels = normalize(activeStage).includes("publish");
   const visibleItems = useMemo(() => {
@@ -588,6 +590,19 @@ export default function FlowItemListView({
   );
   const bulkRemainingTotal = Math.max(0, bulkExpectedTotal - bulkReviewedTotal);
   const bulkCurrency = selectedPaymentItems[0]?.payment?.currency ?? "VND";
+
+  async function requestRowAction(item: CoordinationFlowListItemDTO, transition: CoordinationFlowListItemDTO["manualTransitions"][number]) {
+    if (isMedia) {
+      const accepted = await actionDialog.confirm({
+        title: manualTransitionActionLabel(transition),
+        message: <span>{item.preview.title || item.preview.ref || "Item"}</span>,
+        confirmText: manualTransitionActionLabel(transition),
+        cancelText: "Quay lại",
+      });
+      if (!accepted) return;
+    }
+    runAction(item, transition);
+  }
 
   function runAction(
     item: CoordinationFlowListItemDTO,
@@ -1062,7 +1077,7 @@ export default function FlowItemListView({
               {showPaymentAmount ? <th className="w-52 px-4 py-3">Đối tượng</th> : null}
               {showPaymentAmount ? <th className="w-44 px-4 py-3">Loại khoản</th> : null}
               {showPaymentAmount ? <th className="w-40 px-4 py-3 text-right">Số tiền</th> : null}
-              {!showPaymentAmount ? <th scope="col" className={cn("w-44 px-4 py-3", isMedia && styles.actionColumn)}>Thao tác</th> : null}
+              {!showPaymentAmount ? <th scope="col" className={cn("w-44 px-4 py-3", isMedia && styles.actionColumn)}>{isMedia ? "Xử lý" : "Thao tác"}</th> : null}
               <th scope="col" className={cn("px-4 py-3", isMedia && styles.userColumn)}>Người thao tác</th>
               <th scope="col" className={cn("px-4 py-3", isMedia ? styles.updatedColumn : "text-center")}>Cập nhật</th>
               {!isMedia && <th scope="col" className="w-64 px-4 py-3">Thao tác cuối</th>}
@@ -1105,7 +1120,8 @@ export default function FlowItemListView({
                     },
                   }
                 : null;
-              const primaryAction = mediaOpenTransition ?? enabledActions[0] ?? null;
+              const primaryAction = (isMedia && !enabledActions.length ? null : mediaOpenTransition) ?? enabledActions[0] ?? null;
+              const processingStatus = <WorkflowStatusSignal compact marker status={item.currentWorkflowState || item.status} label={item.currentWorkflowStateLabel || item.preview.status} completedIcon={completedIcon} />;
               const canOpenReconciliation = Boolean(
                 item.payment &&
                 itemStatus(item) !== "DONE" &&
@@ -1307,6 +1323,7 @@ export default function FlowItemListView({
                         isOpenTargetTransition(enabledActions[0]) ? (
                           <OpenTargetAction
                             showIcon={!isMedia}
+                            triggerContent={isMedia ? processingStatus : undefined}
                             queueItem={item as TaskItemQueueItem}
                             transition={enabledActions[0]}
                             onActivate={previewState.closePreview}
@@ -1319,12 +1336,12 @@ export default function FlowItemListView({
                             type="button"
                             disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
-                            onClick={() => runAction(item, enabledActions[0])}
+                            onClick={() => void requestRowAction(item, enabledActions[0])}
                             title={manualTransitionActionLabel(enabledActions[0])}
                             className={isMedia ? styles.rowAction : "h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                           >
                             {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
-                              : manualTransitionActionLabel(enabledActions[0])}
+                              : isMedia ? processingStatus : manualTransitionActionLabel(enabledActions[0])}
                           </button>
                         )
                       ) : (
@@ -1332,6 +1349,7 @@ export default function FlowItemListView({
                           {isOpenTargetTransition(enabledActions[0]) ? (
                             <OpenTargetAction
                             showIcon={!isMedia}
+                            triggerContent={isMedia ? processingStatus : undefined}
                               queueItem={item as TaskItemQueueItem}
                               transition={enabledActions[0]}
                               onActivate={previewState.closePreview}
@@ -1344,18 +1362,18 @@ export default function FlowItemListView({
                               type="button"
                               disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
-                              onClick={() => runAction(item, enabledActions[0])}
+                              onClick={() => void requestRowAction(item, enabledActions[0])}
                               title={manualTransitionActionLabel(enabledActions[0])}
                               className={isMedia ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                             >
                               {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
-                                : manualTransitionActionLabel(enabledActions[0])}
+                                : isMedia ? processingStatus : manualTransitionActionLabel(enabledActions[0])}
                             </button>
                           )}
                           <details className="relative">
                             <summary
-                              title="ThÃªm thao tÃ¡c"
-                              aria-label="ThÃªm thao tÃ¡c"
+                              title="Thêm thao tác"
+                              aria-label="Thêm thao tác"
                               className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 [&::-webkit-details-marker]:hidden"
                             >
                               <MoreHorizontal className="h-4 w-4" />
@@ -1379,7 +1397,7 @@ export default function FlowItemListView({
                                     type="button"
                                     disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
-                                    onClick={() => runAction(item, transition)}
+                                    onClick={() => void requestRowAction(item, transition)}
                                     className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:cursor-wait disabled:opacity-60"
                                   >
                                     {manualTransitionActionLabel(transition)}
@@ -1403,7 +1421,7 @@ export default function FlowItemListView({
                               onClick={() =>
                                 action
                                   ? openOperationalAction(item, action)
-                                  : runAction(item, transition)
+                                  : void requestRowAction(item, transition)
                               }
                               title={manualTransitionActionLabel(transition)}
                               className={isMedia ? styles.rowAction : "h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
@@ -1430,7 +1448,7 @@ export default function FlowItemListView({
                                     onClick={() =>
                                       action
                                         ? openOperationalAction(item, action)
-                                        : runAction(item, transition)
+                                        : void requestRowAction(item, transition)
                                     }
                                     className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50"
                                   >
@@ -1445,6 +1463,7 @@ export default function FlowItemListView({
                     ) : primaryAction && isOpenTargetTransition(primaryAction) ? (
                       <OpenTargetAction
                             showIcon={!isMedia}
+                            triggerContent={isMedia ? processingStatus : undefined}
                         queueItem={item as TaskItemQueueItem}
                         transition={primaryAction}
                         triggerRef={mediaOpenTransition ? activate => {
@@ -1461,13 +1480,13 @@ export default function FlowItemListView({
                         type="button"
                         disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
-                        onClick={() => runAction(item, primaryAction)}
+                        onClick={() => void requestRowAction(item, primaryAction)}
                         title={manualTransitionActionLabel(primaryAction)}
                         className={isMedia ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                       >
-                        {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</> : manualTransitionActionLabel(primaryAction)}
+                        {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</> : isMedia ? processingStatus : manualTransitionActionLabel(primaryAction)}
                       </button>
-                    ) : null}
+                    ) : isMedia ? processingStatus : null}
                   </td> : null}
                   <td className="px-4 py-3">
                     {item.lastUpdatedBy ? (
