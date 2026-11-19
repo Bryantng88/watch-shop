@@ -95,7 +95,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     await nav.getByRole('button', { name: /^Ảnh mở đầu/ }).click();
     assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(), 'charcoal');
     failSave = true; await page.getByRole('button', { name: 'Lưu nháp', exact: true }).click();
-    await page.waitForFunction(() => window.__errors?.includes('Lưu thất bại, giữ bản đang sửa.'));
+    await page.getByRole('alert').filter({ hasText: 'Lưu thất bại, giữ bản đang sửa.' }).waitFor();
     assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(), 'charcoal');
     await page.getByRole('button', { name: 'Lưu nháp', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Đã lưu nháp' }).waitFor();
