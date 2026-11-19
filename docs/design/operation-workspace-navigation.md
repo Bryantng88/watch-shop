@@ -21,7 +21,7 @@ short title and existing actions on the right, without repeating a view picker.
 The left menu selects an area, and the active area's list stages expand below it.
 Do not repeat the same stages as horizontal tabs above the right-hand list.
 
-Use a 220px local navigation and a flexible working pane, separated by a quiet
+Use a 280px local navigation and a flexible working pane, separated by a quiet
 slate-100 line and 28px gap. Selectable rows are flat with blue-50 selection,
 neutral text, readable counts and visible focus. There are no navigation cards,
 step numbers, checkboxes, drag handles or stage mutation commands in this menu.
@@ -117,3 +117,9 @@ verb before invoking the unchanged transition handler. Cancelling performs no
 mutation. Additional publishing commands retain their menu and explicit verbs.
 Rows without an enabled action show plain status text; do not infer workflow
 approval from 4/4 progress. Other domains retain separate status/action columns.
+
+The header/toolbar follows the shared split-workspace rule in the UI contract.
+The Operations hub hides legacy Space breadcrumbs, sharing and workspace-create
+controls; area creation is placed alongside the working-area heading, and count
+plus refresh stay inline. Source identifiers, backend models and permissions are
+unchanged. Website uses the same split adapter while keeping document save actions.

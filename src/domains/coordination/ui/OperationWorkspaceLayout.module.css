@@ -1,12 +1,11 @@
 .layout { min-width: 0; }
-.columns { display: grid; min-width: 0; gap: 20px; }
 .desktop { display: none; }
 .content { min-width: 0; }
 .mobile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; }
 .mobile > label:only-child { grid-column: 1 / -1; }
 .mobile label { display: flex; min-width: 0; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 500; color: #64748b; }
 .mobile select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; background: #fff; color: #334155; font: inherit; font-size: 14px; }
-.navigationTitle { margin: 0 0 12px; font-size: 12px; font-weight: 600; line-height: 16px; color: #64748b; }
+.navigationTitle { margin: 0 0 12px; font-size: 14px; font-weight: 700; line-height: 20px; color: #020617; }
 .group + .group { margin-top: 4px; }
 .groupButton, .stageButton { display: flex; width: 100%; min-width: 0; align-items: center; gap: 8px; min-height: 40px; border: 0; border-radius: 8px; background: transparent; padding: 10px 12px; text-align: left; font: inherit; font-size: 14px; line-height: 20px; color: #475569; cursor: pointer; }
 .groupButton > span, .stageButton > span:first-child { min-width: 0; overflow-wrap: anywhere; }
@@ -18,8 +17,7 @@
 .stageButton { gap: 12px; justify-content: space-between; padding: 8px 10px; font-size: 12px; line-height: 16px; }
 .count { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; color: #64748b; }
 .groupButton:focus-visible, .stageButton:focus-visible, .mobile select:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
-.layout[data-wide="true"] .columns { grid-template-columns: 220px minmax(0, 1fr); gap: 28px; align-items: start; }
-.layout[data-wide="true"] .desktop { display: block; position: sticky; top: 16px; max-height: calc(100dvh - 160px); overflow-y: auto; padding-right: 16px; border-right: 1px solid #f1f5f9; }
+.layout[data-wide="true"] .desktop { display: block; position: sticky; top: 16px; max-height: calc(100dvh - 160px); overflow-y: auto; }
 .layout[data-wide="true"] .mobile { display: none; }
 .layout[data-narrow="true"] .mobile { grid-template-columns: minmax(0, 1fr); }
 @media (pointer: coarse) {

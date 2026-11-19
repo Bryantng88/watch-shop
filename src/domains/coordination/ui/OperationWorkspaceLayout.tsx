@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals/operational-domain-presentation";
+import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
 import styles from "./OperationWorkspaceLayout.module.css";
 
 export type OperationNavigationGroup = {
@@ -35,25 +36,11 @@ function countLabel(count: number | string) {
 export function OperationWorkspaceLayout({
   enabled = true, groups, activeGroup, onGroupChange, stages, activeStage, onStageChange, children,
 }: Props) {
-  const layoutRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const node = layoutRef.current;
-    if (!node) return;
-    // CSS layout containment would capture fixed-position editors and overlays.
-    const updateWidth = () => {
-      node.dataset.wide = String(node.clientWidth >= 960);
-      node.dataset.narrow = String(node.clientWidth < 440);
-    };
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [enabled]);
+  const layoutRef = useAdminSplitWorkspace<HTMLDivElement>(enabled);
   if (!enabled) return <>{children}</>;
   const selected = groups.find((group) => group.key === activeGroup);
-  return <div ref={layoutRef} className={styles.layout}>
-    <div className={styles.columns}>
-      <aside className={styles.desktop} aria-label="Điều hướng vận hành">
+  return <div ref={layoutRef} className={`${styles.layout} ${split.layout}`} style={ADMIN_SPLIT_WORKSPACE_STYLE}>
+      <aside data-admin-pane="sidebar" className={styles.desktop} aria-label="Điều hướng vận hành">
         <h2 className={styles.navigationTitle}>Khu vực vận hành</h2>
         <nav aria-label="Khu vực vận hành">
           {groups.map((group) => {
@@ -92,7 +79,6 @@ export function OperationWorkspaceLayout({
           </select>
         </label>}
       </div>
-      <div className={styles.content}>{children}</div>
-    </div>
+      <div data-admin-pane="content" className={styles.content}>{children}</div>
   </div>;
 }

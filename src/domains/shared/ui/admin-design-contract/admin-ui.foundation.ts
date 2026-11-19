@@ -42,6 +42,7 @@ export const ADMIN_UI_FOUNDATION = {
     regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
   },
+  splitWorkspace: { sidebarWidth: 280, sidebarInset: 16, collapseWidth: 960 },
   focusPanel: {
     padding: 20, mobilePadding: 16, titleGap: 4, chipsGap: 6,
     metadataGap: 8, actionsGap: 8, actionsMarginTop: 16, chartGap: 16,

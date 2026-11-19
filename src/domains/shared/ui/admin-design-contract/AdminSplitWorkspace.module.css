@@ -1,0 +1,6 @@
+.layout { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+.layout > [data-admin-pane="sidebar"] { min-width: 0; grid-column: 1; grid-row: 1; padding-right: 0; padding-bottom: 16px; border-right: 0; border-bottom: 1px solid var(--admin-split-divider); }
+.layout > [data-admin-pane="content"] { min-width: 0; grid-column: 1; grid-row: auto; }
+.layout[data-wide="true"] { grid-template-columns: var(--admin-split-width) minmax(0, 1fr); gap: var(--admin-split-gap); }
+.layout[data-wide="true"] > [data-admin-pane="sidebar"] { padding-right: var(--admin-split-inset); padding-bottom: 0; border-right: 1px solid var(--admin-split-divider); border-bottom: 0; }
+.layout[data-wide="true"] > [data-admin-pane="content"] { grid-column: 2; grid-row: 1; }

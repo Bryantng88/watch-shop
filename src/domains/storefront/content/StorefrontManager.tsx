@@ -1,5 +1,6 @@
 "use client";
 
+import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
 import Image from "next/image";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {AdminPageCanvas,AdminPageHeader,AdminFlatToolbar} from "@/domains/shared/ui/admin-design-contract";
@@ -33,7 +34,7 @@ const names = {
 };
 type HomeSectionId = HomeContent["sections"][number]["id"];
 function HomeSection({id,title,homeOnly,active,children}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode}){
- return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} className="sfc-section-editor" aria-label={title}><h2>{title}</h2>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><summary>{title}</summary>{children}</details>;
+ return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><h2>{title}</h2>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><summary>{title}</summary>{children}</details>;
 }
 async function jsonRequest(url: string, init?: RequestInit) {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -302,6 +303,7 @@ export default function StorefrontManager({
   const [pendingAction,setPendingAction]=useState<"save"|"preview"|"publish"|"unpublish"|"create">("save");
   const [needsReload,setNeedsReload]=useState(false);
   const [activeSection,setActiveSection]=useState<HomeSectionId>("hero");
+  const splitRef = useAdminSplitWorkspace<HTMLFieldSetElement>(homeOnly && Boolean(record));
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [message, setMessage] = useState("");
@@ -530,10 +532,10 @@ export default function StorefrontManager({
               ) : null}
             </div>
           </AdminFlatToolbar>
-          <fieldset disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?"sfc-home-layout":""}`}>
+          <fieldset ref={splitRef} style={home&&homeOnly?ADMIN_SPLIT_WORKSPACE_STYLE:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout}`:""}`}>
             {home ? (
               <>
-                <section className="sfc-section-nav" aria-label="Các khối trang chủ">
+                <section data-admin-pane="sidebar" className="sfc-section-nav" aria-label="Các khối trang chủ">
                   <h2>Các khối trang chủ</h2>
                   <p className="sfc-help">
                     Chọn khối để sửa · kéo để sắp xếp.

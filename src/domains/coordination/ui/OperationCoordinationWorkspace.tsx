@@ -236,7 +236,8 @@ function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]
   if (mode.key === "media-production-flow") return "Luồng sản xuất Media";
   if (mode.key === "sr-cases") return "Hồ sơ yêu cầu dịch vụ";
   if (mode.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
-  if (mode.key === "workspace-index") return "Danh sách Workspace";
+  if (mode.key === "workspace-index") return "Tất cả công việc";
+  if (mode.key === "payment-collection-flow") return "Thanh toán";
   return displayText(mode.label);
 }
 
@@ -245,6 +246,7 @@ type SpaceCoreFlow = NonNullable<CoordinationDashboardDTO["viewConfig"]["coreFlo
 function coreFlowLabel(flow: SpaceCoreFlow) {
   if (flow.key === "media-production-flow") return "Sản xuất Media";
   if (flow.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
+  if (flow.key === "payment-collection-flow") return "Thanh toán";
   return displayText(flow.label);
 }
 
@@ -264,6 +266,8 @@ function stageLabel(value: string) {
     Photography: "Chụp ảnh",
     "Media Processing": "Xử lý Media",
     Publish: "Đăng bài",
+    Settled: "Đã đối soát",
+    Done: "Hoàn tất",
     Inspect: "Kiểm tra",
     Processing: "Xử lý",
     "Done / Follow-up": "Hoàn tất / Theo dõi",
@@ -1897,7 +1901,7 @@ export default function OperationCoordinationWorkspace({
 
   return (
     <SpaceViewPage
-      breadcrumbs={
+      breadcrumbs={isUnifiedOperation ? undefined :
         <AdminBreadcrumbs
           items={[
             { label: "Quản lý Space" },
@@ -1916,9 +1920,9 @@ export default function OperationCoordinationWorkspace({
       meta={
         <span>{isUnifiedOperation ? "Chọn khu vực và giai đoạn để xử lý công việc." : activeCoreFlow ? coreFlowDescription(activeCoreFlow) : activeViewMode ? displayText(activeViewMode.description) : "Theo dõi và xử lý công việc vận hành."}</span>
       }
-      actions={
+      actions={isUnifiedOperation ? undefined :
         <div className="flex items-center gap-2">
-          {isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense ? (
+          {!isUnifiedOperation && isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense ? (
             <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white hover:bg-slate-800">
               <Plus className="h-4 w-4" /> Thêm khoản thu / chi
             </button>
@@ -1937,7 +1941,7 @@ export default function OperationCoordinationWorkspace({
         {adHocWorkCreate.modal}
         <OperationWorkspaceLayout
           enabled={isUnifiedOperation}
-          groups={data.viewConfig.modes.map((mode) => ({ key: mode.key, label: displayText(mode.label), domainKey: mode.coreFlowKey ?? mode.key }))}
+          groups={data.viewConfig.modes.map((mode) => ({ key: mode.key, label: mode.key === "technical-issue-flow" ? "Kỹ thuật" : mode.key === "media-production-flow" ? "Media" : modeLabel(mode), domainKey: mode.coreFlowKey ?? mode.key }))}
           activeGroup={activeViewMode?.key ?? activeViewModeKey}
           onGroupChange={changeActiveViewMode}
           stages={navigationStages}
@@ -1956,8 +1960,8 @@ export default function OperationCoordinationWorkspace({
             {activeViewMode ? (
               <div className="text-xs text-slate-700">
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                  {isUnifiedOperation && <h2 className="m-0 text-sm font-semibold text-slate-950">{activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}</h2>}
-                  <div className="min-w-0">
+                  {isUnifiedOperation && <h2 className="m-0 text-sm font-bold text-slate-950">{activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}</h2>}
+                  <div className={isUnifiedOperation ? "hidden" : "min-w-0"}>
                     <div className="flex flex-wrap items-center gap-2">
                       {!isUnifiedOperation && data.viewConfig.modes.length > 1 ? (
                         <label className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -1987,17 +1991,22 @@ export default function OperationCoordinationWorkspace({
                         <span>Tạo việc</span>
                       </button>
                     ) : null}
+                    {!isUnifiedOperation && (
                     <SpaceSharingEditor
                       taskId={data.cycle.id}
                       context={data.context}
                       activeCoreFlow={activeCoreFlow}
                       sharing={data.spaceSharing}
                     />
+                    )}
+                    {isUnifiedOperation && isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense && (
+                      <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"><Plus className="h-4 w-4" aria-hidden="true" />Thêm khoản thu / chi</button>
+                    )}
                     {isTechnicalIssueFlowMode ? (
                       <button
                         type="button"
                         onClick={() => setIsTechnicalIntakeOpen(true)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tiếp nhận kỹ thuật</span>
@@ -2013,6 +2022,7 @@ export default function OperationCoordinationWorkspace({
                         <span>Tạo Media Post</span>
                       </button>
                     ) : null}
+                    {!isUnifiedOperation && (
                     <button
                         type="button"
                         disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
@@ -2027,11 +2037,12 @@ export default function OperationCoordinationWorkspace({
                         <Plus className="h-4 w-4" />
                         <span>Workspace</span>
                       </button>
+                    )}
                   </div>
                 </div>
 
                 <form
-                  className={`${isCreateFormOpen ? "flex" : "hidden"} mt-4 min-w-0 flex-col gap-2 border-t border-sky-100 pt-4 sm:flex-row sm:items-center`}
+                  className={`${isCreateFormOpen && !isUnifiedOperation ? "flex" : "hidden"} mt-4 min-w-0 flex-col gap-2 border-t border-sky-100 pt-4 sm:flex-row sm:items-center`}
                   onSubmit={createWorkTicket}
                 >
                   <select
@@ -2287,7 +2298,7 @@ export default function OperationCoordinationWorkspace({
                 />
               ) : null}
             </div>
-            {isCreateFormOpen && selectedBlueprint ? (
+            {!isUnifiedOperation && isCreateFormOpen && selectedBlueprint ? (
               <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-3 xl:grid-cols-6">
                 <div>
                   <div className="font-medium text-slate-500">Nguồn Blueprint</div>
@@ -2527,7 +2538,6 @@ export default function OperationCoordinationWorkspace({
             <>
           {isUnifiedOperation && activeCoreFlow && <div className="mb-3 mt-5 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold text-slate-950">{navigationStages.find((stage) => stage.key === activeFlowListStage)?.label ?? "Danh sách"}</h3>
-            <span className="text-xs tabular-nums text-slate-500">{isFlowItemsLoading ? "Đang tải…" : `${flowListStageCounts.get(activeFlowListStage)?.toLocaleString("vi-VN") ?? "—"} item`}</span>
           </div>}
           {activeCoreFlow ? <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}

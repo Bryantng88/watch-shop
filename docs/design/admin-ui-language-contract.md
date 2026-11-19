@@ -763,3 +763,31 @@ Reports is a peer group alongside Business, Storefront and System. Expanded and 
   change guards, per-section completion, and existing transition permissions.
 - Keep native 44px search/filter controls, clear empty/loading/error states, and
   an icon fallback for missing or failed images. No decorative metric cards.
+
+
+## Split workspace and action ownership
+
+Áp dụng cho Vận hành và trình sửa trang chủ website. Geometry dùng chung từ
+`ADMIN_UI_FOUNDATION.splitWorkspace` và adapter `AdminSplitWorkspace`: menu 280px
+(bao gồm inset phải 16px), gap pane 28px, divider 1px slate-100. Cả hai dùng cùng
+hook đo chiều rộng thực của vùng làm việc; dưới 960px chuyển về một cột với
+selector native của domain. Không dùng CSS containment vì sẽ giữ sai vị trí
+fixed modal. Không ép menu website bỏ checkbox/sắp xếp hoặc menu vận hành thêm
+control đó; semantics riêng, geometry chung. Heading menu 14/20px weight 700.
+
+Page title mô tả mục đích; UI Vận hành không hiển thị breadcrumb quản lý Space,
+nút tạo Workspace hoặc chia sẻ Space. Model/backend và quyền không bị xóa.
+Heading vùng phải đi cùng action nghiệp vụ ở bên phải, gap 8px, cao 40px
+(44px coarse pointer); một primary theo khu vực: Tiếp nhận kỹ thuật, Tạo Media
+Post hoặc Thêm khoản thu / chi. Quyền tạo giữ từ domain. Không đặt cùng action
+ở cả page header và heading vùng phải. Nút tạo chung của index dùng “Tạo việc”.
+
+Dòng tìm kiếm bên dưới chỉ gồm search, Bộ lọc, số kết quả và Làm mới trực tiếp;
+không bọc count/refresh bằng “Thêm”. Search co giãn, controls wrap khi hẹp.
+Nhãn hiển thị tiếng Việt: Thanh toán, Đã đối soát, Tất cả công việc. Không đổi key,
+URL, nguồn count hoặc phép tính nghiệp vụ để dịch nhãn.
+
+Website giữ action Lưu nháp/Xem trước/Xuất bản ở document action bar vì chúng
+áp dụng toàn tài liệu, không phải từng khối. Đây là khác biệt có chủ đích với
+hành động theo khu vực của Vận hành. Card/board kỹ thuật chưa được hiện đại hóa
+bởi thay đổi layout này; không tuyên bố toàn bộ nội dung mọi domain đã migrate.
