@@ -16,6 +16,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import { MediaRowActions } from "./MediaRowActions";
 import { ADMIN_OPERATION_LIST as styles, ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract/AdminUserAvatar";
 import type { CoordinationFlowListItemDTO } from "../server/coordination-dashboard.types";
@@ -1306,7 +1307,12 @@ export default function FlowItemListView({
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    {item.targetType === "PURCHASE_REQUEST" && item.purchaseRequest ? (
+                    {isMedia && enabledActions.length > 1 ? (
+                      <MediaRowActions item={item} actions={enabledActions} status={processingStatus} disabled={isActionPending}
+                        onActivate={previewState.closePreview} onReloadRequested={onReloadRequested}
+                        onTransitionApplied={outcome => reconcileModalTransition(item, outcome)}
+                        onAction={transition => void requestRowAction(item, transition)} />
+                    ) : item.targetType === "PURCHASE_REQUEST" && item.purchaseRequest ? (
                       <div className="flex flex-wrap items-center gap-1.5">
                         {item.isWorkflowDone && item.purchaseRequest.orderId ? (
                           <Link href={`/admin/orders/${item.purchaseRequest.orderId}`} className="h-8 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700">

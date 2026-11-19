@@ -17,5 +17,7 @@ export const ADMIN_OPERATION_LIST_STYLE = {
   "--admin-list-action-padding": `${F.controls.compactPaddingX}px`,
   "--admin-list-action-radius": `${F.radius.control}px`,
   "--admin-list-action-gap": `${F.controls.iconGap}px`,
+  "--admin-list-menu-width": `${F.floating.popoverWidth}px`,
+  "--admin-list-font": F.fontFamily,
   "--admin-list-touch": `${F.controls.touchMinHeight}px`,
 } as CSSProperties;

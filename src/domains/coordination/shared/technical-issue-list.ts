@@ -145,3 +145,13 @@ export function technicalIssueViewSelection(flowKey: string, value: string) {
       }
     : null;
 }
+
+/** Same counts for left navigation and the standalone list's stage controls. */
+export function technicalIssueListNavigation(items: Item[], pagination: CoordinationBoardColumnPaginationDTO, state: TechnicalIssueListState, filtered = false) {
+  return [{ key: "OPEN" as const, label: "Đang mở" }, ...TECHNICAL_LIST_STAGES].map(stage => ({
+    ...stage,
+    count: filtered || state.attention !== "ALL"
+      ? technicalIssueListRows(items, stage.key, state.sort, state.attention).length
+      : technicalIssueListStages(stage.key).reduce((total, column) => total + (pagination[column.key]?.total ?? items.filter(item => item.stage === column.key).length), 0),
+  }));
+}

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Grid2X2, List, Search } from "lucide-react";
+import { OperationWorkspaceLayout } from "../../src/domains/coordination/ui/OperationWorkspaceLayout";
 import TechnicalIssueListView from "../../src/domains/coordination/ui/TechnicalIssueListView";
 import { SpaceViewSwitch } from "../../src/domains/shared/ui/space/SpaceFilterBar";
 import {
@@ -11,6 +12,7 @@ import {
   DEFAULT_TI_LIST_STATE,
   TECHNICAL_LIST_STAGES,
   technicalIssueMatches,
+  technicalIssueListNavigation,
   technicalIssueLayoutUrl,
   type TechnicalIssueListState,
 } from "../../src/domains/coordination/shared/technical-issue-list";
@@ -147,6 +149,7 @@ function App() {
         description="Theo dõi công việc, thời hạn và tiến độ xử lý."
         meta={<span className="fixture-label">Dữ liệu minh họa</span>}
       />
+      <OperationWorkspaceLayout enabled={new URLSearchParams(location.search).has("navigation")} groups={[{key:"technical",label:"Kỹ thuật"},{key:"media",label:"Media"}]} activeGroup="technical" onGroupChange={()=>{}} stages={layout === "list" ? technicalIssueListNavigation(visible, pagination, state, !!query) : []} activeStage={state.scope} onStageChange={key=>{setFocus(null);setState(current=>({...current,scope:key as TechnicalIssueListState["scope"],page:1}))}}>
       <div className="fixture-controls">
         <div className="fixture-search">
           <Search size={16} />
@@ -176,6 +179,7 @@ function App() {
       {layout === "list" ? (
         <TechnicalIssueListView
           items={visible}
+          stageNavigation={new URLSearchParams(location.search).has("navigation") ? "external" : "inline"}
           state={state}
           onStateChange={setState}
           focusMemory={memory}
@@ -270,6 +274,7 @@ function App() {
           ))}
         </div>
       )}
+      </OperationWorkspaceLayout>
       {preview && (
         <div className="fixture-overlay">
           <section role="dialog" aria-label="Xem nhanh TI">

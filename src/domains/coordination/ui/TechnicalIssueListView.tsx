@@ -28,6 +28,7 @@ import {
   technicalIssueListStages,
   technicalIssueListLoadTarget,
   technicalIssuePrimaryMove,
+  technicalIssueListNavigation,
   type TechnicalIssueListState,
   type TechnicalIssueListStage,
 } from "../shared/technical-issue-list";
@@ -48,6 +49,7 @@ const date = (value: string | null) =>
     : "—";
 type Move = { stage: TechnicalIssueListStage; label: string };
 type Props = {
+  stageNavigation?: "inline" | "external";
   items: Item[];
   pagination: NonNullable<
     CoordinationDashboardDTO["technicalIssueBoard"]
@@ -222,6 +224,7 @@ export default function TechnicalIssueListView({
   onStateChange,
   query = "",
   focusMemory,
+  stageNavigation = "inline",
   filtered = false,
   loading = false,
 }: Props) {
@@ -296,33 +299,11 @@ export default function TechnicalIssueListView({
       aria-busy={loading || !!loadingColumn}
     >
       <div className={styles.toolbar}>
-        <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
-          {[
-            { key: "OPEN" as const, label: "Đang mở" },
-            ...TECHNICAL_LIST_STAGES,
-          ].map((stage) => (
-            <button
-              type="button"
-              key={stage.key}
-              aria-pressed={scope === stage.key}
-              onClick={() => change({ scope: stage.key })}
-            >
-              {stage.label}
-              <span>
-                {narrow
-                  ? technicalIssueListRows(items, stage.key, sort, attention)
-                      .length
-                  : technicalIssueListStages(stage.key).reduce(
-                      (n, s) =>
-                        n +
-                        (pagination[s.key]?.total ??
-                          items.filter((item) => item.stage === s.key).length),
-                      0,
-                    )}
-              </span>
-            </button>
-          ))}
-        </div>
+        {stageNavigation === "inline" && <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
+          {technicalIssueListNavigation(items, pagination, state, narrow).map(stage => <button type="button" key={stage.key} aria-pressed={scope === stage.key} onClick={() => change({ scope: stage.key })}>
+            {stage.label}<span>{stage.count.toLocaleString("vi-VN")}</span>
+          </button>)}
+        </div>}
         <div className={styles.filters}>
           {scope === "DONE" && (
             <select
