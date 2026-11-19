@@ -109,6 +109,15 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     assert.equal(published.hero.theme, 'charcoal'); assert.deepEqual(mutations, ['save', 'save', 'publish']);
     for (const width of [320, 390, 768, 1280, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
+      await page.waitForFunction(() => {
+        const layout = document.querySelector('.sfc-home-layout');
+        return layout && layout.dataset.wide === String(layout.clientWidth >= 960);
+      });
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) {
+        console.log(await page.evaluate(() => [...document.querySelectorAll('body *')]
+          .filter(el => el.getBoundingClientRect().right > innerWidth + 1)
+          .slice(0, 8).map(el => ({ tag: el.tagName, className: el.className, right: el.getBoundingClientRect().right }))));
+      }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'overflow at ' + width);
       const bounds = await bar.boundingBox(); assert.ok(bounds.height < (width < 640 ? 180 : 120), 'action bar stays compact');
       if (width <= 768) await page.getByRole('combobox', { name: 'Khối đang sửa' }).selectOption('about');
