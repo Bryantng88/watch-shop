@@ -38,11 +38,11 @@ export default function AdminShell({ user, children, assistantSimulation = false
 
     return (
         <AdminNavigationHistoryProvider>
-        {isBen || isEmbedded || isBenWorkList || isTechnicianWorkspace || isBenMediaList || isBenMediaEditor ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
+        {isBen || isEmbedded || isBenWorkList || isBenMediaList || isBenMediaEditor ? <main className="min-h-[100dvh] min-w-0 bg-slate-50">
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
-        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className="grid h-screen overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]">
+        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className={`${isTechnicianWorkspace ? "h-[100dvh]" : "h-screen"} grid overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]`}>
             <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
                 <AdminSidebar
                     onExpandedChange={setSidebarExpanded}
@@ -50,7 +50,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 />
             </div>
 
-            <div className="lg:hidden">
+            <div className={isTechnicianWorkspace ? "hidden" : "lg:hidden"}>
                 <AdminSidebar
                     user={{ permissions: user.permissions, name: user.name, roles: user.roles }}
                     variant="mobile"
@@ -58,6 +58,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
             </div>
 
             <div className="flex min-w-0 flex-col overflow-hidden">
+                <div className={isTechnicianWorkspace ? "hidden lg:block" : undefined}>
                 <AdminTopbar
                     title="Admin"
                     user={{
@@ -66,6 +67,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                         avatarUrl: user.avatarUrl,
                     }}
                 />
+                </div>
 
                 <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50">
                     {children}

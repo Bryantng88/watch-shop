@@ -482,10 +482,10 @@ export default function TechnicianWorkspace({
     );
   }
   return (
-    <AdminPageCanvas className="mx-auto max-w-3xl !px-4 pb-24">
+    <AdminPageCanvas className="min-w-0 w-full !px-4 pb-24 lg:!px-6 lg:pb-8">
       <Link
         href={fromBen ? "/admin/ben" : "/admin/dashboard"}
-        className="inline-flex min-h-9 items-center gap-1 text-xs text-slate-500"
+        className={`inline-flex min-h-9 items-center gap-1 text-xs text-slate-500 ${fromBen ? "" : "lg:hidden"}`}
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {fromBen ? "Ben" : "Admin"}
@@ -557,6 +557,15 @@ export default function TechnicianWorkspace({
         aria-busy={pending}
         className="divide-y divide-slate-100"
       >
+        <div aria-hidden="true" className="hidden grid-cols-[48px_minmax(0,2fr)_minmax(0,1.4fr)_112px_96px_116px_16px] items-center gap-3 py-3 text-xs font-medium text-slate-500 lg:grid">
+          <span />
+          <span>Đồng hồ</span>
+          <span>Nội dung kỹ thuật</span>
+          <span>Trạng thái</span>
+          <span>Hạn xử lý</span>
+          <span>Mã phiếu</span>
+          <span />
+        </div>
         {data.items.map((item) => {
           const stage = getTechnicalIssueOperationStage(item);
           const late =
@@ -573,20 +582,20 @@ export default function TechnicianWorkspace({
                   setNotice("");
                   setSelected(item);
                 }}
-                className="flex min-h-24 w-full items-center gap-3 py-3 text-left transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-60"
+                className="flex min-h-24 w-full items-center gap-3 py-3 text-left transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-60 lg:grid lg:min-h-20 lg:grid-cols-[48px_minmax(0,2fr)_minmax(0,1.4fr)_112px_96px_116px_16px]"
               >
                 <IssuePhoto item={item} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-slate-950">
+                <span className="min-w-0 flex-1 lg:contents">
+                  <span className="block truncate text-sm font-semibold text-slate-950 lg:col-start-2">
                     {item.serviceRequest.productTitle}
                   </span>
-                  <span className="mt-1 block truncate text-xs text-slate-600">
+                  <span className="mt-1 block truncate text-xs text-slate-600 lg:col-start-3 lg:mt-0 lg:text-sm">
                     {item.summary}
                   </span>
-                  <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                  <span className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 lg:contents">
                     <span
                       className={
-                        "rounded px-1.5 py-0.5 " +
+                        "rounded px-1.5 py-0.5 lg:col-start-4 lg:w-fit " +
                         (stage === "IN_PROGRESS"
                           ? ADMIN_DOMAIN_TONE.TECHNICAL.soft
                           : "bg-slate-100 text-slate-600")
@@ -599,7 +608,7 @@ export default function TechnicianWorkspace({
                     {item.expectedCompletionAt && (
                       <span
                         className={
-                          "inline-flex items-center gap-1 " +
+                          "inline-flex items-center gap-1 lg:col-start-5 " +
                           (late ? "text-amber-700" : "")
                         }
                       >
@@ -613,14 +622,15 @@ export default function TechnicianWorkspace({
                         )}
                       </span>
                     )}
-                    <span className="max-w-[120px] truncate font-mono text-[10px] text-slate-400">
+                    {!item.expectedCompletionAt && <span aria-label="Chưa có hạn xử lý" className="hidden text-slate-400 lg:col-start-5 lg:block">—</span>}
+                    <span className="max-w-[120px] truncate font-mono text-[10px] text-slate-400 lg:col-start-6 lg:text-xs lg:text-slate-500">
                       {item.serviceRequest.refNo}
                     </span>
                   </span>
                 </span>
                 <ChevronRight
                   aria-hidden="true"
-                  className="h-4 w-4 shrink-0 text-slate-300"
+                  className="h-4 w-4 shrink-0 text-slate-300 lg:col-start-7"
                 />
               </button>
             </div>

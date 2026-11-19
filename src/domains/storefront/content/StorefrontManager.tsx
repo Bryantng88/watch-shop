@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {AdminPageCanvas,AdminPageHeader,AdminFlatToolbar} from "@/domains/shared/ui/admin-design-contract";
 import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
 import {AsyncActionButton} from "@/domains/shared/ui/mutation/AsyncActionButton";
@@ -13,7 +13,6 @@ import {
   type EditorialImage,
   type HomeContent,
   emptyImage,
-  homeImageGuidance,
 } from "./contract";
 import type { PublicWatchCard } from "../contracts";
 import "./manager.css";
@@ -78,6 +77,7 @@ function ImageField({
   library,
   onUpload,
   disabled,
+  emptyHint,
 }: {
   label: string;
   value: EditorialImage;
@@ -85,7 +85,10 @@ function ImageField({
   library: LibraryImage[];
   onUpload: (file: File) => Promise<LibraryImage | null>;
   disabled: boolean;
+  emptyHint?: string;
 }) {
+  const hintId = useId();
+  const showHint = !value.key && Boolean(emptyHint);
   const fileInput=useRef<HTMLInputElement>(null);
   const current = library.find((i) => i.key === value.key);
   return (
@@ -109,6 +112,7 @@ function ImageField({
         <div className="sfc-image-controls">
           <select
             aria-label={`Chọn ${label}`}
+            aria-describedby={showHint ? hintId : undefined}
             value={value.key}
             onChange={(e) => onChange({ ...value, key: e.target.value })}
           >
@@ -143,6 +147,7 @@ function ImageField({
               Bỏ ảnh
             </button>
           ) : null}
+          {showHint ? <small id={hintId} className="sfc-image-hint">{emptyHint}</small> : null}
         </div>
       </div>
       <Field label="Mô tả ảnh" value={value.alt} onChange={(alt) => onChange({ ...value, alt })} />
@@ -472,11 +477,14 @@ export default function StorefrontManager({
         <p role="status">Đang tải nội dung…</p>
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
-          <AdminFlatToolbar className="sfc-toolbar">
-            <div>
-              <strong>{record.kind === "HOME" ? "Trang chủ" : article?.title}</strong>
-              <small>
-                {uploading?"Đang tải ảnh…":dirty ? "Có thay đổi chưa lưu" : "Đã lưu nháp"} · Phiên bản {record.revision}
+          <AdminFlatToolbar variant="actions" className="sfc-document-actions">
+            <div className="sfc-document-state">
+              {!homeOnly && <strong>{record.kind === "HOME" ? "Trang chủ" : article?.title}</strong>}
+              <p className="sfc-save-state" aria-live="polite">
+                {uploading ? "Đang tải ảnh…" : dirty ? "Có thay đổi chưa lưu" : "Đã lưu nháp"}
+              </p>
+              <small className="tabular-nums">
+                Phiên bản {record.revision}
                 {record.publishedAt
                   ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN",{timeZone:"Asia/Ho_Chi_Minh"})}`
                   : " · Chưa xuất bản"}
@@ -485,7 +493,7 @@ export default function StorefrontManager({
             {needsReload&&<button type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</button>}
             <div className="sfc-actions">
               <AsyncActionButton type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
-                <Save size={15} />
+                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
                 Lưu nháp
               </AsyncActionButton>
               <AsyncActionButton
@@ -495,7 +503,7 @@ export default function StorefrontManager({
                 disabled={busy || uploading}
                 onClick={() => void save("save", true)}
               >
-                <Eye size={15} />
+                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
                 Xem trước
               </AsyncActionButton>
               <AsyncActionButton
@@ -506,7 +514,7 @@ export default function StorefrontManager({
                 disabled={busy || uploading}
                 onClick={() => void save("publish")}
               >
-                <Globe size={15} />
+                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
                 Xuất bản
               </AsyncActionButton>
               {record.publishedAt && !homeOnly ? (
@@ -522,11 +530,6 @@ export default function StorefrontManager({
               ) : null}
             </div>
           </AdminFlatToolbar>
-          {home && homeImageGuidance(home).length > 0 && (
-            <details className="sfc-guidance"><summary>{homeImageGuidance(home).length} lưu ý về cách hiển thị ảnh</summary>
-              {homeImageGuidance(home).map(item=><button key={item.section} type="button" onClick={()=>{setActiveSection(item.section);requestAnimationFrame(()=>document.getElementById(`home-editor-${item.section}`)?.scrollIntoView({block:"start",behavior:"smooth"}));}}>{names[item.section]} · {item.message} <span aria-hidden>→</span></button>)}
-            </details>
-          )}
           <fieldset disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?"sfc-home-layout":""}`}>
             {home ? (
               <>
@@ -649,11 +652,11 @@ export default function StorefrontManager({
                     onChange={(caption) => edit({ ...home, hero: { ...home.hero, caption } })}
                   />
                   </details>
-                  {!home.hero.image.key&&<p className="sfc-help">Đang dùng ảnh đồng hồ tự động từ danh mục. Bạn có thể giữ ảnh này và chỉ đổi tông màu.</p>}
                   <div className="sfc-grid">
                     <ImageField
                       {...imageProps}
                       label="Ảnh desktop"
+                      emptyHint="Để trống để dùng ảnh đồng hồ đủ điều kiện từ danh mục."
                       value={home.hero.image}
                       onChange={(image) => edit({ ...home, hero: { ...home.hero, image } })}
                     />
@@ -707,6 +710,7 @@ export default function StorefrontManager({
                   <ImageField
                     {...imageProps}
                     label="Ảnh giới thiệu"
+                    emptyHint="Ảnh không bắt buộc. Chưa chọn ảnh: phần giới thiệu hiển thị dạng văn bản gọn."
                     value={home.about.image}
                     onChange={(image) => edit({ ...home, about: { ...home.about, image } })}
                   />
@@ -752,6 +756,7 @@ export default function StorefrontManager({
                       <ImageField
                         {...imageProps}
                         label={`Ảnh nhóm ${i + 1}`}
+                        emptyHint="Ảnh không bắt buộc. Chưa chọn ảnh: nhóm hiển thị thành liên kết gọn."
                         value={collection.image}
                         onChange={(image) =>
                           edit({
