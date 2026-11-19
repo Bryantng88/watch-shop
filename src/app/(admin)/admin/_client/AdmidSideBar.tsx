@@ -373,9 +373,7 @@ export default function AdminSidebar({
                 {!isMobile ? (
                     <div className={`flex h-14 shrink-0 items-center border-b border-white/10 px-3 min-[2200px]:hidden ${desktopExpanded ? "justify-between" : "justify-center"}`}>
                         {desktopExpanded ? (
-                            <span aria-label="Menu" className="pl-2 text-[0px] font-semibold uppercase tracking-[0.16em] text-white/55 before:text-xs before:content-['MENU']">
-                                Äiá»u hÆ°á»›ng
-                            </span>
+                            <span className="pl-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/55">Menu</span>
                         ) : null}
                         <button
                             type="button"
@@ -417,7 +415,8 @@ export default function AdminSidebar({
                             if(entry.label === "Báo cáo") return <ReportMenu key="reports" items={entry.children||[]} expanded={isMobile||desktopExpanded||wideScreen} onNavigate={()=>{if(isMobile)setOpen(false);}}/>;
                             const hasChildren = Boolean(entry.children?.length);
                             const isCollapsed = collapsedGroups.has(entry.label);
-                            const isOpen = hasChildren && !isCollapsed;
+                            // Keep rail shortcuts visible when their group header is hidden.
+                            const isOpen = hasChildren && (!isCollapsed || (!isMobile && !desktopExpanded && !wideScreen));
 
                             return (
                                 <div
