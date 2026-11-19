@@ -17,6 +17,18 @@ the Codex desktop app, the CLI, and IDE integrations.
 - Use repository files and scripts as the source of truth. Ask before changing
   architecture, production data, deployment policy, or access controls.
 
+## Admin UI
+
+Before adding or materially changing any admin UI, read
+`docs/design/admin-ui-language-contract.md` and the foundation/shared primitives
+under `src/domains/shared/ui/admin-design-contract`.
+Use Personal Work and Operations Dashboard as the reference surfaces described
+there. Reuse shared typography, spacing, domain tones, focus surfaces, tabs and
+identity components. Distinguish the v2 target specification from legacy adapters
+that have not migrated yet. Add a shared variant before duplicating page-local
+presentation rules, and document intentional exceptions in the pull request.
+This rule does not authorize a repository-wide rewrite or change domain behavior.
+
 ## AI assistant UX
 
 Before changing assistant/chat interactions, read
@@ -116,3 +128,4 @@ the separate local simulation and do not infer production authorization.
   instructions in this file.
 - For ordinary Cloud coding tasks, stop after verification and pull-request
   preparation unless the user separately authorizes merge or release actions.
+
