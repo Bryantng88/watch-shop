@@ -252,8 +252,11 @@ An automatic hero must have a real eligible catalogue source; configured media
 still needs existence checks. Distinguish a saved draft from published content,
 retain revision conflict handling, and never imply a preview changed the site.
 
-Reports is one navigation control in collapsed, expanded and mobile navigation,
-containing only permitted Overview/Finance/Sales destinations. Use normal links,
+Reports is a peer group alongside Business, Storefront and System. In expanded
+and mobile navigation, its heading uses the same typography, alignment, divider,
+spacing and disclosure chevron as those groups; permitted Overview/Finance/Sales
+links sit beneath it. In the collapsed rail, use one Reports icon opening a
+floating list, independent of the expanded group's disclosure state. Use normal links,
 visible focus, keyboard access and Escape dismissal. A collapsed rail must not
 render three unlabeled report icons. Expanded navigation must not cover editing
 controls. Grouping never broadens permissions or changes destination routes.
