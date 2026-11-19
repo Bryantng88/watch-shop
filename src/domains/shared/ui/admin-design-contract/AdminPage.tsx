@@ -29,6 +29,20 @@ export function AdminPageHeader({
   </header>;
 }
 
-export function AdminFlatToolbar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={clsx(ADMIN_UI.toolbar, className)}>{children}</div>;
+/** Filters are grouped; document actions sit flat between the header and editor. */
+export function AdminFlatToolbar({
+  children,
+  className,
+  variant = "filters",
+}: {
+  children: ReactNode;
+  className?: string;
+  variant?: "filters" | "actions";
+}) {
+  return <div className={clsx(
+    variant === "actions"
+      ? "flex flex-col gap-3 border-b border-slate-100 bg-white pb-4 lg:flex-row lg:items-center lg:justify-between"
+      : ADMIN_UI.toolbar,
+    className,
+  )}>{children}</div>;
 }

@@ -421,10 +421,6 @@
 .sfc-field > span { font-weight: 600; }
 .sfc textarea { line-height: 1.5; }
 .sfc-success { border: 0; border-radius: 0; background: transparent; padding: 0; font-size: 12px; margin-bottom: 8px; }
-.sfc-guidance { border-bottom: 1px solid #f1f5f9; padding: 4px 0 12px; margin-bottom: 16px; font-size: 12px; color: #64748b; }
-.sfc-guidance > summary { cursor: pointer; width: fit-content; padding: 4px 0; }
-.sfc-guidance > button { display: flex; justify-content: start; border: 0; background: transparent; font-weight: 400; text-align: left; }
-.sfc-guidance > button:hover { color: #1d4ed8; background: #f8fafc; }
 .sfc-home-layout { display: grid; grid-template-columns: 300px minmax(0,1fr); gap: 28px; align-items: start; }
 .sfc-section-nav { min-width: 0; grid-column: 1; grid-row: 1; padding-right: 20px; border-right: 1px solid #f1f5f9; }
 .sfc-section-nav > h2, .sfc-section-editor > h2 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
@@ -466,4 +462,25 @@
  .sfc-section-mobile .sfc-field { margin-bottom: 8px; }
  .sfc-section-mobile button { min-width: 32px; padding: 6px; }
  .sfc-section-editor { scroll-margin-top: 240px; }
+}
+
+/* Document action bar: flat surface; only filters use the grouped toolbar. */
+.sfc-document-actions { min-width: 0; }
+.sfc-document-state { min-width: 0; }
+.sfc-document-state > strong { display: block; font-size: 14px; line-height: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.sfc-save-state { margin: 0; color: #334155; font-size: 12px; line-height: 16px; font-weight: 500; }
+.sfc-document-state > small { display: block; margin-top: 4px; font-size: 12px; line-height: 16px; color: #64748b; }
+.sfc-document-state > strong + .sfc-save-state { margin-top: 4px; }
+.sfc-document-actions .sfc-actions { gap: 8px; }
+.sfc-document-actions button { min-height: 40px; border-radius: 8px; padding: 8px 16px; gap: 8px; font-size: 14px; line-height: 20px; }
+.sfc-document-actions button:not(.primary) { color: #334155; border-color: #e2e8f0; }
+.sfc-document-actions button:disabled { opacity: 0.5; }
+.sfc-document-actions button svg { width: 16px; height: 16px; stroke-width: 1.75; }
+.sfc-image-controls .sfc-image-hint { flex-basis: 100%; min-width: 0; font-size: 12px; line-height: 16px; margin: 0; }
+@media (max-width: 1023px) {
+ .sfc-document-actions .sfc-actions { width: 100%; }
+ .sfc-document-actions .sfc-actions > button { flex: 1 1 auto; }
+}
+@media (pointer: coarse) {
+ .sfc-document-actions button { min-height: 44px; }
 }
