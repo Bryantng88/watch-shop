@@ -14,7 +14,7 @@ export type AdminViewTab<Value extends string> = {
 
 /** Controlled view filters, not ARIA tab panels. Domain code owns the selection. */
 export function AdminViewTabs<Value extends string>({
-  label, items, value, onValueChange, disabled = false, className,
+  label, items, value, onValueChange, disabled = false, className, density = "compact",
 }: {
   label: string;
   items: readonly AdminViewTab<Value>[];
@@ -22,6 +22,7 @@ export function AdminViewTabs<Value extends string>({
   onValueChange: (value: Value) => void;
   disabled?: boolean;
   className?: string;
+  density?: "compact" | "comfortable";
 }) {
   const strip = useRef<HTMLDivElement>(null);
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
@@ -52,7 +53,7 @@ export function AdminViewTabs<Value extends string>({
     onValueChange(enabled[next].item.value);
   }
 
-  return <div className={clsx(styles.root, className)} data-collapse={items.length > 4 || undefined}>
+  return <div className={clsx(styles.root, density === "comfortable" && styles.comfortable, className)} data-collapse={items.length > 4 || undefined}>
     <div ref={strip} role="group" aria-label={label} className={styles.strip} onKeyDown={navigate}>
       {items.map((item, index) => <button
         ref={element => { buttons.current[index] = element; }}

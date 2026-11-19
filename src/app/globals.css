@@ -620,3 +620,11 @@ a {
   .admin-view-tabs-select { font-size: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .admin-view-tabs-item { transition: none; } }
+
+/* Roomier section navigation without changing compact view filters. */
+.admin-view-tabs-comfortable > .admin-view-tabs-strip { gap: 12px; }
+.admin-view-tabs-comfortable .admin-view-tabs-item {
+  min-height: 44px;
+  padding: 12px 12px 14px;
+  font-size: 14px;
+}

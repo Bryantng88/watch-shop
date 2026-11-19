@@ -4,6 +4,7 @@ import { WATCH_CASE_SHAPE_OPTIONS as CASE_SHAPE_OPTIONS } from "../../shared/wat
 import { WATCH_STYLE_OPTIONS } from "../../shared/watch-style.options";
 import { useEffect, useState } from "react";
 import { Pencil, Sparkles } from "lucide-react";
+import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { buildWatchTitleFromForm } from "../../shared/watch-title-sku.helpers";
 import type { WatchFormValues } from "../../client/form/watch-form.types";
 import {
@@ -226,7 +227,7 @@ function FormSection({
 
 function SummaryChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex min-h-6 items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+    <span className="inline-flex min-h-6 items-center rounded-full bg-white/80 px-2.5 py-1 text-xs font-medium text-slate-700">
       {children}
     </span>
   );
@@ -444,13 +445,13 @@ export default function WatchBasicSection({
       surface={surface}
     >
       <div className="space-y-6">
-        <div className={surface === "flat" ? "hidden border-b border-slate-100 bg-white px-5 py-3 sm:block" : "sticky top-0 z-10 -mx-5 -mt-5 border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur"}>
+        <div className={cx(ADMIN_UI.insightSurface, "rounded-xl p-4 sm:p-5", surface === "flat" ? "hidden sm:block" : "sticky top-0 z-10")}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <div className="text-xs font-semibold uppercase tracking-[0.08em] text-blue-600">
                 Realtime summary
               </div>
-              <div className="mt-1 truncate text-base font-semibold text-slate-950">
+              <div className="mt-1 break-words text-base font-semibold text-slate-950">
                 {summaryTitle}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -465,7 +466,7 @@ export default function WatchBasicSection({
                 )}
               </div>
               {specParts.length ? (
-                <div className="mt-2 text-sm text-slate-500">
+                <div className="mt-2 text-xs text-slate-600">
                   {specParts.join(" - ")}
                 </div>
               ) : null}
@@ -491,7 +492,7 @@ export default function WatchBasicSection({
             </div>
           </div>
           {aiMessage ? (
-            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+            <div className="mt-3 border-t border-blue-100 pt-3 text-sm text-slate-700">
               <div>{aiMessage}</div>
               {aiSources.length ? (
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs">
