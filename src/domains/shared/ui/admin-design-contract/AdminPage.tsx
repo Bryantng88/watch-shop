@@ -48,3 +48,12 @@ export function AdminFlatToolbar({
     className,
   )}>{children}</div>;
 }
+
+
+/** Page-wide document commands live at the bottom, outside workspace headings. */
+export function AdminDocumentFooter({ children, className }: { children: ReactNode; className?: string }) {
+  return <footer aria-label="Thao tác tài liệu" className={clsx(
+    "flex min-w-0 flex-wrap items-center justify-end gap-3 border-t border-slate-100 bg-white py-3 pb-[max(12px,env(safe-area-inset-bottom))]",
+    className,
+  )}>{children}</footer>;
+}
