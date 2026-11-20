@@ -1286,3 +1286,17 @@ loại da, nguồn và màu; tìm kiếm thêm normalization tiếng Việt khô
 Luôn có số kết quả và empty state riêng cho danh sách rỗng/kết quả lọc rỗng.
 Khi pane dưới 680px, hàng chuyển sang cặp label/value theo thứ tự đọc,
 không giữ bảng tối thiểu 1120px hoặc đẩy cả trang tràn ngang.
+
+### Split workspace — pre-paint initialization
+
+Khi remount do chuyển route (ví dụ Phiếu nhập ↔ Đơn hàng), shared split hooks
+đo available width và khôi phục độ rộng/trạng thái menu trong layout effects,
+trước lần paint của client commit. Không chờ passive effect rồi đổi native
+select toàn chiều ngang sang menu trái, hoặc đổi từ độ rộng mặc định sang
+độ rộng đã lưu sau khi nội dung đã hiện.
+Giữ ResizeObserver cho thay đổi kích thước về sau, ngưỡng native select,
+storage key riêng từng khu vực và giới hạn pane theo available width.
+Nếu browser chặn localStorage, dùng mặc định và vẫn đo mode trước paint.
+Không thêm viewport guess vào server render hoặc thay query/filter để sửa
+layout. Test lifecycle giữ passive effects chưa chạy để xác nhận mode và
+saved width đã sẵn sàng; browser regression giữ các hành vi resize/navigation.

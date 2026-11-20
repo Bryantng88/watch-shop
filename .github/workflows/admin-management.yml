@@ -24,6 +24,7 @@ on:
       - 'scripts/check-section-workspaces.cjs'
       - 'src/app/(admin)/admin/trading/**'
       - 'scripts/check-trading-workspace.cjs'
+      - 'scripts/check-split-workspace-first-paint.cjs'
       - 'src/domains/contacts/**'
       - 'src/domains/storefront/media/**'
       - 'src/domains/storefront/content/StorefrontManager.tsx'
@@ -106,6 +107,7 @@ jobs:
           src/domains/trading/shared/trading-navigation.ts
           'src/app/(admin)/admin/trading/page.tsx'
           scripts/check-trading-workspace.cjs
+          scripts/check-split-workspace-first-paint.cjs
           scripts/check-section-workspaces.cjs
           scripts/check-strap-list-ui.cjs
           src/domains/strap/client/StrapInventoryTable.tsx
@@ -139,6 +141,7 @@ jobs:
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
           ROLE_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/roles.png
+      - run: node scripts/check-split-workspace-first-paint.cjs
       - run: node scripts/check-trading-workspace.cjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
