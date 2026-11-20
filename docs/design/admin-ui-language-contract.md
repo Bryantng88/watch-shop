@@ -1134,6 +1134,13 @@ Icon select dùng native select, tooltip mô tả giá trị và chấm báo kh�
 
 ### Role and permission workspace
 
+“Tạo vai trò” nằm trong cụm thao tác của pane nội dung, cùng hàng “Thông tin
+vai trò” và “Lưu vai trò”, không ở tiêu đề trang hoặc trong danh sách vai trò.
+Lưu là primary; Tạo dùng quiet có icon cộng, không tạo hai cụm CTA cạnh tranh.
+Không là mục chọn/toggle hay lựa chọn tạo mới trong select mobile. Menu chỉ
+liệt kê vai trò hiện có; “Vai trò mới” là placeholder trạng thái khi đang tạo.
+Cùng một cụm thao tác áp dụng cho desktop và mobile.
+
 Vai trò & quyền truy cập dùng AdminManagementPage, heading và control chung.
 Canvas trắng, không hero/icon tile hoặc line ngang dưới page title. Menu vai trò
 bên trái dùng cùng split geometry và separator kéo được; pane nội dung giữ mount
