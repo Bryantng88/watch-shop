@@ -36,15 +36,19 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
         ? `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`
         : name === 'toast' ? `const notify={success(message){window.__successes=(window.__successes||[]).concat(message)},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
         : `export const useAppDialog=()=>({confirm:async()=>true});` }));
-      build.onResolve({ filter: /^@\// }, ({ path: source }) => ({ path: source === '@/domains/shared/ui/admin-design-contract'
-        ? path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx')
-        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') || source.endsWith('AdminSplitWorkspace') || source.endsWith('read-ui-response') ? '.ts' : '.tsx') }));
+      build.onResolve({ filter: /^@\// }, async ({ path: source }) => {
+        if (source === '@/domains/shared/ui/admin-design-contract') return { path: path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx') };
+        const base = path.join(root, source.replace(/^@\//, 'src/'));
+        for (const suffix of ['.ts', '.tsx', '/index.ts']) { try { await fs.access(base + suffix); return { path: base + suffix }; } catch {} }
+        return null;
+      });
     } }],
   });
   const tailwindCss = await postcss([tailwind({ content: [path.join(root, 'src/domains/storefront/content/StorefrontManager.tsx'), path.join(root, 'src/domains/shared/ui/admin-design-contract/*.{ts,tsx}')], corePlugins: { preflight: true } })]).process('@tailwind base;@tailwind utilities;', { from: undefined });
   const css = tailwindCss.css + '\n' + bundle.outputFiles.filter(file => file.path.endsWith('.css')).map(file => file.text).join('\n') + '\n' + await fs.readFile(path.join(root, 'src/domains/storefront/content/manager.css'), 'utf8');
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/api/admin/storefront/content')) return reply({ record, articles: [] });
+    if (req.url.startsWith('/api/admin/storefront/media/library')) return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], nextCursor: null, truncated: false });
     if (req.url === '/api/admin/storefront/media') return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], truncated: false });
     if (req.url.startsWith('/api/admin/storefront/products')) return reply({ items: [] });
     if (req.url.startsWith('/storefront-preview')) { res.setHeader('Content-Type', 'text/html'); return res.end('<p>Bản xem trước nháp</p>'); }
@@ -87,9 +91,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const about = page.locator('#home-editor-about');
     const hint = about.getByText('Ảnh không bắt buộc. Chưa chọn ảnh: phần giới thiệu hiển thị dạng văn bản gọn.', { exact: true });
     await hint.waitFor();
-    const aboutImage = about.getByRole('combobox', { name: 'Chọn Ảnh giới thiệu', exact: true });
+    const aboutImage = about.getByRole('button', { name: 'Chọn Ảnh giới thiệu', exact: true });
     assert.equal(await aboutImage.getAttribute('aria-describedby'), await hint.getAttribute('id'));
-    await aboutImage.selectOption(key); assert.equal(await hint.count(), 0);
+    await aboutImage.click();const picker = about.getByRole('region', { name: 'Thư viện Ảnh giới thiệu', exact: true });assert.equal(await picker.getByRole('combobox').inputValue(), 'about');await picker.getByRole('button', { name: 'Chọn ảnh Ảnh mẫu', exact: true }).click();assert.equal(await hint.count(), 0);
     await about.getByRole('button', { name: 'Bỏ ảnh', exact: true }).click(); await hint.waitFor();
     await about.getByLabel('Tiêu đề', { exact: true }).fill('Giới thiệu vẫn giữ khi đổi khối');
     await nav.getByRole('button', { name: /^Bộ sưu tập/ }).click();
