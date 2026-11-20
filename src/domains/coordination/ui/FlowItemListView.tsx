@@ -1,4 +1,5 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminMoney } from "@/domains/shared/ui/admin-design-contract/AdminMoney";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
@@ -1719,32 +1720,8 @@ export default function FlowItemListView({
           <p className="mt-1 text-xs text-slate-500">Thử chọn bước khác hoặc xóa bớt bộ lọc.</p>
         </div>
       ) : null}
-      <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
-        <span>Hiển thị {visibleItems.length} / {effectiveTotal} item</span>
-        {effectiveTotalPages > 1 ? (
-          <div className="flex items-center gap-2">
-            <AdminButton variant="secondary" density="compact"
-              type="button"
-              disabled={pending || pagination.page <= 1}
-              onClick={() => onPageChange(pagination.page - 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Trước
-            </AdminButton>
-            <span className="min-w-20 text-center font-semibold text-slate-700">
-              {pagination.page} / {effectiveTotalPages}
-            </span>
-            <AdminButton variant="secondary" density="compact"
-              type="button"
-              disabled={pending || pagination.page >= effectiveTotalPages}
-              onClick={() => onPageChange(pagination.page + 1)}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Sau
-            </AdminButton>
-          </div>
-        ) : null}
-      </div>
+      <AdminListFooter total={effectiveTotal} unit="item" page={pagination.page} totalPages={effectiveTotalPages} pending={pending}
+        onPrevious={() => onPageChange(pagination.page - 1)} onNext={() => onPageChange(pagination.page + 1)} />
 
       {isBulkReconcileOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">

@@ -1,4 +1,5 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 
 import { AdminAnchorAction, AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
@@ -289,38 +290,8 @@ function Pagination({
   loading?: boolean;
   onPage: (page: number) => void;
 }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-      <div>
-        Tổng: <span className="font-semibold text-slate-950">{total}</span> •
-        Trang <span className="font-semibold text-slate-950">{page}</span>/
-        <span className="font-semibold text-slate-950">{totalPages}</span>
-        {loading ? (
-          <span className="ml-2 text-slate-400">Đang tải...</span>
-        ) : null}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <AdminButton variant="secondary"
-          type="button"
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          disabled={loading || page <= 1}
-          onClick={() => onPage(Math.max(1, page - 1))}
-        >
-          ← Trước
-        </AdminButton>
-
-        <AdminButton variant="secondary"
-          type="button"
-          className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          disabled={loading || page >= totalPages}
-          onClick={() => onPage(Math.min(totalPages, page + 1))}
-        >
-          Sau →
-        </AdminButton>
-      </div>
-    </div>
-  );
+  return <AdminListFooter total={total} unit="đồng hồ" page={page} totalPages={totalPages} pending={loading}
+    onPrevious={() => onPage(Math.max(1, page - 1))} onNext={() => onPage(Math.min(totalPages, page + 1))} />;
 }
 
 export default function WatchListClient(props: WatchListClientProps) {
@@ -1726,7 +1697,6 @@ export default function WatchListClient(props: WatchListClientProps) {
           onApply={handleApplyFilters}
           onClear={handleClearFilters}
           onClearField={handleClearField}
-          onSidebarFilterChange={props.embedded ? (key, value) => pushParams(next => { setParam(next, key, value); next.set("page", "1"); }, { meta: "full", withTotal: true }) : undefined}
           onSaveView={handleSaveView}
         />
       }

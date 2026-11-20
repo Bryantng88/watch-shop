@@ -1,4 +1,5 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 
 
@@ -182,9 +183,6 @@ export default function UserListPageClient(props: PageProps) {
             <div><p className={`${s.metadata} ${s.status}`} data-active={user.isActive}>{user.isActive ? "Hoạt động" : "Đã khóa"}</p><p className={s.metadata}>Cập nhật {dateText(user.updatedAt)}</p></div>
             {canUpdate && <Button className={s.rowAction} aria-label={`Sửa ${user.name || user.email}`} onClick={() => editUser(user)}>Sửa</Button>}
         </li>)}</ul> : <p className={s.metadata}>{currentQuery ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng."}</p>}
-        <div className={s.footer}><p className={s.metadata}>Trang {page.toLocaleString("vi-VN")} / {totalPages.toLocaleString("vi-VN")}</p><div className={s.actions}>
-            {page > 1 ? <AdminLinkAction variant="secondary" href={pageHref(page - 1)} className={s.button}>Trước</AdminLinkAction> : <Button disabled>Trước</Button>}
-            {page < totalPages ? <AdminLinkAction variant="secondary" href={pageHref(page + 1)} className={s.button}>Sau</AdminLinkAction> : <Button disabled>Sau</Button>}
-        </div></div>
+        <AdminListFooter total={total} unit="người dùng" page={page} totalPages={totalPages} previousHref={pageHref(Math.max(1,page-1))} nextHref={pageHref(Math.min(totalPages,page+1))} />
     </AdminManagementSection>;
 }

@@ -1,6 +1,6 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 
-import { AdminWorkspaceFilter, useWorkspaceFilterHost } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { StrapListProjectionRow } from "@/domains/projection/server/strap-list";
@@ -20,7 +20,6 @@ function optionValues(rows: StrapListProjectionRow[], pick: (row: StrapListProje
 function rowStatus(row: StrapListProjectionRow) { return row.attachedWatch ? "ATTACHED" : row.lowStock ? "LOW_STOCK" : "AVAILABLE"; }
 
 export default function StrapInventoryTable({ rows }: { rows: StrapListProjectionRow[] }) {
-  const hosted = useWorkspaceFilterHost();
   const [values, setValues] = useState<FilterBarValues>(emptyFilters);
   const [applied, setApplied] = useState<FilterBarValues>(emptyFilters);
   const fields = useMemo(() => {
@@ -50,10 +49,9 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
   const lowStock = stocked.filter(row => row.lowStock).length;
   const attached = rows.filter(row => row.attachedWatch).length;
   return <section aria-label="Danh sách dây đồng hồ" className={styles.list} style={ADMIN_OPERATION_LIST_STYLE}>
-    {hosted && <AdminWorkspaceFilter label="Trạng thái dây" value={applied.status} options={(fields[2].options ?? []).map(option => option.value ? option : { ...option, label: "Tất cả" })} onChange={status => { setValues(current => ({ ...current, status })); setApplied(current => ({ ...current, status })); }} />}
     <BusinessListFilterBar variant="flat" values={values}
       search={{ key: "q", placeholder: "Tìm tên dây, SKU, hãng, màu, kích thước…" }}
-      primaryFields={fields.slice(0, 3).filter(field => !hosted || field.key !== "status")} advancedFields={fields.slice(3)}
+      primaryFields={fields.slice(0, 3)} advancedFields={fields.slice(3)}
       onChange={patch => setValues(current => ({ ...current, ...patch }))} onApply={() => setApplied({ ...values })} onClearField={clearField} onClearAll={reset} />
     <table className={styles.table}>
       <caption className="sr-only">Dây đồng hồ, kích thước, nguồn, tồn kho và tình trạng</caption>
@@ -70,8 +68,8 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
         <td data-label="Tình trạng">{row.attachedWatch ? <><span className={styles.metadata}>Đang gắn đồng hồ</span><Link className={styles.watchLink} href={`/admin/watches/${row.attachedWatch.productId}`}>{row.attachedWatch.title}</Link></> : row.lowStock ? <span className={styles.warning}>Sắp hết</span> : <span className={styles.ready}>Sẵn sàng</span>}</td>
       </tr>)}</tbody>
     </table>
-    <p className={styles.metadata} role="status" aria-live="polite">Hiển thị {filteredRows.length.toLocaleString("vi-VN")} / {rows.length.toLocaleString("vi-VN")} dây đồng hồ</p>
-    <p className={styles.summary}><span><strong>{rows.length.toLocaleString("vi-VN")}</strong> biến thể</span><span><strong>{stocked.reduce((sum, row) => sum + row.stockQty, 0).toLocaleString("vi-VN")}</strong> chiếc tồn kho</span>{lowStock > 0 && <span className={styles.warning}>{lowStock} mẫu sắp hết</span>}{attached > 0 && <span>{attached} đang gắn đồng hồ</span>}</p>
+    <AdminListFooter total={filteredRows.length} unit="dây đồng hồ" detail={filteredRows.length !== rows.length ? `Lọc từ ${rows.length.toLocaleString("vi-VN")} dây đồng hồ` : undefined} />
+    <p className={styles.summary}><span><strong>{stocked.reduce((sum, row) => sum + row.stockQty, 0).toLocaleString("vi-VN")}</strong> chiếc tồn kho</span>{lowStock > 0 && <span className={styles.warning}>{lowStock} mẫu sắp hết</span>}{attached > 0 && <span>{attached} đang gắn đồng hồ</span>}</p>
     {!filteredRows.length && <div className={styles.empty}><p>{rows.length ? "Không tìm thấy dây đồng hồ phù hợp." : "Chưa có dây đồng hồ trong danh sách."}</p>{rows.length > 0 && <AdminButton variant="quiet" density="compact" type="button" onClick={reset}>Xóa bộ lọc</AdminButton>}</div>}
   </section>;
 }

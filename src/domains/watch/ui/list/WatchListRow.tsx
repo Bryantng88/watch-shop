@@ -160,10 +160,17 @@ function WatchStatusSignal({
                 : normalized === "WAITING" || normalized === "PENDING" ? "Chờ tiếp nhận"
                     : normalized === "ISSUE" ? "Cần kiểm tra"
                         : "Đã kiểm tra");
+    const displayLabel = kind === "service" ? ({
+        IN_SERVICE: "Đang service", DONE: "Đã service", WAITING: "Chưa service",
+        PENDING: "Chưa service", NOT_REQUIRED: "Không cần service", ISSUE: "Service cần kiểm tra",
+    } as Record<string, string>)[normalized] ?? label : ({
+        POSTED: "Đã hoàn tất media", READY_TO_PUBLISH: "Sẵn sàng đăng", MEDIA_READY: "Đã chụp xong",
+        PHOTOSHOOT: "Đang chụp ảnh", MEDIA_PROCESSING: "Đang xử lý media", NEEDS_REWORK: "Media cần xử lý lại",
+        NO_IMAGE: "Chưa vào luồng media",
+    } as Record<string, string>)[normalized] ?? label;
     return <VisualStatusSignal
         variant="inline"
-        category={kind === "media" ? "Media" : "Kỹ thuật"}
-        label={label}
+        label={displayLabel}
         detail={detail}
         detailClassName={detailClassName}
         tone={tone}
@@ -225,8 +232,8 @@ function SaleStatusBadge({
 
     return (
         <VisualStatusSignal
-            variant="inline" category="Bán"
-            label={label || "Không rõ"}
+            variant="inline"
+            label={({ READY: "Chưa bán", SOLD: "Đã bán", HOLD: "Giữ hàng", PROCESSING: "Chưa bán · Đang chuẩn bị", CONSIGNED: "Đang ký gửi", CONSIGNED_TO: "Đang ký gửi" } as Record<string, string>)[normalized] ?? (label || "Chưa rõ trạng thái bán")}
             detail={config.detail}
             tone={config.tone}
             icon={config.icon}

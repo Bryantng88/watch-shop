@@ -1412,3 +1412,31 @@ Counts lấy trên toàn bộ projection cùng search/type/business scope và s�
 không lấy từ trang đang tải; đếm riêng IN/OUT và không cộng queue lần thứ hai.
 Stage thu/chi không là bộ lọc phụ để Xóa lọc không vô tình đổi stage. Giữ Đã đối soát,
 quyền xem/xử lý và bước xác nhận đối soát hiện có; không đổi trạng thái dữ liệu.
+
+
+### Sản phẩm — trạng thái ở bộ lọc danh sách
+
+Sidebar Sản phẩm chỉ chọn Đồng hồ/Dây đồng hồ. Bán hàng của Đồng hồ và Trạng thái
+của Dây đồng hồ nằm trong BusinessListFilterBar phía trên danh sách, dùng icon mở
+bộ lọc chung, không portal ra sidebar. Giữ các giá trị lọc, Áp dụng/Xóa lọc, query
+và phân trang hiện có. Navigation trạng thái Mua bán/Vận hành không thay đổi.
+
+
+Cột Tình trạng Đồng hồ hiển thị trạng thái cụ thể, không dùng prefix Bán/Kỹ thuật:
+Chưa bán / Giữ hàng / Đã bán; Chưa service / Đang service / Đã service. Giữ riêng
+Không cần service, Service cần kiểm tra và Đang ký gửi; không suy diễn trạng thái
+không xác định. Media cũng ghi thẳng trạng thái (Đã hoàn tất media / Đang xử lý media / Đang chụp ảnh),
+không có prefix Media đứng riêng. Giữ ba dòng phẳng, cùng callback xem nhanh
+và cột 230px, chỉ cuộn ngang trong pane khi cần.
+
+
+### Footer danh sách — lấy Mua bán làm chuẩn
+
+AdminListFooter dùng chung cho Phiếu nhập, Đơn hàng, Đồng hồ, Dây đồng hồ,
+Vận hành (Media/Thanh toán và TI), Danh bạ, Hoạt động, hồ sơ dịch vụ và thư viện ảnh.
+Tổng số + Trang x/y ở trái; hai chevron 16px ở phải, target32px/44px touch,
+quiet không card/viền/bóng. Chữ 12/16, số tabular, padding 12px 0 và căn theo bảng.
+Query, page reset, permission, loading/disabled và callback do consumer giữ.
+Không thêm phân trang giả vào danh sách đang lọc toàn bộ local. TI phải giữ số
+đã tải/tổng server và lưu ý bộ lọc chỉ áp dụng phần đã tải. Thư viện cursor ghi
+Đã tải và giữ Tải thêm, không trình bày số đã tải thành tổng toàn bộ thư viện.

@@ -1,4 +1,5 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminButton, AdminAnchorAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
@@ -80,7 +81,7 @@ export default function WebsiteMediaLibrary() {
           <ImagePreview item={item} /><figcaption>{item.name}{item.sizeBytes != null && <span> · {(item.sizeBytes / 1024).toLocaleString("vi-VN", { maximumFractionDigits: 0 })} KB</span>}</figcaption>
           <div className={s.actions}><AdminAnchorAction variant="secondary" className={s.button} href={item.url} target="_blank" rel="noreferrer">Xem ảnh</AdminAnchorAction><AdminAnchorAction variant="secondary" className={s.button} aria-disabled={uploading} onClick={event => { if (uploading) event.preventDefault(); }} href={`/admin/storefront/home?libraryImage=${encodeURIComponent(item.key)}`}>Dùng trên Home</AdminAnchorAction></div>
         </figure>)}</div>
-        {nextCursor && <Button disabled={loading || uploading} onClick={() => setCursor(nextCursor)}>Tải thêm ảnh</Button>}
+        <AdminListFooter total={items.length} totalLabel="Đã tải" unit="ảnh" pending={loading || uploading} actions={nextCursor ? <AdminButton variant="quiet" density="compact" disabled={loading || uploading} onClick={() => setCursor(nextCursor)}>Tải thêm ảnh</AdminButton> : undefined} />
       </div>
     </div>
   </AdminManagementPage>;

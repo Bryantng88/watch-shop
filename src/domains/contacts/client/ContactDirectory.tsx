@@ -1,4 +1,5 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -115,7 +116,7 @@ export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind:
           {canUpdate && <Button className={s.rowAction} disabled={saving} aria-label={`Sửa ${item.name}`} onClick={() => void open(item)}>Sửa</Button>}
         </li>)}
       </ul>}
-      <div className={s.footer}><p className={s.metadata}>Trang {page.toLocaleString("vi-VN")} / {Math.max(1,Math.ceil(data.total/data.pageSize)).toLocaleString("vi-VN")}</p><div className={s.actions}><Button disabled={loading || page <= 1} onClick={() => { setData(null); setPage(p => p - 1); }}>Trước</Button><Button disabled={loading || page * data.pageSize >= data.total} onClick={() => { setData(null); setPage(p => p + 1); }}>Sau</Button></div></div>
+      <AdminListFooter total={data.total} unit="liên hệ" page={page} totalPages={Math.max(1,Math.ceil(data.total/data.pageSize))} pending={loading} onPrevious={() => { setData(null); setPage(p => p - 1); }} onNext={() => { setData(null); setPage(p => p + 1); }} />
     </>}
   </AdminManagementSection>;
 }

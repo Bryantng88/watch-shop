@@ -53,8 +53,8 @@ try{
  browser=await chromium.launch({headless:true,...(process.env.BEN_PWA_CHROMIUM?{executablePath:process.env.BEN_PWA_CHROMIUM}:{})});
  const page=await browser.newPage({viewport:{width:1280,height:1000}});page.on('dialog',dialog=>dialog.accept());const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(url+'/admin/customers');await page.getByRole('list',{name:'Danh sách liên hệ'}).waitFor();assert.equal(await page.getByRole('listitem').count(),30);
- await page.getByRole('button',{name:'Sau',exact:true}).click();await page.getByText('Trang 2 / 2',{exact:true}).waitFor();assert.equal(await page.getByRole('listitem').count(),1);
- await page.getByRole('searchbox',{name:'Tìm tên, điện thoại hoặc email'}).fill('0900000000');await page.getByRole('button',{name:'Tìm',exact:true}).click();await page.getByText('Trang 1 / 1',{exact:true}).waitFor();assert.equal(await page.getByRole('listitem').count(),1);
+ await page.getByRole('button',{name:'Trang sau',exact:true}).click();await page.getByText('Trang 2/2',{exact:true}).waitFor();assert.equal(await page.getByRole('listitem').count(),1);
+ await page.getByRole('searchbox',{name:'Tìm tên, điện thoại hoặc email'}).fill('0900000000');await page.getByRole('button',{name:'Tìm',exact:true}).click();await page.getByText('Trang 1/1',{exact:true}).waitFor();assert.equal(await page.getByRole('listitem').count(),1);
  await page.getByRole('button',{name:/^Sửa Khách hàng thử nghiệm/}).click();const form=page.getByRole('form',{name:'Sửa liên hệ'});await form.getByLabel('Tên liên hệ',{exact:true}).fill('Tên sửa chưa lưu');assert.equal(await form.getByRole('button',{name:'Lưu liên hệ'}).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(37, 99, 235)');
  assert.deepEqual(await form.getByLabel('Tên liên hệ',{exact:true}).evaluate(el=>{const s=getComputedStyle(el);return[s.borderRadius,s.fontSize,s.minHeight]}),['8px','14px','40px']);
  failSave=true;await form.getByRole('button',{name:'Lưu liên hệ'}).click();await page.getByRole('alert').filter({hasText:'Thông tin đã thay đổi'}).waitFor();assert.equal(await form.getByLabel('Tên liên hệ',{exact:true}).inputValue(),'Tên sửa chưa lưu');

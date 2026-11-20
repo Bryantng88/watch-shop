@@ -7,7 +7,7 @@ const esbuild = require("esbuild"),
   { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
 (async () => {
   const root = path.resolve(__dirname, ".."),
-    tmp = await fs.mkdtemp("/tmp/ti-list-browser-");
+    tmp = await fs.mkdtemp(path.join(require("node:os").tmpdir(), "ti-list-browser-"));
   if (process.env.TI_PREVIEW_CSS) {
     await fs.copyFile(process.env.TI_PREVIEW_CSS, path.join(tmp, "global.css"));
   } else {

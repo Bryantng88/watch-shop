@@ -1,3 +1,4 @@
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
@@ -7,8 +8,6 @@ import {
   Activity,
   ArrowUpRight,
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   Search,
   ServerCog,
@@ -292,19 +291,8 @@ export default function GlobalActivityPage({ data, embedded = false }: Props) {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
-          <span className="text-xs text-slate-500">
-            Hiển thị {data.items.length} / {data.pagination.total.toLocaleString("vi-VN")} activity · Trang {data.pagination.page}/{data.pagination.totalPages}
-          </span>
-          <div className="flex items-center gap-2">
-            <AdminLinkAction variant="secondary" density="compact" aria-disabled={data.pagination.page <= 1} href={hrefWithPage(data, Math.max(1, data.pagination.page - 1))} className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold ${data.pagination.page <= 1 ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 text-slate-700 hover:border-violet-200 hover:text-violet-700"}`}>
-              <ChevronLeft className="h-4 w-4" /> Trước
-            </AdminLinkAction>
-            <AdminLinkAction variant="secondary" density="compact" aria-disabled={data.pagination.page >= data.pagination.totalPages} href={hrefWithPage(data, Math.min(data.pagination.totalPages, data.pagination.page + 1))} className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold ${data.pagination.page >= data.pagination.totalPages ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 text-slate-700 hover:border-violet-200 hover:text-violet-700"}`}>
-              Sau <ChevronRight className="h-4 w-4" />
-            </AdminLinkAction>
-          </div>
-        </div>
+        <AdminListFooter total={data.pagination.total} unit="hoạt động" page={data.pagination.page} totalPages={data.pagination.totalPages}
+          previousHref={hrefWithPage(data, Math.max(1, data.pagination.page-1))} nextHref={hrefWithPage(data, Math.min(data.pagination.totalPages, data.pagination.page+1))} />
       </section>
     </div>
   );

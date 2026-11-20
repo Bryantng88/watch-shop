@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import styles from "@/domains/shared/ui/admin-design-contract/AdminBusinessTable.module.css";
 import { ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
 
-import { cn } from "@/lib/utils";
 
 import AcquisitionListRow from "./AcquisitionListRow";
 import type { AcquisitionListItem } from "./types";
@@ -122,42 +120,9 @@ export default function AcquisitionListTable({
                 </table>
             </div>
 
-            <div className={styles.footer}>
-                <div>
-                    Tổng: <b className="text-slate-900">{total}</b> phiếu · Trang {page}/
-                    {totalPages}
-                </div>
-
-                <div className="flex gap-2">
-                    <Link
-                        aria-label="Trang trước"
-                        aria-disabled={page <= 1}
-                        href={buildHref(pathname, searchParams, {
-                            page: String(Math.max(1, page - 1)),
-                        })}
-                        className={cn(
-                            styles.pageLink,
-                            page <= 1 && "pointer-events-none opacity-40",
-                        )}
-                    >
-                        <ChevronLeft size={16} aria-hidden="true" />
-                    </Link>
-
-                    <Link
-                        aria-label="Trang sau"
-                        aria-disabled={page >= totalPages}
-                        href={buildHref(pathname, searchParams, {
-                            page: String(Math.min(totalPages, page + 1)),
-                        })}
-                        className={cn(
-                            styles.pageLink,
-                            page >= totalPages && "pointer-events-none opacity-40",
-                        )}
-                    >
-                        <ChevronRight size={16} aria-hidden="true" />
-                    </Link>
-                </div>
-            </div>
+            <AdminListFooter total={total} unit="phiếu" page={page} totalPages={totalPages}
+        previousHref={buildHref(pathname, searchParams, { page: String(Math.max(1, page - 1)) })}
+        nextHref={buildHref(pathname, searchParams, { page: String(Math.min(totalPages, page + 1)) })} />
         </div>
     );
 }

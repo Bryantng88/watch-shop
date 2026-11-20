@@ -1,10 +1,10 @@
 "use client";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   ArrowDown,
-  ChevronLeft,
   ChevronRight,
   Clock3,
   Loader2,
@@ -449,42 +449,11 @@ export default function TechnicalIssueListView({
           )}
         </div>
       )}
-      <div className={styles.footer}>
-        <div>
-          <p id="ti-list-coverage">
-            {rows.length > 0
-              ? `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, rows.length)} / ${rows.length} TI khớp bộ lọc`
-              : "0 TI khớp bộ lọc"}{" "}
-            <span>
-              · {loaded}/{total} TI đã tải
-            </span>
-          </p>
-          {loaded < total && (
-            <small>Lọc và sắp xếp áp dụng cho TI đã tải.</small>
-          )}
-        </div>
-        <div className={styles.pager}>
-          <AdminButton variant="secondary"
-            type="button"
-            aria-label="Trang TI trước"
-            disabled={currentPage <= 1}
-            onClick={() => onStateChange({ ...state, page: currentPage - 1 })}
-          >
-            <ChevronLeft size={15} />
-          </AdminButton>
-          <span>
-            {currentPage}/{pages}
-          </span>
-          <AdminButton variant="secondary"
-            type="button"
-            aria-label="Trang TI sau"
-            disabled={currentPage >= pages}
-            onClick={() => onStateChange({ ...state, page: currentPage + 1 })}
-          >
-            <ChevronRight size={15} />
-          </AdminButton>
-          {loadTarget && (
-            <AdminButton variant="secondary"
+      <AdminListFooter total={rows.length} unit="TI khớp bộ lọc" page={currentPage} totalPages={pages} previousLabel="Trang TI trước" nextLabel="Trang TI sau"
+        onPrevious={() => onStateChange({ ...state, page: currentPage - 1 })} onNext={() => onStateChange({ ...state, page: currentPage + 1 })}
+        detail={<div id="ti-list-coverage">{loaded}/{total} TI đã tải{loaded < total && <small className="block">Lọc và sắp xếp áp dụng cho TI đã tải.</small>}</div>}
+        actions={<>{loadTarget && (
+            <AdminButton variant="quiet"
               type="button"
               className={styles.load}
               disabled={!!loadingColumn}
@@ -503,9 +472,7 @@ export default function TechnicalIssueListView({
                 (stage) => stage.key === loadTarget,
               )?.label.toLocaleLowerCase("vi")}
             </AdminButton>
-          )}
-        </div>
-      </div>
+          )}</>} />
     </div>
   );
 }

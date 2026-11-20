@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import styles from "@/domains/shared/ui/admin-design-contract/AdminBusinessTable.module.css";
 import { ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
-import { cn } from "@/lib/utils";
 import { buildHref, isOrderSelectable } from "./helpers";
 import OrderListRow from "./OrderListRow";
 import type { OrderListItem } from "./types";
@@ -96,39 +94,9 @@ export default function OrderListTable(props: Props) {
         </table>
       </div>
 
-      <div className={styles.footer}>
-        <div>
-          Tổng: <b className="text-slate-900">{props.total}</b> đơn · Trang {props.page}/{props.totalPages}
-        </div>
-        <div className="flex gap-2">
-          <Link
-            aria-label="Trang trước"
-            aria-disabled={props.page <= 1}
-            href={buildHref(props.pathname, props.searchParams, {
-              page: String(Math.max(1, props.page - 1)),
-            })}
-            className={cn(
-              styles.pageLink,
-              props.page <= 1 && "pointer-events-none opacity-40",
-            )}
-          >
-            <ChevronLeft size={16} aria-hidden="true" />
-          </Link>
-          <Link
-            aria-label="Trang sau"
-            aria-disabled={props.page >= props.totalPages}
-            href={buildHref(props.pathname, props.searchParams, {
-              page: String(Math.min(props.totalPages, props.page + 1)),
-            })}
-            className={cn(
-              styles.pageLink,
-              props.page >= props.totalPages && "pointer-events-none opacity-40",
-            )}
-          >
-            <ChevronRight size={16} aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
+      <AdminListFooter total={props.total} unit="đơn" page={props.page} totalPages={props.totalPages}
+        previousHref={buildHref(props.pathname, props.searchParams, { page: String(Math.max(1, props.page - 1)) })}
+        nextHref={buildHref(props.pathname, props.searchParams, { page: String(Math.min(props.totalPages, props.page + 1)) })} />
     </div>
   );
 }

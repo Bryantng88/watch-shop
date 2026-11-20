@@ -15,3 +15,5 @@ export * from "./AdminListThumbnail";
 export * from "./AdminListDateTime";
 
 export * from "./AdminMoney";
+
+export * from "./AdminListFooter";

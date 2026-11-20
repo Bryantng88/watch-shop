@@ -1,6 +1,5 @@
 "use client";
 
-import { AdminWorkspaceFilter, useWorkspaceFilterHost } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters";
 import { BusinessListFilterBar } from "@/domains/shared/ui/business-list";
 import type { FilterBarField } from "@/domains/shared/ui/filter-bar";
 
@@ -152,7 +151,6 @@ export default function WatchListFilters({
     onClear,
     onClearField,
     onSaveView,
-    onSidebarFilterChange,
 }: {
     filters: Filters;
     total?: number;
@@ -164,10 +162,7 @@ export default function WatchListFilters({
     onClear: () => void;
     onClearField: (key: string) => void;
     onSaveView?: () => void;
-    onSidebarFilterChange?: (key: "saleStatus", value: string) => void;
 }) {
-    const hosted = useWorkspaceFilterHost() && Boolean(onSidebarFilterChange);
-    const saleField = advancedFields.find(field => field.key === "saleStatus")!;
     const primaryFields: FilterBarField[] = [
         {
             key: "brandId",
@@ -185,14 +180,13 @@ export default function WatchListFilters({
 
     return (
         <>
-        {hosted && <AdminWorkspaceFilter label="Tình trạng bán đồng hồ" value={filters.saleStatus} options={saleField.options ?? []} onChange={value => onSidebarFilterChange?.("saleStatus", value)} />}
         <BusinessListFilterBar variant="flat"
             values={filters}
             total={total}
             visibleCount={visibleCount}
             search={{ key: "q", placeholder: "Tìm đồng hồ, thương hiệu, model, mã tham chiếu…" }}
             primaryFields={primaryFields}
-            advancedFields={advancedFields.filter(field => !hosted || field.key !== "saleStatus")}
+            advancedFields={advancedFields}
             sortField={sortField}
             onChange={(patch) => onChange(patch as Partial<Filters>)}
             onApply={onApply}
