@@ -91,6 +91,7 @@ function ImageField({
   disabled,
   emptyHint,
   folder = "editorial",
+  suggestedImage,
 }: {
   label: string;
   value: EditorialImage;
@@ -100,6 +101,7 @@ function ImageField({
   disabled: boolean;
   emptyHint?: string;
   folder?: WebsiteFolder;
+  suggestedImage?: LibraryImage | null;
 }) {
   const hintId = useId();
   const showHint = !value.key && Boolean(emptyHint);
@@ -147,6 +149,7 @@ function ImageField({
                 e.target.value = "";
               }}
             />
+          {suggestedImage && suggestedImage.key !== value.key && <AdminButton variant="quiet" type="button" disabled={disabled} title={suggestedImage.name} aria-label={`Dùng ảnh từ thư viện cho ${label}`} onClick={() => onChange({ ...value, key: suggestedImage.key })}>Dùng ảnh từ thư viện</AdminButton>}
           <small className="sfc-image-hint">{folderName}</small>
           {value.key ? (
             <AdminButton variant="quiet" type="button" onClick={() => onChange(emptyImage())}>
@@ -307,6 +310,7 @@ export default function StorefrontManager({
   const [record, setRecord] = useState<ContentRecord | null>(null);
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [library, setLibrary] = useState<LibraryImage[]>([]);
+  const [librarySuggestion, setLibrarySuggestion] = useState<LibraryImage | null>(null);
   const documentMutation=useUiMutation(),uploadMutation=useUiMutation(),dialog=useAppDialog();
   const busy=documentMutation.hasPending,uploading=uploadMutation.hasPending;
   const [pendingAction,setPendingAction]=useState<"save"|"preview"|"publish"|"unpublish"|"create">("save");
@@ -360,6 +364,7 @@ export default function StorefrontManager({
         selected = lookup.item;
       }
       if (request !== libraryRequest.current) return;
+      setLibrarySuggestion(selected ?? null);
       setLibrary(selected ? [selected, ...result.items.filter(item => item.key !== selected.key)] : result.items);
       setLibraryNotice(selected ? "Ảnh từ thư viện đã sẵn trong bộ chọn. Chọn vị trí ảnh và lưu nháp khi đã sẵn sàng." : result.truncated ? "Thư viện đang hiển thị 300 ảnh mới nhất. Mở Thư viện ảnh website để tìm ảnh cũ hơn." : "");
     } catch (error) {
@@ -421,7 +426,7 @@ export default function StorefrontManager({
   }
   const home = record?.kind === "HOME" ? (record.draft as HomeContent) : null;
   const article = record?.kind === "ARTICLE" ? (record.draft as ArticleContent) : null;
-  const imageProps = { library, onUpload: upload, disabled: uploading || busy };
+  const imageProps = { library, suggestedImage: librarySuggestion, onUpload: upload, disabled: uploading || busy };
   function moveSection(from: number, to: number) {
     if (!home || to < 0 || to >= home.sections.length) return;
     const sections = [...home.sections];
