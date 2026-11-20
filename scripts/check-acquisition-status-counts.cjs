@@ -1,0 +1,16 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Query fixture with optional read-only local verification. */
+const assert=require('node:assert/strict'),path=require('node:path'),{createRequire}=require('node:module');
+const esbuild=require('esbuild');
+(async()=>{
+ const root=path.resolve(__dirname,'..');
+ const result=await esbuild.build({entryPoints:[path.join(root,'src/domains/projection/server/acquisition-list/acquisition-list-projection.query.ts')],bundle:true,write:false,platform:'node',format:'cjs',packages:'external',plugins:[{name:'db-port',setup(build){build.onResolve({filter:/^@\/server\/db\/client$/},()=>({path:'db',namespace:'fixture'}));build.onLoad({filter:/.*/,namespace:'fixture'},()=>({contents:'export const dbOrTx=db=>db;'}));}}]});
+ const m={exports:{}};new Function('require','module','exports',result.outputFiles[0].text)(createRequire(path.join(root,'package.json')),m,m.exports);const query=m.exports.queryAcquisitionListProjection;
+ const calls=[];const db={$queryRaw:async sql=>{calls.push(sql);if(sql.sql.includes('GROUP BY'))return[{status:'DRAFT',count:2n},{status:'POSTED',count:5n},{status:'CANCELED',count:1n},{status:'CANCELLED',count:2n}];return sql.sql.includes('SELECT "dataJson"')?[]:[{count:5n}];}};
+ const output=await query(db,{status:'POSTED',view:'posted',q:'seiko',vendorId:'vendor-scope',type:'PURCHASE',productScope:'ACCESSORY_ONLY',audienceSegment:'WOMEN',page:3});
+ assert.deepEqual(output.counts,{all:10,DRAFT:2,POSTED:5,CANCELLED:3});const grouped=calls.find(x=>x.sql.includes('GROUP BY'));assert.ok(grouped.sql.includes('jsonb_array_elements_text'),'same accessory-only permission scope');for(const value of ['%seiko%','vendor-scope','PURCHASE','WOMEN'])assert.ok(grouped.values.includes(value),'preserve filter '+value);assert.ok(!grouped.values.includes('POSTED'),'status filter does not hide other menu counts');assert.ok(!grouped.sql.includes('LIMIT'),'count all pages');assert.ok(calls[0].values.includes('POSTED'),'list retains current status');
+ if(process.env.ACQUISITION_COUNT_READONLY==='1'){
+  const url=new URL(process.env.DATABASE_URL);assert.ok(['localhost','127.0.0.1'].includes(url.hostname)&&url.port==='15424','only the approved local database');
+  const{PrismaClient}=require('@prisma/client');const prisma=new PrismaClient();try{await prisma.$transaction(async tx=>{await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY');const base=await query(tx,{pageSize:1});for(const status of ['DRAFT','POSTED','CANCELLED']){const filtered=await query(tx,{status,pageSize:1});assert.deepEqual(filtered.counts,base.counts);assert.equal(filtered.total,base.counts[status]);}const scoped=await query(tx,{productScope:'ACCESSORY_ONLY',q:'seiko',pageSize:1});assert.ok(scoped.counts.all<=base.counts.all);},{timeout:30000});console.log('PASS real local database in READ ONLY transaction: each menu count matches full filtered totals, unchanged by paging/status selection; scoped search remains bounded. No writes.');}finally{await prisma.$disconnect();}
+ }
+ console.log('PASS acquisition count query: cancellation alias, full-page aggregation, non-status filters and accessory permission scope retained.');
+})().catch(error=>{console.error(error.message);process.exitCode=1});

@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import styles from "@/domains/shared/ui/admin-design-contract/AdminBusinessTable.module.css";
+import { ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
 import { cn } from "@/lib/utils";
 import { buildHref, isOrderSelectable } from "./helpers";
 import OrderListRow from "./OrderListRow";
@@ -36,25 +39,16 @@ export default function OrderListTable(props: Props) {
     selectableIds.some((id) => props.selectedIds.includes(id)) && !allChecked;
 
   return (
-    <div className="relative max-w-full overflow-hidden rounded-b-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
-      <div className="relative w-full overflow-x-auto">
-        <table className="w-full min-w-[1460px] table-fixed text-sm">
-          <colgroup>
-            <col className="w-[48px]" />
-            <col className="w-[360px]" />
-            <col className="w-[190px]" />
-            <col className="w-[180px]" />
-            <col className="w-[210px]" />
-            <col className="w-[220px]" />
-            <col className="w-[160px]" />
-            <col className="w-[140px]" />
-            <col className="w-[80px]" />
-          </colgroup>
-          <thead className="bg-slate-50/80 text-left text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+    <div className={styles.list} style={ADMIN_OPERATION_LIST_STYLE}>
+      <div className={styles.scroll}>
+        <table className={styles.table}>
+                    <caption className="sr-only">Danh sách đơn hàng</caption>
+          <colgroup><col style={{ width: 40 }} /><col style={{ width: 240 }} /><col style={{ width: 150 }} /><col style={{ width: 140 }} /><col style={{ width: 150 }} /><col style={{ width: 160 }} /><col style={{ width: 160 }} /><col style={{ width: 116 }} /><col style={{ width: 44 }} /></colgroup>
+          <thead>
             <tr>
               <th className="px-4 py-3">
                 <input
-                  type="checkbox"
+                  type="checkbox" aria-label="Chọn tất cả dòng có thể xử lý"
                   checked={allChecked}
                   ref={(element) => {
                     if (element) element.indeterminate = someChecked;
@@ -71,7 +65,7 @@ export default function OrderListTable(props: Props) {
               <th className="px-4 py-3">Ghi chú</th>
               <th className="px-4 py-3 text-right">Tổng tiền</th>
               <th className="px-4 py-3">Cập nhật</th>
-              <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Actions</th>
+              <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right"><span className="sr-only">Thao tác</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -102,34 +96,36 @@ export default function OrderListTable(props: Props) {
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 text-sm text-slate-500">
+      <div className={styles.footer}>
         <div>
           Tổng: <b className="text-slate-900">{props.total}</b> đơn · Trang {props.page}/{props.totalPages}
         </div>
         <div className="flex gap-2">
           <Link
+            aria-label="Trang trước"
             aria-disabled={props.page <= 1}
             href={buildHref(props.pathname, props.searchParams, {
               page: String(Math.max(1, props.page - 1)),
             })}
             className={cn(
-              "rounded-xl border border-slate-200 px-3 py-2",
+              styles.pageLink,
               props.page <= 1 && "pointer-events-none opacity-40",
             )}
           >
-            Trước
+            <ChevronLeft size={16} aria-hidden="true" />
           </Link>
           <Link
+            aria-label="Trang sau"
             aria-disabled={props.page >= props.totalPages}
             href={buildHref(props.pathname, props.searchParams, {
               page: String(Math.min(props.totalPages, props.page + 1)),
             })}
             className={cn(
-              "rounded-xl border border-slate-200 px-3 py-2",
+              styles.pageLink,
               props.page >= props.totalPages && "pointer-events-none opacity-40",
             )}
           >
-            Sau
+            <ChevronRight size={16} aria-hidden="true" />
           </Link>
         </div>
       </div>

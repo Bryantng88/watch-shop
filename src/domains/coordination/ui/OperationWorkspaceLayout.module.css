@@ -6,7 +6,7 @@
 .mobile label { display: flex; min-width: 0; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 500; color: #64748b; }
 .mobile select { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; background: #fff; color: #334155; font: inherit; font-size: 14px; }
 .group + .group { margin-top: 4px; }
-.groupButton, .stageButton { display: flex; width: 100%; min-width: 0; align-items: center; gap: 8px; min-height: 40px; border: 0; border-radius: 8px; background: transparent; padding: 10px 12px; text-align: left; font: inherit; font-size: 14px; line-height: 20px; color: #475569; cursor: pointer; }
+.groupButton, .stageButton { display: flex; width: 100%; min-width: 0; align-items: center; gap: 8px; min-height: 40px; border: 0; border-radius: 8px; background: transparent; padding: 10px 12px; text-align: left; font: inherit; font-size: 13px; line-height: 20px; color: #475569; cursor: pointer; }
 .groupButton > span, .stageButton > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .groupButton:hover, .stageButton:hover { background: #f8fafc; color: #0f172a; }
 .groupButton[aria-current="page"] { font-weight: 600; color: #020617; }

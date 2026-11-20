@@ -14,6 +14,7 @@ export type AcquisitionListItemDetail = AcquisitionListProjectionItem;
 export type AcquisitionListItem = AcquisitionListProjectionRow;
 
 export type AcquisitionListClientProps = {
+    counts?: Partial<Record<string, number>>;
     items: AcquisitionListItem[];
     total: number;
     page: number;

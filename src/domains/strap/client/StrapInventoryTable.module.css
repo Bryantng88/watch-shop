@@ -1,5 +1,5 @@
 .list { container: strap-list / inline-size; min-width: 0; font-family: var(--admin-list-font); color: var(--admin-list-body); }
-.summary { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0 0 16px; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
+.summary { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 8px 0 0; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
 .summary strong { font-weight: 600; color: var(--admin-list-text); font-variant-numeric: tabular-nums; }
 .table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); }
 .table th { text-align: left; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 500; color: var(--admin-list-muted); }

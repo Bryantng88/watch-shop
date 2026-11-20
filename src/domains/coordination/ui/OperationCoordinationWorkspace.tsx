@@ -1192,6 +1192,9 @@ export default function OperationCoordinationWorkspace({
     }).mediaBoard;
     if (mediaBoard) setAsyncMediaBoard(mediaBoard);
   }, []);
+  const isPaymentReview = data.context === "OPERATION" && isPaymentCollectionFlow && activeFlowListStage !== "payment-settled";
+  const effectivePaymentDirection = isPaymentReview ? filterPaymentDirection === "OUT" ? "OUT" : "IN" : filterPaymentDirection;
+  const paymentMenuStage = isPaymentReview ? effectivePaymentDirection === "OUT" ? "payment-review-out" : "payment-review-in" : activeFlowListStage;
   const loadFlowItems = useCallback(async (
     requestedStageKey?: string,
     requestedPage = 1,
@@ -1207,7 +1210,7 @@ export default function OperationCoordinationWorkspace({
       flowStatus: filterWorkStatus,
       flowPaymentStatus: filterPayment,
       flowPaymentType: filterPaymentType,
-      flowPaymentDirection: filterPaymentDirection,
+      flowPaymentDirection: effectivePaymentDirection,
       flowSort: "UPDATED_DESC",
       doneRange,
     });
@@ -1265,7 +1268,7 @@ export default function OperationCoordinationWorkspace({
     flowEndpoint,
     filterPayment,
     filterPaymentType,
-    filterPaymentDirection,
+    effectivePaymentDirection,
     filterQuery,
     filterWorkStatus,
     doneRange,
@@ -1783,7 +1786,11 @@ export default function OperationCoordinationWorkspace({
   const isUnifiedOperation = data.context === "OPERATION";
   const flowNavigationStages = isOperationalBoardView ? [] : isTaskItemListMode
     ? (activeViewMode.taskItemStages ?? []).map((stage) => ({ key: stage.key, label: stage.label, count: taskItemStageCounts[stage.key] }))
-    : orderedFlowStages.map((stage) => ({
+    : isPaymentCollectionFlow ? [
+      { key: "payment-review-in", label: "Cần thu", count: asyncFlowStageCounts["payment-review-in"] ?? "—" },
+      { key: "payment-review-out", label: "Cần chi", count: asyncFlowStageCounts["payment-review-out"] ?? "—" },
+      { key: "payment-settled", label: "Đã đối soát", count: asyncFlowStageCounts["payment-settled"] ?? "—" },
+    ] : orderedFlowStages.map((stage) => ({
         key: stage.key,
         label: activeCoreFlow?.key === "media-production-flow" && stage.key === "done" ? "Hoàn tất" : stageLabel(stage.label),
         count: flowListStageCounts.get(stage.key) ??
@@ -1954,9 +1961,20 @@ export default function OperationCoordinationWorkspace({
           activeGroup={activeViewMode?.key ?? activeViewModeKey}
           onGroupChange={changeActiveViewMode}
           stages={navigationStages}
-          activeStage={technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : activeFlowListStage}
+          activeStage={technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : isPaymentCollectionFlow ? paymentMenuStage : activeFlowListStage}
           onStageChange={(key) => {
-            if (technicalStagesInMenu) {
+            if (isPaymentCollectionFlow && ["payment-review-in", "payment-review-out", "payment-settled"].includes(key)) {
+              if (key === paymentMenuStage) return;
+              const direction = key === "payment-review-out" ? "OUT" : key === "payment-review-in" ? "IN" : "ALL";
+              const stage = key === "payment-settled" ? key : "payment-review";
+              flowItemsAbortController.current?.abort();
+              setIsFlowItemsLoading(true);
+              setFilterPaymentDirection(direction);
+              setFlowListStageFilter(stage);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("flowStage", stage); params.set("flowPaymentDirection", direction); params.set("flowPage", "1");
+              window.history.pushState(null, "", `/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
+            } else if (technicalStagesInMenu) {
               const stage = navigationStages.find(candidate => candidate.key === key);
               if (stage) { setFocusedTechnicalIssueId(null); setTechnicalListState(current => ({ ...current, scope: stage.key as TechnicalIssueListState["scope"], page: 1 })); }
             } else if (isTaskItemListMode) {
@@ -1974,7 +1992,7 @@ export default function OperationCoordinationWorkspace({
                 <AdminWorkspaceHeadingRow>
                   {isUnifiedOperation && <AdminWorkspaceHeading>{[
                     isMediaFlowMode ? "Sản xuất Media" : modeLabel(activeViewMode),
-                    navigationStages.find(stage => stage.key === (technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : activeFlowListStage))?.label,
+                    navigationStages.find(stage => stage.key === (technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : isPaymentCollectionFlow ? paymentMenuStage : activeFlowListStage))?.label,
                   ].filter((label, index, labels) => label && labels.indexOf(label) === index).join(" – ")}</AdminWorkspaceHeading>}
                   <div className={isUnifiedOperation ? "hidden" : "min-w-0"}>
                     <div className="flex flex-wrap items-center gap-2">
@@ -2236,7 +2254,7 @@ export default function OperationCoordinationWorkspace({
                       { label: "Khác", value: "OTHER" },
                     ],
                     onChange: setFilterPaymentType,
-                  }, {
+                  }, ...(!isPaymentReview ? [{
                     key: "payment-direction",
                     label: "Loại phiếu",
                     value: filterPaymentDirection,
@@ -2246,7 +2264,7 @@ export default function OperationCoordinationWorkspace({
                       { label: "Phiếu chi", value: "OUT" },
                     ],
                     onChange: setFilterPaymentDirection,
-                  }] : [])] : []),
+                  }] : [])] : [])] : []),
                   ...(!isOperationalBoardView ? [{
                     key: "page-size",
                     label: "Số dòng hiển thị",
@@ -2274,7 +2292,7 @@ export default function OperationCoordinationWorkspace({
                     visibleSummary={visibleTechnicalIssueBoardSummary}
                   />
                 ) : null}
-                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || filterPaymentDirection !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <AdminButton variant="secondary" type="button" onClick={() => { setTechnicalFilterResetKey(value => value + 1); setFilterQuery(""); if (isTechnicalIssueFlowMode) { const url = new URL(window.location.href); url.searchParams.delete("flowQuery"); window.history.replaceState(null, "", url.toString()); } setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</AdminButton> : null}
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || (!isPaymentReview && filterPaymentDirection !== "ALL") || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <AdminButton variant="secondary" type="button" onClick={() => { setTechnicalFilterResetKey(value => value + 1); setFilterQuery(""); if (isTechnicalIssueFlowMode) { const url = new URL(window.location.href); url.searchParams.delete("flowQuery"); window.history.replaceState(null, "", url.toString()); } setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); if (!isPaymentReview) setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</AdminButton> : null}
                 {isTechnicalIssueFlowMode && technicalLayout === "list" && technicalStagesInMenu && <AdminIconSelect label="Sắp xếp TI" value={technicalListState.sort}
                   icon={<ArrowDownWideNarrow className="h-4 w-4" />}
                   options={[{ value: "PRIORITY", label: "Ưu tiên trước" }, { value: "DUE", label: "Hạn gần nhất" }, { value: "UPDATED", label: "Mới cập nhật" }]}

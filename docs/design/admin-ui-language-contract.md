@@ -768,7 +768,7 @@ Reports is a peer group alongside Business, Storefront and System. Expanded and 
 ## Split workspace and action ownership
 
 Áp dụng cho Vận hành và trình sửa trang chủ website. Geometry dùng chung từ
-`ADMIN_UI_FOUNDATION.splitWorkspace` và adapter `AdminSplitWorkspace`: menu 280px
+`ADMIN_UI_FOUNDATION.splitWorkspace` và adapter `AdminSplitWorkspace`: menu 220px
 (bao gồm inset phải 16px), gap pane 28px, divider 1px slate-100. Cả hai dùng cùng
 hook đo chiều rộng thực của vùng làm việc; dưới 960px chuyển về một cột với
 selector native của domain. Không dùng CSS containment vì sẽ giữ sai vị trí
@@ -913,8 +913,8 @@ query, sort, pagination, load-more, priority và transition approval giữ logic
 ### Draggable Operations menu divider
 
 Vận hành dùng opt-in AdminSplitResize cùng geometry của AdminSplitWorkspace.
-Không có nút thu gọn: đường phân cách dọc là separator kéo được, mặc định 280px,
-menu 200–400px và luôn chừa tối thiểu 600px cho vùng phải khi đủ chiều rộng.
+Không có nút thu gọn: đường phân cách dọc là separator kéo được, mặc định 220px,
+menu 200–240px và luôn chừa tối thiểu 600px cho vùng phải khi đủ chiều rộng.
 Kéo dưới ngưỡng 120px thu menu về 0; separator vẫn ở mép trái để kéo mở lại.
 Nhấp đúp đặt lại mặc định. Lưu riêng độ rộng menu Operations trên browser;
 không gộp với state sidebar admin chính hoặc state stage/filter/draft.
@@ -988,7 +988,7 @@ bookmark, search, pagination và form hiện hữu. `/admin/directory` đi tới
 được phép; active state sidebar theo cả workspace và các route danh sách.
 
 Dùng geometry `ADMIN_UI_FOUNDATION.splitWorkspace` và `AdminSplitWorkspace`
-đang được áp dụng cho Vận hành / Home ở PR #124: menu 280px gồm inset phải
+đang được áp dụng cho Vận hành / Home ở PR #124: menu 220px gồm inset phải
 16px, gap 28px, line slate-100. Đo available width bằng hook chung; dưới 960px,
 menu thành native selector cùng các destination. Selector kích hoạt cùng route
 link để giữ kiểm tra dirty draft. Không containment hoặc padding page lồng nhau.
@@ -1322,3 +1322,93 @@ standalone giữ control cũ. Activity giữ period trong hidden input của for
 giữ các query khác và reset page 1 khi đổi saleStatus. Không tạo trạng thái
 nghiệp vụ giả cho trang không có tiêu chí tương ứng; trang như vậy vẫn có
 menu điều hướng nhỏ gọn chung. Không đổi API, permission hoặc công thức báo cáo.
+
+
+### Mua bán — danh sách phẳng và trạng thái trong menu
+
+Ở Vận hành và Mua bán, trạng thái/giai đoạn nằm ngay dưới mục khu vực đang chọn,
+không tách thành nhóm ngang cấp bên ngoài menu. Mua bán dùng selectedNavigation
+của shared workspace; chỉ có một bản điều hướng trạng thái tại mỗi breakpoint.
+Desktop thụt một cấp với line nhẹ; màn hình hẹp giữ native select và nhãn đầy đủ.
+Giữ callback, query, quyền, reset page và các route cũ.
+
+Phiếu nhập/Đơn hàng dùng AdminBusinessTable với foundation của danh sách chung:
+nền trắng, hàng phẳng, heading sentence case, font 14/20 và metadata 12/16.
+Không card bao bảng, shadow, icon tile hoặc đồ họa hành trình trong ô trạng thái.
+Bộ lọc dùng BusinessListFilterBar flat; thanh chọn nhiều dòng phẳng, giữ hành động
+nghiệp vụ hiện có. Phân trang và menu dòng dùng icon có tên accessible.
+
+Ảnh đầu dòng 36px dùng AdminListThumbnail, có fallback khi thiếu/lỗi ảnh; số sản
+phẩm và xem nhanh đầy đủ vẫn giữ. Ngày dùng AdminListDateTime hai dòng, full year
+và timezone Asia/Ho_Chi_Minh. Tiền giữ formatter vi-VN, đơn vị ₫ cho VND.
+Payment/Acquisition/Shipment signals có variant inline opt-in, giữ cách tính và
+mapping trạng thái hiện có; các consumer chưa chuyển vẫn dùng variant mặc định.
+Giữ cột tài chính theo quyền, điều kiện chọn dòng/duyệt, menu và payload cũ.
+Bảng rộng chỉ cuộn trong pane; không đẩy cả trang tràn ngang.
+
+
+### Menu khu vực — độ rộng gọn dùng chung
+
+Menu khu vực mặc định 220px (gồm inset), giới hạn kéo trong 200–240px khi mở.
+Không tự nở theo tên mục hoặc số lượng trạng thái. Tên dài xuống dòng trong pane;
+không thu font để ép chữ. Giá trị 280–400px đã lưu trước đây nằm ngoài giới hạn
+mới nên dùng lại mặc định 220px; vẫn giữ trạng thái thu gọn 0px và các lựa chọn
+200–240px hợp lệ. Mũi tên thu/mở, phím điều chỉnh, native select trên màn hình
+hẹp và state nội dung được giữ nguyên. Quy tắc áp dụng qua shared foundation,
+không đặt width riêng ở từng workspace.
+
+
+### Đơn hàng — giao hàng compact
+
+ShipmentLiveRouteSignal compact dùng một hàng icon 16px + nhãn 12/20 cho tất cả
+trạng thái, kể cả không giao và đã hủy. Không đường hành trình rời, card, nền icon,
+gradient hoặc bóng. Xe dịch nhẹ tối đa 3px một lần trong 800ms khi đang giao/
+đang hoàn; không loop hoặc tạo chiều cao hàng riêng. Các trạng thái khác đứng yên.
+Giữ mapping nghiệp vụ cũ, nhãn accessible và prefers-reduced-motion (tắt animation).
+
+
+### Đơn hàng — khôi phục hành trình giao hàng
+
+Theo lựa chọn giao diện mới nhất, danh sách Đơn hàng dùng lại ShipmentLiveRouteSignal
+mặc định: thanh tiến độ, marker xe/kiện hàng và điểm hoàn tất như thiết kế ban đầu.
+Đường hành trình rộng 112px, cao 28px; nhãn 12/16 bên dưới. Giữ nguyên mapping
+trạng thái và cách chuyển tiếp; không thay bằng tín hiệu compact icon–nhãn.
+
+
+Danh sách Đơn hàng dùng progress không có nhãn chữ thường trực. Không giao hàng,
+đã hủy và hoàn hàng dùng icon nhỏ không badge; trạng thái tiến độ giữ thanh hành
+trình cũ. Mỗi tín hiệu có title, aria-label và keyboard focus để đọc trạng thái;
+focus hiển thị tên, giảm chuyển động tắt transition. Không bỏ ý nghĩa trạng thái
+khỏi accessibility tree hoặc thay mapping dữ liệu.
+
+
+### Tiền và số đếm trạng thái Mua bán
+
+AdminMoney là nội dung đọc thuần: số tabular, currency nhỏ cùng baseline, căn phải;
+không button/link, viền, nền hoặc bóng. PaymentAmountSummary inline dùng tổng
+14/20 weight 500; dư nợ 12/16 màu attention. Khi dư nợ bằng tổng, chỉ ghi Chưa thu/
+Chưa trả, không lặp số tiền. Thanh toán một phần giữ số Còn thu/Còn trả đầy đủ.
+Không thay số học, đơn vị, quyền xem hoặc trạng thái đã hủy.
+
+Số tiền Thanh toán vận hành không còn kích hoạt đối soát. Icon cuối dòng mở đối
+soát nếu stage còn hiệu lực; stage xong vẫn xem nhanh. Chặn bubble để không mở
+đồng thời preview và đối soát. Mở form không tự xác nhận thu/chi.
+
+Trạng thái Mua bán có số đếm căn phải, không badge. Đơn hàng dùng counts hiện có;
+Phiếu nhập tổng hợp ProjectionRecord cùng version, search/vendor/type/audience và
+scope quyền, bỏ riêng status/view và phân trang khi đếm. Không đếm từ trang đang
+hiển thị; thiếu counts không bịa số 0. Mobile select giữ số đếm trong nhãn option.
+
+
+### Thanh toán — Cần thu / Cần chi
+
+Menu tách Cần thu (UNPAID + direction IN), Cần chi (UNPAID + OUT) và Đã đối soát.
+Đây là hai trạng thái danh sách trên cùng workflow đối soát, không tạo/sửa payment
+hoặc chuyển workspace khi chỉ đổi menu. URL giữ flowStage=payment-review cùng
+flowPaymentDirection IN/OUT, reset về trang 1; link review cũ mặc định Cần thu.
+Tiền thu màu success xanh, tiền chi màu danger đỏ, vẫn là chữ thuần căn phải.
+
+Counts lấy trên toàn bộ projection cùng search/type/business scope và số tiền dương,
+không lấy từ trang đang tải; đếm riêng IN/OUT và không cộng queue lần thứ hai.
+Stage thu/chi không là bộ lọc phụ để Xóa lọc không vô tình đổi stage. Giữ Đã đối soát,
+quyền xem/xử lý và bước xác nhận đối soát hiện có; không đổi trạng thái dữ liệu.

@@ -1,0 +1,15 @@
+.compact { display: inline-flex; max-width: 100%; min-height: 20px; align-items: center; gap: 6px; vertical-align: middle; }
+.marker { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 16px; width: 16px; height: 20px; color: var(--route-tone); }
+.label { min-width: 0; font-size: 12px; line-height: 20px; font-weight: 400; overflow-wrap: anywhere; }
+.compact[data-state="shipping"] .marker { animation: outbound 800ms ease-out 1; }
+.compact[data-state="returning"] .marker { animation: inbound 800ms ease-out 1; }
+.compact[data-state="returning"] .marker svg { transform: scaleX(-1); }
+@keyframes outbound { 0% { transform: translateX(-3px); opacity: .6; } 70% { transform: translateX(1px); opacity: 1; } 100% { transform: translateX(0); } }
+@keyframes inbound { 0% { transform: translateX(3px); opacity: .6; } 70% { transform: translateX(-1px); opacity: 1; } 100% { transform: translateX(0); } }
+@media(prefers-reduced-motion: reduce) { .compact[data-state] .marker { animation: none; } }
+
+.iconStatus { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; vertical-align: middle; border-radius: 4px; }
+.progress { vertical-align: middle; border-radius: 4px; }
+.iconStatus:focus-visible, .progress:focus-visible { outline: 2px solid var(--admin-list-focusRing, #60a5fa); outline-offset: 2px; }
+.progress:focus-visible::after, .iconStatus:focus-visible::after { content: attr(aria-label); position: absolute; z-index: 5; margin-top: 52px; padding: 4px 8px; border-radius: 4px; background: var(--admin-list-text, #020617); color: white; white-space: nowrap; font-size: 12px; line-height: 16px; }
+@media(prefers-reduced-motion:reduce) { .progress * { transition: none; animation: none; } }

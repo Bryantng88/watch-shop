@@ -488,7 +488,7 @@ export default function OrderListClient({
     setWorkCaseSource(buildOrderWorkCaseSource(row));
   }
   return (
-    <TradingWorkspace entries={tradingEntries} selected="/admin/orders">
+    <TradingWorkspace entries={tradingEntries} selected="/admin/orders" counts={countsByView}>
     <BusinessListShell className="!px-0 !pt-0 !pb-0"
       header={
         <AdminWorkspaceHeadingRow><AdminWorkspaceHeading>Đơn hàng</AdminWorkspaceHeading>

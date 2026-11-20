@@ -44,6 +44,7 @@ type Props = {
     actions: RowActionItem[];
     align?: "left" | "right";
     buttonClassName?: string;
+    quiet?: boolean;
 };
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -84,6 +85,7 @@ export default function RowActionsMenu({
     actions,
     align = "right",
     buttonClassName,
+    quiet = false,
 }: Props) {
     const [open, setOpen] = React.useState(false);
     const [menuPosition, setMenuPosition] = React.useState<{
@@ -158,7 +160,7 @@ export default function RowActionsMenu({
 
     if (!visibleActions.length) {
         return (
-            <AdminButton iconOnly variant="secondary" density="compact"
+            <AdminButton aria-label="Thao tác khác" iconOnly variant={quiet ? "quiet" : "secondary"} density="compact"
                 type="button"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300"
                 disabled
@@ -170,7 +172,7 @@ export default function RowActionsMenu({
 
     return (
         <div ref={wrapRef} className="relative inline-flex overflow-visible">
-            <AdminButton iconOnly variant="secondary" density="compact"
+            <AdminButton aria-label="Thao tác khác" iconOnly variant={quiet ? "quiet" : "secondary"} density="compact"
                 ref={buttonRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}

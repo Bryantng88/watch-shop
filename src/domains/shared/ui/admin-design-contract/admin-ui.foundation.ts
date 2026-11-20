@@ -44,8 +44,8 @@ export const ADMIN_UI_FOUNDATION = {
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
   },
   splitWorkspace: {
-    sidebarWidth: 280, sidebarInset: 16, collapseWidth: 960,
-    resize: { minSidebarWidth: 200, maxSidebarWidth: 400, minContentWidth: 600, collapseAt: 120, step: 16, hitArea: 12, touchHitArea: 24 },
+    sidebarWidth: 220, sidebarInset: 16, collapseWidth: 960,
+    resize: { minSidebarWidth: 200, maxSidebarWidth: 240, minContentWidth: 600, collapseAt: 120, step: 16, hitArea: 12, touchHitArea: 24 },
   },
   focusPanel: {
     padding: 20, mobilePadding: 16, titleGap: 4, chipsGap: 6,

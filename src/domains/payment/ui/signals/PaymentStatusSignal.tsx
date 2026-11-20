@@ -1,8 +1,10 @@
+import { VisualStatusSignal } from "@/domains/shared/ui/signals/VisualStatusSignal";
 import { Ban, Check, CircleDollarSign, HandCoins } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 type Props = {
+  variant?: "default" | "inline";
   status?: string | null;
   totalAmount?: number | string | null;
   remainingAmount?: number | string | null;
@@ -26,6 +28,11 @@ export default function PaymentStatusSignal(props: Props) {
     !cancelled &&
     (["PAID", "FULL_PAID", "FULLY_PAID"].includes(key) || (total > 0 && remaining <= 0));
   const partial = !fullyPaid && ratio > 0;
+
+  if (props.variant === "inline") return <VisualStatusSignal variant="inline" className={props.className}
+    label={cancelled ? "Đã hủy" : fullyPaid ? "Đã thanh toán" : partial ? `Đã trả ${Math.round(ratio * 100)}%` : "Chưa thanh toán"}
+    tone={cancelled ? "rose" : fullyPaid ? "emerald" : partial ? "violet" : "slate"}
+    icon={cancelled ? "warning" : fullyPaid ? "success" : "neutral"} />;
 
   if (cancelled) {
     return (

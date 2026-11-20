@@ -69,7 +69,7 @@ export async function queryAcquisitionListProjection(db: DB, input: AcquisitionL
   const offset = (page - 1) * pageSize;
   const where = Prisma.join(conditions(input), " AND ");
 
-  const [rows, counts, projectionCounts] = await Promise.all([
+  const [rows, counts, projectionCounts, statusCounts] = await Promise.all([
     client.$queryRaw<ProjectionJsonRow[]>(Prisma.sql`
       SELECT "dataJson" FROM "ProjectionRecord"
       WHERE ${where}
@@ -84,15 +84,29 @@ export async function queryAcquisitionListProjection(db: DB, input: AcquisitionL
       WHERE "projectionKey" = ${ACQUISITION_LIST_PROJECTION_KEY}
         AND "projectionVersion" = ${ACQUISITION_LIST_PROJECTION_VERSION}
     `),
+    client.$queryRaw<{ status: string; count: bigint | number }[]>(Prisma.sql`
+      SELECT "status", COUNT(*) AS "count" FROM "ProjectionRecord"
+      WHERE ${Prisma.join(conditions({ ...input, status: "", view: "all" }), " AND ")}
+      GROUP BY "status"
+    `),
   ]);
 
   const total = Number(counts[0]?.count ?? 0);
+  const menuCounts: Record<string, number> = { all: 0, DRAFT: 0, POSTED: 0, CANCELLED: 0 };
+  for (const row of statusCounts) {
+    const count = Number(row.count);
+    menuCounts.all += count;
+    const normalized = normalizeStatus(row.status);
+    const key = normalized === "CANCELED" ? "CANCELLED" : normalized;
+    if (key) menuCounts[key] = (menuCounts[key] ?? 0) + count;
+  }
   return {
+    counts: menuCounts,
     items: rows.map((row) => row.dataJson),
     total,
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
     projectionRowCount: Number(projectionCounts[0]?.count ?? 0),
-  } satisfies AcquisitionListProjectionResult & { projectionRowCount: number };
+  } satisfies AcquisitionListProjectionResult & { projectionRowCount: number; counts: Record<string, number> };
 }

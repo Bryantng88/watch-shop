@@ -29,6 +29,19 @@ on:
       - 'scripts/check-section-workspaces.cjs'
       - 'src/app/(admin)/admin/trading/**'
       - 'scripts/check-trading-workspace.cjs'
+      - 'scripts/check-trading-lists.cjs'
+      - 'scripts/check-acquisition-status-counts.cjs'
+      - 'scripts/check-payment-direction-counts.cjs'
+      - 'src/domains/projection/server/payment-list.projection.ts'
+      - 'src/domains/projection/server/acquisition-list/**'
+      - 'src/domains/acquisition/server/list/**'
+      - 'src/domains/acquisition/ui/list/**'
+      - 'src/domains/order/ui/list/**'
+      - 'src/domains/shared/ui/admin-design-contract/AdminBusinessTable*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminList*'
+      - 'src/domains/payment/ui/signals/**'
+      - 'src/domains/acquisition/ui/signals/**'
+      - 'src/domains/shipment/ui/progress/ShipmentLiveRouteSignal.tsx'
       - 'scripts/check-split-workspace-first-paint.cjs'
       - 'src/domains/contacts/**'
       - 'src/domains/storefront/media/**'
@@ -155,6 +168,13 @@ jobs:
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
           TRADING_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/trading.png
+      - run: node scripts/check-payment-direction-counts.cjs
+      - run: node scripts/check-acquisition-status-counts.cjs
+      - run: node scripts/check-trading-lists.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          TRADING_UI_CSS: /tmp/admin-buttons-global.css
+          TRADING_LIST_SCREENSHOT_DIR: ${{ runner.temp }}/admin-management/trading-lists
       - run: node scripts/check-section-workspaces.cjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
