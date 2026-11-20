@@ -1,142 +1,590 @@
 "use client";
 
+import React, {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Plus, Save, Search, X } from "lucide-react";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
-import { useMemo, useState } from "react";
-
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Plus, Save, Search, Shield, UsersRound, X } from "lucide-react";
-
+import {
+  AdminManagementPage,
+  AdminManagementSection,
+  AdminManagementButton,
+  AdminManagementField,
+  ADMIN_MANAGEMENT as shared,
+} from "@/domains/shared/ui/admin-design-contract/AdminManagement";
+import {
+  AdminWorkspaceHeading,
+  AdminWorkspaceHeadingRow,
+} from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+import {
+  ADMIN_SPLIT_WORKSPACE as split,
+  ADMIN_SPLIT_WORKSPACE_STYLE,
+  useAdminSplitWorkspace,
+} from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
+import {
+  ADMIN_SPLIT_RESIZE as resize,
+  useAdminSplitResize,
+} from "@/domains/shared/ui/admin-design-contract/AdminSplitResize";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
+import {
+  PageEditingState,
+  PageNotice,
+} from "@/domains/shared/feedback/PageFeedback";
+import {
+  readUiResponse,
+  uiFeedbackMessage,
+} from "@/domains/shared/feedback/read-ui-response";
+import styles from "./RolePermissionManager.module.css";
 
 type PermissionItem = { id: string; code: string; description: string | null };
-type RoleItem = { id: string; name: string; description: string | null; permissions: PermissionItem[] };
-type RoleDraft = { id?: string; name: string; description: string; permissionIds: string[] };
+type RoleItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  permissions: PermissionItem[];
+};
+type RoleDraft = {
+  id?: string;
+  name: string;
+  description: string;
+  permissionIds: string[];
+};
+const empty = (): RoleDraft => ({
+  name: "",
+  description: "",
+  permissionIds: [],
+});
+const fromRole = (role: RoleItem): RoleDraft => ({
+  id: role.id,
+  name: role.name,
+  description: role.description ?? "",
+  permissionIds: role.permissions.map((permission) => permission.id),
+});
+const fingerprint = (draft: RoleDraft) =>
+  JSON.stringify({ ...draft, permissionIds: [...draft.permissionIds].sort() });
+const normalizeSearch = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
 
-const EMPTY_ROLE: RoleDraft = { name: "", description: "", permissionIds: [] };
-
-function permissionGroup(code: string) {
-    const prefixes: Array<[string, string]> = [
-        ["ORDER_PAYMENT_", "Thanh toán · Đơn bán"],
-        ["ACQUISITION_PAYMENT_", "Thanh toán · Phiếu nhập"],
-        ["SERVICE_PAYMENT_", "Thanh toán · Dịch vụ"],
-        ["SHIPMENT_PAYMENT_", "Thanh toán · Vận chuyển"],
-        ["PAYMENT_", "Thanh toán · Toàn bộ"],
-        ["WATCH_ACQUISITION_", "Phiếu nhập · Đồng hồ"],
-        ["ACCESSORY_ACQUISITION_", "Phiếu nhập · Phụ kiện"],
-        ["ACQUISITION_", "Phiếu nhập · Toàn bộ"],
-        ["ACCESSORY_", "Phụ kiện"], ["PRODUCT_", "Sản phẩm"], ["ORDER_", "Đơn hàng"], ["PAYMENT_", "Thanh toán"],
-        ["SHIPMENT_", "Vận chuyển"], ["SERVICE_", "Dịch vụ"], ["TASK_", "Công việc"],
-        ["USER_", "Người dùng"], ["CUSTOMER_", "Khách hàng"], ["MEDIA_", "Media"],
-        ["ACTIVITY_", "Hoạt động"], ["SYSTEM_", "Hệ thống"], ["DASHBOARD_", "Dashboard"],
-    ];
-    return prefixes.find(([prefix]) => code.startsWith(prefix))?.[1] ?? "Khác";
+function isRole(value: unknown): value is RoleItem {
+  if (!value || typeof value !== "object") return false;
+  const role = value as Record<string, unknown>;
+  return (
+    typeof role.id === "string" &&
+    typeof role.name === "string" &&
+    (role.description === null || typeof role.description === "string") &&
+    Array.isArray(role.permissions) &&
+    role.permissions.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        typeof item.id === "string" &&
+        typeof item.code === "string",
+    )
+  );
 }
 
-export default function RolePermissionManager({ initialRoles, permissions }: {
-    initialRoles: RoleItem[];
-    permissions: PermissionItem[];
+function permissionGroup(code: string) {
+  const prefixes: Array<[string, string]> = [
+    ["ORDER_PAYMENT_", "Thanh toán · Đơn bán"],
+    ["ACQUISITION_PAYMENT_", "Thanh toán · Phiếu nhập"],
+    ["SERVICE_PAYMENT_", "Thanh toán · Dịch vụ"],
+    ["SHIPMENT_PAYMENT_", "Thanh toán · Vận chuyển"],
+    ["PAYMENT_", "Thanh toán · Toàn bộ"],
+    ["WATCH_ACQUISITION_", "Phiếu nhập · Đồng hồ"],
+    ["ACCESSORY_ACQUISITION_", "Phiếu nhập · Phụ kiện"],
+    ["ACQUISITION_", "Phiếu nhập · Toàn bộ"],
+    ["ACCESSORY_", "Phụ kiện"],
+    ["PRODUCT_", "Sản phẩm"],
+    ["ORDER_", "Đơn hàng"],
+    ["PAYMENT_", "Thanh toán"],
+    ["SHIPMENT_", "Vận chuyển"],
+    ["SERVICE_", "Dịch vụ"],
+    ["TASK_", "Công việc"],
+    ["USER_", "Người dùng"],
+    ["CUSTOMER_", "Khách hàng"],
+    ["MEDIA_", "Media"],
+    ["ACTIVITY_", "Hoạt động"],
+    ["SYSTEM_", "Hệ thống"],
+    ["DASHBOARD_", "Dashboard"],
+  ];
+  return prefixes.find(([prefix]) => code.startsWith(prefix))?.[1] ?? "Khác";
+}
+
+export default function RolePermissionManager({
+  initialRoles,
+  permissions,
+}: {
+  initialRoles: RoleItem[];
+  permissions: PermissionItem[];
 }) {
-    const router = useRouter();
-    const notify = useNotify();
-    const [roles, setRoles] = useState(initialRoles);
-    const [draft, setDraft] = useState<RoleDraft>(() => initialRoles[0]
-        ? { id: initialRoles[0].id, name: initialRoles[0].name, description: initialRoles[0].description ?? "", permissionIds: initialRoles[0].permissions.map((item) => item.id) }
-        : EMPTY_ROLE);
-    const [query, setQuery] = useState("");
-    const [busy, setBusy] = useState(false);
-
-    const groups = useMemo(() => {
-        const normalizedQuery = query.trim().toLowerCase();
-        return permissions.reduce<Record<string, PermissionItem[]>>((result, permission) => {
-            if (normalizedQuery && !`${permission.code} ${permission.description ?? ""}`.toLowerCase().includes(normalizedQuery)) return result;
-            (result[permissionGroup(permission.code)] ||= []).push(permission);
-            return result;
-        }, {});
-    }, [permissions, query]);
-
-    function selectRole(role: RoleItem) {
-        setDraft({ id: role.id, name: role.name, description: role.description ?? "", permissionIds: role.permissions.map((permission) => permission.id) });
-    }
-
-    function togglePermission(permissionId: string) {
-        setDraft((current) => ({ ...current, permissionIds: current.permissionIds.includes(permissionId)
-            ? current.permissionIds.filter((id) => id !== permissionId)
-            : [...current.permissionIds, permissionId] }));
-    }
-
-    function toggleGroup(items: PermissionItem[]) {
-        const allSelected = items.every((item) => draft.permissionIds.includes(item.id));
-        const ids = new Set(draft.permissionIds);
-        items.forEach((item) => allSelected ? ids.delete(item.id) : ids.add(item.id));
-        setDraft((current) => ({ ...current, permissionIds: Array.from(ids) }));
-    }
-
-    async function saveRole() {
-        if (!draft.name.trim()) return notify.error("Tên role không được để trống");
-        setBusy(true);
-        try {
-            const response = await fetch(draft.id ? `/api/admin/roles/${draft.id}` : "/api/admin/roles", {
-                method: draft.id ? "PUT" : "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(draft),
-            });
-            const data = await response.json().catch(() => null);
-            if (!response.ok) throw new Error(data?.message || data?.detail || "Không thể lưu role");
-            if (Array.isArray(data?.roles)) {
-                setRoles(data.roles);
-                const saved = data.roles.find((role: RoleItem) => role.name === draft.name.trim().toUpperCase());
-                if (saved) selectRole(saved);
-            }
-            notify.success(draft.id ? "Đã cập nhật role" : "Đã tạo role");
-            router.refresh();
-        } catch (error) {
-            notify.error(error instanceof Error ? error.message : "Không thể lưu role");
-        } finally {
-            setBusy(false);
-        }
-    }
-
-    return (
-        <div className="min-h-full bg-slate-50/60">
-            <header className="border-b bg-white px-5 py-5 lg:px-7">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex items-start gap-3"><span className="grid h-10 w-10 place-items-center rounded-md bg-slate-100 text-slate-700"><Shield size={19} /></span><div><h1 className="text-xl font-semibold text-slate-950">Role & quyền truy cập</h1><p className="mt-1 text-sm text-slate-500">Thiết lập phạm vi nghiệp vụ theo từng nhóm người dùng.</p></div></div>
-                    <AdminLinkAction variant="secondary" href="/admin/users" className="inline-flex h-10 items-center gap-2 rounded-md border bg-white px-3 text-sm font-medium hover:bg-slate-50"><ArrowLeft size={16} /> Người dùng</AdminLinkAction>
-                </div>
-            </header>
-
-            <main className="grid min-h-[calc(100vh-180px)] grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)]">
-                <aside className="border-r bg-white p-4">
-                    <AdminButton variant="primary" type="button" onClick={() => setDraft(EMPTY_ROLE)} className="mb-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 text-sm font-medium text-white"><Plus size={16} /> Tạo role mới</AdminButton>
-                    <div className="space-y-1">
-                        {roles.map((role) => <AdminButton variant="contextual" key={role.id} type="button" onClick={() => selectRole(role)} className={`flex w-full items-center justify-between rounded-md px-3 py-3 text-left ${draft.id === role.id ? "bg-slate-100" : "hover:bg-slate-50"}`}><span className="min-w-0"><b className="block truncate text-sm text-slate-900">{role.name}</b><span className="text-xs text-slate-500">{role.permissions.length} quyền</span></span>{draft.id === role.id ? <Check size={16} className="text-slate-700" /> : null}</AdminButton>)}
-                    </div>
-                    <div className="mt-5 border-t pt-4 text-xs text-slate-500"><UsersRound size={15} className="mb-2" />Mỗi người dùng có thể được gán nhiều role. Quyền hiệu lực là tổng quyền từ các role đó.</div>
-                </aside>
-
-                <section className="min-w-0 px-5 py-5 lg:px-7">
-                    <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-5">
-                        <div className="grid flex-1 gap-4 sm:grid-cols-2">
-                            <label className="text-sm font-medium text-slate-700">Tên role<input value={draft.name} onChange={(e) => setDraft((current) => ({ ...current, name: e.target.value }))} className="mt-1.5 h-10 w-full rounded-md border bg-white px-3 font-normal outline-none focus:border-slate-500" placeholder="ACCESSORY_MANAGER" disabled={draft.name === "ADMIN"} /></label>
-                            <label className="text-sm font-medium text-slate-700">Mô tả<input value={draft.description} onChange={(e) => setDraft((current) => ({ ...current, description: e.target.value }))} className="mt-1.5 h-10 w-full rounded-md border bg-white px-3 font-normal outline-none focus:border-slate-500" placeholder="Phạm vi trách nhiệm của role" /></label>
-                        </div>
-                        <AdminButton variant="primary" type="button" onClick={saveRole} disabled={busy} className="inline-flex h-10 items-center gap-2 rounded-md bg-slate-950 px-4 text-sm font-medium text-white disabled:opacity-50"><Save size={16} /> {busy ? "Đang lưu..." : "Lưu role"}</AdminButton>
-                    </div>
-
-                    <div className="mt-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-slate-900">Permission</h2><p className="text-xs text-slate-500">Đã chọn {draft.permissionIds.length}/{permissions.length} quyền</p></div><div className="relative w-full sm:w-80"><Search className="absolute left-3 top-2.5 text-slate-400" size={17} /><input value={query} onChange={(e) => setQuery(e.target.value)} className="h-10 w-full rounded-md border bg-white pl-10 pr-9 text-sm outline-none focus:border-slate-500" placeholder="Tìm permission" />{query ? <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={() => setQuery("")} className="absolute right-2 top-2 grid h-6 w-6 place-items-center text-slate-400"><X size={14} /></AdminButton> : null}</div></div>
-
-                    <div className="mt-5 space-y-5">
-                        {Object.entries(groups).map(([group, items]) => {
-                            const selected = items.filter((item) => draft.permissionIds.includes(item.id)).length;
-                            return <div key={group} className="border-t pt-4 first:border-0 first:pt-0"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-semibold text-slate-900">{group}</h3><span className="text-xs text-slate-500">{selected}/{items.length} đã chọn</span></div><AdminButton variant="secondary" density="compact" type="button" onClick={() => toggleGroup(items)} className="text-xs font-semibold text-slate-600 hover:text-slate-950">{selected === items.length ? "Bỏ chọn nhóm" : "Chọn cả nhóm"}</AdminButton></div><div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{items.map((permission) => {
-                                const checked = draft.permissionIds.includes(permission.id);
-                                return <AdminButton variant="contextual" key={permission.id} type="button" onClick={() => togglePermission(permission.id)} className={`flex min-h-16 items-start gap-3 rounded-md border p-3 text-left transition-colors ${checked ? "border-violet-200 bg-violet-50/70" : "border-slate-200 bg-white hover:border-slate-400"}`}><span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border transition-colors ${checked ? "border-violet-500 bg-violet-500 text-white" : "border-slate-300 bg-white"}`}>{checked ? <Check size={13} /> : null}</span><span className="min-w-0"><b className={`block break-all font-mono text-xs ${checked ? "text-violet-950" : "text-slate-800"}`}>{permission.code}</b><span className={`mt-1 block text-xs ${checked ? "text-violet-700" : "text-slate-500"}`}>{permission.description || "Chưa có mô tả"}</span></span></AdminButton>;
-                            })}</div></div>;
-                        })}
-                    </div>
-                </section>
-            </main>
-        </div>
+  const router = useRouter(),
+    notify = useNotify(),
+    dialog = useAppDialog();
+  const first = initialRoles[0] ? fromRole(initialRoles[0]) : empty();
+  const [roles, setRoles] = useState(initialRoles);
+  const [draft, setDraft] = useState<RoleDraft>(first);
+  const [saved, setSaved] = useState(() => fingerprint(first));
+  const [query, setQuery] = useState("");
+  const [showCodes, setShowCodes] = useState(false);
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const savingRef = useRef(false),
+    nameRef = useRef<HTMLInputElement>(null);
+  const layout = useAdminSplitWorkspace<HTMLDivElement>();
+  const pane = useAdminSplitResize(layout, "admin:roles:menu-width:v1");
+  const navId = useId(),
+    queryId = useId();
+  const dirty = fingerprint(draft) !== saved;
+  const selected = useMemo(
+    () => new Set(draft.permissionIds),
+    [draft.permissionIds],
+  );
+  const groups = useMemo(() => {
+    const search = normalizeSearch(query.trim());
+    return permissions.reduce<Record<string, PermissionItem[]>>(
+      (result, permission) => {
+        const group = permissionGroup(permission.code);
+        if (
+          search &&
+          !normalizeSearch(
+            `${group} ${permission.code} ${permission.description ?? ""}`,
+          ).includes(search)
+        )
+          return result;
+        (result[group] ||= []).push(permission);
+        return result;
+      },
+      {},
     );
+  }, [permissions, query]);
+  const visibleCount = Object.values(groups).reduce(
+    (count, items) => count + items.length,
+    0,
+  );
+  const canLeave = useCallback(
+    async () =>
+      !savingRef.current &&
+      (!dirty ||
+        (await dialog.confirm({
+          title: "Bỏ thay đổi chưa lưu?",
+          message: "Các thay đổi về vai trò và quyền chưa được lưu.",
+          confirmText: "Bỏ thay đổi",
+          cancelText: "Tiếp tục sửa",
+        }))),
+    [dirty, dialog],
+  );
+  useEffect(() => {
+    if (!dirty && !busy) return;
+    const unload = (event: BeforeUnloadEvent) => event.preventDefault();
+    const navigation = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      const link =
+        event.target instanceof Element
+          ? event.target.closest<HTMLAnchorElement>("a[href]")
+          : null;
+      if (!link || link.target === "_blank" || link.hasAttribute("download"))
+        return;
+      const url = new URL(link.href, location.href);
+      if (
+        url.origin !== location.origin ||
+        (url.pathname === location.pathname && url.search === location.search)
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      void canLeave().then((leave) => {
+        if (leave) router.push(url.pathname + url.search + url.hash);
+      });
+    };
+    window.addEventListener("beforeunload", unload);
+    document.addEventListener("click", navigation, true);
+    return () => {
+      window.removeEventListener("beforeunload", unload);
+      document.removeEventListener("click", navigation, true);
+    };
+  }, [dirty, busy, canLeave, router]);
+  async function choose(role?: RoleItem) {
+    if (savingRef.current || (role?.id === draft.id && role)) return;
+    if (!(await canLeave())) return;
+    const next = role ? fromRole(role) : empty();
+    setDraft(next);
+    setSaved(fingerprint(next));
+    setError("");
+    if (!role) requestAnimationFrame(() => nameRef.current?.focus());
+  }
+  async function resetDraft() {
+    if (!(await canLeave())) return;
+    const original = roles.find((role) => role.id === draft.id);
+    const next = original ? fromRole(original) : empty();
+    setDraft(next);
+    setSaved(fingerprint(next));
+    setError("");
+  }
+  function toggle(id: string) {
+    setDraft((current) => ({
+      ...current,
+      permissionIds: current.permissionIds.includes(id)
+        ? current.permissionIds.filter((value) => value !== id)
+        : [...current.permissionIds, id],
+    }));
+  }
+  function toggleGroup(items: PermissionItem[]) {
+    setDraft((current) => {
+      const ids = new Set(current.permissionIds),
+        all = items.every((item) => ids.has(item.id));
+      items.forEach((item) => (all ? ids.delete(item.id) : ids.add(item.id)));
+      return { ...current, permissionIds: Array.from(ids) };
+    });
+  }
+  async function saveRole(event: React.FormEvent) {
+    event.preventDefault();
+    if (savingRef.current || !dirty) return;
+    if (!draft.name.trim()) {
+      setError("Tên vai trò không được để trống.");
+      nameRef.current?.focus();
+      return;
+    }
+    savingRef.current = true;
+    setBusy(true);
+    setError("");
+    const input = { ...draft, permissionIds: [...draft.permissionIds] };
+    try {
+      const response = await fetch(
+        input.id ? `/api/admin/roles/${input.id}` : "/api/admin/roles",
+        {
+          method: input.id ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(input),
+        },
+      );
+      const data = await readUiResponse(
+        response,
+        "Không thể lưu vai trò. Vui lòng thử lại.",
+      );
+      if (!Array.isArray(data.roles) || !data.roles.every(isRole))
+        throw new Error(
+          "Không thể xác nhận kết quả lưu. Vui lòng tải lại để kiểm tra.",
+        );
+      const updated = data.roles as RoleItem[];
+      const role = updated.find((role) =>
+        input.id
+          ? role.id === input.id
+          : role.name === input.name.trim().replace(/\s+/g, "_").toUpperCase(),
+      );
+      if (!role)
+        throw new Error(
+          "Không thể xác nhận kết quả lưu. Vui lòng tải lại để kiểm tra.",
+        );
+      const next = fromRole(role);
+      setRoles(updated);
+      setDraft(next);
+      setSaved(fingerprint(next));
+      notify.success(input.id ? "Đã cập nhật vai trò." : "Đã tạo vai trò.");
+      router.refresh();
+    } catch (reason) {
+      setError(
+        uiFeedbackMessage(reason, "Không thể lưu vai trò. Vui lòng thử lại."),
+      );
+    } finally {
+      savingRef.current = false;
+      setBusy(false);
+    }
+  }
+  return (
+    <AdminManagementPage
+      title="Vai trò & quyền truy cập"
+      description="Chọn vai trò để quản lý phạm vi làm việc của người dùng."
+      actions={
+        <AdminLinkAction variant="quiet" href="/admin/users">
+          <ArrowLeft size={16} aria-hidden="true" />
+          Người dùng
+        </AdminLinkAction>
+      }
+    >
+      <div
+        ref={layout}
+        className={`${split.layout} ${resize.layout} ${styles.workspace}`}
+        data-sidebar-collapsed={pane.width === 0}
+        data-resizing={pane.resizing}
+        style={{ ...ADMIN_SPLIT_WORKSPACE_STYLE, ...pane.style }}
+      >
+        <aside id={navId} data-admin-pane="sidebar">
+          <div className={styles.desktopNav}>
+            <AdminWorkspaceHeadingRow>
+              <AdminWorkspaceHeading navigation>Vai trò</AdminWorkspaceHeading>
+            </AdminWorkspaceHeadingRow>
+            <nav aria-label="Danh sách vai trò" className={styles.roleList}>
+              <AdminButton
+                variant="quiet"
+                className={styles.create}
+                disabled={busy}
+                aria-pressed={!draft.id}
+                onClick={() => void choose()}
+              >
+                <Plus size={16} aria-hidden="true" />
+                Tạo vai trò
+              </AdminButton>
+              {roles.map((role) => (
+                <AdminButton
+                  variant="contextual"
+                  className={styles.role}
+                  key={role.id}
+                  disabled={busy}
+                  onClick={() => void choose(role)}
+                  aria-pressed={draft.id === role.id}
+                >
+                  <span className={styles.roleName} title={role.name}>
+                    {role.name}
+                  </span>
+                  <span className={shared.metadata}>
+                    {role.permissions.length} quyền
+                  </span>
+                </AdminButton>
+              ))}
+            </nav>
+            <p className={`${shared.metadata} ${styles.help}`}>
+              Người dùng có thể có nhiều vai trò. Quyền hiệu lực được tổng hợp
+              từ các vai trò đã gán.
+            </p>
+          </div>
+          <div className={styles.mobileNav}>
+            <label className={shared.field}>
+              Vai trò
+              <select
+                className={shared.input}
+                disabled={busy}
+                value={draft.id || "__new__"}
+                onChange={(event) =>
+                  void choose(
+                    roles.find((role) => role.id === event.target.value),
+                  )
+                }
+              >
+                <option value="__new__">Tạo vai trò mới</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name} · {role.permissions.length} quyền
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </aside>
+        <div
+          {...pane.separatorProps}
+          aria-label="Điều chỉnh độ rộng danh sách vai trò"
+          aria-controls={navId}
+          className={resize.separator}
+        />
+        <section data-admin-pane="content" className={styles.editor}>
+          <form
+            onSubmit={saveRole}
+            data-admin-form
+            aria-label="Chỉnh sửa vai trò"
+            className={shared.form}
+          >
+            <AdminWorkspaceHeadingRow>
+              <AdminWorkspaceHeading>
+                {draft.id ? "Thông tin vai trò" : "Vai trò mới"}
+              </AdminWorkspaceHeading>
+              <div className={styles.actions}>
+                <PageEditingState dirty={dirty} saving={busy} />
+                {dirty && (
+                  <AdminManagementButton
+                    disabled={busy}
+                    onClick={() => void resetDraft()}
+                  >
+                    Hủy thay đổi
+                  </AdminManagementButton>
+                )}
+                <AdminManagementButton
+                  primary
+                  type="submit"
+                  pending={busy}
+                  pendingLabel="Đang lưu…"
+                  disabled={!dirty || busy}
+                >
+                  <Save size={16} aria-hidden="true" />
+                  Lưu vai trò
+                </AdminManagementButton>
+              </div>
+            </AdminWorkspaceHeadingRow>
+            {error && <PageNotice title={error} />}
+            <fieldset disabled={busy} className={styles.fields}>
+              <label className={shared.field}>
+                Tên vai trò
+                <input
+                  ref={nameRef}
+                  className={shared.input}
+                  value={draft.name}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  disabled={draft.name === "ADMIN"}
+                  placeholder="VD: QUAN_LY_KHO"
+                  required
+                />
+              </label>
+              <AdminManagementField
+                label="Mô tả"
+                value={draft.description}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                placeholder="Phạm vi trách nhiệm của vai trò"
+              />
+            </fieldset>
+          </form>
+          <AdminManagementSection
+            title="Quyền truy cập"
+            description={`Đã chọn ${selected.size}/${permissions.length} quyền`}
+          >
+            <div className={styles.toolbar}>
+              <label className={styles.search} htmlFor={queryId}>
+                <Search size={16} aria-hidden="true" />
+                <input
+                  id={queryId}
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Tìm quyền hoặc nhóm quyền…"
+                  aria-label="Tìm quyền hoặc nhóm quyền"
+                />
+                {query && (
+                  <AdminButton
+                    variant="contextual"
+                    type="button"
+                    aria-label="Xóa tìm quyền"
+                    onClick={() => setQuery("")}
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </AdminButton>
+                )}
+              </label>
+              <label className={styles.showCodes}>
+                <input
+                  type="checkbox"
+                  checked={showCodes}
+                  onChange={(event) => setShowCodes(event.target.checked)}
+                />
+                Hiện mã quyền
+              </label>
+            </div>
+            {query && (
+              <p className={shared.metadata}>
+                {visibleCount} quyền khớp tìm kiếm · Chọn nhóm chỉ áp dụng cho
+                kết quả đang hiển thị.
+              </p>
+            )}
+            <fieldset disabled={busy} className={styles.permissions}>
+              {Object.entries(groups).map(([group, items]) => {
+                const count = items.filter((item) =>
+                  selected.has(item.id),
+                ).length;
+                return (
+                  <section
+                    key={group}
+                    aria-label={group}
+                    className={styles.group}
+                  >
+                    <div className={styles.groupHeading}>
+                      <h3 className={shared.sectionTitle}>
+                        {group}
+                        <span className={shared.metadata}>
+                          {" "}
+                          {count}/{items.length} đã chọn
+                        </span>
+                      </h3>
+                      <AdminButton
+                        variant="quiet"
+                        density="compact"
+                        type="button"
+                        onClick={() => toggleGroup(items)}
+                      >
+                        {count === items.length
+                          ? query
+                            ? "Bỏ chọn kết quả"
+                            : "Bỏ chọn nhóm"
+                          : query
+                            ? "Chọn kết quả"
+                            : "Chọn cả nhóm"}
+                      </AdminButton>
+                    </div>
+                    <div className={styles.permissionList}>
+                      {items.map((permission) => (
+                        <label
+                          key={permission.id}
+                          className={`${shared.checkRow} ${styles.permission}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected.has(permission.id)}
+                            onChange={() => toggle(permission.id)}
+                          />
+                          <span>
+                            <span className={styles.permissionName}>
+                              {permission.description?.trim() ||
+                                permission.code}
+                            </span>
+                            {showCodes && permission.description?.trim() && (
+                              <span className={shared.metadata}>
+                                {permission.code}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+              {!visibleCount && (
+                <div className={styles.empty}>
+                  <p>
+                    {query
+                      ? "Không tìm thấy quyền phù hợp."
+                      : "Chưa có quyền trong danh mục."}
+                  </p>
+                  <AdminButton
+                    variant="quiet"
+                    type="button"
+                    onClick={() => setQuery("")}
+                  >
+                    Xóa tìm kiếm
+                  </AdminButton>
+                </div>
+              )}
+            </fieldset>
+          </AdminManagementSection>
+        </section>
+      </div>
+    </AdminManagementPage>
+  );
 }

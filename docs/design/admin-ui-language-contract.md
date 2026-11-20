@@ -1130,3 +1130,29 @@ Identity mở xem nhanh trong danh sách TI dùng contextual, không dùng secon
 Danh sách TI trong Vận hành không có hàng dropdown riêng: Mức chú ý và lịch sử
 đã xong nằm trong bộ lọc chung; sắp xếp dùng `AdminIconSelect` trên toolbar.
 Icon select dùng native select, tooltip mô tả giá trị và chấm báo khác mặc định.
+
+
+### Role and permission workspace
+
+Vai trò & quyền truy cập dùng AdminManagementPage, heading và control chung.
+Canvas trắng, không hero/icon tile hoặc line ngang dưới page title. Menu vai trò
+bên trái dùng cùng split geometry và separator kéo được; pane nội dung giữ mount
+khi resize. Khi hẹp dùng selector native với cùng guard chuyển vai trò. Tên vai
+trò dài giới hạn hai dòng trong menu; tên đầy đủ giữ trong DOM và field chỉnh sửa.
+
+Quyền là các hàng checkbox phẳng, nhóm theo catalog hiện có. Mô tả là nhãn chính
+14/20; mã quyền 12/16 chỉ hiện qua “Hiện mã quyền”, nhưng luôn tìm được bằng mã.
+Không tô card tím cho từng quyền đã chọn. Tìm theo mô tả, mã hoặc nhóm; chọn nhóm
+khi có query chỉ thay đổi những kết quả đang hiển thị, không đụng quyền bị ẩn.
+Đếm tổng quyền độc lập với kết quả tìm kiếm. Không thay đổi implication, grant,
+USER_MANAGE hoặc policy API trong migration trình bày này.
+
+Dirty guard giữ bản sửa khi đổi vai trò, tạo mới hoặc rời trang. Bỏ chọn rồi chọn
+lại cùng tập quyền trả về clean bất kể thứ tự ID. Lưu có single-flight, khóa editor
+và chọn vai trò khi pending; lỗi inline giữ draft, thành công toast một lần sau
+phản hồi server hợp lệ. ADMIN giữ quy tắc khóa tên hiện hữu; không bổ sung luật
+cấp quyền hoặc quyền mặc định mới.
+
+Ưu tiên TI: tia sét 14px, màu critical khi gấp; bỏ chữ và nền badge. Tên accessible,
+pressed/busy/disabled và tooltip giải thích giữ nguyên. Hit area desktop 24px và
+coarse 44px; icon gấp luôn hiện, thường hiện qua hover/focus/touch như trước.

@@ -87,6 +87,14 @@ const esbuild = require("esbuild"),
       .getByRole("table", { name: "Danh sách TI", exact: true })
       .waitFor();
     assert.equal(await page.locator("[data-technical-issue-id]").count(), 25);
+    const urgentIcon = page.getByRole('button',{name:/^Bỏ gấp:/}).first();
+    assert.equal(await urgentIcon.innerText(),'', 'urgency is icon-only visually');
+    assert.match(await urgentIcon.getAttribute('title'),/gấp/);
+    assert.equal(await urgentIcon.getAttribute('aria-pressed'),'true');
+    assert.equal(await urgentIcon.locator('svg').evaluate(el=>el.getBoundingClientRect().width),14);
+    assert.equal(await urgentIcon.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+    assert.equal(await urgentIcon.evaluate(el=>el.getBoundingClientRect().width),24);
+
     // Header text, identity, urgency and data share a stable first-line axis.
     const geometry = await page.locator('[data-technical-issue-id]').evaluateAll(rows => rows.map(row => {
       const cells = row.querySelectorAll(':scope > [role="cell"]');

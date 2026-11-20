@@ -241,7 +241,7 @@ export default function TechnicalIssueListView({
       </div>}
       {(loading || loadingColumn) && (
         <p role="status" className={styles.loading}>
-          <Loader2 size={14} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
           Đang tải dữ liệu TI…
         </p>
       )}
@@ -312,13 +312,10 @@ export default function TechnicalIssueListView({
                         onClick={() => onTogglePriority(item)}
                       >
                         {busy ? (
-                          <Loader2 size={14} className="animate-spin" />
+                          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
                         ) : (
-                          <Zap size={14} />
+                          <Zap size={14} aria-hidden="true" />
                         )}
-                        <span className={urgent ? "" : "sr-only"}>
-                          {urgent ? "Gấp" : "Thường"}
-                        </span>
                       </AdminButton>
                     </div>
                     <span
@@ -497,7 +494,7 @@ export default function TechnicalIssueListView({
               }
             >
               {loadingColumn === `technical:${loadTarget}` ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
               ) : (
                 <ArrowDown size={14} />
               )}

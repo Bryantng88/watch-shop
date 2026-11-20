@@ -33,7 +33,7 @@
 .unread { color: var(--admin-list-link); }
 .priority { position: relative; z-index: 2; pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 24px; min-width: 24px; border-radius: var(--ti-radius); color: var(--admin-list-muted); flex: none; opacity: 0; }
 .row:hover .priority, .row:focus-within .priority { opacity: 1; }
-.priority.urgent { opacity: 1; padding: 4px 6px; color: var(--admin-list-danger); background: var(--admin-list-dangerSurface); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 600; }
+.priority.urgent { opacity: 1; color: var(--admin-list-danger); }
 .priority:hover { color: var(--admin-list-danger); background: var(--admin-list-dangerSurface); }
 .owner { padding-top: 4px; grid-area: owner; display: flex; align-items: start; flex-direction: column; gap: 6px; }
 .stage { display: inline-flex; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 500; color: var(--admin-list-body); }
