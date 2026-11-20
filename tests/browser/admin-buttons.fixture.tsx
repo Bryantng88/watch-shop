@@ -20,12 +20,15 @@ function App() {
     <p data-testid="count">{count}</p>
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:16}}>
       <AdminButton data-testid="compact" density="compact" type="button">Phân loại lỗi</AdminButton>
-      <AdminButton data-testid="svg-icon" type="button" aria-label="Làm mới" style={{width:40,height:40}}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8a6 6 0 1 0 2-4" /></svg></AdminButton>
+      <AdminButton data-testid="svg-icon" iconOnly type="button" aria-label="Làm mới" style={{width:40,height:40}}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8a6 6 0 1 0 2-4" /></svg></AdminButton>
       <AdminButton data-testid="icon" density="compact" iconOnly type="button" aria-label="Thêm">+</AdminButton>
       <AdminRowActionMenu label="Xử lý Media" status="Chưa xử lý" actions={[{key:"start",label:"Bắt đầu xử lý",onSelect:()=>setCount(v=>v+1)},{key:"locked",label:"Bị khóa",disabled:true,onSelect:()=>setCount(999)}]} />
       <AdminAnchorAction data-testid="anchor" href="#preview">Mở website</AdminAnchorAction>
       <AdminLinkAction data-testid="next-link" href="/admin/users">Danh bạ</AdminLinkAction>
     </div>
+    <AdminButton data-testid="quiet" variant="quiet" iconOnly aria-label="Xem nhanh" type="button">›</AdminButton>
+    <AdminButton data-testid="icon-text" type="button"><svg aria-hidden="true" width="16" height="16" /><span>Vai trò và quyền</span></AdminButton>
+    <AdminButton data-testid="hidden-launcher" className="hidden" hidden type="button">Hidden editor launcher</AdminButton>
     <AdminButton data-testid="contextual" type="button" variant="contextual" aria-pressed style={{display:"block",width:180,padding:6,background:"#eff6ff",border:0,textAlign:"left",marginTop:16}}>Kiểm tra <span>39</span></AdminButton>
     <details><AdminDisclosureSummary>Ghi chú nhỏ</AdminDisclosureSummary><p>Thông tin ảnh</p></details>
     {createPortal(<AdminButton data-testid="portal" type="button">Nút trong portal</AdminButton>,document.body)}

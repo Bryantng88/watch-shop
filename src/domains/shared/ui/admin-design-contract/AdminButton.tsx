@@ -4,7 +4,7 @@ import React, { createContext, forwardRef, useContext, type AnchorHTMLAttributes
 import { ADMIN_BUTTON_SURFACE_STYLE } from "./AdminButtonSurface";
 import styles from "./AdminButton.module.css";
 
-export type AdminButtonVariant = "primary" | "secondary" | "danger" | "contextual";
+export type AdminButtonVariant = "primary" | "secondary" | "danger" | "quiet" | "contextual";
 export type AdminButtonDensity = "default" | "compact";
 const AdminButtonContext = createContext(false);
 

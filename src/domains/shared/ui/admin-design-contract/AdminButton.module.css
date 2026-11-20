@@ -57,11 +57,20 @@
 }
 @media (prefers-reduced-motion: reduce) { .control.control.control[data-admin-button] { transition: none; } }
 
-.control.control.control[data-admin-button]:not([data-admin-button="contextual"]):has(> svg:only-child),
 .control.control.control[data-admin-icon="true"]:not([data-admin-button="contextual"]) { width: var(--admin-button-height); min-width: var(--admin-button-height); padding: 8px; }
-.control.control.control[data-admin-density="compact"]:not([data-admin-button="contextual"]):has(> svg:only-child),
 .control.control.control[data-admin-icon="true"][data-admin-density="compact"]:not([data-admin-button="contextual"]) { width: var(--admin-button-compact-height); min-width: var(--admin-button-compact-height); padding: 6px; }
-@media (pointer: coarse) { .control.control.control[data-admin-button][data-admin-density]:not([data-admin-button="contextual"]):has(> svg:only-child), .control.control.control[data-admin-icon="true"][data-admin-density]:not([data-admin-button="contextual"]) { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
+@media (pointer: coarse) { .control.control.control[data-admin-icon="true"][data-admin-density]:not([data-admin-button="contextual"]) { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
 
 .control.control.control[data-admin-button="primary"]:not([data-admin-button="contextual"]):active:not(:disabled):not([aria-disabled="true"]) { background-color: var(--admin-button-primary-pressed-bg); }
 .control.control.control[data-admin-button][hidden] { display: none; }
+
+/* Supporting actions are flat; repeated row/tools actions use the quiet variant. */
+.control.control.control.control[data-admin-button="secondary"] { background-image: none; box-shadow: none; }
+.control.control.control.control[data-admin-button="secondary"]:is(:hover,:active):not(:disabled):not([aria-disabled="true"]) { background-image: none; background-color: #f8fafc; box-shadow: none; }
+.control.control.control.control[data-admin-button="quiet"] { min-height: var(--admin-button-compact-height); padding: 5px 8px; border-color: transparent; background: transparent; box-shadow: none; font-weight: 500; }
+.control.control.control.control[data-admin-button="quiet"]:is(:hover,:active):not(:disabled):not([aria-disabled="true"]) { border-color: transparent; background: #f1f5f9; box-shadow: none; }
+.control.control.control.control[data-admin-button="quiet"][data-admin-icon="true"] { width: var(--admin-button-compact-height); min-width: var(--admin-button-compact-height); padding: 6px; }
+@media(pointer:coarse) { .control.control.control.control[data-admin-button="quiet"] { min-height: var(--admin-button-touch-height); } .control.control.control.control[data-admin-button="quiet"][data-admin-icon="true"] { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
+
+.control.control.control.control[data-admin-button="quiet"][aria-pressed="true"] { background: #eff6ff; color: #1d4ed8; }
+.control.control.control.control[data-admin-button="quiet"][aria-pressed="true"]:hover { background: #dbeafe; color: #1d4ed8; }

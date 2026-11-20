@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { ADMIN_OPERATION_PAGE_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
@@ -58,7 +59,7 @@ export function SpaceViewPage({
   const workspaceHeader = headerVariant === "workspace";
 
   return (
-    <main className={workspaceHeader ? `${ADMIN_OPERATION_PAGE_CLASS} min-w-0 bg-white px-4 py-3 font-sans text-slate-950 sm:px-6 sm:py-5` : `${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
+    <main style={workspaceHeader ? { fontFamily: ADMIN_UI_FOUNDATION.fontFamily } : undefined} className={workspaceHeader ? `${ADMIN_OPERATION_PAGE_CLASS} min-w-0 bg-white px-4 py-3 font-sans text-slate-950 sm:px-6 sm:py-5` : `${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
       <div className="mx-auto flex w-full max-w-none min-w-0 flex-col gap-4">
         {breadcrumbs}
         <section

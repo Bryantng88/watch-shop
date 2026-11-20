@@ -148,7 +148,7 @@ Biểu đồ xanh là một vùng phẳng radius 0; card tóm tắt record radiu
 | Body | slate-700 `#334155` |
 | Metadata | slate-500 `#64748b` |
 | Tertiary | slate-400 `#94a3b8`; không dùng cho nội dung thiết yếu |
-| Primary action | slate-950; hover slate-800 |
+| Primary action | blue-600; hover blue-700; pressed blue-800 |
 | Link | blue-700 `#1d4ed8`, underline khi hover/focus |
 | Neutral grouped surface | slate-50 `#f8fafc` |
 | Focus surface | blue-50 `#eff6ff` |
@@ -1063,7 +1063,8 @@ permissions, confirmation, mutation, navigation or form behavior.
 | Variant | Purpose |
 | --- | --- |
 | primary | Main action: blue surface, subtle top highlight and lower shadow |
-| secondary | Supporting action: neutral raised surface |
+| secondary | Supporting action: flat neutral surface, no gradient or shadow |
+| quiet | Repeated row actions, search, refresh, reorder and preview: transparent surface, compact target, subtle hover |
 | danger | Destructive action: rose surface, existing confirmation unchanged |
 | contextual | Tabs, navigation, calendar/content cells, image choices, menu items, text/close controls; retain their local semantic layout and selection states |
 
@@ -1087,3 +1088,37 @@ Run `npm run check:admin-buttons` to traverse admin imports, reject native butto
 or summary controls outside the primitive, and check client directive placement.
 New adapters must be backed by these primitives. This migration standardizes
 controls; it does not claim that every legacy page layout meets all v2 recipes.
+
+### Hàng tiêu đề trong workspace có menu trái
+
+Dùng `AdminWorkspaceHeading` cho tiêu đề cả hai pane và
+`AdminWorkspaceHeadingRow` cho hàng tiêu đề có thao tác. Chiều cao tối thiểu
+lấy từ control foundation (40 px, 44 px trên thiết bị cảm ứng), kể cả khi
+không có nút hoặc người dùng không có quyền tạo. Tiêu đề giữ vị trí trong
+hàng đầu khi các nút xuống dòng; không căn giữa theo tổng chiều cao nhóm nút.
+Font, cỡ chữ và line-height lấy từ sectionTitle trong foundation.
+Áp dụng cho các khu vực/giai đoạn Vận hành, nhóm Danh bạ và các khối trang chủ website.
+
+### Quiet controls correction — 2026-11-20
+
+Không áp raised finish đại trà. `secondary` dùng viền phẳng, không gradient/bóng.
+`quiet` dành cho thao tác lặp trong hàng và công cụ tra cứu/làm mới, mặc định
+32 px, cảm ứng 44 px. Trạng thái có thể bấm dùng contextual để giữ bố cục badge;
+không có hiệu ứng nâng icon. Điều hướng/liên kết giữ kiểu phẳng. Primary/danger
+chỉ dành cho lệnh cần nhấn mạnh. Dùng `iconOnly` tường minh; không suy luận từ
+CSS `svg:only-child` vì selector này bỏ qua text node, làm nút icon + chữ co vuông.
+Quy tắc này thay thế phần raised mặc định cho supporting/row controls phía trên.
+
+Toolbar workspace dùng `AdminRefreshAction`: chỉ icon refresh, nền trong suốt,
+nhãn truy cập/tooltip và trạng thái đang tải. Bộ chuyển Bảng/Danh sách dùng
+`AdminIconViewSwitch`: hai icon phẳng với aria-pressed và nền xanh nhạt cho lựa
+chọn hiện tại; không có card, bóng hoặc dropdown khi có đủ icon cho các lựa chọn.
+
+Bộ lọc toolbar chỉ hiển thị icon phẳng (32 px desktop, 44 px cảm ứng),
+chấm nhỏ báo bộ lọc đang áp dụng/nhắc chưa đọc; số lượng nằm trong tooltip
+và accessible label. Giữ native details/summary, focus ring và đóng khi bấm ngoài.
+Identity mở xem nhanh trong danh sách TI dùng contextual, không dùng secondary.
+
+Danh sách TI trong Vận hành không có hàng dropdown riêng: Mức chú ý và lịch sử
+đã xong nằm trong bộ lọc chung; sắp xếp dùng `AdminIconSelect` trên toolbar.
+Icon select dùng native select, tooltip mô tả giá trị và chấm báo khác mặc định.

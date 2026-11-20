@@ -1,0 +1,5 @@
+.row { display: flex; min-width: 0; min-height: var(--workspace-heading-height); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.heading { display: flex; align-items: center; min-width: 0; min-height: var(--workspace-heading-height); margin: 0; overflow-wrap: anywhere; }
+.navigation { margin-bottom: 12px; }
+.row > div { min-width: 0; }
+@media (pointer: coarse) { .row, .heading { min-height: var(--workspace-heading-touch-height); } }

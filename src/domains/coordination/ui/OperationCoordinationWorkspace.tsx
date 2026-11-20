@@ -1,4 +1,6 @@
 "use client";
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+import { AdminIconSelect } from "@/domains/shared/ui/admin-design-contract/AdminToolbarControls";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { isUnknownOperationalAction } from "@/domains/task/shared/operational-action-response";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
@@ -19,6 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowDownWideNarrow,
   Camera,
   CalendarClock,
   CheckCircle2,
@@ -1146,9 +1149,6 @@ export default function OperationCoordinationWorkspace({
     flowItemsModeKey,
     flowItemsStageKey,
   ]);
-  const flowListVisibleCount = activeFlowListStage
-    ? flowListStageCounts.get(activeFlowListStage) ?? 0
-    : asyncFlowItems.length;
   const isPaymentCollectionFlow =
     activeCoreFlow?.key === "payment-collection-core-flow";
   const flowEndpoint = useMemo(() => {
@@ -1971,11 +1971,11 @@ export default function OperationCoordinationWorkspace({
           <div className="border-b border-slate-100 pb-4">
             {activeViewMode ? (
               <div className="text-xs text-slate-700">
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                  {isUnifiedOperation && <h2 className="m-0 text-sm font-bold text-slate-950">{[
+                <AdminWorkspaceHeadingRow>
+                  {isUnifiedOperation && <AdminWorkspaceHeading>{[
                     isMediaFlowMode ? "Sản xuất Media" : modeLabel(activeViewMode),
                     navigationStages.find(stage => stage.key === (technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : activeFlowListStage))?.label,
-                  ].filter((label, index, labels) => label && labels.indexOf(label) === index).join(" – ")}</h2>}
+                  ].filter((label, index, labels) => label && labels.indexOf(label) === index).join(" – ")}</AdminWorkspaceHeading>}
                   <div className={isUnifiedOperation ? "hidden" : "min-w-0"}>
                     <div className="flex flex-wrap items-center gap-2">
                       {!isUnifiedOperation && data.viewConfig.modes.length > 1 ? (
@@ -2054,7 +2054,7 @@ export default function OperationCoordinationWorkspace({
                       </AdminButton>
                     )}
                   </div>
-                </div>
+                </AdminWorkspaceHeadingRow>
 
                 <form
                   className={`${isCreateFormOpen && !isUnifiedOperation ? "flex" : "hidden"} mt-4 min-w-0 flex-col gap-2 border-t border-sky-100 pt-4 sm:flex-row sm:items-center`}
@@ -2141,6 +2141,15 @@ export default function OperationCoordinationWorkspace({
                   { value: "LIST", label: "Danh sách", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
+                  ...(isTechnicalIssueFlowMode && technicalLayout === "list" && technicalStagesInMenu ? [{
+                    key: "technical-attention", label: "Mức chú ý", value: technicalListState.attention,
+                    options: [{ value: "ALL", label: "Tất cả mức chú ý" }, { value: "OVERDUE", label: "Quá hạn" }, { value: "URGENT", label: "Ưu tiên gấp" }, { value: "MENTIONED", label: "Nhắc tôi chưa đọc" }],
+                    onChange: (value: string) => setTechnicalListState(current => ({ ...current, attention: value as TechnicalIssueListState["attention"], page: 1 })),
+                  }, ...(technicalListState.scope === "DONE" ? [{
+                    key: "technical-done-range", label: "Lịch sử TI đã xong", value: doneRange,
+                    options: [{ value: "14D", label: "14 ngày gần đây" }, { value: "30D", label: "30 ngày gần đây" }, { value: "ALL", label: "Toàn bộ lịch sử" }],
+                    onChange: (value: string) => { setTechnicalListState(current => ({ ...current, page: 1 })); void changeDoneRange(value as "14D" | "30D" | "ALL"); },
+                  }] : [])] : []),
                   ...(isTaskItemListMode || isTechnicalIssueFlowMode ? [] : [{
                     key: "work-status",
                     label: "Trạng thái công việc",
@@ -2264,20 +2273,12 @@ export default function OperationCoordinationWorkspace({
                     summary={technicalIssueBoardSummary}
                     visibleSummary={visibleTechnicalIssueBoardSummary}
                   />
-                ) : isMediaBoardView ? (
-                  <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-600">
-                    {asyncMediaBoard?.items.length ?? 0} Watch
-                  </span>
-                ) : (
-                  <>
-                    <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
-                      {isViewPending || isFlowItemsLoading
-                        ? "Đang tải..."
-                        : `${activeCoreFlow ? flowListVisibleCount : filteredWorkTickets.length} item`}
-                    </span>
-                  </>
-                )}
+                ) : null}
                 {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || filterPaymentDirection !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <AdminButton variant="secondary" type="button" onClick={() => { setTechnicalFilterResetKey(value => value + 1); setFilterQuery(""); if (isTechnicalIssueFlowMode) { const url = new URL(window.location.href); url.searchParams.delete("flowQuery"); window.history.replaceState(null, "", url.toString()); } setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</AdminButton> : null}
+                {isTechnicalIssueFlowMode && technicalLayout === "list" && technicalStagesInMenu && <AdminIconSelect label="Sắp xếp TI" value={technicalListState.sort}
+                  icon={<ArrowDownWideNarrow className="h-4 w-4" />}
+                  options={[{ value: "PRIORITY", label: "Ưu tiên trước" }, { value: "DUE", label: "Hạn gần nhất" }, { value: "UPDATED", label: "Mới cập nhật" }]}
+                  onChange={value => setTechnicalListState(current => ({ ...current, sort: value as TechnicalIssueListState["sort"], page: 1 }))} />}
                 <SpaceDataRefreshButton
                   loading={isBoardRefreshing || isFlowItemsLoading}
                   refreshedAt={boardRefreshedAt}

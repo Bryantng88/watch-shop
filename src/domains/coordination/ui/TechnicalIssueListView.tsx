@@ -192,7 +192,7 @@ export default function TechnicalIssueListView({
       style={ADMIN_TECHNICAL_LIST_STYLE}
       aria-busy={loading || !!loadingColumn}
     >
-      <div className={styles.toolbar}>
+      {stageNavigation === "inline" && <div className={styles.toolbar}>
         {stageNavigation === "inline" && <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
           {technicalIssueListNavigation(items, pagination, state, narrow).map(stage => <AdminButton variant="contextual" type="button" key={stage.key} aria-pressed={scope === stage.key} onClick={() => change({ scope: stage.key })}>
             {stage.label}<span>{stage.count.toLocaleString("vi-VN")}</span>
@@ -238,7 +238,7 @@ export default function TechnicalIssueListView({
             <option value="UPDATED">Mới cập nhật</option>
           </select>
         </div>
-      </div>
+      </div>}
       {(loading || loadingColumn) && (
         <p role="status" className={styles.loading}>
           <Loader2 size={14} className="animate-spin" />
@@ -282,7 +282,7 @@ export default function TechnicalIssueListView({
                 className={`${styles.row} ${focusedIssueId === item.id ? styles.focused : ""}`}
               >
                 <div role="cell" className={styles.identity}>
-                  <AdminButton variant="secondary"
+                  <AdminButton variant="contextual"
                     type="button"
                     className={styles.open}
                     onClick={() => onPreview(item)}

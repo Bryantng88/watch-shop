@@ -1542,7 +1542,7 @@ export default function FlowItemListView({
                     </Link>
                   </td>}
                   <td className="px-4 py-3">
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet" iconOnly
                       type="button"
                       onClick={() => openItemPreview(item)}
                       aria-label="Xem nhanh item"

@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, CSSProperties, InputHTMLAttributes, ReactNode } from "react";
 import { useId } from "react";
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "./AdminWorkspaceHeading";
 import { AdminPageCanvas, AdminPageHeader } from "./AdminPage";
 import { ADMIN_UI_FOUNDATION as f } from "./admin-ui.foundation";
 import { AsyncActionButton } from "../mutation/AsyncActionButton";
@@ -27,12 +28,12 @@ export function AdminManagementPage({ title, eyebrow, description, actions, chil
 /** A workspace pane owns its heading/actions; the surrounding page owns padding. */
 export function AdminManagementSection({ title, description, actions, children }: { title: string; description?: string; actions?: ReactNode; children: ReactNode }) {
   return <section className={styles.flow} aria-label={title}>
-    <div className={styles.sectionHeader}><div><h2 className={styles.sectionTitle}>{title}</h2>{description && <p className={styles.metadata}>{description}</p>}</div>{actions && <div className={styles.actions}>{actions}</div>}</div>
+    <AdminWorkspaceHeadingRow><div><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{description && <p className={styles.metadata}>{description}</p>}</div>{actions && <div className={styles.actions}>{actions}</div>}</AdminWorkspaceHeadingRow>
     {children}
   </section>;
 }
 export function AdminManagementButton({ primary, pending, pendingLabel, className = "", style, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; pending?: boolean; pendingLabel?: string }) {
-  return <AsyncActionButton variant={primary ? "primary" : "secondary"} type="button" className={`${styles.button} ${primary ? ADMIN_PRIMARY_ACTION : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} style={{ ...(primary ? ADMIN_PRIMARY_ACTION_STYLE : {}), ...style }} {...props} />;
+  return <AsyncActionButton variant={primary ? "primary" : "quiet"} type="button" className={`${styles.button} ${primary ? ADMIN_PRIMARY_ACTION : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} style={{ ...(primary ? ADMIN_PRIMARY_ACTION_STYLE : {}), ...style }} {...props} />;
 }
 export function AdminManagementField({ label, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
   const id = useId();

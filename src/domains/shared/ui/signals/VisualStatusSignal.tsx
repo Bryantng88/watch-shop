@@ -82,7 +82,7 @@ export function VisualStatusSignal({
     const styles = TONE_CLASSES[tone];
     const content = (
         <>
-            <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border transition group-hover:-translate-y-0.5 group-hover:shadow-sm", styles.icon)}>
+            <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border", styles.icon)}>
                 <Icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2} />
             </span>
             <span className={cn("min-w-0 text-left", iconOnly && "sr-only")}>
@@ -101,7 +101,7 @@ export function VisualStatusSignal({
     const resolvedTitle = title ?? [label, detail].filter(Boolean).join(" · ");
 
     if (onClick) {
-        return <AdminButton variant="secondary" type="button" onClick={onClick} className={rootClassName} title={resolvedTitle}>{content}</AdminButton>;
+        return <AdminButton variant="contextual" type="button" onClick={onClick} className={rootClassName} title={resolvedTitle}>{content}</AdminButton>;
     }
 
     return <span className={rootClassName} title={resolvedTitle}>{content}</span>;

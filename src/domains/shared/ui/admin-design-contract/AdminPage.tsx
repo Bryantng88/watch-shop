@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import clsx from "clsx";
+import { ADMIN_UI_FOUNDATION } from "./admin-ui.foundation";
 import { ADMIN_UI } from "./admin-ui.tokens";
 
 export function AdminPageCanvas({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={clsx(ADMIN_UI.page, ADMIN_UI.pageFlow, className)}>{children}</div>;
+  return <div className={clsx(ADMIN_UI.page, ADMIN_UI.pageFlow, className)} style={{ fontFamily: ADMIN_UI_FOUNDATION.fontFamily }}>{children}</div>;
 }
 
 export function AdminPageHeader({
@@ -21,7 +22,7 @@ export function AdminPageHeader({
   meta?: ReactNode;
   className?: string;
 }) {
-  return <header className={clsx("flex flex-wrap items-end justify-between gap-4", className)}>
+  return <header className={clsx("flex flex-wrap items-end justify-between gap-4", variant === "workspace" && "pb-2", className)}>
     <div>
       {eyebrow ? <p className={ADMIN_UI.eyebrow}>{eyebrow}</p> : null}
       <h1 className={variant === "workspace" ? "m-0 text-xl font-bold leading-7 text-slate-950 sm:text-2xl sm:leading-8" : ADMIN_UI.pageTitle}>{title}</h1>

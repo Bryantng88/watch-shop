@@ -9,3 +9,4 @@ export { ADMIN_SPLIT_WORKSPACE, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorksp
 export * from "./AdminManagement";
 export * from "./AdminWorkspaceNavigation";
 export * from "./AdminButton";
+export * from "./AdminWorkspaceHeading";
