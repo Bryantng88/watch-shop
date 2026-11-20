@@ -42,7 +42,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
-        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className={`${isTechnicianWorkspace ? "h-[100dvh]" : "h-screen"} grid overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]`}>
+        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className={`relative ${isTechnicianWorkspace ? "h-[100dvh]" : "h-screen"} grid overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]`}>
             <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
                 <AdminSidebar
                     onExpandedChange={setSidebarExpanded}
