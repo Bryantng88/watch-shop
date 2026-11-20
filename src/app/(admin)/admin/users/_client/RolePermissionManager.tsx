@@ -316,10 +316,12 @@ export default function RolePermissionManager({
       title="Vai trò & quyền truy cập"
       description="Chọn vai trò để quản lý phạm vi làm việc của người dùng."
       actions={
-        <AdminLinkAction variant="quiet" href="/admin/users">
-          <ArrowLeft size={16} aria-hidden="true" />
-          Người dùng
-        </AdminLinkAction>
+        <div className={styles.actions}>
+          <AdminLinkAction variant="quiet" href="/admin/users">
+            <ArrowLeft size={16} aria-hidden="true" />
+            Người dùng
+          </AdminLinkAction>
+        </div>
       }
     >
       <div
@@ -335,16 +337,6 @@ export default function RolePermissionManager({
               <AdminWorkspaceHeading navigation>Vai trò</AdminWorkspaceHeading>
             </AdminWorkspaceHeadingRow>
             <nav aria-label="Danh sách vai trò" className={styles.roleList}>
-              <AdminButton
-                variant="quiet"
-                className={styles.create}
-                disabled={busy}
-                aria-pressed={!draft.id}
-                onClick={() => void choose()}
-              >
-                <Plus size={16} aria-hidden="true" />
-                Tạo vai trò
-              </AdminButton>
               {roles.map((role) => (
                 <AdminButton
                   variant="contextual"
@@ -381,7 +373,7 @@ export default function RolePermissionManager({
                   )
                 }
               >
-                <option value="__new__">Tạo vai trò mới</option>
+                {!draft.id && <option value="__new__" disabled>Vai trò mới</option>}
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name} · {role.permissions.length} quyền
@@ -409,6 +401,10 @@ export default function RolePermissionManager({
                 {draft.id ? "Thông tin vai trò" : "Vai trò mới"}
               </AdminWorkspaceHeading>
               <div className={styles.actions}>
+                <AdminButton variant="quiet" type="button" disabled={busy} onClick={() => void choose()}>
+                  <Plus size={16} aria-hidden="true" />
+                  Tạo vai trò
+                </AdminButton>
                 <PageEditingState dirty={dirty} saving={busy} />
                 {dirty && (
                   <AdminManagementButton

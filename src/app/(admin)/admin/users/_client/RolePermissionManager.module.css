@@ -5,8 +5,7 @@
 .mobileNav { display: block; }
 .workspace[data-wide="true"] .desktopNav { display: block; }
 .workspace[data-wide="true"] .mobileNav { display: none; }
-.roleList { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
-.create { width: 100%; margin-bottom: 8px; }
+.roleList { display: flex; flex-direction: column; gap: 4px; }
 .role { display: flex; flex-direction: column; align-items: start; gap: 4px; width: 100%; min-height: 64px; padding: 10px 12px; border-radius: var(--am-radius); text-align: left; }
 .role:hover { background: var(--am-soft); }
 .role[aria-pressed="true"] { background: var(--am-selected); }
