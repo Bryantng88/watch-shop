@@ -1,7 +1,8 @@
 import { AdminButtonProvider } from "../../src/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Grid2X2, List, Search } from "lucide-react";
+import { AdminIconSelect } from "../../src/domains/shared/ui/admin-design-contract/AdminToolbarControls";
+import { ArrowDownWideNarrow, Grid2X2, List, Search } from "lucide-react";
 import { OperationWorkspaceLayout } from "../../src/domains/coordination/ui/OperationWorkspaceLayout";
 import TechnicalIssueListView from "../../src/domains/coordination/ui/TechnicalIssueListView";
 import { SpaceViewSwitch } from "../../src/domains/shared/ui/space/SpaceFilterBar";
@@ -161,6 +162,7 @@ function App() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+        {layout === "list" && new URLSearchParams(location.search).has("navigation") && <AdminIconSelect label="Sắp xếp TI" value={state.sort} icon={<ArrowDownWideNarrow size={16} />} options={[{value:"PRIORITY",label:"Ưu tiên trước"},{value:"DUE",label:"Hạn gần nhất"},{value:"UPDATED",label:"Mới cập nhật"}]} onChange={value=>setState(current=>({...current,sort:value as TechnicalIssueListState["sort"],page:1}))} />}
         <SpaceViewSwitch
           activeView={layout}
           options={[
