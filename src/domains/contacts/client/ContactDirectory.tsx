@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw, Search } from "lucide-react";
+import { AdminRefreshAction } from "@/domains/shared/ui/admin-design-contract/AdminToolbarControls";
+import { Plus, Search } from "lucide-react";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { AdminManagementSection, AdminManagementButton as Button, AdminManagementField as Field, ADMIN_MANAGEMENT as s } from "@/domains/shared/ui/admin-design-contract/AdminManagement";
 import type { ContactKind, ContactPage, DirectoryContact } from "../shared/contact-directory";
@@ -90,7 +91,7 @@ export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind:
       <Button type="submit"><Search aria-hidden="true" />Tìm</Button>
       {(search || query) && <Button onClick={() => { setData(null); setSearch(""); setQuery(""); setPage(1); setReload(v => v + 1); }}>Xóa tìm</Button>}
       <span className={`${s.metadata} ${s.resultCount}`} role="status">{loading ? "Đang tải…" : data ? `${data.total.toLocaleString("vi-VN")} liên hệ` : "—"}</span>
-      <Button disabled={loading} aria-label="Làm mới danh bạ" onClick={() => setReload(v => v + 1)}><RefreshCw aria-hidden="true" />Làm mới</Button>
+      <AdminRefreshAction loading={loading} label="Làm mới danh bạ" onRefresh={() => setReload(v => v + 1)} />
     </form>
     {message && <p role="status" className={s.metadata}>{message}</p>}
     {draft && <form ref={editor} data-admin-form className={`${s.form} ${s.editor}`} aria-label={draft.id ? "Sửa liên hệ" : "Thêm liên hệ"} onSubmit={event => void save(event)}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useId, type ReactNode } from "react";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals/operational-domain-presentation";
@@ -45,13 +46,13 @@ export function OperationWorkspaceLayout({
   const selected = groups.find((group) => group.key === activeGroup);
   return <div ref={layoutRef} className={`${styles.layout} ${split.layout} ${resize.layout}`} data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={{ ...ADMIN_SPLIT_WORKSPACE_STYLE, ...pane.style }}>
       <aside id={navigationId} data-admin-pane="sidebar" className={styles.desktop} aria-label="Điều hướng vận hành">
-        <h2 className={styles.navigationTitle}>Khu vực vận hành</h2>
+        <AdminWorkspaceHeading navigation>Khu vực vận hành</AdminWorkspaceHeading>
         <nav aria-label="Khu vực vận hành">
           {groups.map((group) => {
             const active = group.key === activeGroup;
             const Icon = operationalDomainPresentation(group.domainKey ?? group.key).icon;
             return <div key={group.key} className={styles.group}>
-              <AdminButton variant="secondary" type="button" aria-current={active ? "page" : undefined}
+              <AdminButton variant="contextual" type="button" aria-current={active ? "page" : undefined}
                 className={styles.groupButton} data-has-stages={active && stages.length > 0 || undefined}
                 onClick={() => onGroupChange(group.key)}>
                 <Icon className={styles.icon} aria-hidden="true" />

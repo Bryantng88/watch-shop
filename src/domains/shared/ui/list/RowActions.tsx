@@ -115,7 +115,7 @@ export default function RowActions<T>({
 
     return (
         <div ref={rootRef} className="relative flex justify-end">
-            <AdminButton variant="secondary"
+            <AdminButton variant="quiet" iconOnly aria-label="Thao tác khác" aria-expanded={open} aria-haspopup="menu"
                 ref={buttonRef}
                 type="button"
                 onClick={() => setOpen((value) => !value)}

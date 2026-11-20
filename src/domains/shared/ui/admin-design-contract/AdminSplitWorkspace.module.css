@@ -5,9 +5,12 @@
 .layout[data-wide="true"] > [data-admin-pane="sidebar"] { padding-right: var(--admin-split-inset); padding-bottom: 0; border-right: 1px solid var(--admin-split-divider); border-bottom: 0; }
 .layout[data-wide="true"] > [data-admin-pane="content"] { grid-column: 2; grid-row: 1; }
 
-.navigationLinks { display: none; flex-direction: column; gap: 4px; }
-.navigationTitle { margin: 0 0 12px; font: 700 14px/20px var(--am-font); color: var(--am-text); }
-.navigationLink { display: flex; align-items: center; min-height: 44px; padding: 8px 12px; border-radius: var(--am-radius); font: 400 14px/20px var(--am-font); color: var(--am-body); overflow-wrap: anywhere; }
+.navigationLinks { display: none; flex-direction: column; gap: 0; }
+.navigationLink { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 10px 12px; border-radius: var(--am-radius); font: 400 14px/20px var(--am-font); color: var(--am-body); overflow-wrap: anywhere; }
+.navigationLink + .navigationLink { margin-top: 4px; }
+.navigationIcon { display: inline-flex; flex-shrink: 0; color: var(--am-muted); }
+.navigationIcon svg { width: 16px; height: 16px; }
+.navigationLink > span:last-child { min-width: 0; }
 .navigationLink:hover { background: var(--am-soft); }
 .navigationLink[aria-current="page"] { background: var(--am-selected); color: var(--am-text); font-weight: 600; }
 .navigationLink:focus-visible, .navigationSelect select:focus-visible { outline: 2px solid var(--am-ring); outline-offset: 2px; }
@@ -15,4 +18,4 @@
 .navigationSelect select { width: 100%; min-height: var(--am-control); border: 1px solid var(--am-border); border-radius: var(--am-radius); padding: 8px 12px; font: 400 14px/20px var(--am-font); color: var(--am-text); background: var(--am-canvas); }
 .layout[data-wide="true"] .navigationLinks { display: flex; }
 .layout[data-wide="true"] .navigationSelect { display: none; }
-@media(pointer:coarse) { .navigationSelect select { min-height: var(--am-touch); font-size: 16px; } }
+@media(pointer:coarse) { .navigationSelect select { min-height: var(--am-touch); font-size: 16px; } .navigationLink { min-height: var(--am-touch); } }

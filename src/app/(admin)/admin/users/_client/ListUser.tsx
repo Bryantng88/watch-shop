@@ -5,7 +5,8 @@ import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/Admin
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useRouter } from "next/navigation";
-import { Plus, RefreshCw, Shield } from "lucide-react";
+import { AdminRefreshAction } from "@/domains/shared/ui/admin-design-contract/AdminToolbarControls";
+import { Plus, Shield } from "lucide-react";
 
 import { AdminManagementSection, AdminManagementField as Field, AdminManagementButton as Button, ADMIN_MANAGEMENT as s } from "@/domains/shared/ui/admin-design-contract/AdminManagement";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -164,14 +165,14 @@ export default function UserListPageClient(props: PageProps) {
     }
 
     return <AdminManagementSection title="Người dùng" actions={<>
-        {canManageRoles && <AdminLinkAction variant="secondary" href="/admin/users/roles" className={s.button}><Shield aria-hidden="true" />Vai trò & quyền</AdminLinkAction>}
+        {canManageRoles && <AdminLinkAction variant="secondary" href="/admin/users/roles" className={s.button}><Shield aria-hidden="true" /><span>Vai trò & quyền</span></AdminLinkAction>}
         {canCreate && <Button primary onClick={createUser}><Plus aria-hidden="true" />Tạo người dùng</Button>}
     </>}>
         <form data-admin-form action="/admin/users" className={`${s.toolbar} ${s.plainToolbar}`} role="search">
             <label className={s.searchField}><span className="sr-only">Tìm theo tên, email hoặc vai trò</span><input type="search" name="q" defaultValue={currentQuery ?? ""} className={s.input} placeholder="Tìm theo tên, email hoặc vai trò…" /></label>
             <Button type="submit">Tìm</Button>{currentQuery && <AdminLinkAction variant="secondary" href="/admin/users" className={s.button}>Xóa tìm</AdminLinkAction>}
             <span className={`${s.metadata} ${s.resultCount}`} role="status">{total.toLocaleString("vi-VN")} người dùng</span>
-            <Button onClick={() => router.refresh()}><RefreshCw aria-hidden="true" />Làm mới</Button>
+            <AdminRefreshAction onRefresh={() => router.refresh()} />
         </form>
         {editor && <UserEditor key={editor.id || "new"} state={editor} roles={roles} busy={busy} dirty={dirty} error={saveError} onChange={patch => setEditor(current => current ? { ...current, ...patch } : current)} onClose={() => void closeEditor()} onSave={() => void saveUser()} />}
         <div aria-hidden="true" className={`${s.columnHeader} ${s.userRow}`}><span>Người dùng</span><span>Vai trò</span><span>Trạng thái</span><span>{canUpdate ? "Thao tác" : ""}</span></div>

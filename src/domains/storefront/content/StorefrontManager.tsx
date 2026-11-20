@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
 import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeedback";
@@ -37,7 +38,7 @@ const names = {
 };
 type HomeSectionId = HomeContent["sections"][number]["id"];
 function HomeSection({id,title,homeOnly,active,children}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode}){
- return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><h2>{title}</h2>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><AdminDisclosureSummary>{title}</AdminDisclosureSummary>{children}</details>;
+ return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><AdminDisclosureSummary>{title}</AdminDisclosureSummary>{children}</details>;
 }
 async function jsonRequest<T = { record: ContentRecord; articles: ArticleItem[]; items: LibraryImage[]; item: LibraryImage; truncated?: boolean }>(url: string, init?: RequestInit): Promise<T> {
   const fallback = "Không thể tải hoặc lưu dữ liệu website. Vui lòng thử lại.";
@@ -429,7 +430,7 @@ export default function StorefrontManager({
   }
   return (
     <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
-      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a>}/>
+      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<><a href="/admin/storefront/media" target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Thư viện ảnh website ↗</a><a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a></>}/>
       {!homeOnly && (
         <div className="sfc-tabs">
           <AdminButton variant="contextual"
@@ -503,13 +504,13 @@ export default function StorefrontManager({
             {home ? (
               <>
                 <section data-admin-pane="sidebar" className="sfc-section-nav" aria-label="Các khối trang chủ">
-                  <h2>Các khối trang chủ</h2>
+                  <AdminWorkspaceHeading navigation>Các khối trang chủ</AdminWorkspaceHeading>
                   <p className="sfc-help">
                     Chọn khối để sửa · kéo để sắp xếp.
                   </p>
                   {homeOnly&&<div className="sfc-section-mobile">
                     <label className="sfc-field"><span>Khối đang sửa</span><select value={activeSection} onChange={event=>setActiveSection(event.target.value as HomeSectionId)}>{home.sections.map(section=><option key={section.id} value={section.id}>{names[section.id]}</option>)}</select></label>
-                    <div className="sfc-row"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={home.sections.find(section=>section.id===activeSection)?.enabled||false} onChange={event=>edit({...home,sections:home.sections.map(section=>section.id===activeSection?{...section,enabled:event.target.checked}:section)})}/>Hiển thị khối</label><div className="flex gap-1"><AdminButton variant="secondary" type="button" aria-label="Đưa khối đang sửa lên" disabled={home.sections[0].id===activeSection} onClick={()=>{const i=home.sections.findIndex(section=>section.id===activeSection);moveSection(i,i-1);}}><ArrowUp size={15}/></AdminButton><AdminButton variant="secondary" type="button" aria-label="Đưa khối đang sửa xuống" disabled={home.sections.at(-1)?.id===activeSection} onClick={()=>{const i=home.sections.findIndex(section=>section.id===activeSection);moveSection(i,i+1);}}><ArrowDown size={15}/></AdminButton></div></div>
+                    <div className="sfc-row"><label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={home.sections.find(section=>section.id===activeSection)?.enabled||false} onChange={event=>edit({...home,sections:home.sections.map(section=>section.id===activeSection?{...section,enabled:event.target.checked}:section)})}/>Hiển thị khối</label><div className="flex gap-1"><AdminButton variant="quiet" iconOnly type="button" aria-label="Đưa khối đang sửa lên" disabled={home.sections[0].id===activeSection} onClick={()=>{const i=home.sections.findIndex(section=>section.id===activeSection);moveSection(i,i-1);}}><ArrowUp size={15}/></AdminButton><AdminButton variant="quiet" iconOnly type="button" aria-label="Đưa khối đang sửa xuống" disabled={home.sections.at(-1)?.id===activeSection} onClick={()=>{const i=home.sections.findIndex(section=>section.id===activeSection);moveSection(i,i+1);}}><ArrowDown size={15}/></AdminButton></div></div>
                   </div>}
                   <div className={homeOnly?"sfc-section-desktop":""}>
                   {home.sections.map((section, i) => (
@@ -542,8 +543,8 @@ export default function StorefrontManager({
                         />
                         <span className="sr-only">Hiển thị {names[section.id]}</span>
                       </label>
-                      <AdminButton variant="secondary" type="button" className="sfc-section-select" aria-current={activeSection===section.id?"true":undefined} aria-controls={`home-editor-${section.id}`} onClick={()=>{setActiveSection(section.id);if(window.matchMedia("(max-width: 900px)").matches)requestAnimationFrame(()=>document.getElementById(`home-editor-${section.id}`)?.scrollIntoView({block:"start",behavior:"smooth"}));}}><span>{names[section.id]}</span><small>{section.enabled?"Đang bật":"Đang ẩn"}</small></AdminButton>
-                      <AdminButton variant="secondary"
+                      <AdminButton variant="contextual" type="button" className="sfc-section-select" aria-current={activeSection===section.id?"true":undefined} aria-controls={`home-editor-${section.id}`} onClick={()=>{setActiveSection(section.id);if(window.matchMedia("(max-width: 900px)").matches)requestAnimationFrame(()=>document.getElementById(`home-editor-${section.id}`)?.scrollIntoView({block:"start",behavior:"smooth"}));}}><span>{names[section.id]}</span><small>{section.enabled?"Đang bật":"Đang ẩn"}</small></AdminButton>
+                      <AdminButton variant="quiet" iconOnly
                         type="button"
                         disabled={!i}
                         aria-label={`Đưa ${names[section.id]} lên`}
@@ -551,7 +552,7 @@ export default function StorefrontManager({
                       >
                         <ArrowUp size={15} />
                       </AdminButton>
-                      <AdminButton variant="secondary"
+                      <AdminButton variant="quiet" iconOnly
                         type="button"
                         disabled={i === home.sections.length - 1}
                         aria-label={`Đưa ${names[section.id]} xuống`}

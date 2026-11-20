@@ -948,6 +948,28 @@ Focus ring, pending, disabled và target coarse giữ contract hiện hữu. Dis
 bỏ gradient/shadow; trạng thái không có lệnh được phép vẫn là text/badge phẳng,
 không render như nút. Không đổi nhãn, quyền, callback mở editor hoặc command.
 
+SpaceViewPage variant workspace có divider 1px slate-100 dưới title/description,
+padding-bottom 16px; flow bên ngoài sở hữu khoảng cách 16px tới vùng làm việc.
+Đây là phân tách page identity với menu/list, không thêm card, shadow hoặc gradient.
+Các variant default/compact giữ hình thức hiện tại.
+
+### Unified Operations pane title and list presentation
+
+Heading vùng làm việc ghép tên khu vực và stage đang chọn bằng dấu –,
+ví dụ “Sản xuất Media – Chụp ảnh” hoặc “Thanh toán – Cần đối soát”. Không
+lặp stage thành một heading riêng trên bảng; board không ghép stage khi không
+có stage selection. Page identity Vận hành và CTA theo khu vực giữ vị trí cũ.
+
+Flow lists trong hub OPERATION dùng chung AdminOperationList: hàng phẳng,
+thumbnail 36px, title 14/20 semibold, metadata 12/16, avatar sm, timestamp và
+liên kết hoạt động cùng cột, selection/focus và nút phụ trung tính. Thanh toán
+giữ các cột đối tượng, loại khoản và số tiền; phương thức dùng label domain,
+không đổi tiền tệ, dấu thu/chi, quyền hoặc callback đối soát. Bảng rộng cuộn
+ngang trong pane, không làm body tràn. Loading/empty giữ đúng cấu trúc cột.
+Các luồng vận chuyển/đơn hàng dùng cùng adapter, giữ command và editor cũ;
+workspace index/việc phát sinh chuẩn hóa heading và khoảng cách hàng. Không
+tuyên bố đã thiết kế lại board hoặc các modal nghiệp vụ trong phạm vi này.
+Các route chuyên biệt ngoài hub tiếp tục dùng presentation hiện hữu.
 
 ## Danh bạ workspace
 
@@ -1021,81 +1043,6 @@ Không hover-lift/translate/scale nên hit area và hàng dữ liệu không d�
 Focus ring, pending, disabled và target coarse giữ contract hiện hữu. Disabled
 bỏ gradient/shadow; trạng thái không có lệnh được phép vẫn là text/badge phẳng,
 không render như nút. Không đổi nhãn, quyền, callback mở editor hoặc command.
-
-
-## Danh bạ workspace
-
-Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
-Người dùng / Khách hàng / Nhà cung cấp (Vendor) theo quyền đọc hiện hữu; không
-đưa Users vào System lần thứ hai. Các URL danh sách cũ giữ nguyên để không phá
-bookmark, search, pagination và form hiện hữu. `/admin/directory` đi tới mục đầu
-được phép; active state sidebar theo cả workspace và các route danh sách.
-
-Dùng geometry `ADMIN_UI_FOUNDATION.splitWorkspace` và `AdminSplitWorkspace`
-đang được áp dụng cho Vận hành / Home ở PR #124: menu 280px gồm inset phải
-16px, gap 28px, line slate-100. Đo available width bằng hook chung; dưới 960px,
-menu thành native selector cùng các destination. Selector kích hoạt cùng route
-link để giữ kiểm tra dirty draft. Không containment hoặc padding page lồng nhau.
-
-Một h1 Danh bạ; heading vùng phải là tên danh sách, action tạo ở cạnh heading,
-toolbar tìm kiếm ngay dưới. Danh sách phẳng, count/filter/pagination theo domain;
-không thêm card hoặc KPI. Mỗi mục chỉ xuất hiện khi đủ quyền đọc, không suy ra
-quyền sửa từ khả năng mở workspace. Không đổi API, role grant hoặc access policy.
-
-Runtime dùng AdminManagementSection và AdminWorkspaceNavigation. Header dùng
-variant workspace như Home; menu chọn nền focusSurface như Vận hành. Toolbar
-tìm kiếm đơn giản dùng variant phẳng, kết quả/count và Làm mới hiện trực tiếp.
-Danh sách có heading cột, nhận diện người dùng bằng AdminUserAvatar, thiếu dữ
-liệu dùng dấu —; trên mobile bỏ heading cột và giữ thứ tự đọc từng liên hệ.
-
-Form người dùng dùng inline editor cùng vùng nội dung như khách hàng/nhà cung
-cấp để đối chiếu danh sách; không mở drawer legacy. Field/button lấy từ shared
-AdminManagement, vai trò dùng checkbox native, không card màu cho từng vai trò.
-PageEditingState ở heading form; lỗi lưu ở trong form và giữ dữ liệu, thành công
-chỉ toast một lần. Hủy/chuyển route/chọn bản ghi khác kiểm tra dirty draft trước.
-API, role grant và semantics lưu không thay đổi. Trang quản lý vai trò riêng
-không thuộc phạm vi chuẩn hóa này.
-
-
-### Directory refresh, sidebar hierarchy and primary buttons
-
-Danh bạ dùng cùng split/resize primitive với Vận hành, với key độ rộng riêng;
-menu Nhóm liên hệ và stage/route selection không mất state khi kéo. Không đặt
-line ngang giữa title/description và nội dung. Heading section 14/20 bold,
-row identity 14/20 semibold, metadata 12/16; font stack có fallback khi biến
-Geist chưa có để shorthand font không vô hiệu hóa size/weight. Cột thao tác
-rộng 72px thống nhất giữa header/row, không lấy auto-width khác nhau từng hàng.
-Email và vai trò dài giữ đầy đủ trong dữ liệu/DOM/title và form sửa, hiển thị
-gọn trong list. Reflow theo list container; không lấy viewport để đo pane.
-
-Sidebar chỉ có một entry Sản phẩm với Đồng hồ / Phụ kiện bên trong; rail mở
-flyout, expanded/mobile dùng disclosure cùng primitive Báo cáo. Lọc từng child
-bằng quyền route hiện hữu, kể cả tài khoản chỉ có quyền xem phụ kiện. Bỏ hai
-shortcut Sales / Kỹ thuật khỏi sidebar; không xóa route, workflow hay đổi quyền.
-
-ADMIN_PRIMARY_ACTION / STYLE là variant dùng chung từ foundation.primaryAction,
-xanh 2563eb với hover/pressed tương ứng, chữ trắng; áp vào nút primary của
-AdminManagement và CTA Vận hành. Giữ 40px desktop / 44px coarse, radius 8px,
-14/20 semibold, icon 16px và focus/pending/disabled. Nút phụ trung tính;
-destructive giữ semantic riêng. Không dùng kích thước nhỏ của nút Configure
-tham chiếu, không tuyên bố mọi button legacy đã migrate.
-
-
-### Raised button finish — explicit design variant
-
-Theo yêu cầu trực tiếp, nút xử lý trong hàng Media/TI dùng lớp nổi nhẹ kiểu
-Cloudflare: gradient trắng/xám rất nhẹ, viền rõ, highlight inset và bóng ngoài
-1–2px; active đổi gradient và dùng bóng inset để tạo cảm giác nhấn xuống.
-Nút primary xanh giữ palette đã chọn và dùng cùng finish. Giá trị nằm một nguồn
-ở foundation.buttonSurface và AdminButtonSurface; không copy palette/shadow
-vào từng page. Đây là ngoại lệ opt-in cho quy tắc không gradient mặc định,
-không áp cho card/row, popover content hoặc mọi control legacy.
-
-Không hover-lift/translate/scale nên hit area và hàng dữ liệu không dịch chuyển.
-Focus ring, pending, disabled và target coarse giữ contract hiện hữu. Disabled
-bỏ gradient/shadow; trạng thái không có lệnh được phép vẫn là text/badge phẳng,
-không render như nút. Không đổi nhãn, quyền, callback mở editor hoặc command.
-
 
 ## Shared buttons across admin — 2026-11-20
 
@@ -1116,7 +1063,8 @@ permissions, confirmation, mutation, navigation or form behavior.
 | Variant | Purpose |
 | --- | --- |
 | primary | Main action: blue surface, subtle top highlight and lower shadow |
-| secondary | Supporting action: neutral raised surface |
+| secondary | Supporting action: flat neutral surface, no gradient or shadow |
+| quiet | Repeated row actions, search, refresh, reorder and preview: transparent surface, compact target, subtle hover |
 | danger | Destructive action: rose surface, existing confirmation unchanged |
 | contextual | Tabs, navigation, calendar/content cells, image choices, menu items, text/close controls; retain their local semantic layout and selection states |
 
@@ -1140,3 +1088,37 @@ Run `npm run check:admin-buttons` to traverse admin imports, reject native butto
 or summary controls outside the primitive, and check client directive placement.
 New adapters must be backed by these primitives. This migration standardizes
 controls; it does not claim that every legacy page layout meets all v2 recipes.
+
+### Hàng tiêu đề trong workspace có menu trái
+
+Dùng `AdminWorkspaceHeading` cho tiêu đề cả hai pane và
+`AdminWorkspaceHeadingRow` cho hàng tiêu đề có thao tác. Chiều cao tối thiểu
+lấy từ control foundation (40 px, 44 px trên thiết bị cảm ứng), kể cả khi
+không có nút hoặc người dùng không có quyền tạo. Tiêu đề giữ vị trí trong
+hàng đầu khi các nút xuống dòng; không căn giữa theo tổng chiều cao nhóm nút.
+Font, cỡ chữ và line-height lấy từ sectionTitle trong foundation.
+Áp dụng cho các khu vực/giai đoạn Vận hành, nhóm Danh bạ và các khối trang chủ website.
+
+### Quiet controls correction — 2026-11-20
+
+Không áp raised finish đại trà. `secondary` dùng viền phẳng, không gradient/bóng.
+`quiet` dành cho thao tác lặp trong hàng và công cụ tra cứu/làm mới, mặc định
+32 px, cảm ứng 44 px. Trạng thái có thể bấm dùng contextual để giữ bố cục badge;
+không có hiệu ứng nâng icon. Điều hướng/liên kết giữ kiểu phẳng. Primary/danger
+chỉ dành cho lệnh cần nhấn mạnh. Dùng `iconOnly` tường minh; không suy luận từ
+CSS `svg:only-child` vì selector này bỏ qua text node, làm nút icon + chữ co vuông.
+Quy tắc này thay thế phần raised mặc định cho supporting/row controls phía trên.
+
+Toolbar workspace dùng `AdminRefreshAction`: chỉ icon refresh, nền trong suốt,
+nhãn truy cập/tooltip và trạng thái đang tải. Bộ chuyển Bảng/Danh sách dùng
+`AdminIconViewSwitch`: hai icon phẳng với aria-pressed và nền xanh nhạt cho lựa
+chọn hiện tại; không có card, bóng hoặc dropdown khi có đủ icon cho các lựa chọn.
+
+Bộ lọc toolbar chỉ hiển thị icon phẳng (32 px desktop, 44 px cảm ứng),
+chấm nhỏ báo bộ lọc đang áp dụng/nhắc chưa đọc; số lượng nằm trong tooltip
+và accessible label. Giữ native details/summary, focus ring và đóng khi bấm ngoài.
+Identity mở xem nhanh trong danh sách TI dùng contextual, không dùng secondary.
+
+Danh sách TI trong Vận hành không có hàng dropdown riêng: Mức chú ý và lịch sử
+đã xong nằm trong bộ lọc chung; sắp xếp dùng `AdminIconSelect` trên toolbar.
+Icon select dùng native select, tooltip mô tả giá trị và chấm báo khác mặc định.

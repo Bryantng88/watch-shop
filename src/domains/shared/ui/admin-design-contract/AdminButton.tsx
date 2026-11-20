@@ -4,7 +4,7 @@ import React, { createContext, forwardRef, useContext, type AnchorHTMLAttributes
 import { ADMIN_BUTTON_SURFACE_STYLE } from "./AdminButtonSurface";
 import styles from "./AdminButton.module.css";
 
-export type AdminButtonVariant = "primary" | "secondary" | "danger" | "contextual";
+export type AdminButtonVariant = "primary" | "secondary" | "danger" | "quiet" | "contextual";
 export type AdminButtonDensity = "default" | "compact";
 const AdminButtonContext = createContext(false);
 
@@ -21,7 +21,7 @@ export function useAdminButtonAppearance({ variant = "secondary", density = "def
     ? Object.fromEntries(Object.entries(style).filter(([key]) => !/^(?:background.*|color|border.*|boxShadow|font.*|textTransform|transform)$/.test(key)))
     : style;
   return {
-    className: [className, admin ? styles.control : ""].filter(Boolean).join(" "),
+    className: [className, admin && className?.trim() !== "hidden" ? styles.control : ""].filter(Boolean).join(" "),
     style: admin ? { ...ADMIN_BUTTON_SURFACE_STYLE, ...safeStyle } as React.CSSProperties : style,
     "data-admin-button": admin ? variant : undefined,
     "data-admin-density": admin ? density : undefined,

@@ -34,7 +34,7 @@ import {
   QueueItemThumbnail,
   type TaskItemQueueItem,
 } from "@/domains/task/ui/task-work/QueueWorkQueue";
-import { PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
+import { PAYMENT_METHOD_OPTIONS, PAYMENT_PURPOSE_LABEL } from "@/domains/payment/shared/payment.constants";
 import {
   manualTransitionActionLabel,
   manualTransitionOutcomeMovesOutOfCurrentStage,
@@ -55,6 +55,7 @@ import type {
 import PurchaseRequestOrderModal from "@/domains/purchase-request/ui/PurchaseRequestOrderModal";
 import { CarrierDispatchAssistant } from "@/domains/shipment/ui/carrier";
 import { PostTargetChip } from "@/domains/shared/ui/post-target/PostTargetChip";
+import { PostTargetSummary } from "@/domains/shared/ui/post-target/PostTargetSummary";
 
 type FlowStage = {
   key: string;
@@ -70,7 +71,7 @@ type Props = {
   statusFilter: string;
   paymentFilter: string;
   activeStage: string;
-  presentation?: "default" | "media";
+  presentation?: "default" | "media" | "operation" | "payment";
   imageOverrides?: Record<string, string | null>;
   pending?: boolean;
   completedIcon?: "success" | "published";
@@ -180,7 +181,7 @@ function paymentPurpose(purpose?: string | null) {
 function paymentOwnerLabel(ownerType?: string | null) {
   const key = String(ownerType ?? "").toUpperCase();
   if (key === "ORDER") return "Khách hàng";
-  if (key === "ACQUISITION") return "Vendor";
+  if (key === "ACQUISITION") return "Nhà cung cấp";
   if (key === "TECHNICAL_ISSUE" || key === "SERVICE_REQUEST" || key === "SERVICE") {
     return "Đối tác dịch vụ";
   }
@@ -513,11 +514,13 @@ export default function FlowItemListView({
   ), [stages]);
   const actionDialog = useAppDialog();
   const isMedia = presentation === "media";
-  const showPaymentAmount = items.some((item) => Boolean(item.payment));
+  const isCompact = presentation !== "default";
+  const showPaymentAmount = presentation === "payment" || items.some((item) => Boolean(item.payment));
   const showStatusColumn =
     !isMedia && !showPaymentAmount && !normalize(activeStage).includes("photography");
   const showProgressColumn = normalize(activeStage).includes("media-processing");
   const showPublishChannels = normalize(activeStage).includes("publish");
+  const columnCount = 5 + Number(showStatusColumn) + Number(showProgressColumn) + Number(showPublishChannels) + (showPaymentAmount ? 3 : 1) + Number(!isCompact);
   const visibleItems = useMemo(() => {
     const cleanQuery = query.trim().toLocaleLowerCase("vi");
     return items.filter((item) => {
@@ -1007,18 +1010,18 @@ export default function FlowItemListView({
   );
 
   return (
-    <div className="bg-white" style={isMedia ? ADMIN_OPERATION_LIST_STYLE : undefined}>
+    <div className="bg-white" style={isCompact ? ADMIN_OPERATION_LIST_STYLE : undefined}>
       {selectedItems.length ? (
-        <div className="flex flex-wrap items-center gap-3 border-b border-violet-100 bg-violet-50 px-5 py-3">
-          <span className="text-sm font-semibold text-violet-900">Đã chọn {selectedItems.length} item</span>
+        <div className={isCompact ? styles.bulkBar : "flex flex-wrap items-center gap-3 border-b border-violet-100 bg-violet-50 px-5 py-3"}>
+          <span className={isCompact ? "text-sm font-semibold text-slate-700" : "text-sm font-semibold text-violet-900"}>Đã chọn {selectedItems.length} công việc</span>
           {selectedPaymentItems.length ? (
             <AdminButton variant="primary" density="compact"
               type="button"
               disabled={isActionPending}
               onClick={openBulkReconcileModal}
-              className="h-8 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"
+              className={isCompact ? styles.bulkAction : "h-8 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"}
             >
-              Đối soát {selectedPaymentItems.length} payment
+              Đối soát {selectedPaymentItems.length} khoản
             </AdminButton>
           ) : null}
           {commonActions.slice(0, 2).map((transition) => (
@@ -1027,7 +1030,7 @@ export default function FlowItemListView({
               type="button"
               disabled={isActionPending}
               onClick={() => runBulkAction(transition.actionKey)}
-              className="h-8 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"
+              className={isCompact ? styles.bulkAction : "h-8 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"}
             >
               {pendingActionId === "BULK" ? "Đang xử lý..." : manualTransitionActionLabel(transition)}
             </AdminButton>
@@ -1042,11 +1045,11 @@ export default function FlowItemListView({
         </div>
       ) : null}
 
-      <div className={isMedia ? styles.mediaScroll : "overflow-x-auto"}>
-        <table className={cn(
+      <div className={isCompact ? styles.mediaScroll : "overflow-x-auto"}>
+        <table aria-label={showPaymentAmount ? "Danh sách thanh toán" : "Danh sách công việc"} className={cn(
           "w-full border-collapse",
-          isMedia
-            ? cn(styles.mediaTable, showProgressColumn && styles.withProgress, showPublishChannels && styles.withChannels)
+          isCompact
+            ? cn(styles.mediaTable, showProgressColumn && styles.withProgress, showPublishChannels && styles.withChannels, showPaymentAmount && styles.withPayment)
             : showPaymentAmount
             ? "min-w-[1080px]"
             : showPublishChannels
@@ -1055,7 +1058,7 @@ export default function FlowItemListView({
         )}>
           <thead>
             <tr className="border-b border-slate-200 bg-[#fbfcfe] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-slate-500">
-              <th scope="col" className={cn("w-12 px-5 py-3", isMedia && styles.selectionColumn)}>
+              <th scope="col" className={cn("w-12 px-5 py-3", isCompact && styles.selectionColumn)}>
                 <ResponsiveSelectionCheckbox
                   aria-label="Chọn tất cả item đang hiển thị"
                   checked={allVisibleSelected}
@@ -1072,21 +1075,22 @@ export default function FlowItemListView({
                   }}
                 />
               </th>
-              <th scope="col" className="px-2 py-3">Item</th>
-              {showStatusColumn ? <th scope="col" className={cn("px-4 py-3", isMedia && styles.statusColumn)}>Trạng thái</th> : null}
-              {showProgressColumn ? <th scope="col" className={cn("w-40 px-4 py-3", isMedia && styles.progressColumn)}>{isMedia ? "Tiến độ" : "Progress"}</th> : null}
-              {showPublishChannels ? <th scope="col" className={cn("w-56 px-4 py-3", isMedia && styles.channelColumn)}>Kênh đăng</th> : null}
-              {showPaymentAmount ? <th className="w-52 px-4 py-3">Đối tượng</th> : null}
-              {showPaymentAmount ? <th className="w-44 px-4 py-3">Loại khoản</th> : null}
-              {showPaymentAmount ? <th className="w-40 px-4 py-3 text-right">Số tiền</th> : null}
-              {!showPaymentAmount ? <th scope="col" className={cn("w-44 px-4 py-3", isMedia && styles.actionColumn)}>{isMedia ? "Xử lý" : "Thao tác"}</th> : null}
-              <th scope="col" className={cn("px-4 py-3", isMedia && styles.userColumn)}>Người thao tác</th>
-              <th scope="col" className={cn("px-4 py-3", isMedia ? styles.updatedColumn : "text-center")}>Cập nhật</th>
-              {!isMedia && <th scope="col" className="w-64 px-4 py-3">Thao tác cuối</th>}
-              <th scope="col" className={cn("w-10", isMedia && styles.previewColumn)}><span className="sr-only">Xem chi tiết</span></th>
+              <th scope="col" className="px-2 py-3">{showPaymentAmount ? "Khoản thu / chi" : "Item"}</th>
+              {showStatusColumn ? <th scope="col" className={cn("px-4 py-3", isCompact && styles.statusColumn)}>Trạng thái</th> : null}
+              {showProgressColumn ? <th scope="col" className={cn("w-40 px-4 py-3", isCompact && styles.progressColumn)}>{isCompact ? "Tiến độ" : "Progress"}</th> : null}
+              {showPublishChannels ? <th scope="col" className={cn("w-56 px-4 py-3", isCompact && styles.channelColumn)}>Kênh đăng</th> : null}
+              {showPaymentAmount ? <th scope="col" className={cn("w-52 px-4 py-3", isCompact && styles.counterpartyColumn)}>Đối tượng</th> : null}
+              {showPaymentAmount ? <th scope="col" className={cn("w-44 px-4 py-3", isCompact && styles.purposeColumn)}>Loại khoản</th> : null}
+              {showPaymentAmount ? <th scope="col" className={cn("w-40 px-4 py-3 text-right", isCompact && styles.amountColumn)}>Số tiền</th> : null}
+              {!showPaymentAmount ? <th scope="col" className={cn("w-44 px-4 py-3", isCompact && styles.actionColumn)}>{isMedia ? "Xử lý" : "Thao tác"}</th> : null}
+              <th scope="col" className={cn("px-4 py-3", isCompact && styles.userColumn)}>Người thao tác</th>
+              <th scope="col" className={cn("px-4 py-3", isCompact ? styles.updatedColumn : "text-center")}>Cập nhật</th>
+              {!isCompact && <th scope="col" className="w-64 px-4 py-3">Thao tác cuối</th>}
+              <th scope="col" className={cn("w-10", isCompact && styles.previewColumn)}><span className="sr-only">Xem chi tiết</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
+            {isCompact && (pending || !visibleItems.length) && <tr><td colSpan={columnCount} className="py-6 text-center text-sm text-slate-500" role="status">{pending ? "Đang tải công việc…" : "Không có công việc phù hợp với bộ lọc hiện tại."}</td></tr>}
             {!pending && visibleItems.map((item) => {
               const stage = stageByKey.get(normalize(item.flowStageKey));
               const checked = selectedIds.includes(item.id);
@@ -1141,8 +1145,8 @@ export default function FlowItemListView({
                   }}
                   className={cn(
                     "group transition hover:bg-slate-50",
-                    previewType(item.targetType) && (isMedia ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-300"),
-                    checked && (isMedia ? "bg-blue-50/50" : "bg-violet-50/50"),
+                    previewType(item.targetType) && (isCompact ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-300" : "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-violet-300"),
+                    checked && (isCompact ? "bg-blue-50/50" : "bg-violet-50/50"),
                   )}
                 >
                   <td className="px-5 py-3">
@@ -1164,9 +1168,9 @@ export default function FlowItemListView({
                     <AdminButton variant="contextual"
                       type="button"
                       onClick={() => openItemPreview(item)}
-                      className={cn("flex min-w-0 items-center gap-3 text-left", isMedia && styles.identity)}
+                      className={cn("flex min-w-0 items-center gap-3 text-left", isCompact && styles.identity)}
                     >
-                      <span className={cn("relative shrink-0", isMedia && styles.thumbnail)}>
+                      <span className={cn("relative shrink-0", isCompact && styles.thumbnail)}>
                         <QueueItemThumbnail item={thumbnailItem as TaskItemQueueItem} />
                         {item.discussionCount > 0 ? (
                           <span
@@ -1178,7 +1182,7 @@ export default function FlowItemListView({
                         ) : null}
                       </span>
                       <span className="min-w-0">
-                        <span title={item.preview.title || undefined} className={isMedia ? styles.title : "block max-w-[340px] truncate text-sm font-semibold text-slate-950"}>{item.preview.title || "Item chưa đặt tên"}</span>
+                        <span title={item.preview.title || undefined} className={isCompact ? styles.title : "block max-w-[340px] truncate text-sm font-semibold text-slate-950"}>{item.preview.title || "Item chưa đặt tên"}</span>
                         <span className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-500"><span className="truncate">{item.preview.ref || item.targetType}</span><WatchMediaWorkBadge state={dailyState(item.dailyMediaWork)}/></span>
                       </span>
                     </AdminButton>
@@ -1186,7 +1190,7 @@ export default function FlowItemListView({
                   {showStatusColumn ? (
                     <td className="px-4 py-3">
                       <WorkflowStatusSignal
-                        compact={isMedia}
+                        compact={isCompact}
                         status={item.currentWorkflowState || item.status}
                         label={item.currentWorkflowStateLabel || item.preview.status}
                         completedIcon={completedIcon}
@@ -1199,16 +1203,16 @@ export default function FlowItemListView({
                         value={(item.mediaWorkProgress.completed / item.mediaWorkProgress.total) * 100}
                         numerator={item.mediaWorkProgress.completed}
                         denominator={item.mediaWorkProgress.total}
-                        appearance={isMedia ? "quiet" : "default"}
+                        appearance={isCompact ? "quiet" : "default"}
                         layout="compact"
-                        className={isMedia ? "w-full" : "w-36"}
+                        className={isCompact ? "w-full" : "w-36"}
                         label={`Tiến độ Media: ${item.mediaWorkProgress.completed}/${item.mediaWorkProgress.total} đầu việc`}
                       />
                     ) : <span className="text-xs text-slate-400">-</span>}
                   </td> : null}
                   {showPublishChannels ? (
                     <td className="px-4 py-3">
-                      {item.preview.postTargets?.length ? (
+                      {item.preview.postTargets?.length && isCompact ? <PostTargetSummary targets={item.preview.postTargets} /> : item.preview.postTargets?.length ? (
                         <div
                           title={item.preview.postTargets
                             .map((target) =>
@@ -1233,10 +1237,10 @@ export default function FlowItemListView({
                     <td className="px-4 py-3">
                       {item.payment ? (
                         <>
-                          <div className="max-w-48 truncate text-xs font-semibold text-slate-800">
+                          <div className={isCompact ? styles.title : "max-w-48 truncate text-xs font-semibold text-slate-800"}>
                             {item.payment.counterparty ?? item.payment.ownerRef ?? "Chưa xác định"}
                           </div>
-                          <div className="mt-1 text-[11px] text-slate-500">
+                          <div className="mt-1 text-xs leading-4 text-slate-500">
                             {paymentOwnerLabel(item.payment.ownerType)}
                             {item.payment.contact ? ` · ${item.payment.contact}` : ""}
                           </div>
@@ -1251,8 +1255,8 @@ export default function FlowItemListView({
                           <div className="text-xs font-semibold text-slate-800">
                             {paymentPurpose(item.payment.purpose)}
                           </div>
-                          <div className="mt-1 text-[11px] text-slate-500">
-                            {item.payment.type ?? item.payment.ownerType}
+                          <div className="mt-1 text-xs leading-4 text-slate-500">
+                            {isCompact ? ({ SERVICE: "Dịch vụ", ACQUISITION: "Thu mua", ORDER: "Đơn hàng", TECHNICAL_ISSUE: "Kỹ thuật", SERVICE_REQUEST: "Yêu cầu dịch vụ" } as Record<string,string>)[item.payment.type ?? item.payment.ownerType] ?? paymentOwnerLabel(item.payment.ownerType) : item.payment.type ?? item.payment.ownerType}
                           </div>
                         </>
                       ) : <span className="text-xs text-slate-400">-</span>}
@@ -1295,8 +1299,8 @@ export default function FlowItemListView({
                               )}
                             </div>
                           )}
-                          <div className="mt-1 text-[11px] font-medium text-slate-500">
-                            {item.payment.method ?? "Chưa có phương thức"}
+                          <div className="mt-1 text-xs leading-4 text-slate-500">
+                            {isCompact ? PAYMENT_METHOD_OPTIONS.find(option => option.value === item.payment?.method)?.label ?? item.payment.method ?? "Chưa có phương thức" : item.payment.method ?? "Chưa có phương thức"}
                           </div>
                         </>
                       ) : <span className="text-xs text-slate-400">-</span>}
@@ -1308,11 +1312,15 @@ export default function FlowItemListView({
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    {isMedia && enabledActions.length > 1 ? (
+                    {isCompact && item.targetType !== "PURCHASE_REQUEST" && enabledActions.length > 1 ? (
                       <MediaRowActions item={item} actions={enabledActions} status={processingStatus} disabled={isActionPending}
                         onActivate={previewState.closePreview} onReloadRequested={onReloadRequested}
                         onTransitionApplied={outcome => reconcileModalTransition(item, outcome)}
-                        onAction={transition => void requestRowAction(item, transition)} />
+                        onAction={transition => {
+                          const action = item.targetType === "SHIPMENT" ? operationalActionFromMetadata(transition.metadata) : null;
+                          if (action) openOperationalAction(item, action);
+                          else void requestRowAction(item, transition);
+                        }} />
                     ) : item.targetType === "PURCHASE_REQUEST" && item.purchaseRequest ? (
                       <div className="flex flex-wrap items-center gap-1.5">
                         {item.isWorkflowDone && item.purchaseRequest.orderId ? (
@@ -1336,7 +1344,7 @@ export default function FlowItemListView({
                             onActivate={previewState.closePreview}
                             onRefreshRequested={onReloadRequested}
                             onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
-                            className={isMedia ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
+                            className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                           />
                         ) : (
                           <AdminButton variant="secondary" density="compact"
@@ -1345,7 +1353,7 @@ export default function FlowItemListView({
                             aria-busy={pendingActionId === item.id}
                             onClick={() => void requestRowAction(item, enabledActions[0])}
                             title={manualTransitionActionLabel(enabledActions[0])}
-                            className={isMedia ? styles.rowAction : "h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
+                            className={isCompact ? styles.rowAction : "h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                           >
                             {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
                               : isMedia ? processingStatus : manualTransitionActionLabel(enabledActions[0])}
@@ -1362,7 +1370,7 @@ export default function FlowItemListView({
                               onActivate={previewState.closePreview}
                               onRefreshRequested={onReloadRequested}
                               onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
-                              className={isMedia ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
+                              className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                             />
                           ) : (
                             <AdminButton variant="secondary" density="compact"
@@ -1371,7 +1379,7 @@ export default function FlowItemListView({
                             aria-busy={pendingActionId === item.id}
                               onClick={() => void requestRowAction(item, enabledActions[0])}
                               title={manualTransitionActionLabel(enabledActions[0])}
-                              className={isMedia ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
+                              className={isCompact ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                             >
                               {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
                                 : isMedia ? processingStatus : manualTransitionActionLabel(enabledActions[0])}
@@ -1431,7 +1439,7 @@ export default function FlowItemListView({
                                   : void requestRowAction(item, transition)
                               }
                               title={manualTransitionActionLabel(transition)}
-                              className={isMedia ? styles.rowAction : "h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
+                              className={isCompact ? styles.rowAction : "h-8 max-w-40 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                             >
                               {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
                                 : manualTransitionActionLabel(transition)}
@@ -1480,7 +1488,7 @@ export default function FlowItemListView({
                         onActivate={previewState.closePreview}
                         onRefreshRequested={onReloadRequested}
                         onTransitionApplied={(outcome) => reconcileModalTransition(item, outcome)}
-                        className={isMedia ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
+                        className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                       />
                     ) : primaryAction ? (
                       <AdminButton variant="secondary" density="compact"
@@ -1489,7 +1497,7 @@ export default function FlowItemListView({
                             aria-busy={pendingActionId === item.id}
                         onClick={() => void requestRowAction(item, primaryAction)}
                         title={manualTransitionActionLabel(primaryAction)}
-                        className={isMedia ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
+                        className={isCompact ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                       >
                         {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</> : isMedia ? processingStatus : manualTransitionActionLabel(primaryAction)}
                       </AdminButton>
@@ -1498,7 +1506,7 @@ export default function FlowItemListView({
                   <td className="px-4 py-3">
                     {item.lastUpdatedBy ? (
                       <div className="flex items-center gap-2">
-                        {isMedia ? (
+                        {isCompact ? (
                         <AdminUserAvatar size="sm" user={{ name: item.lastUpdatedBy.label, avatarUrl: item.lastUpdatedBy.avatarUrl }} />
                         ) : (
                         <UserAvatar
@@ -1511,8 +1519,8 @@ export default function FlowItemListView({
                       </div>
                     ) : <span className="text-xs text-slate-400">Hệ thống</span>}
                   </td>
-                  <td className={cn("px-4 py-3 text-xs text-slate-500", !isMedia && "text-center")}>
-                    {isMedia ? <>
+                  <td className={cn("px-4 py-3 text-xs text-slate-500", !isCompact && "text-center")}>
+                    {isCompact ? <>
                       <time className={styles.time} dateTime={item.updatedAt ?? undefined}>{formatTime(item.updatedAt)}</time>
                       <Link href={`/admin/activity?targetType=${encodeURIComponent(item.targetType)}&q=${encodeURIComponent(item.targetId)}&period=ALL`}
                         className={styles.activity} title={item.latestActivityTitle || "Chưa có thao tác"}
@@ -1522,7 +1530,7 @@ export default function FlowItemListView({
                       </Link>
                     </> : formatTime(item.updatedAt)}
                   </td>
-                  {!isMedia && <td className="px-4 py-3">
+                  {!isCompact && <td className="px-4 py-3">
                     <Link
                       href={`/admin/activity?targetType=${encodeURIComponent(item.targetType)}&q=${encodeURIComponent(item.targetId)}&period=ALL`}
                       className="flex max-w-64 items-center gap-2 text-left text-xs text-slate-600 transition hover:text-violet-700"
@@ -1534,11 +1542,11 @@ export default function FlowItemListView({
                     </Link>
                   </td>}
                   <td className="px-4 py-3">
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet" iconOnly
                       type="button"
                       onClick={() => openItemPreview(item)}
                       aria-label="Xem nhanh item"
-                      className={isMedia ? styles.previewButton : "text-slate-400 transition group-hover:text-violet-600"}
+                      className={isCompact ? styles.previewButton : "text-slate-400 transition group-hover:text-violet-600"}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </AdminButton>
