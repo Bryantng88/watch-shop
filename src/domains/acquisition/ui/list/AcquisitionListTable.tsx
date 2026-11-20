@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import styles from "@/domains/shared/ui/admin-design-contract/AdminBusinessTable.module.css";
+import { ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
 
 import { cn } from "@/lib/utils";
 
@@ -65,26 +68,17 @@ export default function AcquisitionListTable({
         selectableIds.some((id) => selectedIds.includes(id)) && !allChecked;
 
     return (
-        <div className="overflow-hidden bg-white">
-            <div className="w-full overflow-x-auto">
-                <table className="w-full min-w-[960px] table-fixed text-sm">
-                    <colgroup>
-                        <col className="w-[3%]" />
-                        <col className="w-[23%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[12%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[10%]" />
-                        <col className="w-[10%]" />
-                        <col className="w-[7%]" />
-                        <col className="w-[7%]" />
-                    </colgroup>
+        <div className={styles.list} style={ADMIN_OPERATION_LIST_STYLE}>
+            <div className={styles.scroll}>
+                <table className={styles.table}>
+                    <caption className="sr-only">Danh sách phiếu nhập</caption>
+                    <colgroup><col style={{ width: 40 }} /><col style={{ width: 250 }} /><col style={{ width: 156 }} /><col style={{ width: 128 }} />{canViewFinancials && <col style={{ width: 140 }} />}<col style={{ width: 140 }} />{canViewFinancials && <col style={{ width: 168 }} />}<col style={{ width: 112 }} /><col style={{ width: 44 }} /></colgroup>
 
-                    <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
+                    <thead>
                         <tr>
                             <th className="px-4 py-3">
                                 <input
-                                    type="checkbox"
+                                    type="checkbox" aria-label="Chọn tất cả dòng có thể xử lý"
                                     checked={allChecked}
                                     ref={(element) => {
                                         if (element) element.indeterminate = someChecked;
@@ -97,10 +91,10 @@ export default function AcquisitionListTable({
                             <th className="px-4 py-3">Phiếu nhập</th>
                             <th className="px-4 py-3">Trạng thái phiếu</th>
                             <th className={canViewFinancials ? "px-4 py-3" : "hidden"}>Thanh toán</th>
-                            <th className="px-4 py-3">Vendor</th>
+                            <th className="px-4 py-3">Nhà cung cấp</th>
                             <th className={canViewFinancials ? "px-4 py-3 text-right" : "hidden"}>Tổng tiền</th>
                             <th className="px-4 py-3">Cập nhật</th>
-                            <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right">Thao tác</th>
+                            <th className="sticky right-0 z-10 bg-slate-50 px-3 py-3 text-right"><span className="sr-only">Thao tác</span></th>
                         </tr>
                     </thead>
 
@@ -119,7 +113,7 @@ export default function AcquisitionListTable({
 
                         {!items.length ? (
                             <tr>
-                                <td colSpan={9} className="px-5 py-12 text-center text-sm text-slate-500">
+                                <td colSpan={canViewFinancials ? 9 : 7} className="px-5 py-12 text-center text-sm text-slate-500">
                                     Không có phiếu nhập phù hợp.
                                 </td>
                             </tr>
@@ -128,7 +122,7 @@ export default function AcquisitionListTable({
                 </table>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-sm text-slate-500">
+            <div className={styles.footer}>
                 <div>
                     Tổng: <b className="text-slate-900">{total}</b> phiếu · Trang {page}/
                     {totalPages}
@@ -136,29 +130,31 @@ export default function AcquisitionListTable({
 
                 <div className="flex gap-2">
                     <Link
+                        aria-label="Trang trước"
                         aria-disabled={page <= 1}
                         href={buildHref(pathname, searchParams, {
                             page: String(Math.max(1, page - 1)),
                         })}
                         className={cn(
-                            "rounded-xl border border-slate-200 px-3 py-2",
+                            styles.pageLink,
                             page <= 1 && "pointer-events-none opacity-40",
                         )}
                     >
-                        Trước
+                        <ChevronLeft size={16} aria-hidden="true" />
                     </Link>
 
                     <Link
+                        aria-label="Trang sau"
                         aria-disabled={page >= totalPages}
                         href={buildHref(pathname, searchParams, {
                             page: String(Math.min(totalPages, page + 1)),
                         })}
                         className={cn(
-                            "rounded-xl border border-slate-200 px-3 py-2",
+                            styles.pageLink,
                             page >= totalPages && "pointer-events-none opacity-40",
                         )}
                     >
-                        Sau
+                        <ChevronRight size={16} aria-hidden="true" />
                     </Link>
                 </div>
             </div>

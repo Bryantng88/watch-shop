@@ -2858,7 +2858,7 @@ export async function getCoordinationDashboard(input: {
   const flowStatus = normalizeStatus(input.flowStatus);
   const flowPaymentStatus = normalizeStatus(input.flowPaymentStatus);
   const flowPaymentType = normalizeStatus(input.flowPaymentType);
-  const flowPaymentDirection = normalizeStatus(input.flowPaymentDirection);
+  let flowPaymentDirection = normalizeStatus(input.flowPaymentDirection);
   const flowSort = normalizeStatus(input.flowSort) || "UPDATED_DESC";
   const hasFlowFilters = Boolean(
     flowQuery ||
@@ -3069,6 +3069,7 @@ export async function getCoordinationDashboard(input: {
   const isTechnicalFlow = input.context === "TECHNICAL" || activeFlow?.key === "technical-issue-flow";
   const isMediaFlow = input.context === "MEDIA" || activeFlow?.key === "media-production-flow";
   const isPaymentFlow = input.context === "PAYMENT" || activeFlow?.key === "payment-collection-core-flow";
+  if (input.context === "OPERATION" && isPaymentFlow && !normalizeStatus(input.flowStageKey).includes("SETTLED") && !["IN", "OUT"].includes(flowPaymentDirection)) flowPaymentDirection = "IN";
   const isShipmentFlow = activeFlow?.key === "shipment-operation-core-flow";
   const isPurchaseRequestFlow = activeFlow?.key === "purchase-request-operation-core-flow";
   const usesGenericFlowItemReader =
@@ -3836,7 +3837,9 @@ export async function getCoordinationDashboard(input: {
   } else if (isPaymentFlow && paymentStageCountsPromise) {
     const counts = await paymentStageCountsPromise;
     flowStageCounts["payment-review"] = counts.unpaid;
-    flowStageCounts["payment-settled"] = counts.all - counts.unpaid;
+    flowStageCounts["payment-review-in"] = counts.incomingUnpaid;
+    flowStageCounts["payment-review-out"] = counts.outgoingUnpaid;
+    flowStageCounts["payment-settled"] = counts.settledAll;
   } else if (isShipmentFlow && shipmentStageCountsPromise) {
     const counts = await shipmentStageCountsPromise;
     flowStageCounts["shipment-waiting"] =
@@ -3870,7 +3873,7 @@ export async function getCoordinationDashboard(input: {
   for (const [taskItemId, count] of paymentQueueCountByTaskItem) {
     queueCountByTaskItem.set(taskItemId, count);
   }
-  if (!isMediaFlow && !isTechnicalFlow) {
+  if (!isMediaFlow && !isTechnicalFlow && !isPaymentFlow) {
     for (const workspace of flowLoadTaskItems) {
       const metadata = workspaceRoleMetadataFromNote(workspace.note);
       const stageKey = normalizeWorkTypeKey(

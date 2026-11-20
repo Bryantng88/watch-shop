@@ -271,6 +271,7 @@ function projectionOrder(sort: PaymentListProjectionInput["sort"]) {
 export async function queryPaymentListProjection(db: DB, input: PaymentListProjectionInput) {
   const offset = (input.page - 1) * input.pageSize;
   const baseWhere = Prisma.join(baseConditions(input), " AND ");
+  const directionWhere = Prisma.join(baseConditions({ ...input, direction: undefined }), " AND ");
   const status = clean(input.status).toUpperCase() || null;
   const statusNot = clean(input.statusNot).toUpperCase() || null;
   const rows = await dbOrTx(db).$queryRaw<Array<{
@@ -284,6 +285,7 @@ export async function queryPaymentListProjection(db: DB, input: PaymentListProje
       FROM "ProjectionRecord"
       WHERE ${baseWhere}
     ),
+    direction_base AS (SELECT "status", "dataJson" FROM "ProjectionRecord" WHERE ${directionWhere}),
     selected AS (
       SELECT "dataJson"
       FROM base
@@ -298,6 +300,9 @@ export async function queryPaymentListProjection(db: DB, input: PaymentListProje
       UNION ALL SELECT 'paid', COUNT(*) FROM base WHERE "status" = 'PAID'
       UNION ALL SELECT 'unpaid', COUNT(*) FROM base WHERE "status" = 'UNPAID'
       UNION ALL SELECT 'canceled', COUNT(*) FROM base WHERE "status" = 'CANCELED'
+      UNION ALL SELECT 'incomingUnpaid', COUNT(*) FROM direction_base WHERE "status" = 'UNPAID' AND "dataJson"->>'direction' = 'IN'
+      UNION ALL SELECT 'outgoingUnpaid', COUNT(*) FROM direction_base WHERE "status" = 'UNPAID' AND "dataJson"->>'direction' = 'OUT'
+      UNION ALL SELECT 'settledAll', COUNT(*) FROM direction_base WHERE "status" <> 'UNPAID'
       UNION ALL SELECT 'total', COUNT(*) FROM base
         WHERE (${status}::text IS NULL OR "status" = ${status})
           AND (${statusNot}::text IS NULL OR "status" <> ${statusNot})
@@ -315,6 +320,9 @@ export async function queryPaymentListProjection(db: DB, input: PaymentListProje
       .map((row) => row.dataJson as PaymentListProjectionRow),
     total: counts.get("total") ?? 0,
     counts: {
+      incomingUnpaid: counts.get("incomingUnpaid") ?? 0,
+      outgoingUnpaid: counts.get("outgoingUnpaid") ?? 0,
+      settledAll: counts.get("settledAll") ?? 0,
       all: counts.get("all") ?? 0,
       paid: counts.get("paid") ?? 0,
       unpaid: counts.get("unpaid") ?? 0,

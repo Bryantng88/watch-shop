@@ -1,4 +1,5 @@
 "use client";
+import { AdminMoney } from "@/domains/shared/ui/admin-design-contract/AdminMoney";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
@@ -1266,39 +1267,8 @@ export default function FlowItemListView({
                     <td className="px-4 py-3 text-right">
                       {item.payment ? (
                         <>
-                          {canOpenReconciliation ? (
-                            <AdminButton variant="secondary"
-                              type="button"
-                              disabled={isActionPending}
-                              onClick={() => openReconcileModal(item)}
-                              title={`Mở đối soát ${paymentDirection(item.payment?.direction).label.toLowerCase()}`}
-                              className={cn(
-                                "ml-auto block text-sm font-bold tabular-nums underline-offset-4 transition hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-200 disabled:cursor-wait disabled:opacity-60",
-                                String(item.payment.direction).toUpperCase() === "OUT"
-                                  ? "text-rose-700 hover:text-rose-800"
-                                  : "text-emerald-700 hover:text-emerald-800",
-                              )}
-                            >
-                              {formatMoney(
-                                item.payment.amount,
-                                item.payment.currency,
-                                paymentDirection(item.payment.direction).sign,
-                              )}
-                            </AdminButton>
-                          ) : (
-                            <div className={cn(
-                              "text-sm font-bold tabular-nums",
-                              String(item.payment.direction).toUpperCase() === "OUT"
-                                ? "text-rose-700"
-                                : "text-emerald-700",
-                            )}>
-                              {formatMoney(
-                                item.payment.amount,
-                                item.payment.currency,
-                                paymentDirection(item.payment.direction).sign,
-                              )}
-                            </div>
-                          )}
+                          <AdminMoney amount={String(item.payment.direction).toUpperCase() === "OUT" ? -Math.abs(item.payment.amount) : Math.abs(item.payment.amount)} currency={item.payment.currency} className={cn("text-sm font-medium leading-5", String(item.payment.direction).toUpperCase() === "OUT" ? "text-rose-700" : "text-emerald-700")} />
+
                           <div className="mt-1 text-xs leading-4 text-slate-500">
                             {isCompact ? PAYMENT_METHOD_OPTIONS.find(option => option.value === item.payment?.method)?.label ?? item.payment.method ?? "Chưa có phương thức" : item.payment.method ?? "Chưa có phương thức"}
                           </div>
@@ -1544,8 +1514,11 @@ export default function FlowItemListView({
                   <td className="px-4 py-3">
                     <AdminButton variant="quiet" iconOnly
                       type="button"
-                      onClick={() => openItemPreview(item)}
-                      aria-label="Xem nhanh item"
+                      onClick={(event) => { event.stopPropagation(); if (canOpenReconciliation) openReconcileModal(item); else openItemPreview(item); }}
+                      onKeyDown={(event) => event.stopPropagation()}
+                      disabled={canOpenReconciliation && isActionPending}
+                      aria-label={canOpenReconciliation ? "Mở đối soát khoản thu / chi" : "Xem nhanh item"}
+                      title={canOpenReconciliation ? "Mở đối soát" : "Xem nhanh"}
                       className={isCompact ? styles.previewButton : "text-slate-400 transition group-hover:text-violet-600"}
                     >
                       <ChevronRight className="h-4 w-4" />

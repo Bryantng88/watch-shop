@@ -1,0 +1,16 @@
+.list { min-width: 0; max-width: 100%; background: var(--admin-list-canvas); font-family: var(--admin-list-font); color: var(--admin-list-body); }
+.scroll { max-width: 100%; overflow-x: auto; }
+.table { width: 100%; min-width: 1160px; table-layout: fixed; border-collapse: collapse; font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); }
+.table th, .table td { padding: var(--admin-list-cell-padding); vertical-align: middle; border-bottom: 1px solid var(--admin-list-divider); overflow-wrap: anywhere; }
+.table thead { background: var(--admin-list-canvas); text-transform: none; letter-spacing: normal; text-align: left; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); }
+.table th { font-weight: 500; }
+.table th:first-child, .table td:first-child { padding-left: 8px; padding-right: 8px; }
+.table th:last-child, .table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--admin-list-canvas); padding-left: 4px; padding-right: 4px; box-shadow: none; }
+.table tbody tr:hover { background: var(--admin-list-softSurface); }
+.footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-variant-numeric: tabular-nums; }
+.pageLink { display: inline-flex; min-width: 32px; min-height: 32px; align-items: center; justify-content: center; border-radius: 6px; }
+.pageLink:hover { background: var(--admin-list-softSurface); }
+.pageLink:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
+@media(pointer:coarse) { .pageLink { min-width: var(--admin-list-touch); min-height: var(--admin-list-touch); } }
+
+.bulk { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--admin-list-divider, #f1f5f9); font-size: 12px; line-height: 16px; color: var(--admin-list-muted, #64748b); }

@@ -50,7 +50,6 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
   const lowStock = stocked.filter(row => row.lowStock).length;
   const attached = rows.filter(row => row.attachedWatch).length;
   return <section aria-label="Danh sách dây đồng hồ" className={styles.list} style={ADMIN_OPERATION_LIST_STYLE}>
-    <p className={styles.summary}><span><strong>{rows.length.toLocaleString("vi-VN")}</strong> biến thể</span><span><strong>{stocked.reduce((sum, row) => sum + row.stockQty, 0).toLocaleString("vi-VN")}</strong> chiếc tồn kho</span>{lowStock > 0 && <span className={styles.warning}>{lowStock} mẫu sắp hết</span>}{attached > 0 && <span>{attached} đang gắn đồng hồ</span>}</p>
     {hosted && <AdminWorkspaceFilter label="Trạng thái dây" value={applied.status} options={(fields[2].options ?? []).map(option => option.value ? option : { ...option, label: "Tất cả" })} onChange={status => { setValues(current => ({ ...current, status })); setApplied(current => ({ ...current, status })); }} />}
     <BusinessListFilterBar variant="flat" values={values}
       search={{ key: "q", placeholder: "Tìm tên dây, SKU, hãng, màu, kích thước…" }}
@@ -72,6 +71,7 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
       </tr>)}</tbody>
     </table>
     <p className={styles.metadata} role="status" aria-live="polite">Hiển thị {filteredRows.length.toLocaleString("vi-VN")} / {rows.length.toLocaleString("vi-VN")} dây đồng hồ</p>
+    <p className={styles.summary}><span><strong>{rows.length.toLocaleString("vi-VN")}</strong> biến thể</span><span><strong>{stocked.reduce((sum, row) => sum + row.stockQty, 0).toLocaleString("vi-VN")}</strong> chiếc tồn kho</span>{lowStock > 0 && <span className={styles.warning}>{lowStock} mẫu sắp hết</span>}{attached > 0 && <span>{attached} đang gắn đồng hồ</span>}</p>
     {!filteredRows.length && <div className={styles.empty}><p>{rows.length ? "Không tìm thấy dây đồng hồ phù hợp." : "Chưa có dây đồng hồ trong danh sách."}</p>{rows.length > 0 && <AdminButton variant="quiet" density="compact" type="button" onClick={reset}>Xóa bộ lọc</AdminButton>}</div>}
   </section>;
 }

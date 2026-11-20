@@ -12,6 +12,7 @@ export async function getAcquisitionListProjection(input: AcquisitionListFilters
     return {
         items: result.items,
         total: result.total,
+        counts: result.counts,
         page: result.page,
         pageSize: result.pageSize,
         totalPages: result.totalPages,

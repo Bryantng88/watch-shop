@@ -26,3 +26,15 @@ button.navigationLink:hover { background: var(--am-soft); }
 button.navigationLink:disabled { opacity: .5; cursor: default; }
 .filterTarget:empty { display: none; }
 @media(pointer:coarse) { .filterNavigation .navigationLink { min-height: var(--am-touch); } }
+
+.nestedNavigation { margin: 4px 0 8px 20px; padding-left: 8px; border-left: 1px solid var(--admin-split-divider); }
+.nestedNavigation h2 { display: none; }
+.nestedMobile:empty { display: none; }
+.layout[data-wide="true"] .nestedMobile { display: none; }
+.layout:not([data-wide="true"]) .nestedMobile { margin-top: 12px; }
+
+.navigationLinks > div + div { margin-top: 4px; }
+
+.navigationLink[aria-current="page"][data-has-navigation="true"] { background: transparent; }
+
+.navigationCount { margin-left: auto; flex-shrink: 0; font-size: 12px; line-height: 16px; font-weight: 400; font-variant-numeric: tabular-nums; color: var(--am-muted); }

@@ -1,4 +1,5 @@
 "use client";
+import tableStyles from "@/domains/shared/ui/admin-design-contract/AdminBusinessTable.module.css";
 
 import { Plus } from "lucide-react";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
@@ -187,7 +188,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
     }
 
     return (
-        <TradingWorkspace entries={props.tradingEntries} selected="/admin/acquisitions">
+        <TradingWorkspace entries={props.tradingEntries} selected="/admin/acquisitions" counts={props.counts}>
         <BusinessListShell className="!px-0 !pt-0 !pb-0"
             header={
                 <AdminWorkspaceHeadingRow><AdminWorkspaceHeading>Phiếu nhập</AdminWorkspaceHeading>
@@ -208,12 +209,12 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
         >
 
             {selectedIds.length > 0 ? (
-                <div className="flex items-center gap-4 border-b border-slate-100 bg-slate-50 p-2">
+                <div className={tableStyles.bulk}>
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} phiếu đã chọn
                     </span>
 
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet" density="compact"
                         className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
                         onClick={handleBulkPost}
                         type="button"
@@ -221,7 +222,7 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
                         Duyệt phiếu
                     </AdminButton>
 
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet" density="compact"
                         className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
                         onClick={() => setSelectedIds([])}
                         type="button"

@@ -75,7 +75,7 @@ export default function OrderListFilters({
   }];
 
   return (
-    <BusinessListFilterBar
+    <BusinessListFilterBar variant="flat"
       values={filters}
       total={total}
       visibleCount={visibleCount}

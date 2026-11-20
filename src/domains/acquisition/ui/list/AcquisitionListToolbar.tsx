@@ -108,7 +108,7 @@ export default function AcquisitionListToolbar({
     }
 
     return (
-        <BusinessListFilterBar
+        <BusinessListFilterBar variant="flat"
             values={values}
             total={total}
             visibleCount={visibleCount}

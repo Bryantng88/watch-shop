@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');const path=require('node:path');const
  const fixture={exports:{}};new Function('require','module','exports',build.outputFiles.find(f=>f.path.endsWith('.cjs')).text)(createRequire(path.join(root,'package.json')),fixture,fixture.exports);const hooks=fixture.exports;
  const storageDescriptor=Object.getOwnPropertyDescriptor(globalThis,'localStorage');const previousObserver=global.ResizeObserver;
  try{
- for(const scenario of [{width:1440,saved:'340',expected:340,wide:true},{width:1440,saved:'0',expected:0,wide:true},{width:980,saved:'390',expected:352,wide:true},{width:700,saved:'340',expected:200,wide:false},{width:1440,saved:'bad',expected:280,wide:true},{width:1440,denied:true,expected:280,wide:true}]){
+ for(const scenario of [{width:1440,saved:'232',expected:232,wide:true},{width:1440,saved:'240',expected:240,wide:true},{width:1440,saved:'340',expected:220,wide:true},{width:1440,saved:'0',expected:0,wide:true},{width:980,saved:'390',expected:220,wide:true},{width:700,saved:'340',expected:200,wide:false},{width:1440,saved:'bad',expected:220,wide:true},{width:1440,denied:true,expected:220,wide:true}]){
   const slots=[];let cursor=0,pending=false,layouts=[],passives=[];const values=new Map([['admin:trading:menu-width:v1',scenario.saved],['admin:trading:menu-width:v1:expanded','340']]);
   Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem(key){if(scenario.denied)throw Error('Storage restricted');return values.get(key)??null},setItem(key,value){if(scenario.denied)throw Error('Storage restricted');values.set(key,value)}}});
   global.ResizeObserver=class{observe(){}disconnect(){}};
