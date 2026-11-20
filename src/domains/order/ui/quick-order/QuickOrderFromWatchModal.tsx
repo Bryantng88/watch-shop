@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { Loader2, ShoppingCart, X } from "lucide-react";
 
@@ -82,9 +83,9 @@ export default function QuickOrderFromWatchModal({
                         </h2>
                         <p className="mt-1 text-sm text-slate-500">{title || "Watch đang chọn"}</p>
                     </div>
-                    <button type="button" onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    <AdminButton variant="secondary" type="button" onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
                 </header>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">

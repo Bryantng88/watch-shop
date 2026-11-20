@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import {
     WorkflowActionType,
@@ -117,13 +118,13 @@ export default function WorkflowTemplateModal({
                         </p>
                     </div>
 
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={onClose}
                         className="rounded-full p-2 text-slate-400 hover:bg-slate-100"
                     >
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
                 </div>
 
                 <div className="max-h-[72vh] space-y-4 overflow-y-auto px-5 py-4">
@@ -191,14 +192,14 @@ export default function WorkflowTemplateModal({
                                 </div>
                             </div>
 
-                            <button
+                            <AdminButton variant="primary" density="compact"
                                 type="button"
                                 onClick={addCondition}
                                 className="inline-flex h-9 items-center gap-2 rounded-full bg-slate-950 px-3 text-sm font-semibold text-white"
                             >
                                 <Plus className="h-4 w-4" />
                                 Thêm
-                            </button>
+                            </AdminButton>
                         </div>
 
                         <div className="space-y-2">
@@ -216,7 +217,7 @@ export default function WorkflowTemplateModal({
                                         ))}
                                     </select>
 
-                                    <button
+                                    <AdminButton iconOnly variant="secondary"
                                         type="button"
                                         onClick={() =>
                                             setConditions((prev) => prev.filter((_, idx) => idx !== index))
@@ -224,7 +225,7 @@ export default function WorkflowTemplateModal({
                                         className="h-10 w-10 rounded-2xl text-rose-500 hover:bg-rose-50"
                                     >
                                         <Trash2 className="mx-auto h-4 w-4" />
-                                    </button>
+                                    </AdminButton>
                                 </div>
                             ))}
 
@@ -265,22 +266,22 @@ export default function WorkflowTemplateModal({
                 </div>
 
                 <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={onClose}
                         className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
                     >
                         Đóng
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         disabled={pending || !name.trim()}
                         onClick={submit}
                         className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
                     >
                         {pending ? "Đang lưu..." : "Lưu workflow"}
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>

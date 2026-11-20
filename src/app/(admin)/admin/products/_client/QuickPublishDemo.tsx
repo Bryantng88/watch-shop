@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React, { useEffect, useMemo, useState } from "react";
 
 type MissingItem =
@@ -31,7 +32,7 @@ function SideModal({ open, onClose, title, children }: { open: boolean; onClose:
             <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl">
                 <div className="flex items-center justify-between border-b px-5 py-3">
                     <h3 className="text-base font-semibold">{title}</h3>
-                    <button onClick={onClose} className="rounded p-2 hover:bg-gray-100">✕</button>
+                    <AdminButton variant="secondary" onClick={onClose} className="rounded p-2 hover:bg-gray-100">✕</AdminButton>
                 </div>
                 <div className="h-[calc(100%-56px)] overflow-auto p-5">{children}</div>
             </div>
@@ -183,8 +184,8 @@ export default function QuickPublishModal({
                                                     const next = [...images]; next[i] = { ...it, key: e.target.value }; setImages(next);
                                                 }} />
                                         ))}
-                                        <button type="button" className="rounded-md border px-3 py-1 text-sm"
-                                            onClick={() => setImages(prev => [...prev, { key: "" }])}>+ Thêm ảnh</button>
+                                        <AdminButton variant="secondary" density="compact" type="button" className="rounded-md border px-3 py-1 text-sm"
+                                            onClick={() => setImages(prev => [...prev, { key: "" }])}>+ Thêm ảnh</AdminButton>
                                     </div>
                                 )}
                             </div>
@@ -216,11 +217,11 @@ export default function QuickPublishModal({
                     </div>
 
                     <div className="flex justify-end gap-2 pt-3 border-t">
-                        <button onClick={load} disabled={loading} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Kiểm tra lại</button>
-                        <button onClick={savePartial} disabled={loading} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Lưu các mục bổ sung</button>
-                        <button onClick={publish} disabled={!pass || loading}
+                        <AdminButton variant="secondary" onClick={load} disabled={loading} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Kiểm tra lại</AdminButton>
+                        <AdminButton variant="secondary" onClick={savePartial} disabled={loading} className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Lưu các mục bổ sung</AdminButton>
+                        <AdminButton variant="primary" onClick={publish} disabled={!pass || loading}
                             className={cx("rounded-md px-3 py-2 text-sm font-semibold text-white",
-                                pass ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gray-400 cursor-not-allowed")}>Publish</button>
+                                pass ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gray-400 cursor-not-allowed")}>Publish</AdminButton>
                     </div>
                 </div>
             )}

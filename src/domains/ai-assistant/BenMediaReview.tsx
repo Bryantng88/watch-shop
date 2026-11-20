@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {useEffect, useRef, useState} from "react";
 import {currentMediaEditor, type MediaEditor} from "./media-editor";
 
@@ -28,10 +29,10 @@ export default function BenMediaReview({editor, requestKey, awaitingInsight, sta
     <p className="font-medium">Xử lý media · {editor.title}</p>
     {awaitingInsight ? <div className="space-y-1">
       <p>Ở chiếc này, bạn ấn tượng nhất điểm gì? Trả lời trong ô chat để Ben bắt đầu viết.</p>
-      <button type="button" disabled={status?.pending} onClick={onSkip} className="text-indigo-700 underline">Để Ben tự chọn</button>
-    </div> : <button type="button" disabled={status?.pending} onClick={onAsk} className="text-indigo-700 underline disabled:opacity-50">
+      <AdminButton variant="secondary" type="button" disabled={status?.pending} onClick={onSkip} className="text-indigo-700 underline">Để Ben tự chọn</AdminButton>
+    </div> : <AdminButton variant="secondary" type="button" disabled={status?.pending} onClick={onAsk} className="text-indigo-700 underline disabled:opacity-50">
       {status?.pending?"Ben đang xử lý…":"Tra cứu và viết nội dung"}
-    </button>}
+    </AdminButton>}
     {(status?.text||observation)&&<p role="status">{status?.text||observation}</p>}
   </section>;
 }

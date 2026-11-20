@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useId, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
@@ -13,23 +14,27 @@ type ReportLink = {
 };
 
 type Props = {
+    label?: string;
+    icon?: ComponentType<{ size?: number; className?: string }>;
+    appearance?: "group" | "item";
     items: ReportLink[];
     expanded: boolean;
     onNavigate: () => void;
 };
 
-export default function ReportMenu({ items, expanded, onNavigate }: Props) {
+export default function ReportMenu({ items, expanded, onNavigate, label = "Báo cáo", icon: MenuIcon = BarChart3, appearance = "group" }: Props) {
     const pathname = usePathname();
     const id = useId();
     const trigger = useRef<HTMLButtonElement>(null);
     const panel = useRef<HTMLDivElement>(null);
-    const [groupOpen, setGroupOpen] = useState(true);
+    const [groupOpen, setGroupOpen] = useState(() => appearance === "group" || items.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`)));
     const [railOpen, setRailOpen] = useState(false);
     const [position, setPosition] = useState({ top: 0, left: 0 });
     const open = expanded ? groupOpen : railOpen;
     const active = items.some((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
 
     useEffect(() => { setRailOpen(false); }, [pathname, expanded]);
+    useEffect(() => { if (appearance === "item" && active) setGroupOpen(true); }, [appearance, active, pathname]);
 
     useEffect(() => {
         if (!open) return;
@@ -76,11 +81,11 @@ export default function ReportMenu({ items, expanded, onNavigate }: Props) {
         <div
             ref={panel}
             id={id}
-            aria-label="Các báo cáo"
+            aria-label={label === "Báo cáo" ? "Các báo cáo" : `Mục ${label}`}
             className={expanded ? "mt-1 space-y-1 pl-2" : "fixed z-[100] max-h-[calc(100dvh-16px)] w-60 space-y-1 overflow-y-auto rounded-xl bg-[#11191f] p-2 text-gray-200 shadow-xl"}
             style={expanded ? undefined : position}
         >
-            {!expanded && <p className="px-3 py-2 text-xs font-semibold text-white/60">Báo cáo</p>}
+            {!expanded && <p className="px-3 py-2 text-xs font-semibold text-white/60">{label}</p>}
             {items.map((item) => {
                 const Icon = item.icon ?? BarChart3;
                 return (
@@ -101,15 +106,15 @@ export default function ReportMenu({ items, expanded, onNavigate }: Props) {
     );
 
     return (
-        <div className="relative pt-3 first:pt-0">
-            {!expanded && <div className="mx-auto h-px w-7 bg-white/10" />}
-            <button
+        <div className={appearance === "group" ? "relative pt-3 first:pt-0" : "relative"}>
+            {!expanded && appearance === "group" && <div className="mx-auto h-px w-7 bg-white/10" />}
+            <AdminButton variant="contextual" density="compact"
                 ref={trigger}
                 type="button"
-                aria-label="Báo cáo"
+                aria-label={label}
                 aria-expanded={open}
                 aria-controls={open ? id : undefined}
-                title={!expanded ? "Báo cáo" : undefined}
+                title={!expanded ? label : undefined}
                 onClick={() => {
                     if (expanded) setGroupOpen(!groupOpen);
                     else if (railOpen) setRailOpen(false);
@@ -123,15 +128,18 @@ export default function ReportMenu({ items, expanded, onNavigate }: Props) {
                         requestAnimationFrame(() => panel.current?.querySelector<HTMLAnchorElement>("a")?.focus());
                     }
                 }}
-                className={expanded
+                className={expanded && appearance === "item"
+                    ? `flex h-12 w-full items-center gap-3 rounded-xl px-4 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${active ? "bg-gray-900 text-white" : ""}`
+                    : expanded
                     ? "mx-2 flex w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70"
                     : `mt-1 flex h-12 w-full items-center justify-center rounded-xl px-4 text-slate-300 transition hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${active ? "bg-gray-900 text-white" : ""}`}
             >
                 {expanded ? <>
-                    <span>Báo cáo</span>
+                    {appearance === "item" && <MenuIcon size={18} className="shrink-0 opacity-80" />}
+                    <span className={appearance === "item" ? "min-w-0 flex-1" : undefined}>{label}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${groupOpen ? "rotate-0" : "-rotate-90"}`} />
-                </> : <BarChart3 size={18} className="shrink-0 opacity-80" />}
-            </button>
+                </> : <MenuIcon size={18} className="shrink-0 opacity-80" />}
+            </AdminButton>
             {open && (expanded ? links : createPortal(links, document.body))}
         </div>
     );

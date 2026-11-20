@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState, useTransition } from "react";
 import { WorkCaseScope, type WorkCaseCategory } from "@prisma/client";
 import { createWorkCaseCategoryAction, updateWorkCaseCategoryAction } from "../actions/work-case.actions";
@@ -102,7 +103,7 @@ export default function WorkCaseSettingsClient({ categories }: { categories: Wor
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-950">{editing ? "Sửa nhóm" : "Thêm nhóm"}</h2>
-            {editing ? <button type="button" onClick={reset} className="text-sm font-semibold text-slate-500 hover:text-slate-900">Tạo mới</button> : null}
+            {editing ? <AdminButton variant="secondary" type="button" onClick={reset} className="text-sm font-semibold text-slate-500 hover:text-slate-900">Tạo mới</AdminButton> : null}
           </div>
 
           <div className="mt-4 space-y-3">
@@ -115,7 +116,7 @@ export default function WorkCaseSettingsClient({ categories }: { categories: Wor
               <label className="block"><span className="text-sm font-medium text-slate-700">Sort</span><input type="number" value={form.sortOrder} onChange={(e) => setForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm" /></label>
             </div>
             <label className="inline-flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={form.isActive} onChange={(e) => setForm((p) => ({ ...p, isActive: e.target.checked }))} /> Active</label>
-            <button type="button" disabled={pending} onClick={submit} className="w-full rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{pending ? "Đang lưu..." : "Lưu cấu hình"}</button>
+            <AdminButton variant="primary" type="button" disabled={pending} onClick={submit} className="w-full rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{pending ? "Đang lưu..." : "Lưu cấu hình"}</AdminButton>
           </div>
         </div>
       </div>

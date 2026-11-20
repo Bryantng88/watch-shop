@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 
 export function FilterChip({
@@ -10,7 +11,7 @@ export function FilterChip({
   onClick?: () => void;
 }) {
   return (
-    <button
+    <AdminButton variant="contextual" density="compact"
       type="button"
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-xs transition ${
@@ -20,6 +21,6 @@ export function FilterChip({
       }`}
     >
       {children}
-    </button>
+    </AdminButton>
   );
 }

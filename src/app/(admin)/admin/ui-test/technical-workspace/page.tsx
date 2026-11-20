@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import {
     Activity,
@@ -57,9 +58,9 @@ export default function TechnicalWorkspaceUiTestPage() {
                     <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
                     <b className="truncate text-slate-900">Bàn xử lý kỹ thuật</b>
                 </nav>
-                <button type="button" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50" aria-label="Thao tác khác">
+                <AdminButton iconOnly variant="secondary" density="compact" type="button" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50" aria-label="Thao tác khác">
                     <MoreHorizontal className="h-4 w-4" />
-                </button>
+                </AdminButton>
             </div>
 
             <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
@@ -122,9 +123,9 @@ export default function TechnicalWorkspaceUiTestPage() {
 
             <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
                 {tabs.map(({ label, icon: Icon, count }, index) => (
-                    <button key={label} type="button" className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold ${index === 1 ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200" : "text-slate-600 hover:bg-slate-50"}`}>
+                    <AdminButton variant="secondary" density="compact" key={label} type="button" className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold ${index === 1 ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200" : "text-slate-600 hover:bg-slate-50"}`}>
                         <Icon className="h-3.5 w-3.5" />{label}{count ? <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] ring-1 ring-slate-200">{count}</span> : null}
-                    </button>
+                    </AdminButton>
                 ))}
             </div>
 
@@ -134,13 +135,13 @@ export default function TechnicalWorkspaceUiTestPage() {
                         <div><h2 className="text-sm font-semibold text-slate-950">Technical Items</h2><p className="mt-1 text-[11px] text-slate-500">Danh sách item thuộc Bàn xử lý kỹ thuật.</p></div>
                         <div className="flex flex-wrap items-center gap-2">
                             <label className="flex h-9 w-52 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs text-slate-500"><Search className="h-4 w-4" /><input className="min-w-0 flex-1 outline-none" placeholder="Tìm kiếm item..." /></label>
-                            <button type="button" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500"><Filter className="h-4 w-4" /></button>
-                            <button type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-300 px-3 text-xs font-semibold text-violet-700"><Plus className="h-4 w-4" />Thêm item<ChevronDown className="h-3.5 w-3.5" /></button>
+                            <AdminButton iconOnly variant="secondary" density="compact" type="button" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500"><Filter className="h-4 w-4" /></AdminButton>
+                            <AdminButton variant="secondary" density="compact" type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-300 px-3 text-xs font-semibold text-violet-700"><Plus className="h-4 w-4" />Thêm item<ChevronDown className="h-3.5 w-3.5" /></AdminButton>
                         </div>
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto border-b border-slate-100 px-4 py-3">
-                        {["Tất cả", "Kiểm tra", "Chờ xử lý", "Đang xử lý", "Done"].map((label, index) => <button key={label} type="button" className={`h-8 shrink-0 rounded-lg border px-3 text-[11px] font-semibold ${index === 0 ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600"}`}>{label}</button>)}
+                        {["Tất cả", "Kiểm tra", "Chờ xử lý", "Đang xử lý", "Done"].map((label, index) => <AdminButton variant="secondary" density="compact" key={label} type="button" className={`h-8 shrink-0 rounded-lg border px-3 text-[11px] font-semibold ${index === 0 ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600"}`}>{label}</AdminButton>)}
                     </div>
 
                     <div className="overflow-x-auto">
@@ -151,7 +152,7 @@ export default function TechnicalWorkspaceUiTestPage() {
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex justify-center border-t border-slate-100 p-4"><button className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">Xem tất cả 18 items<ArrowRight className="h-4 w-4" /></button></div>
+                    <div className="flex justify-center border-t border-slate-100 p-4"><AdminButton variant="secondary" density="compact" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">Xem tất cả 18 items<ArrowRight className="h-4 w-4" /></AdminButton></div>
                 </section>
 
                 <aside className="space-y-4">
@@ -164,11 +165,11 @@ export default function TechnicalWorkspaceUiTestPage() {
                             <Detail label="Default view" value="Items" />
                             <Detail label="Tuần" value="29/2026" />
                         </div>
-                        <button type="button" className="mt-5 h-9 w-full rounded-lg bg-violet-50 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">Chỉnh sửa thông tin</button>
+                        <AdminButton variant="secondary" density="compact" type="button" className="mt-5 h-9 w-full rounded-lg bg-violet-50 text-xs font-semibold text-violet-700 ring-1 ring-violet-100">Chỉnh sửa thông tin</AdminButton>
                     </section>
 
                     <section className="rounded-xl border border-slate-200 bg-white p-5">
-                        <div className="flex items-center justify-between"><h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">Hoạt động gần nhất</h3><button className="text-[10px] font-semibold text-violet-700">Xem tất cả</button></div>
+                        <div className="flex items-center justify-between"><h3 className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600">Hoạt động gần nhất</h3><AdminButton variant="secondary" density="compact" className="text-[10px] font-semibold text-violet-700">Xem tất cả</AdminButton></div>
                         <div className="relative mt-5 space-y-5 before:absolute before:bottom-2 before:left-[7px] before:top-2 before:w-px before:bg-slate-200">
                             <ActivityItem text="Mẫn đã phân loại item Spa vỏ" time="15:37 17/07/2026" />
                             <ActivityItem text="System đã chuyển 3 item sang Chờ xử lý" time="15:10 17/07/2026" />
@@ -187,7 +188,7 @@ function Meta({ icon: Icon, label, value, amber = false }: { icon: typeof UserRo
 
 function ItemRow({ item }: { item: typeof items[number] }) {
     const done = item.percent === 100;
-    return <tr className="text-xs"><td className="px-4 py-4"><input type="checkbox" /></td><td className="px-3 py-4"><div className="font-semibold text-slate-900">{item.title}</div><div className="mt-1 text-[10px] text-slate-500">{item.ref} · {item.watch}</div></td><td className="px-3 py-4"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${done ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>{item.status}</span></td><td className="px-3 py-4"><div className="flex items-center justify-between text-[10px]"><b className={done ? "text-emerald-600" : "text-blue-600"}>{item.progress}</b><span>{item.percent}%</span></div><div className="mt-2 h-1.5 w-32 rounded-full bg-slate-100"><div style={{ width: `${item.percent}%` }} className={`h-full rounded-full ${done ? "bg-emerald-500" : "bg-blue-500"}`} /></div></td><td className="px-3 py-4"><button className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600">Xử lý kỹ thuật<ChevronRight className="h-3 w-3" /></button></td><td className="px-3 py-4"><span className="grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-[10px] font-bold text-white">{item.assignee.slice(0, 1)}</span></td><td className="px-3 py-4 font-semibold text-slate-600">{item.activity}</td></tr>;
+    return <tr className="text-xs"><td className="px-4 py-4"><input type="checkbox" /></td><td className="px-3 py-4"><div className="font-semibold text-slate-900">{item.title}</div><div className="mt-1 text-[10px] text-slate-500">{item.ref} · {item.watch}</div></td><td className="px-3 py-4"><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${done ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>{item.status}</span></td><td className="px-3 py-4"><div className="flex items-center justify-between text-[10px]"><b className={done ? "text-emerald-600" : "text-blue-600"}>{item.progress}</b><span>{item.percent}%</span></div><div className="mt-2 h-1.5 w-32 rounded-full bg-slate-100"><div style={{ width: `${item.percent}%` }} className={`h-full rounded-full ${done ? "bg-emerald-500" : "bg-blue-500"}`} /></div></td><td className="px-3 py-4"><AdminButton variant="secondary" density="compact" className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600">Xử lý kỹ thuật<ChevronRight className="h-3 w-3" /></AdminButton></td><td className="px-3 py-4"><span className="grid h-8 w-8 place-items-center rounded-full bg-slate-800 text-[10px] font-bold text-white">{item.assignee.slice(0, 1)}</span></td><td className="px-3 py-4 font-semibold text-slate-600">{item.activity}</td></tr>;
 }
 
 function Detail({ label, value }: { label: string; value: string }) {

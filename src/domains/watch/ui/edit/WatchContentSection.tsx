@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { AlertTriangle, BookOpen, WandSparkles } from "lucide-react";
 import GuardNotice from "@/domains/shared/feedback/GuardNotice";
@@ -388,14 +389,14 @@ export default function WatchContentSection({
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <FieldLabel>Bullet specs</FieldLabel>
 
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={addBullet}
                             disabled={locked}
                             className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             + Thêm bullet
-                        </button>
+                        </AdminButton>
                     </div>
 
                     {bulletSpecs.length === 0 ? (
@@ -419,14 +420,14 @@ export default function WatchContentSection({
                                         className="border-b-0"
                                     />
 
-                                    <button
+                                    <AdminButton iconOnly variant="secondary" density="compact"
                                         type="button"
                                         onClick={() => removeBullet(index)}
                                         disabled={locked}
                                         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         ×
-                                    </button>
+                                    </AdminButton>
                                 </div>
                             ))}
                         </div>

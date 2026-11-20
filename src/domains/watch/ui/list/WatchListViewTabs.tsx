@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { ViewKey, WatchListCounts } from "./types";
 
 const items: Array<{ key: ViewKey; label: string }> = [
@@ -28,7 +29,7 @@ export default function WatchListViewTabs({
                     const count = counts[item.key] ?? 0;
 
                     return (
-                        <button
+                        <AdminButton variant="contextual"
                             key={item.key}
                             type="button"
                             onClick={() => onChange(item.key)}
@@ -54,7 +55,7 @@ export default function WatchListViewTabs({
                             {active ? (
                                 <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-950" />
                             ) : null}
-                        </button>
+                        </AdminButton>
                     );
                 })}
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
 import { useEffect, useMemo, useState } from "react";
 import { Box, ImageIcon, Loader2, Plus, Save, Trash2, X } from "lucide-react";
@@ -287,13 +288,13 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                         </div>
                     </div>
 
-                    <button
+                    <AdminButton iconOnly variant="secondary"
                         type="button"
                         onClick={onClose}
                         className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                     >
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
                 </div>
 
                 {loading ? (
@@ -359,14 +360,14 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                 </div>
 
                                                 {draft ? (
-                                                    <button
+                                                    <AdminButton variant="danger"
                                                         type="button"
                                                         onClick={() => removeItem(item.id)}
                                                         className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                         Xóa
-                                                    </button>
+                                                    </AdminButton>
                                                 ) : null}
                                             </div>
 

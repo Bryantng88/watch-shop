@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import clsx from "clsx";
 import { ADMIN_VIEW_TABS as styles } from "./admin-ui.tokens";
@@ -56,7 +57,7 @@ export function AdminViewTabs<Value extends string>({
 
   return <div className={clsx(styles.root, density === "comfortable" && styles.comfortable, className)} data-collapse={items.length > 4 || undefined}>
     <div ref={strip} role="group" aria-label={label} className={styles.strip} onKeyDown={navigate}>
-      {items.map((item, index) => <button
+      {items.map((item, index) => <AdminButton variant="contextual"
         ref={element => { buttons.current[index] = element; }}
         key={item.value}
         type="button"
@@ -65,7 +66,7 @@ export function AdminViewTabs<Value extends string>({
         aria-label={item.accessibleLabel ?? (item.count !== undefined ? `${item.label}: ${typeof item.count === "number" ? item.count.toLocaleString("vi-VN") : item.count}` : undefined)}
         className={styles.item}
         onClick={() => onValueChange(item.value)}
-      ><span>{item.label}</span>{item.count !== undefined && <span aria-hidden="true" className={styles.count}>{typeof item.count === "number" ? item.count.toLocaleString("vi-VN") : item.count}</span>}{item.indicator && <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.indicator === "complete" ? "bg-emerald-500" : item.indicator === "unknown" ? "bg-amber-500" : "bg-slate-300"}`} />}</button>)}
+      ><span>{item.label}</span>{item.count !== undefined && <span aria-hidden="true" className={styles.count}>{typeof item.count === "number" ? item.count.toLocaleString("vi-VN") : item.count}</span>}{item.indicator && <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.indicator === "complete" ? "bg-emerald-500" : item.indicator === "unknown" ? "bg-amber-500" : "bg-slate-300"}`} />}</AdminButton>)}
     </div>
     {items.length > 4 && <select
       aria-label={label}

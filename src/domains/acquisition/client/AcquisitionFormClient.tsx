@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
 import { useRouter } from "next/navigation";
@@ -157,7 +158,7 @@ const VendorQuickField = memo(function VendorQuickField({
                     Vendor <span className="text-rose-500">*</span>
                 </label>
                 {!creating ? (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         type="button"
                         disabled={disabled}
                         onClick={() => setCreating(true)}
@@ -165,7 +166,7 @@ const VendorQuickField = memo(function VendorQuickField({
                     >
                         <Plus className="h-3.5 w-3.5" />
                         Thêm vendor
-                    </button>
+                    </AdminButton>
                 ) : null}
             </div>
 
@@ -218,15 +219,15 @@ const VendorQuickField = memo(function VendorQuickField({
                                 className={FIELD_CLASS}
                             />
                         </div>
-                        <button
+                        <AdminButton variant="primary"
                             type="button"
                             disabled={pending || !name.trim()}
                             onClick={handleCreate}
                             className="inline-flex h-10 items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
                             {pending ? "Dang them" : "Them"}
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton iconOnly variant="secondary"
                             type="button"
                             disabled={pending}
                             onClick={() => {
@@ -238,7 +239,7 @@ const VendorQuickField = memo(function VendorQuickField({
                             aria-label="Dong form them vendor"
                         >
                             <X className="h-4 w-4" />
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}
@@ -295,9 +296,9 @@ function TradeInOrderField({
                             {value.customerName} · {value.customerPhone || "Chưa có SĐT"} · {value.status}
                         </div>
                     </div>
-                    <button type="button" disabled={disabled} onClick={() => { onChange(null); setQuery(""); }} className="rounded-md border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">
+                    <AdminButton variant="secondary" density="compact" type="button" disabled={disabled} onClick={() => { onChange(null); setQuery(""); }} className="rounded-md border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">
                         Chọn lại
-                    </button>
+                    </AdminButton>
                 </div>
             ) : (
                 <div className="relative">
@@ -306,13 +307,13 @@ function TradeInOrderField({
                     {query.trim().length >= 2 ? (
                         <div className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white p-2 shadow-xl">
                             {loading ? <div className="px-3 py-4 text-sm text-slate-500">Đang tìm đơn hàng...</div> : items.length ? items.map((order) => (
-                                <button key={order.id} type="button" onClick={() => { onChange(order); setQuery(""); }} className="block w-full rounded-md px-3 py-3 text-left hover:bg-slate-50">
+                                <AdminButton variant="contextual" key={order.id} type="button" onClick={() => { onChange(order); setQuery(""); }} className="block w-full rounded-md px-3 py-3 text-left hover:bg-slate-50">
                                     <div className="flex items-center justify-between gap-3">
                                         <span className="text-sm font-semibold text-slate-900">{order.refNo || order.id}</span>
                                         <span className="text-xs font-medium text-slate-500">{order.status}</span>
                                     </div>
                                     <div className="mt-1 text-xs text-slate-500">{order.customerName} · {order.customerPhone || "Chưa có SĐT"}</div>
-                                </button>
+                                </AdminButton>
                             )) : <div className="px-3 py-4 text-sm text-slate-500">Không tìm thấy đơn hàng.</div>}
                         </div>
                     ) : null}
@@ -646,7 +647,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
 
                         </div>
                         <details className="pb-4 text-xs text-slate-500">
-                            <summary className="cursor-pointer py-2">Ghi chú & tùy chọn</summary>
+                            <AdminDisclosureSummary className="cursor-pointer py-2">Ghi chú & tùy chọn</AdminDisclosureSummary>
                             <div className="grid gap-4 py-2 md:grid-cols-2">
                             <div className="md:col-span-2">
                                 <label className="mb-2 block text-sm font-semibold text-slate-900">
@@ -654,7 +655,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                 </label>
                                 <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
                                     {(["MEN", "WOMEN"] as const).map((segment) => (
-                                        <button
+                                        <AdminButton variant="secondary"
                                             key={segment}
                                             type="button"
                                             disabled={submitting || quickNames.busy}
@@ -666,7 +667,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                             }`}
                                         >
                                             {segment === "MEN" ? "Nam" : "Nữ"}
-                                        </button>
+                                        </AdminButton>
                                     ))}
                                 </div>
                                 <p className="mt-2 text-xs text-slate-500">
@@ -715,18 +716,18 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             description="Chon nhieu anh tu NAS, he thong se do vao cac dong dang trong truoc roi moi them dong moi."
                             actions={
                                 <>
-                                    <button type="button" onClick={() => void quickNames.generate()} disabled={submitting || quickNames.busy || !quickNames.count}
+                                    <AdminButton variant="secondary" type="button" onClick={() => void quickNames.generate()} disabled={submitting || quickNames.busy || !quickNames.count}
                                         className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-800 disabled:opacity-40">
                                         {quickNames.busy ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
                                         {quickNames.busy ? "Codex đang đọc ảnh…" : "Codex gợi ý tên"}
-                                    </button>
-                                    {quickNames.busy && <button type="button" onClick={quickNames.stop} className="min-h-10 px-2 text-xs text-slate-600 underline">Dừng chờ</button>}
+                                    </AdminButton>
+                                    {quickNames.busy && <AdminButton variant="secondary" density="compact" type="button" onClick={quickNames.stop} className="min-h-10 px-2 text-xs text-slate-600 underline">Dừng chờ</AdminButton>}
                                     <AcquisitionBulkImagePicker
                                         onImport={importPreparedImages}
                                         disabled={submitting || quickNames.busy}
                                         audienceSegment={audienceSegment}
                                     />
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={addWatchLine}
                                         disabled={submitting || quickNames.busy}
@@ -734,7 +735,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                     >
                                         <Plus className="h-4 w-4" />
                                         Thêm đồng hồ
-                                    </button>
+                                    </AdminButton>
                                 </>
                             }
                         />
@@ -767,21 +768,21 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
 
             <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
                 <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         disabled={submitting || quickNames.busy}
                         onClick={() => router.push("/admin/acquisitions")}
                         className="inline-flex h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                     >
                         Hủy
-                    </button>
+                    </AdminButton>
 
                     <div className="flex items-center gap-2">
                         <div className="hidden items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 sm:flex">
                             <WalletCards className="h-4 w-4 text-slate-400" />
                             {formatMoney(totalWatchCost, currency)}
                         </div>
-                        <button
+                        <AdminButton variant="primary"
                             type="button"
                             disabled={submitting || quickNames.busy}
                             onClick={submit}
@@ -789,7 +790,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                         >
                             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Lưu phiếu nhập
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </div>

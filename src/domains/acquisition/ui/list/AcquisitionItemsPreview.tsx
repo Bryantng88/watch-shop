@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { ImageIcon, Link2, Package2 } from "lucide-react";
@@ -116,7 +117,7 @@ export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListI
 
     return (
         <>
-            <button
+            <AdminButton variant="contextual"
                 ref={btnRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
@@ -131,7 +132,7 @@ export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListI
                         {row.itemCount} dòng · {row.linkedWatchCount} đã liên kết
                     </span>
                 </span>
-            </button>
+            </AdminButton>
 
             {open && rect && typeof window !== "undefined"
                 ? createPortal(
@@ -146,13 +147,13 @@ export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListI
                                 <div className="mt-0.5 text-xs text-slate-500">{row.refNo} · {row.itemCount} dòng</div>
                             </div>
 
-                            <button
+                            <AdminButton variant="secondary" density="compact"
                                 type="button"
                                 onClick={() => setOpen(false)}
                                 className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                             >
                                 Đóng
-                            </button>
+                            </AdminButton>
                         </div>
 
                         <div className="space-y-2">

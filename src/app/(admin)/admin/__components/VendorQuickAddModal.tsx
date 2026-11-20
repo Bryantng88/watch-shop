@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 
 export default function VendorQuickAddModal({
@@ -51,16 +52,16 @@ export default function VendorQuickAddModal({
                 {error && <div className="text-red-600 text-sm">{error}</div>}
 
                 <div className="flex justify-end gap-2">
-                    <button onClick={onClose} className="border px-3 py-2 rounded text-sm">
+                    <AdminButton variant="secondary" onClick={onClose} className="border px-3 py-2 rounded text-sm">
                         Hủy
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="primary"
                         onClick={handleSubmit}
                         disabled={loading}
                         className="bg-black text-white px-3 py-2 rounded text-sm"
                     >
                         {loading ? "Đang lưu..." : "Lưu"}
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>

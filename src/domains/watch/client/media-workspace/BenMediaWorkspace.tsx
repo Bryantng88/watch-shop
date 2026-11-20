@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -42,8 +43,8 @@ export default function BenMediaWorkspace({data}: {data: MediaListData}) {
     <AdminFlatToolbar>
       <form role="search" aria-label="Tìm media" onSubmit={event => {event.preventDefault(); navigate(data.stage);}} className="flex min-w-0 items-center gap-1">
         <input aria-label="Tìm theo đồng hồ, SKU hoặc mã bài" value={query} onChange={event => setQuery(event.target.value)} maxLength={120} placeholder="Đồng hồ, SKU, mã bài…" className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-blue-200" />
-        {query && <button type="button" disabled={pending} aria-label="Xóa tìm kiếm" onClick={() => {setQuery("");navigate(data.stage, "");}} className="grid h-11 w-9 shrink-0 place-items-center rounded-lg text-slate-500 focus-visible:ring-2 focus-visible:ring-blue-300"><X size={16} /></button>}
-        <button type="submit" disabled={pending} aria-label="Tìm media" className="grid h-11 w-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-300">{pending ? <Loader2 size={16} className="animate-spin"/> : <Search size={16}/>}</button>
+        {query && <AdminButton iconOnly variant="secondary" type="button" disabled={pending} aria-label="Xóa tìm kiếm" onClick={() => {setQuery("");navigate(data.stage, "");}} className="grid h-11 w-9 shrink-0 place-items-center rounded-lg text-slate-500 focus-visible:ring-2 focus-visible:ring-blue-300"><X size={16} /></AdminButton>}
+        <AdminButton iconOnly variant="secondary" type="submit" disabled={pending} aria-label="Tìm media" className="grid h-11 w-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-300">{pending ? <Loader2 size={16} className="animate-spin"/> : <Search size={16}/>}</AdminButton>
         <select aria-label="Giai đoạn media" value={data.stage} disabled={pending} onChange={event => navigate(event.target.value as MediaStage)} className="min-h-11 max-w-[42%] rounded-lg border-0 bg-white px-2 text-sm text-slate-700 outline-none focus-visible:ring-2 focus-visible:ring-blue-300">{mediaStages.map(stage => <option key={stage} value={stage}>{mediaStageLabels[stage]}</option>)}</select>
       </form>
     </AdminFlatToolbar>
@@ -72,6 +73,6 @@ export default function BenMediaWorkspace({data}: {data: MediaListData}) {
         })}
       </ul>
     </div>
-    {data.totalPages > 1 && <nav aria-label="Phân trang media" className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4"><button type="button" disabled={pending || data.page <= 1} onClick={() => navigate(data.stage, data.q, data.page - 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs disabled:opacity-40">Trước</button><span className="text-xs tabular-nums text-slate-500">{data.page}/{data.totalPages}</span><button type="button" disabled={pending || data.page >= data.totalPages} onClick={() => navigate(data.stage, data.q, data.page + 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs disabled:opacity-40">Tiếp</button></nav>}
+    {data.totalPages > 1 && <nav aria-label="Phân trang media" className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4"><AdminButton variant="secondary" density="compact" type="button" disabled={pending || data.page <= 1} onClick={() => navigate(data.stage, data.q, data.page - 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs disabled:opacity-40">Trước</AdminButton><span className="text-xs tabular-nums text-slate-500">{data.page}/{data.totalPages}</span><AdminButton variant="secondary" density="compact" type="button" disabled={pending || data.page >= data.totalPages} onClick={() => navigate(data.stage, data.q, data.page + 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs disabled:opacity-40">Tiếp</AdminButton></nav>}
   </AdminPageCanvas>;
 }

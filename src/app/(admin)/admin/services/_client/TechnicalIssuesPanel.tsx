@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React, { useMemo, useState } from "react";
 
 type IssueRecord = {
@@ -377,65 +378,65 @@ export default function TechnicalIssuesPanel({
 
                                     <div className="flex flex-wrap gap-2 md:justify-end">
                                         {status === "OPEN" && (
-                                            <button
+                                            <AdminButton variant="secondary" density="compact"
                                                 disabled={disabled}
                                                 onClick={() => handleStart(issue.id)}
                                                 className="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
                                             >
                                                 Bắt đầu
-                                            </button>
+                                            </AdminButton>
                                         )}
 
                                         {(status === "OPEN" ||
                                             status === "IN_PROGRESS") && (
-                                                <button
+                                                <AdminButton variant="secondary" density="compact"
                                                     disabled={disabled}
                                                     onClick={() => openEdit(issue)}
                                                     className="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
                                                 >
                                                     Cập nhật
-                                                </button>
+                                                </AdminButton>
                                             )}
 
                                         {status === "IN_PROGRESS" && (
-                                            <button
+                                            <AdminButton variant="secondary" density="compact"
                                                 disabled={disabled}
                                                 onClick={() => openRecord(issue)}
                                                 className="rounded-lg border px-3 py-1.5 text-xs hover:bg-slate-50 disabled:opacity-60"
                                             >
                                                 Thêm record
-                                            </button>
+                                            </AdminButton>
                                         )}
 
                                         {status === "IN_PROGRESS" && (
-                                            <button
+                                            <AdminButton variant="primary" density="compact"
                                                 disabled={disabled}
                                                 onClick={() => openComplete(issue)}
                                                 className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 disabled:opacity-60"
                                             >
                                                 Hoàn tất
-                                            </button>
+                                            </AdminButton>
                                         )}
 
                                         {(status === "OPEN" ||
                                             status === "IN_PROGRESS") && (
-                                                <button
+                                                <AdminButton variant="secondary" density="compact"
                                                     disabled={disabled}
                                                     onClick={() => openCancel(issue)}
                                                     className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-60"
                                                 >
                                                     Hủy
-                                                </button>
+                                                </AdminButton>
                                             )}
 
                                         {status === "OPEN" && (
-                                            <button
+                                            <AdminButton variant="secondary" density="compact"
                                                 disabled={disabled}
                                                 onClick={() => handleDelete(issue.id)}
                                                 className="rounded-lg border px-3 py-1.5 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-60"
                                             >
                                                 Xóa
-                                            </button>
+                                            </AdminButton>
                                         )}
                                     </div>
                                 </div>
@@ -547,18 +548,18 @@ export default function TechnicalIssuesPanel({
                 onClose={() => setEditingIssue(null)}
                 footer={
                     <>
-                        <button
+                        <AdminButton variant="secondary"
                             className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
                             onClick={() => setEditingIssue(null)}
                         >
                             Hủy
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton variant="primary"
                             className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
                             onClick={submitEdit}
                         >
                             Lưu cập nhật
-                        </button>
+                        </AdminButton>
                     </>
                 }
             >
@@ -598,18 +599,18 @@ export default function TechnicalIssuesPanel({
                 onClose={() => setRecordIssue(null)}
                 footer={
                     <>
-                        <button
+                        <AdminButton variant="secondary"
                             className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
                             onClick={() => setRecordIssue(null)}
                         >
                             Hủy
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton variant="primary"
                             className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white"
                             onClick={submitRecord}
                         >
                             Lưu record
-                        </button>
+                        </AdminButton>
                     </>
                 }
             >
@@ -663,18 +664,18 @@ export default function TechnicalIssuesPanel({
                 onClose={() => setCompleteIssue(null)}
                 footer={
                     <>
-                        <button
+                        <AdminButton variant="secondary"
                             className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
                             onClick={() => setCompleteIssue(null)}
                         >
                             Hủy
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton variant="primary"
                             className="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white"
                             onClick={submitComplete}
                         >
                             Hoàn tất
-                        </button>
+                        </AdminButton>
                     </>
                 }
             >
@@ -709,18 +710,18 @@ export default function TechnicalIssuesPanel({
                 onClose={() => setCancelIssue(null)}
                 footer={
                     <>
-                        <button
+                        <AdminButton variant="secondary"
                             className="rounded-xl border border-slate-200 px-4 py-2 text-sm"
                             onClick={() => setCancelIssue(null)}
                         >
                             Hủy bỏ
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton variant="danger"
                             className="rounded-xl bg-rose-600 px-4 py-2 text-sm text-white"
                             onClick={submitCancel}
                         >
                             Xác nhận hủy
-                        </button>
+                        </AdminButton>
                     </>
                 }
             >

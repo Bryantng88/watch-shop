@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import type { PaymentOwner, PaymentOwnerType } from "./PaymentWorkspace";
@@ -76,7 +77,7 @@ export default function PaymentCreatePanel({
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-white">
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => {
                     if (locked) return;
@@ -91,7 +92,7 @@ export default function PaymentCreatePanel({
                 <span className="text-xs font-bold text-slate-400">
                     {locked ? "Đã đủ" : expanded ? "Thu gọn" : "Mở"}
                 </span>
-            </button>
+            </AdminButton>
 
             {locked ? (
                 <div className="border-t border-slate-100 px-5 pb-5 pt-4">
@@ -137,14 +138,14 @@ export default function PaymentCreatePanel({
                         Đánh dấu đã thanh toán ngay
                     </label>
 
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         disabled={submitting}
                         onClick={submit}
                         className="h-10 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white disabled:opacity-50"
                     >
                         Tạo payment
-                    </button>
+                    </AdminButton>
                 </div>
             ) : null}
         </div>

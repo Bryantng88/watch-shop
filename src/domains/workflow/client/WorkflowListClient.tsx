@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState, useTransition } from "react";
 import { Plus, Settings2, Trash2 } from "lucide-react";
 import {
@@ -61,14 +62,14 @@ export default function WorkflowListClient({ items = [] }: { items: any[] }) {
                     </p>
                 </div>
 
-                <button
+                <AdminButton variant="primary"
                     type="button"
                     onClick={openCreate}
                     className="inline-flex h-10 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
                 >
                     <Plus className="h-4 w-4" />
                     Tạo workflow
-                </button>
+                </AdminButton>
             </div>
 
             <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
@@ -117,16 +118,16 @@ export default function WorkflowListClient({ items = [] }: { items: any[] }) {
                         </div>
 
                         <div className="flex justify-end gap-1">
-                            <button
+                            <AdminButton iconOnly variant="secondary" density="compact"
                                 type="button"
                                 onClick={() => openEdit(item)}
                                 className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
                                 title="Sửa"
                             >
                                 <Settings2 className="h-4 w-4" />
-                            </button>
+                            </AdminButton>
 
-                            <button
+                            <AdminButton iconOnly variant="secondary" density="compact"
                                 type="button"
                                 disabled={pending}
                                 onClick={() => remove(item)}
@@ -134,7 +135,7 @@ export default function WorkflowListClient({ items = [] }: { items: any[] }) {
                                 title="Xóa"
                             >
                                 <Trash2 className="h-4 w-4" />
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 ))}

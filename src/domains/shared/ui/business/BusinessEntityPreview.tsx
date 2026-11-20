@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -177,36 +178,36 @@ function WatchDecisionPanel({
                         {reviewContext !== "SERVICE" ? (
                             <>
                             {serviceActive && snapshot.service.requestId ? (
-                                <Link
+                                <AdminLinkAction variant="secondary" density="compact"
                                     href={`/admin/services/${snapshot.service.requestId}`}
                                     className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                                 >
                                     <Wrench className="h-3.5 w-3.5" /> Mở service
-                                </Link>
-                            ) : <button
+                                </AdminLinkAction>
+                            ) : <AdminButton variant="secondary" density="compact"
                                 type="button"
                                 onClick={() => setServiceIntakeOpen(true)}
                                 className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
                             >
                                 <Wrench className="h-3.5 w-3.5" />
                                 Đưa vào service
-                            </button>}
+                            </AdminButton>}
                             </>
                         ) : null}
                         {reviewContext !== "PRICING" ? (
-                            <Link href={editHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                            <AdminLinkAction variant="secondary" density="compact" href={editHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
                                 <CircleDollarSign className="h-3.5 w-3.5" /> Điều chỉnh giá
-                            </Link>
+                            </AdminLinkAction>
                         ) : null}
                         {reviewContext !== "MEDIA" && !preview.mediaReview ? (
-                            <Link href={mediaHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                            <AdminLinkAction variant="secondary" density="compact" href={mediaHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
                                 <ImageIcon className="h-3.5 w-3.5" /> Xử lý media
-                            </Link>
+                            </AdminLinkAction>
                         ) : null}
                         {reviewContext !== "CONTENT" ? (
-                            <Link href={contentHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                            <AdminLinkAction variant="secondary" density="compact" href={contentHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
                                 <FileText className="h-3.5 w-3.5" /> Xử lý content
-                            </Link>
+                            </AdminLinkAction>
                         ) : null}
                     </div>
                 </div>
@@ -321,10 +322,10 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
                     <div className="text-sm font-semibold text-slate-950">Thông tin Technical Issue</div>
                     <div className="mt-0.5 text-xs text-slate-500">Có thể chỉnh sửa khi TI chưa Done.</div>
                 </div>
-                <button type="button" onClick={() => setEditing((current) => !current)} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50">
+                <AdminButton variant="secondary" density="compact" type="button" onClick={() => setEditing((current) => !current)} disabled={saving} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-blue-200 bg-white px-3 text-sm font-semibold text-blue-700 hover:bg-blue-50">
                     <Pencil className="h-4 w-4" />
                     {editing ? "Đóng chỉnh sửa" : "Chỉnh sửa"}
-                </button>
+                </AdminButton>
             </div>
             {editing ? (
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -460,10 +461,10 @@ function TechnicalIssueEditPanel({ preview }: { preview: BusinessEntityPreview }
                     ) : null}
                     {error ? <div className="sm:col-span-2 text-sm font-medium text-rose-600">{error}</div> : null}
                     <div className="flex justify-end sm:col-span-2">
-                        <button type="button" disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:bg-slate-300">
+                        <AdminButton variant="primary" type="button" disabled={saving} onClick={() => void save()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:bg-slate-300">
                             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                             Lưu thay đổi
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}
@@ -515,10 +516,10 @@ function DoneTechnicalIssueCostPanel({
             <div className="mt-1 text-xs text-slate-600">Chỉ cập nhật chi phí; nội dung và kết quả TI vẫn được khóa.</div>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <input type="number" min={0} step={1000} value={actualCost} onChange={(event) => setActualCost(event.target.value)} className="h-10 flex-1 rounded-xl border border-amber-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-amber-100" placeholder="Chi phí thực tế" />
-                <button type="button" disabled={saving || actualCost.trim() === ""} onClick={() => void save()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white disabled:opacity-50">
+                <AdminButton variant="primary" type="button" disabled={saving || actualCost.trim() === ""} onClick={() => void save()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white disabled:opacity-50">
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Lưu chi phí
-                </button>
+                </AdminButton>
             </div>
             {error ? <div className="mt-2 text-xs font-medium text-rose-700">{error}</div> : null}
         </section>
@@ -673,10 +674,10 @@ function BusinessEntityActivityPanel({
                     {mentionMatches.length ? (
                         <div className="ml-11 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                             {mentionMatches.map((user) => (
-                                <button key={user.id} type="button" onClick={() => addMention(user)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-violet-50">
+                                <AdminButton variant="contextual" key={user.id} type="button" onClick={() => addMention(user)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-violet-50">
                                     <PreviewUserAvatar label={user.label} avatarUrl={user.avatarUrl} />
                                     <span className="font-medium text-slate-800">{user.label}</span>
-                                </button>
+                                </AdminButton>
                             ))}
                         </div>
                     ) : null}
@@ -685,13 +686,13 @@ function BusinessEntityActivityPanel({
                             {mentionedUserIds.map((userId) => {
                                 const user = activity.mentionableUsers?.find((candidate) => candidate.id === userId);
                                 if (!user) return null;
-                                return <button key={user.id} type="button" onClick={() => setMentionedUserIds((current) => current.filter((id) => id !== user.id))} className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 py-1 pl-1 pr-2 text-xs font-semibold text-violet-700"><PreviewUserAvatar label={user.label} avatarUrl={user.avatarUrl} size="sm" />{user.label}<X className="h-3 w-3" /></button>;
+                                return <AdminButton variant="contextual" density="compact" key={user.id} type="button" onClick={() => setMentionedUserIds((current) => current.filter((id) => id !== user.id))} className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 py-1 pl-1 pr-2 text-xs font-semibold text-violet-700"><PreviewUserAvatar label={user.label} avatarUrl={user.avatarUrl} size="sm" />{user.label}<X className="h-3 w-3" /></AdminButton>;
                             })}
                         </div>
                     ) : null}
                     <div className="mt-2 flex items-center justify-between gap-3">
                         <div className="text-xs font-medium text-slate-400">{commentError ? <span className="text-rose-600">{commentError}</span> : "Gõ @ để giao việc hoặc nhắc đúng người."}</div>
-                        <button
+                        <AdminButton variant="primary" density="compact"
                             type="button"
                             disabled={!body.trim() || submitting}
                             onClick={() => void submitComment()}
@@ -699,17 +700,17 @@ function BusinessEntityActivityPanel({
                         >
                             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                             Gửi
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}
             <div className="mt-4 flex items-center gap-2">
-                <button type="button" onClick={() => setActivityTab("DISCUSSION")} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${activityTab === "DISCUSSION" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-500"}`}>
+                <AdminButton variant="secondary" density="compact" type="button" onClick={() => setActivityTab("DISCUSSION")} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${activityTab === "DISCUSSION" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-500"}`}>
                     Trao đổi ({activity.items.length})
-                </button>
-                <button type="button" onClick={() => void loadHistory(historyPage)} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${activityTab === "HISTORY" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-500"}`}>
+                </AdminButton>
+                <AdminButton variant="secondary" density="compact" type="button" onClick={() => void loadHistory(historyPage)} className={`rounded-lg border px-3 py-1.5 text-xs font-semibold ${activityTab === "HISTORY" ? "border-violet-200 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-500"}`}>
                     Lịch sử
-                </button>
+                </AdminButton>
             </div>
             <div className="mt-3 [&>div]:!space-y-3 [&_article]:rounded-none [&_article]:border-0 [&_article]:border-b [&_article]:border-slate-100 [&_article]:shadow-none">
                 {historyLoading ? (
@@ -745,9 +746,9 @@ function BusinessEntityActivityPanel({
                 )}
                 {activityTab === "HISTORY" && !historyLoading && historyTotalPages > 1 ? (
                     <div className="flex items-center justify-end gap-2 pt-2">
-                        <button type="button" disabled={historyPage <= 1} onClick={() => void loadHistory(historyPage - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs disabled:opacity-40">Trước</button>
+                        <AdminButton variant="secondary" density="compact" type="button" disabled={historyPage <= 1} onClick={() => void loadHistory(historyPage - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs disabled:opacity-40">Trước</AdminButton>
                         <span className="text-xs text-slate-500">{historyPage}/{historyTotalPages}</span>
-                        <button type="button" disabled={historyPage >= historyTotalPages} onClick={() => void loadHistory(historyPage + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs disabled:opacity-40">Sau</button>
+                        <AdminButton variant="secondary" density="compact" type="button" disabled={historyPage >= historyTotalPages} onClick={() => void loadHistory(historyPage + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs disabled:opacity-40">Sau</AdminButton>
                     </div>
                 ) : null}
             </div>
@@ -780,7 +781,7 @@ export function BusinessEntityMiniCard({
                     {typeLabel(preview.type)}
                 </div>
 
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     onClick={(event) => {
                         event.stopPropagation();
@@ -790,7 +791,7 @@ export function BusinessEntityMiniCard({
                     aria-label="Xem nhanh"
                 >
                     <ExternalLink className="h-3 w-3" />
-                </button>
+                </AdminButton>
             </div>
 
             <div className="mt-0.5 line-clamp-1 text-xs font-semibold text-slate-800">
@@ -862,13 +863,13 @@ export function BusinessEntityPreviewModal({
                         </h2>
                     </div>
 
-                    <button
+                    <AdminButton iconOnly variant="secondary" density="compact"
                         type="button"
                         onClick={onClose}
                         aria-label="Đóng xem nhanh" className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-200"
                     >
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
                 </div>
 
                 <div className="overflow-y-auto px-5 py-4">
@@ -892,11 +893,11 @@ export function BusinessEntityPreviewModal({
                               <div className={preview.type === "WATCH" ? "flex items-center gap-3" : "flex items-center gap-4 p-4"}>
                                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-50">
                                     {preview.imageUrl ? (
-                                        <button type="button" onClick={() => setImageOpen(true)} className="group/image relative h-full w-full cursor-zoom-in" aria-label="Phóng lớn ảnh">
+                                        <AdminButton variant="contextual" type="button" onClick={() => setImageOpen(true)} className="group/image relative h-full w-full cursor-zoom-in" aria-label="Phóng lớn ảnh">
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img src={preview.imageUrl} alt={preview.title} className="h-full w-full object-cover transition group-hover/image:scale-105" />
                                             <span className="absolute inset-0 grid place-items-center bg-slate-950/0 text-white opacity-0 transition group-hover/image:bg-slate-950/30 group-hover/image:opacity-100"><ZoomIn className="h-5 w-5" /></span>
-                                        </button>
+                                        </AdminButton>
                                     ) : (
                                         <ImageIcon className="h-5 w-5 text-slate-400" />
                                     )}
@@ -1097,16 +1098,16 @@ export function BusinessEntityPreviewModal({
                             {preview.actions?.length ? (
                                 <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                                     {preview.actions.map((action, actionIndex) => action.command ? (
-                                        <button
+                                        <AdminButton variant={actionIndex === 0 ? "primary" : "secondary"}
                                             type="button"
                                             key={`${action.label}:${action.command}`}
                                             onClick={() => onAction?.(action)}
                                             className={`${actionIndex === 0 ? "bg-slate-950 text-white hover:bg-slate-800" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"} inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-bold transition`}
                                         >
                                             {action.label}
-                                        </button>
+                                        </AdminButton>
                                     ) : action.href ? (
-                                        <Link
+                                        <AdminLinkAction variant="primary"
                                             key={`${action.label}:${action.href}`}
                                             href={action.href}
                                             onClick={onClose}
@@ -1114,19 +1115,19 @@ export function BusinessEntityPreviewModal({
                                         >
                                             {action.label}
                                             <ExternalLink className="h-4 w-4" />
-                                        </Link>
+                                        </AdminLinkAction>
                                     ) : null)}
                                 </div>
                             ) : null}
 
                             {preview.href && !preview.actions?.some((action) => action.href === preview.href) ? (
-                                <Link
+                                <AdminLinkAction variant="secondary"
                                     href={preview.href}
                                     className={`inline-flex h-10 items-center justify-center gap-2 px-3 text-sm ${ADMIN_UI.secondaryAction}`}
                                 >
                                     Mở trang chi tiết
                                     <ExternalLink className="h-4 w-4" />
-                                </Link>
+                                </AdminLinkAction>
                             ) : null}
                         </div>
                     ) : (
@@ -1138,7 +1139,7 @@ export function BusinessEntityPreviewModal({
             </div>
             {imageOpen && preview?.imageUrl ? (
                 <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/90 p-4 sm:p-8" onClick={(event) => { event.stopPropagation(); setImageOpen(false); }}>
-                    <button type="button" onClick={() => setImageOpen(false)} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20" aria-label="Đóng ảnh phóng lớn"><X className="h-6 w-6" /></button>
+                    <AdminButton iconOnly variant="secondary" type="button" onClick={() => setImageOpen(false)} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20" aria-label="Đóng ảnh phóng lớn"><X className="h-6 w-6" /></AdminButton>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={preview.imageUrl} alt={preview.title} onClick={(event) => event.stopPropagation()} className="max-h-full max-w-full rounded-xl object-contain shadow-2xl" />
                 </div>

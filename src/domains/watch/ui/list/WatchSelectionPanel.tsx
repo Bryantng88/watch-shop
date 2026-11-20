@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Image from "next/image";
 
 import type { WatchRow } from "./types";
@@ -16,14 +17,14 @@ export default function WatchSelectionPanel({ open, rows, onClose, onRemove, onC
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[120] flex justify-end bg-slate-950/25" role="dialog" aria-modal="true" aria-label="Watch đã chọn">
-      <button type="button" aria-label="Đóng danh sách" className="min-w-0 flex-1 cursor-default" onClick={onClose} />
+      <AdminButton variant="secondary" type="button" aria-label="Đóng danh sách" className="min-w-0 flex-1 cursor-default" onClick={onClose} />
       <aside className="flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
         <header className="flex items-start justify-between border-b border-slate-100 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-slate-950">Watch đã chọn</h2>
             <p className="mt-1 text-xs text-slate-500">{rows.length} watch được giữ khi đổi trang hoặc bộ lọc.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+          <AdminButton variant="secondary" density="compact" type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</AdminButton>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2">
           {rows.map((row) => (
@@ -35,13 +36,13 @@ export default function WatchSelectionPanel({ open, rows, onClose, onRemove, onC
                 <p className="truncate text-sm font-semibold text-slate-900">{row.title}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-500">{row.sku || "Chưa có SKU"}{row.brandName ? ` · ${row.brandName}` : ""}</p>
               </div>
-              <button type="button" onClick={() => onRemove(row.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-600">Bỏ</button>
+              <AdminButton variant="secondary" density="compact" type="button" onClick={() => onRemove(row.id)} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-600">Bỏ</AdminButton>
             </div>
           ))}
         </div>
         <footer className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
-          <button type="button" onClick={onClear} className="text-sm font-semibold text-rose-600 hover:text-rose-700">Bỏ chọn tất cả</button>
-          <button type="button" onClick={onClose} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Xong</button>
+          <AdminButton variant="secondary" type="button" onClick={onClear} className="text-sm font-semibold text-rose-600 hover:text-rose-700">Bỏ chọn tất cả</AdminButton>
+          <AdminButton variant="primary" type="button" onClick={onClose} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Xong</AdminButton>
         </footer>
       </aside>
     </div>

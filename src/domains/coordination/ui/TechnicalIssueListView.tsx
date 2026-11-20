@@ -1,6 +1,6 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   ArrowDown,
@@ -9,14 +9,11 @@ import {
   Clock3,
   Loader2,
   MessageCircle,
-  MoreHorizontal,
   Search,
   Zap,
 } from "lucide-react";
-import {
-  ADMIN_DOMAIN_TONE,
-  AdminUserAvatar,
-} from "@/domains/shared/ui/admin-design-contract";
+import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
+import { ADMIN_TECHNICAL_LIST as styles, ADMIN_TECHNICAL_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminTechnicalList";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import type {
   CoordinationDashboardDTO,
@@ -28,10 +25,10 @@ import {
   technicalIssueListStages,
   technicalIssueListLoadTarget,
   technicalIssuePrimaryMove,
+  technicalIssueListNavigation,
   type TechnicalIssueListState,
   type TechnicalIssueListStage,
 } from "../shared/technical-issue-list";
-import styles from "./TechnicalIssueListView.module.css";
 const PAGE_SIZE = 25;
 const money = (value: number) =>
   new Intl.NumberFormat("vi-VN", {
@@ -42,12 +39,13 @@ const money = (value: number) =>
 const date = (value: string | null) =>
   value && Number.isFinite(Date.parse(value))
     ? new Intl.DateTimeFormat("vi-VN", {
-        dateStyle: "short",
+        day: "2-digit", month: "2-digit", year: "numeric",
         timeZone: "Asia/Ho_Chi_Minh",
       }).format(new Date(value))
     : "—";
 type Move = { stage: TechnicalIssueListStage; label: string };
 type Props = {
+  stageNavigation?: "inline" | "external";
   items: Item[];
   pagination: NonNullable<
     CoordinationDashboardDTO["technicalIssueBoard"]
@@ -86,121 +84,18 @@ function RowActions({
   onPreview: () => void;
   onMove: (stage: TechnicalIssueListStage) => void;
 }) {
-  const primary = technicalIssuePrimaryMove(item.stage, options),
-    trigger = useRef<HTMLButtonElement>(null),
-    menu = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false),
-    [position, setPosition] = useState({ top: 0, left: 0 });
-  useEffect(() => {
-    if (!open) return;
-    const close = (event: PointerEvent) => {
-      if (
-        !trigger.current?.contains(event.target as Node) &&
-        !menu.current?.contains(event.target as Node)
-      )
-        setOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-        trigger.current?.focus();
-      }
-    };
-    const scroll = () => setOpen(false);
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", escape);
-    window.addEventListener("scroll", scroll, true);
-    window.addEventListener("resize", scroll);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", escape);
-      window.removeEventListener("scroll", scroll, true);
-      window.removeEventListener("resize", scroll);
-    };
-  }, [open]);
-  useEffect(() => setOpen(false), [item.stage, pending]);
-  function toggle() {
-    const rect = trigger.current?.getBoundingClientRect();
-    if (rect)
-      setPosition({
-        top: Math.max(
-          8,
-          Math.min(
-            rect.bottom + 6,
-            window.innerHeight - ((options.length + 1) * 40 + 16),
-          ),
-        ),
-        left: Math.max(8, Math.min(rect.right - 240, window.innerWidth - 248)),
-      });
-    setOpen(!open);
-    if (!open)
-      requestAnimationFrame(() =>
-        menu.current?.querySelector<HTMLButtonElement>("button")?.focus(),
-      );
-  }
-  return (
-    <div className={styles.actions}>
-      <button
-        type="button"
-        className={styles.move}
-        disabled={pending}
-        aria-label={`${primary ? primary.label : "Xem nhanh"}: ${item.summary}`}
-        onClick={() => (primary ? onMove(primary.stage) : onPreview())}
-      >
-        {primary ? primary.label : "Xem nhanh"}
-        <ChevronRight size={13} />
-      </button>
-      {options.some((option) => option.stage !== primary?.stage) && (
-        <button
-          ref={trigger}
-          type="button"
-          className={styles.iconButton}
-          disabled={pending}
-          aria-label={`Thao tác khác: ${item.summary}`}
-          aria-expanded={open}
-          onClick={toggle}
-        >
-          <MoreHorizontal size={17} />
-        </button>
-      )}
-      {open &&
-        createPortal(
-          <div
-            ref={menu}
-            className={styles.menu}
-            style={position}
-            aria-label={`Thao tác TI ${item.summary}`}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onPreview();
-              }}
-            >
-              Xem nhanh
-            </button>
-            {options
-              .filter((option) => option.stage !== primary?.stage)
-              .map((option) => (
-                <button
-                  key={option.stage}
-                  type="button"
-                  disabled={pending}
-                  onClick={() => {
-                    setOpen(false);
-                    onMove(option.stage);
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-          </div>,
-          document.body,
-        )}
-    </div>
-  );
+  const primary = technicalIssuePrimaryMove(item.stage, options);
+  const label = primary?.label ?? "Xem nhanh";
+  if (options.length > 1) return <AdminRowActionMenu triggerClassName={styles.move} label={`Thao tác TI: ${item.summary}`} status={<span>{label}</span>} disabled={pending}
+    actions={[...options.map(option => ({ key: option.stage, label: option.label, onSelect: () => onMove(option.stage) })), { key: "preview", label: "Xem nhanh", onSelect: onPreview }]} />;
+  return <AdminButton variant="secondary" density="compact" type="button" className={styles.move} disabled={pending} aria-label={`${label}: ${item.summary}`} onClick={() => primary ? onMove(primary.stage) : onPreview()}>{label}<ChevronRight size={16} aria-hidden="true" /></AdminButton>;
 }
+
+function TechnicalThumbnail({ src }: { src: string | null }) {
+  const [failed, setFailed] = useState(false);
+  return <span className={styles.thumbnail}>{src && !failed ? <Image src={src} alt="" width={36} height={36} unoptimized onError={() => setFailed(true)} /> : <Clock3 size={16} aria-hidden="true" />}</span>;
+}
+
 export default function TechnicalIssueListView({
   items,
   pagination,
@@ -222,6 +117,7 @@ export default function TechnicalIssueListView({
   onStateChange,
   query = "",
   focusMemory,
+  stageNavigation = "inline",
   filtered = false,
   loading = false,
 }: Props) {
@@ -293,36 +189,15 @@ export default function TechnicalIssueListView({
     <div
       ref={root}
       className={styles.list}
+      style={ADMIN_TECHNICAL_LIST_STYLE}
       aria-busy={loading || !!loadingColumn}
     >
       <div className={styles.toolbar}>
-        <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
-          {[
-            { key: "OPEN" as const, label: "Đang mở" },
-            ...TECHNICAL_LIST_STAGES,
-          ].map((stage) => (
-            <button
-              type="button"
-              key={stage.key}
-              aria-pressed={scope === stage.key}
-              onClick={() => change({ scope: stage.key })}
-            >
-              {stage.label}
-              <span>
-                {narrow
-                  ? technicalIssueListRows(items, stage.key, sort, attention)
-                      .length
-                  : technicalIssueListStages(stage.key).reduce(
-                      (n, s) =>
-                        n +
-                        (pagination[s.key]?.total ??
-                          items.filter((item) => item.stage === s.key).length),
-                      0,
-                    )}
-              </span>
-            </button>
-          ))}
-        </div>
+        {stageNavigation === "inline" && <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
+          {technicalIssueListNavigation(items, pagination, state, narrow).map(stage => <AdminButton variant="contextual" type="button" key={stage.key} aria-pressed={scope === stage.key} onClick={() => change({ scope: stage.key })}>
+            {stage.label}<span>{stage.count.toLocaleString("vi-VN")}</span>
+          </AdminButton>)}
+        </div>}
         <div className={styles.filters}>
           {scope === "DONE" && (
             <select
@@ -379,9 +254,8 @@ export default function TechnicalIssueListView({
         <div role="rowgroup" className={styles.headerGroup}>
           <div role="row" className={styles.header}>
             {[
-              "TI / Đồng hồ",
-              "Trạng thái",
-              "Đơn vị xử lý",
+              "Lỗi / Đồng hồ",
+              "Xử lý",
               "Thời hạn",
               "Chi phí",
               "Thao tác",
@@ -408,25 +282,14 @@ export default function TechnicalIssueListView({
                 className={`${styles.row} ${focusedIssueId === item.id ? styles.focused : ""}`}
               >
                 <div role="cell" className={styles.identity}>
-                  <button
+                  <AdminButton variant="secondary"
                     type="button"
                     className={styles.open}
                     onClick={() => onPreview(item)}
                     aria-label={`Xem nhanh TI ${item.summary}`}
+                    title={item.processingDetails.length ? item.processingDetails.join(" · ") : undefined}
                   >
-                    <span className={styles.thumbnail}>
-                      {image ? (
-                        <Image
-                          src={image}
-                          alt=""
-                          width={40}
-                          height={40}
-                          unoptimized
-                        />
-                      ) : (
-                        <Clock3 size={18} aria-hidden="true" />
-                      )}
-                    </span>
+                    <TechnicalThumbnail key={image || "missing"} src={image} />
                     <span className={styles.identityText}>
                       <span className={styles.title}>{item.summary}</span>
                       <span
@@ -445,7 +308,7 @@ export default function TechnicalIssueListView({
                         <span>
                           {item.serviceRequest.refNo || "Chưa có mã SR"}
                         </span>
-                        <span className={ADMIN_DOMAIN_TONE.TECHNICAL.soft}>
+                        <span>
                           {areaLabel(item.area)}
                         </span>
                         {item.requestOrigin === "CUSTOMER_ORDER" && (
@@ -467,17 +330,10 @@ export default function TechnicalIssueListView({
                           </span>
                         )}
                       </span>
-                      {item.processingDetails.length > 0 && (
-                        <span
-                          className={styles.processing}
-                          title={item.processingDetails.join(" · ")}
-                        >
-                          {item.processingDetails.join(" · ")}
-                        </span>
-                      )}
+                      <span className="sr-only">{item.processingDetails.join(" · ")}</span>
                     </span>
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton variant="contextual"
                     type="button"
                     aria-pressed={urgent}
                     aria-busy={busy}
@@ -495,43 +351,22 @@ export default function TechnicalIssueListView({
                     <span className={urgent ? "" : "sr-only"}>
                       {urgent ? "Gấp" : "Thường"}
                     </span>
-                  </button>
-                </div>
-                <div role="cell" className={styles.stage}>
-                  <span data-stage={item.stage}>
-                    {
-                      TECHNICAL_LIST_STAGES.find(
-                        (stage) => stage.key === item.stage,
-                      )?.label
-                    }
-                  </span>
+                  </AdminButton>
                 </div>
                 <div role="cell" className={styles.owner}>
-                  <span className={styles.ownerName}>
-                    {ownerLabel(item.actionMode, item.vendorName)}
-                  </span>
-                  <span className={styles.updated}>
-                    <AdminUserAvatar
-                      user={{
-                        name: item.lastUpdatedBy.label,
-                        avatarUrl: item.lastUpdatedBy.avatarUrl,
-                      }}
-                      size="xs"
-                    />
-                    <span>
-                      Cập nhật: {item.lastUpdatedBy.label}
-                      <small>{date(item.updatedAt)}</small>
-                    </span>
-                  </span>
+                  <span className={styles.stage} data-stage={item.stage}>{TECHNICAL_LIST_STAGES.find(stage => stage.key === item.stage)?.label}</span>
+                  <span className={styles.ownerName}>{ownerLabel(item.actionMode, item.vendorName)}</span>
+                  <span className="sr-only">Cập nhật: {item.lastUpdatedBy.label} · {date(item.updatedAt)}</span>
                 </div>
                 <div role="cell" className={styles.due}>
                   <span className={styles.mobileLabel}>Thời hạn</span>
                   <span
                     className={late && item.stage !== "DONE" ? styles.late : ""}
+                    aria-label={!item.expectedCompletionAt ? "Chưa hẹn hạn" : undefined}
                   >
                     {item.expectedCompletionAt
                       ? date(item.expectedCompletionAt)
-                      : "Chưa hẹn hạn"}
+                      : "—"}
                   </span>
                   {late && (
                     <small className={item.stage === "DONE" ? "" : styles.late}>
@@ -542,14 +377,14 @@ export default function TechnicalIssueListView({
                     </small>
                   )}
                 </div>
-                <div role="cell" className={styles.cost}>
+                <div role="cell" className={styles.cost} aria-label={item.actualCost == null && item.estimatedCost == null ? "Chưa có chi phí" : undefined}>
                   <span className={styles.mobileLabel}>Chi phí</span>
                   <span>
                     {item.actualCost != null
                       ? money(item.actualCost)
                       : item.estimatedCost != null
                         ? money(item.estimatedCost)
-                        : "Chưa có chi phí"}
+                        : "—"}
                   </span>
                   {(item.actualCost != null || item.estimatedCost != null) && (
                     <small>
@@ -581,9 +416,9 @@ export default function TechnicalIssueListView({
               : "Thử đổi trạng thái hoặc xóa bộ lọc đang chọn."}
           </p>
           {attention !== "ALL" && (
-            <button type="button" onClick={() => change({ attention: "ALL" })}>
+            <AdminButton variant="secondary" type="button" onClick={() => change({ attention: "ALL" })}>
               Bỏ lọc chú ý
-            </button>
+            </AdminButton>
           )}
         </div>
       )}
@@ -602,27 +437,27 @@ export default function TechnicalIssueListView({
           )}
         </div>
         <div className={styles.pager}>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             aria-label="Trang TI trước"
             disabled={currentPage <= 1}
             onClick={() => onStateChange({ ...state, page: currentPage - 1 })}
           >
             <ChevronLeft size={15} />
-          </button>
+          </AdminButton>
           <span>
             {currentPage}/{pages}
           </span>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             aria-label="Trang TI sau"
             disabled={currentPage >= pages}
             onClick={() => onStateChange({ ...state, page: currentPage + 1 })}
           >
             <ChevronRight size={15} />
-          </button>
+          </AdminButton>
           {loadTarget && (
-            <button
+            <AdminButton variant="secondary"
               type="button"
               className={styles.load}
               disabled={!!loadingColumn}
@@ -640,7 +475,7 @@ export default function TechnicalIssueListView({
               {TECHNICAL_LIST_STAGES.find(
                 (stage) => stage.key === loadTarget,
               )?.label.toLocaleLowerCase("vi")}
-            </button>
+            </AdminButton>
           )}
         </div>
       </div>

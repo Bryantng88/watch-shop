@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRouter } from "next/navigation";
 import {
     CheckCircle2,
@@ -445,7 +446,7 @@ export default function SectionReviewActions({
             {hasPrimaryActions ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     {canSubmit ? (
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={handleSubmit}
                             disabled={Boolean(pending)}
@@ -457,11 +458,11 @@ export default function SectionReviewActions({
                                 <Send className="h-3.5 w-3.5" />
                             )}
                             Gửi duyệt
-                        </button>
+                        </AdminButton>
                     ) : null}
 
                     {canResetDraft ? (
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={handleResetDraft}
                             disabled={Boolean(pending)}
@@ -473,11 +474,11 @@ export default function SectionReviewActions({
                                 <Undo2 className="h-3.5 w-3.5" />
                             )}
                             Mở chỉnh sửa
-                        </button>
+                        </AdminButton>
                     ) : null}
 
                     {canReject ? (
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={handleReject}
                             disabled={Boolean(pending)}
@@ -489,11 +490,11 @@ export default function SectionReviewActions({
                                 <XCircle className="h-3.5 w-3.5" />
                             )}
                             Trả về
-                        </button>
+                        </AdminButton>
                     ) : null}
 
                     {canApprove ? (
-                        <button
+                        <AdminButton variant="primary" density="compact"
                             type="button"
                             onClick={handleApprove}
                             disabled={Boolean(pending)}
@@ -505,7 +506,7 @@ export default function SectionReviewActions({
                                 <CheckCircle2 className="h-3.5 w-3.5" />
                             )}
                             {isFormDirty ? "Lưu & duyệt" : "Duyệt"}
-                        </button>
+                        </AdminButton>
                     ) : null}
                     <RelatedTaskCompleteModal
                         open={relatedTaskOpen}
@@ -577,16 +578,16 @@ export default function SectionReviewActions({
                             ) : null}
 
                             <div className="mt-5 flex flex-wrap justify-end gap-3">
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => setRejectOpen(false)}
                                     disabled={Boolean(pending)}
                                     className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                                 >
                                     Hủy
-                                </button>
+                                </AdminButton>
 
-                                <button
+                                <AdminButton variant="danger"
                                     type="button"
                                     onClick={confirmRejectWithNote}
                                     disabled={Boolean(pending)}
@@ -598,7 +599,7 @@ export default function SectionReviewActions({
                                         <XCircle className="h-4 w-4" />
                                     )}
                                     Trả về
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import RowActionMenu from "@/app/(admin)/admin/__components/RowActionMenu"
 import StatusBadge from "@/components/badges/StatusBadge";
@@ -249,7 +250,7 @@ export default function ProductListRow({
 
                     <div className="space-y-1">
                         <StatusBadge status={getContentStatusBadgeValue(product) as any} />
-                        <button
+                        <AdminButton variant="contextual"
                             type="button"
                             onClick={() => onOpenReadiness(product)}
                             className="block text-left"
@@ -260,7 +261,7 @@ export default function ProductListRow({
                                     <MiniDotLabel label="Missing Image" tone="gray" />
                                 ) : null}
                             </div>
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </td>

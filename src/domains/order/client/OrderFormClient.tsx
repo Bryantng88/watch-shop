@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -504,7 +505,7 @@ export default function OrderFormClient({
             onChange={(tradeIn) => patchValues({ tradeIn })}
           />
 
-          <details open={Boolean(initialData?.notes)} className="border-t border-slate-100 py-3 text-xs text-slate-500"><summary className="cursor-pointer">Ghi chú nội bộ</summary>
+          <details open={Boolean(initialData?.notes)} className="border-t border-slate-100 py-3 text-xs text-slate-500"><AdminDisclosureSummary className="cursor-pointer">Ghi chú nội bộ</AdminDisclosureSummary>
           <OrderNotesSection
             value={values.notes}
             disabled={!canEdit}

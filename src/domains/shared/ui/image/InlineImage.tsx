@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { useState } from "react";
@@ -55,7 +56,7 @@ export default function InlineImage({
     return (
         <>
             {/* Thumbnail */}
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => imageUrl && setOpen(true)}
                 className={[
@@ -81,7 +82,7 @@ export default function InlineImage({
                         )}
                     </div>
                 )}
-            </button>
+            </AdminButton>
 
             {/* Modal zoom */}
             {open && imageUrl && (

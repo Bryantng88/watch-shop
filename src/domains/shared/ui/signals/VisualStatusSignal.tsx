@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { MouseEventHandler } from "react";
 import {
     AlertCircle,
@@ -100,7 +101,7 @@ export function VisualStatusSignal({
     const resolvedTitle = title ?? [label, detail].filter(Boolean).join(" · ");
 
     if (onClick) {
-        return <button type="button" onClick={onClick} className={rootClassName} title={resolvedTitle}>{content}</button>;
+        return <AdminButton variant="secondary" type="button" onClick={onClick} className={rootClassName} title={resolvedTitle}>{content}</AdminButton>;
     }
 
     return <span className={rootClassName} title={resolvedTitle}>{content}</span>;

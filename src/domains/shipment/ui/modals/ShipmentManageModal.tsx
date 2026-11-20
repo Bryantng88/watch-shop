@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, PackageCheck, RotateCcw, Truck, X } from "lucide-react";
 
@@ -512,14 +513,14 @@ export default function ShipmentManageModal({
                         </p>
                     </div>
 
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={onClose}
                         className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                         disabled={submitting}
                     >
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
                 </div>
 
                 {loading ? (

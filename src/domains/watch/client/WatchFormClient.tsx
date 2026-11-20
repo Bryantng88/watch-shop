@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { currentMediaEditor, registerMediaEditor, type MediaDraft, type MediaEditor } from "@/domains/ai-assistant/media-editor";
 import { confirmMediaParts, effectiveMediaParts, invalidateChangedMediaParts, mergeLoadedMediaPool, mediaPartSaveSnapshot, mergeWatchSaveReceipt } from "../shared/media-work-state";
 import BenContentPreview from "../ui/edit/BenContentPreview";
@@ -139,12 +140,12 @@ function missingRequiredMediaWorkPartLabels(doneState: Record<MediaWorkPart, boo
 function MediaWorkDoneButton({ label, done, dirty, ready, statusUnknown, onRecheck, disabled, onSaveDraft, onComplete }: {
   label: string; done: boolean; dirty: boolean; ready: boolean; statusUnknown: boolean; onRecheck: () => void; disabled?: boolean; onSaveDraft: () => void; onComplete: () => void;
 }) {
-  if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><button type="button" disabled={disabled} onClick={onRecheck} className="h-11 rounded-lg border border-slate-300 px-3 text-slate-700">Kiểm tra lại</button></div>;
+  if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><AdminButton variant="secondary" type="button" disabled={disabled} onClick={onRecheck} className="h-11 rounded-lg border border-slate-300 px-3 text-slate-700">Kiểm tra lại</AdminButton></div>;
   if (!ready) return <span role="status" className="text-xs text-slate-500">Đang tải kho ảnh…</span>;
   return <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
     <span role="status" className={done?"w-full text-xs font-medium text-emerald-700 sm:w-auto":"w-full text-xs text-slate-500 sm:w-auto"}>{done?(dirty?"Đã hoàn tất · chưa lưu":"Đã hoàn tất"):dirty?"Có thay đổi chưa lưu":"Đã lưu · chưa hoàn tất"}</span>
-    <button type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</button>
-    <button type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-11 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</button>
+    <AdminButton variant="secondary" density="compact" type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</AdminButton>
+    <AdminButton variant="primary" density="compact" type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-11 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</AdminButton>
   </div>;
 }
 
@@ -1656,14 +1657,14 @@ export default function WatchFormClient({
   const mediaImageActions = isMediaProgressContext ? (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {workspaceBindingId && !isMediaWorkspaceDone ? (
-        <button
+        <AdminButton variant="secondary" density="compact"
           type="button"
           disabled={mediaSubmitPending || isMediaWorkspaceReturned}
           onClick={() => setReshootNoteOpen(true)}
           className="inline-flex h-11 items-center justify-center rounded-lg border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           Yêu cầu chụp lại
-        </button>
+        </AdminButton>
       ) : null}
       {reshootNoteOpen ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]">
@@ -1677,7 +1678,7 @@ export default function WatchFormClient({
                   Ghi rõ phần Photoshoot cần chụp lại.
                 </p>
               </div>
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 disabled={mediaSubmitPending}
                 onClick={() => setReshootNoteOpen(false)}
@@ -1685,7 +1686,7 @@ export default function WatchFormClient({
                 aria-label="Đóng"
               >
                 ×
-              </button>
+              </AdminButton>
             </div>
             <div className="p-5">
               <label
@@ -1707,22 +1708,22 @@ export default function WatchFormClient({
               />
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4">
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 disabled={mediaSubmitPending}
                 onClick={() => setReshootNoteOpen(false)}
                 className="h-9 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-200/70"
               >
                 Hủy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="primary" density="compact"
                 type="button"
                 disabled={mediaSubmitPending || !reshootNote.trim()}
                 onClick={requestMediaReshootFromModal}
                 className="h-9 rounded-lg bg-amber-500 px-4 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {mediaSubmitPending ? "Đang xử lý" : "Yêu cầu chụp lại"}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -1738,28 +1739,28 @@ export default function WatchFormClient({
           <span className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
             Đã hoàn tất
           </span>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             disabled={mediaSubmitPending}
             onClick={reopenMediaWorkspaceFromModal}
             className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-200 bg-white px-4 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {mediaSubmitPending ? "Đang xử lý" : "Mở lại xử lý"}
-          </button>
+          </AdminButton>
         </>
       ) : (
         <>
           {canReturnMediaWorkspace ? (
-            <button
+            <AdminButton variant="secondary"
               type="button"
               disabled={mediaSubmitPending}
               onClick={returnMediaWorkspaceFromModal}
               className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {mediaSubmitPending ? "Đang xử lý" : "Trả về"}
-            </button>
+            </AdminButton>
           ) : null}
-          <button
+          <AdminButton variant="primary"
             type="button"
             disabled={mediaSubmitPending || !canApproveMediaWorkspace}
             onClick={approveMediaWorkspaceFromModal}
@@ -1771,7 +1772,7 @@ export default function WatchFormClient({
             className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
           >
             {mediaSubmitPending ? "Đang duyệt" : "Duyệt xong"}
-          </button>
+          </AdminButton>
         </>
       )}
     </>

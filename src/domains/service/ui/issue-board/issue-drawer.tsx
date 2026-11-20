@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { Plus, X } from "lucide-react";
 import { createQuickVendor } from "@/domains/vendor/client/vendor.actions";
@@ -185,7 +186,7 @@ function VendorSelectWithQuickCreate({
         </label>
 
         {!creating ? (
-          <button
+          <AdminButton variant="secondary" density="compact"
             type="button"
             onClick={() => {
               setError(null);
@@ -195,7 +196,7 @@ function VendorSelectWithQuickCreate({
           >
             <Plus className="h-3.5 w-3.5" />
             Vendor mới
-          </button>
+          </AdminButton>
         ) : null}
       </div>
 
@@ -224,7 +225,7 @@ function VendorSelectWithQuickCreate({
               </div>
             </div>
 
-            <button
+            <AdminButton variant="secondary"
               type="button"
               onClick={() => {
                 setCreating(false);
@@ -233,7 +234,7 @@ function VendorSelectWithQuickCreate({
               className="rounded-full p-1 text-indigo-500 hover:bg-white/70"
             >
               <X className="h-4 w-4" />
-            </button>
+            </AdminButton>
           </div>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_150px_auto]">
@@ -262,14 +263,14 @@ function VendorSelectWithQuickCreate({
               />
             </div>
 
-            <button
+            <AdminButton variant="primary"
               type="button"
               onClick={handleCreate}
               disabled={pending || !name.trim()}
               className="self-end rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {pending ? "Đang tạo..." : "Thêm"}
-            </button>
+            </AdminButton>
           </div>
 
           {error ? (
@@ -426,13 +427,13 @@ export function IssueDrawer({
               </div>
             </div>
 
-            <button
+            <AdminButton variant="secondary"
               type="button"
               className="rounded-xl border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
               onClick={onClose}
             >
               Đóng
-            </button>
+            </AdminButton>
           </div>
         </div>
 
@@ -670,25 +671,25 @@ export function IssueDrawer({
           <section className="rounded-2xl border border-stone-200 bg-white p-4">
             <div className="flex flex-wrap gap-3">
               {issue.boardColumn === "PENDING_CONFIRM" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={busyId === issue.id}
                   onClick={() => onAction(issue.id, "confirm")}
                   className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
                 >
                   Xác nhận
-                </button>
+                </AdminButton>
               )}
 
               {issue.boardColumn === "READY" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={!canStart}
                   onClick={() => onAction(issue.id, "start")}
                   className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Bắt đầu xử lý
-                </button>
+                </AdminButton>
               )}
               <section className="rounded-2xl border border-stone-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -743,7 +744,7 @@ export function IssueDrawer({
 
                             {log.approvalStatus === "PENDING" ? (
                               <>
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                   type="button"
                                   onClick={async () => {
                                     await fetch(`/api/admin/maintenance-records/${log.id}/approve`, {
@@ -754,9 +755,9 @@ export function IssueDrawer({
                                   className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100"
                                 >
                                   Duyệt
-                                </button>
+                                </AdminButton>
 
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                   type="button"
                                   onClick={async () => {
                                     const reason = window.prompt("Lý do từ chối phát sinh?");
@@ -788,7 +789,7 @@ export function IssueDrawer({
                                   className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-100"
                                 >
                                   Từ chối
-                                </button>
+                                </AdminButton>
                               </>
                             ) : null}
                           </div>
@@ -861,46 +862,46 @@ export function IssueDrawer({
                   </div>
 
                   <div className="mt-3 flex justify-end">
-                    <button
+                    <AdminButton variant="secondary"
                       type="button"
                       disabled={logPending || !logNotes.trim()}
                       onClick={submitMaintenanceLog}
                       className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {logPending ? "Đang lưu..." : "Thêm nhật ký"}
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               </section>
               {issue.boardColumn === "IN_PROGRESS" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={!canComplete}
                   onClick={() => onAction(issue.id, "complete")}
                   className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Hoàn tất
-                </button>
+                </AdminButton>
               )}
 
               {issue.boardColumn !== "DONE" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => onCancelIssue(issue.id)}
                   disabled={cancelingIssueId === issue.id}
                   className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                 >
                   {cancelingIssueId === issue.id ? "Đang hủy..." : "Hủy issue"}
-                </button>
+                </AdminButton>
               )}
 
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm hover:bg-stone-50"
                 onClick={onOpenServiceRequest}
               >
                 Mở Service Request
-              </button>
+              </AdminButton>
             </div>
           </section>
         </div>

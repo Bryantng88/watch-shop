@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Boxes, ChartNoAxesCombined, Eye, MousePointerClick, PackageCheck, ShoppingBag, Users } from "lucide-react";
@@ -33,7 +34,7 @@ export default function SalesReportClient({ data, internalDevice }: { data: Sale
     <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4">
       <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Báo cáo / Bán hàng</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Hiệu quả bán hàng</h1><p className="mt-1 text-sm text-slate-500">Traffic → yêu cầu mua → đơn hàng, đặt cạnh tồn kho và kết quả tài chính.</p></div>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>{savingInternal ? "Đang lưu…" : internalDevice ? "Thiết bị nội bộ · đang bật" : "Đánh dấu thiết bị nội bộ"}</button>
+        <AdminButton variant="contextual" density="compact" type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>{savingInternal ? "Đang lưu…" : internalDevice ? "Thiết bị nội bộ · đang bật" : "Đánh dấu thiết bị nội bộ"}</AdminButton>
         <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">Tháng hiện tại · {data.period.days} ngày</span>
       </div>
     </header>
@@ -45,9 +46,9 @@ export default function SalesReportClient({ data, internalDevice }: { data: Sale
           Tháng này đã loại {number(data.internalTraffic.sessions)} phiên · {number(data.internalTraffic.visitors)} người xem · {number(data.internalTraffic.events)} sự kiện nội bộ khỏi báo cáo.
         </p>
       </div>
-      <button type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-100" : "border-slate-300 bg-slate-950 text-white hover:bg-slate-800"}`}>
+      <AdminButton variant="contextual" density="compact" type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-100" : "border-slate-300 bg-slate-950 text-white hover:bg-slate-800"}`}>
         {savingInternal ? "Đang lưu…" : internalDevice ? "Bỏ đánh dấu nội bộ" : "Đánh dấu thiết bị nội bộ"}
-      </button>
+      </AdminButton>
     </section>
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">

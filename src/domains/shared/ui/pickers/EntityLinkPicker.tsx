@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -150,7 +151,7 @@ export default function EntityLinkPicker({
                                     ) : null}
                                 </div>
 
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => removeId(id)}
                                     className={cn(
@@ -159,7 +160,7 @@ export default function EntityLinkPicker({
                                     )}
                                 >
                                     <X className="h-4 w-4" />
-                                </button>
+                                </AdminButton>
                             </div>
                         );
                     })}
@@ -184,14 +185,14 @@ export default function EntityLinkPicker({
                             className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
                         />
 
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={runSearch}
                             disabled={pending}
                             className="shrink-0 text-xs font-semibold text-slate-700 disabled:opacity-50"
                         >
                             {pending ? "Tìm..." : "Tìm"}
-                        </button>
+                        </AdminButton>
                     </div>
 
                     {error ? (
@@ -206,7 +207,7 @@ export default function EntityLinkPicker({
                                 const selected = selectedIds.includes(item.id);
 
                                 return (
-                                    <button
+                                    <AdminButton variant="contextual"
                                         key={item.id}
                                         type="button"
                                         disabled={selected}
@@ -230,7 +231,7 @@ export default function EntityLinkPicker({
                                                 {item.sublabel}
                                             </div>
                                         ) : null}
-                                    </button>
+                                    </AdminButton>
                                 );
                             })}
                         </div>

@@ -1,8 +1,9 @@
 "use client";
 
+import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+
 import { useSearchParams } from "next/navigation";
 import {
     ChevronDown,
@@ -140,13 +141,13 @@ function SectionCard({
                 </div>
 
                 {collapsible ? (
-                    <button
+                    <AdminButton iconOnly variant="secondary" density="compact"
                         type="button"
                         onClick={() => setOpen((v) => !v)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
                     >
                         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
+                    </AdminButton>
                 ) : null}
             </div>
 
@@ -458,21 +459,21 @@ export default function OrderFormClient({
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Link
+                    <AdminLinkAction variant="secondary"
                         href={backHref}
                         className="inline-flex h-10 items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
                     >
                         {backLabel}
-                    </Link>
+                    </AdminLinkAction>
 
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={handleSubmit}
                         disabled={!canEdit || submitting}
                         className="inline-flex h-10 items-center justify-center rounded-2xl bg-neutral-950 px-4 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {submitting ? "Đang lưu..." : isEdit ? "Cập nhật" : "Tạo đơn"}
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
 
@@ -676,7 +677,7 @@ export default function OrderFormClient({
                                                 <div className="px-4 py-3 text-sm text-neutral-500">Không có kết quả</div>
                                             ) : (
                                                 productResults.map((row) => (
-                                                    <button
+                                                    <AdminButton variant="contextual"
                                                         key={row.id}
                                                         type="button"
                                                         onClick={() => addProduct(row)}
@@ -704,7 +705,7 @@ export default function OrderFormClient({
                                                                 {row.availabilityStatus ? ` • ${row.availabilityStatus}` : ""}
                                                             </div>
                                                         </div>
-                                                    </button>
+                                                    </AdminButton>
                                                 ))
                                             )}
                                         </div>
@@ -716,7 +717,7 @@ export default function OrderFormClient({
                                 <div className="text-sm font-medium text-neutral-700">Thêm dịch vụ</div>
                                 <div className="flex flex-wrap gap-2">
                                     {services.map((svc) => (
-                                        <button
+                                        <AdminButton variant="secondary" density="compact"
                                             key={svc.id}
                                             type="button"
                                             onClick={() => addService(svc)}
@@ -724,7 +725,7 @@ export default function OrderFormClient({
                                             className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                                         >
                                             + {svc.name}
-                                        </button>
+                                        </AdminButton>
                                     ))}
                                 </div>
                             </div>
@@ -831,30 +832,30 @@ export default function OrderFormClient({
                                                     </div>
 
                                                     <div className="flex shrink-0 items-center gap-2">
-                                                        <button
+                                                        <AdminButton iconOnly variant="secondary" density="compact"
                                                             type="button"
                                                             onClick={() => moveItem(index, -1)}
                                                             disabled={!canEdit || index === 0}
                                                             className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-sm text-neutral-700 disabled:opacity-40"
                                                         >
                                                             ↑
-                                                        </button>
-                                                        <button
+                                                        </AdminButton>
+                                                        <AdminButton iconOnly variant="secondary" density="compact"
                                                             type="button"
                                                             onClick={() => moveItem(index, 1)}
                                                             disabled={!canEdit || index === items.length - 1}
                                                             className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-sm text-neutral-700 disabled:opacity-40"
                                                         >
                                                             ↓
-                                                        </button>
-                                                        <button
+                                                        </AdminButton>
+                                                        <AdminButton variant="danger" density="compact"
                                                             type="button"
                                                             onClick={() => removeItem(index)}
                                                             disabled={!canEdit}
                                                             className="inline-flex h-9 items-center justify-center rounded-xl border border-red-200 bg-white px-3 text-sm text-red-600 disabled:opacity-40"
                                                         >
                                                             Xóa
-                                                        </button>
+                                                        </AdminButton>
                                                     </div>
                                                 </div>
 
@@ -976,14 +977,14 @@ export default function OrderFormClient({
                                     </span>
                                 </div>
 
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={handleSubmit}
                                     disabled={!canEdit || submitting}
                                     className="inline-flex h-11 w-full items-center justify-center rounded-2xl bg-neutral-950 px-4 text-sm font-medium text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {submitting ? "Đang lưu..." : isEdit ? "Cập nhật đơn hàng" : "Tạo đơn hàng"}
-                                </button>
+                                </AdminButton>
                             </div>
                         </SectionCard>
                     </div>

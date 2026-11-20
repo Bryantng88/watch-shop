@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import HoverPreviewPortal from "../../__components/HoverPreviewPortal";
@@ -80,7 +81,7 @@ function MediaGrid({
 
                 <div className="grid grid-cols-4 gap-3 sm:grid-cols-5 md:grid-cols-6">
                     {files.map((f) => (
-                        <button
+                        <AdminButton variant="contextual"
                             key={f.key}
                             type="button"
                             onClick={() => onPick(f.key)}
@@ -95,7 +96,7 @@ function MediaGrid({
                                 loading="lazy"
                                 decoding="async"
                             />
-                        </button>
+                        </AdminButton>
                     ))}
                 </div>
             </div>
@@ -142,13 +143,13 @@ function PickerModal({
             <div className="max-h-[85vh] w-full max-w-6xl overflow-hidden rounded-xl bg-white shadow-2xl">
                 <div className="flex items-center justify-between border-b px-4 py-3">
                     <h3 className="font-medium">Chọn ảnh cho inline picker</h3>
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         type="button"
                         onClick={onClose}
                         className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
                         Đóng
-                    </button>
+                    </AdminButton>
                 </div>
 
                 <div className="max-h-[calc(85vh-60px)] overflow-auto p-4">
@@ -189,7 +190,7 @@ export default function InlineImagePicker({
                 onMouseEnter={() => setShowPreview(true)}
                 onMouseLeave={() => setShowPreview(false)}
             >
-                <button
+                <AdminButton variant="contextual"
                     type="button"
                     onClick={() => !disabled && setOpen(true)}
                     disabled={disabled}
@@ -219,7 +220,7 @@ export default function InlineImagePicker({
                             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                         </div>
                     )}
-                </button>
+                </AdminButton>
             </div>
 
             <HoverPreviewPortal

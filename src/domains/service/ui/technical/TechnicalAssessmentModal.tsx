@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -403,7 +404,7 @@ function Button({
     };
 
     return (
-        <button
+        <AdminButton variant="secondary"
             {...props}
             className={cx(
                 "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:opacity-50",
@@ -412,7 +413,7 @@ function Button({
             )}
         >
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
@@ -461,7 +462,7 @@ function StatusToggle({
 }) {
     return (
         <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
-            <button
+            <AdminButton variant="secondary"
                 type="button"
                 onClick={() => onChange("GOOD")}
                 className={cx(
@@ -472,8 +473,8 @@ function StatusToggle({
                 )}
             >
                 {goodText}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton variant="secondary"
                 type="button"
                 onClick={() => onChange("ISSUE")}
                 className={cx(
@@ -484,7 +485,7 @@ function StatusToggle({
                 )}
             >
                 {issueText}
-            </button>
+            </AdminButton>
         </div>
     );
 }
@@ -567,7 +568,7 @@ function IssueChipGroup({
             {options.map((item) => {
                 const active = selected.includes(item.code);
                 return (
-                    <button
+                    <AdminButton variant="contextual"
                         key={item.code}
                         type="button"
                         onClick={() => toggle(item.code)}
@@ -579,7 +580,7 @@ function IssueChipGroup({
                         )}
                     >
                         {item.label} <span className="opacity-70">(-{item.deduction})</span>
-                    </button>
+                    </AdminButton>
                 );
             })}
         </div>
@@ -607,7 +608,7 @@ function CollapsibleScoreCard({
 
     return (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
                 className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left hover:bg-slate-50"
@@ -627,7 +628,7 @@ function CollapsibleScoreCard({
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                     )}
                 </div>
-            </button>
+            </AdminButton>
 
             {open ? <div className="border-t border-slate-200 bg-slate-50/50 p-4">{children}</div> : null}
         </div>

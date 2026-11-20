@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState, type ReactNode } from "react";
 import { Bookmark, Filter, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import type {
@@ -160,7 +161,7 @@ export default function FilterBar({
                     </label>
                 ) : null}
 
-                <button
+                <AdminButton variant={advancedOpen ? "primary" : "secondary"}
                     type="button"
                     onClick={() => setAdvancedOpen((current) => !current)}
                     aria-expanded={advancedOpen}
@@ -173,7 +174,7 @@ export default function FilterBar({
                             {activeCount}
                         </span>
                     ) : null}
-                </button>
+                </AdminButton>
 
                 {trailingActions ? (
                     <div className="flex shrink-0 items-center justify-end gap-2">
@@ -210,23 +211,23 @@ export default function FilterBar({
                             />
                         </label>
                     ) : null}
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         onClick={onApply}
                         className="inline-flex h-11 items-center justify-center gap-2 self-end rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
                     >
                         <SlidersHorizontal className="h-4 w-4" />
                         Áp dụng
-                    </button>
+                    </AdminButton>
                     {onSaveView ? (
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={onSaveView}
                             className="inline-flex h-11 items-center justify-center gap-2 self-end rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
                         >
                             <Bookmark className="h-4 w-4" />
                             Lưu view
-                        </button>
+                        </AdminButton>
                     ) : null}
                 </div>
             ) : null}
@@ -238,7 +239,7 @@ export default function FilterBar({
                         {activeFields.map((field) => {
                             const value = activeFieldValue(field, values);
                             return (
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     key={field.key}
                                     type="button"
                                     onClick={() => onClearField(field.key)}
@@ -246,17 +247,17 @@ export default function FilterBar({
                                 >
                                     {field.label}: {labelFor(field, value)}
                                     <X className="h-3.5 w-3.5" />
-                                </button>
+                                </AdminButton>
                             );
                         })}
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={onClearAll}
                             className="inline-flex h-8 items-center gap-1 rounded-xl px-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                             Xóa tất cả
-                        </button>
+                        </AdminButton>
                     </div>
 
                     {hasTotal ? (

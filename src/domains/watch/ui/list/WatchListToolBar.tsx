@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { ArchiveRestore, Camera, ChevronDown, Images, Watch as WatchIcon } from "lucide-react";
 import {
@@ -71,7 +72,7 @@ export default function WatchListToolbar({
                     aria-label="Chọn danh sách Watch"
                 >
                     {(["MEN", "WOMEN"] as const).map((segment) => (
-                        <button
+                        <AdminButton variant="contextual" density="compact"
                             key={segment}
                             type="button"
                             onClick={() => onAudienceSegmentChange?.(segment)}
@@ -83,19 +84,19 @@ export default function WatchListToolbar({
                             }`}
                         >
                             {segment === "MEN" ? "Nam" : "Nữ"}
-                        </button>
+                        </AdminButton>
                     ))}
                 </div>
-                <button
+                <AdminButton variant="secondary" density="compact"
                     type="button"
                     onClick={onToggleDuplicateView}
                     className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                     <ArchiveRestore className="h-4 w-4" />
                     {duplicateView ? "Về danh sách Watch" : "Watch trùng"}
-                </button>
+                </AdminButton>
                 {showSelectionActions && selectedCount > 0 ? <div className="relative">
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         onClick={() => setIsActionMenuOpen((value) => !value)}
                         disabled={selectedCount <= 0 || submitting}
@@ -103,11 +104,11 @@ export default function WatchListToolbar({
                     >
                         {submitting ? "Đang gửi..." : "Thao tác"}
                         <ChevronDown className="h-4 w-4" />
-                    </button>
+                    </AdminButton>
 
                     {isActionMenuOpen ? (
                         <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
-                            <button
+                            <AdminButton variant="contextual"
                                 type="button"
                                 onClick={runPhotoshootRequest}
                                 disabled={!canRequestPhotoshoot || submitting}
@@ -127,8 +128,8 @@ export default function WatchListToolbar({
                                         {photoshootEligibleCount} watch chưa có ảnh trong {selectedCount} watch đã chọn
                                     </span>
                                 </span>
-                            </button>
-                            <button
+                            </AdminButton>
+                            <AdminButton variant="contextual"
                                 type="button"
                                 onClick={runMediaReviewRequest}
                                 disabled={!canRequestMediaReview || submitting}
@@ -148,7 +149,7 @@ export default function WatchListToolbar({
                                         {mediaReviewEligibleCount} watch đã có ảnh trong {selectedCount} watch đã chọn
                                     </span>
                                 </span>
-                            </button>
+                            </AdminButton>
                         </div>
                     ) : null}
                 </div> : null}

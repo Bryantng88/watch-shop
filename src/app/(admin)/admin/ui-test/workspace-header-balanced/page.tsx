@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
   CalendarDays,
   CheckCircle2,
@@ -117,9 +118,9 @@ export default function WorkspaceHeaderBalancedTestPage() {
               <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace ref</div>
               <div className="mt-1.5 flex items-center justify-between gap-2">
                 <code className="truncate text-sm font-bold text-slate-900">PX-42E6-35E3A0</code>
-                <button type="button" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-indigo-600 hover:bg-indigo-50">
+                <AdminButton iconOnly variant="secondary" density="compact" type="button" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-indigo-600 hover:bg-indigo-50">
                   <Copy className="h-4 w-4" />
-                </button>
+                </AdminButton>
               </div>
             </div>
           </div>
@@ -164,14 +165,14 @@ export default function WorkspaceHeaderBalancedTestPage() {
                   <div className="min-w-0"><div className="truncate text-xs font-bold">{title}</div><div className="mt-1 text-[10px] text-slate-400">{ref} · {channels}</div></div>
                   <span className={status === "Hoàn tất" ? "w-fit rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700" : "w-fit rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700"}>{status}</span>
                   <span className="text-xs font-semibold text-slate-500">{activity}</span>
-                  <button type="button" className="h-8 rounded-lg border border-slate-200 bg-white text-[11px] font-semibold text-slate-700">Đã đăng bài</button>
+                  <AdminButton variant="secondary" density="compact" type="button" className="h-8 rounded-lg border border-slate-200 bg-white text-[11px] font-semibold text-slate-700">Đã đăng bài</AdminButton>
                 </div>
               ))}
             </div>
           </section>
 
           <aside className="space-y-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="text-xs font-bold">Shared with</div><div className="mt-3 flex items-center justify-between"><div className="flex -space-x-2"><div className="h-9 w-9 rounded-full border-2 border-white bg-amber-200" /><div className="h-9 w-9 rounded-full border-2 border-white bg-slate-300" /></div><button className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-bold text-indigo-600">+ Thêm</button></div></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="text-xs font-bold">Shared with</div><div className="mt-3 flex items-center justify-between"><div className="flex -space-x-2"><div className="h-9 w-9 rounded-full border-2 border-white bg-amber-200" /><div className="h-9 w-9 rounded-full border-2 border-white bg-slate-300" /></div><AdminButton variant="secondary" density="compact" className="rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-bold text-indigo-600">+ Thêm</AdminButton></div></div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="text-xs font-bold">Thông tin nhanh</div><dl className="mt-3 space-y-2 text-xs"><div className="flex justify-between"><dt className="text-slate-500">Ref</dt><dd className="font-semibold">2026-W30</dd></div><div className="flex justify-between"><dt className="text-slate-500">Tạo lúc</dt><dd className="font-semibold">15:24 20/7/26</dd></div><div className="flex justify-between"><dt className="text-slate-500">Cập nhật</dt><dd className="font-semibold">18:14 20/7/26</dd></div></dl></div>
           </aside>
         </div>

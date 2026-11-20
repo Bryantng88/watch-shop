@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -93,22 +94,22 @@ function Pagination({
             </div>
 
             <div className="flex items-center gap-2">
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                     disabled={page <= 1}
                     onClick={() => onPage(Math.max(1, page - 1))}
                 >
                     ← Trước
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="secondary"
                     type="button"
                     className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                     disabled={page >= totalPages}
                     onClick={() => onPage(Math.min(totalPages, page + 1))}
                 >
                     Sau →
-                </button>
+                </AdminButton>
             </div>
         </div>
     );
@@ -161,22 +162,22 @@ function BulkSaleModal({
                 </div>
 
                 <div className="flex justify-end gap-3 px-5 py-4">
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={onClose}
                         className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
                         disabled={saving}
                     >
                         Hủy
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="primary"
                         type="button"
                         onClick={onConfirm}
                         className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                         disabled={saving}
                     >
                         {saving ? "Đang lưu..." : "Xác nhận"}
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>
@@ -502,28 +503,28 @@ export default function ListProducts(props: ProductListPageProps) {
 
             {!isStrapCatalog ? (
                 <ProductListBulkBar selectedCount={selectedIds.length}>
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={() => setBulkSaleOpen(true)}
                         className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                         Bulk sale
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={handleBulkService}
                         disabled={bulkServiceLoading}
                         className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                     >
                         {bulkServiceLoading ? "Đang tạo..." : "Bulk request service"}
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={() => setSelectedIds([])}
                         className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
                     >
                         Bỏ chọn
-                    </button>
+                    </AdminButton>
                 </ProductListBulkBar>
             ) : null}
 

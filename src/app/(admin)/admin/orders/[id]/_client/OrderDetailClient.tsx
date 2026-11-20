@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import StatusBadge from "@/components/badges/StatusBadge";
@@ -180,18 +181,18 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                 <div className="flex flex-wrap items-start justify-between gap-4 px-5 py-5 sm:px-6">
                     <div className="space-y-3">
                         <div className="flex flex-wrap items-center gap-2">
-                            <Link
+                            <AdminLinkAction variant="secondary" density="compact"
                                 href="/admin/orders"
                                 className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-50"
                             >
                                 ← Danh sách đơn hàng
-                            </Link>
-                            <Link
+                            </AdminLinkAction>
+                            <AdminLinkAction variant="secondary" density="compact"
                                 href={`/admin/orders/${data.id}/edit`}
                                 className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 transition hover:bg-neutral-50"
                             >
                                 Chỉnh sửa
-                            </Link>
+                            </AdminLinkAction>
                         </div>
 
                         <div>
@@ -411,7 +412,7 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
 
                     <Panel title="Thao tác" description="Các hành động nhanh dành cho vận hành đơn hàng.">
                         <div className="space-y-3">
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 disabled={!canPost || posting}
                                 onClick={() => runAction(`/api/admin/orders/${data.id}/post`, setPosting)}
@@ -423,9 +424,9 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                                 )}
                             >
                                 {posting ? "Đang duyệt..." : "Duyệt đơn"}
-                            </button>
+                            </AdminButton>
 
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 disabled={!canVerify || verifying}
                                 onClick={() => runAction(`/api/admin/orders/${data.id}/verify`, setVerifying)}
@@ -437,9 +438,9 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                                 )}
                             >
                                 {verifying ? "Đang xác minh..." : "Verify đơn"}
-                            </button>
+                            </AdminButton>
 
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 disabled={!canCancel || cancelling}
                                 onClick={() =>
@@ -457,7 +458,7 @@ export default function OrderDetailClient({ data }: { data: OrderDetailData }) {
                                 )}
                             >
                                 {cancelling ? "Đang hủy..." : "Hủy đơn"}
-                            </button>
+                            </AdminButton>
 
                             <Link
                                 href={`/admin/orders/${data.id}/edit`}

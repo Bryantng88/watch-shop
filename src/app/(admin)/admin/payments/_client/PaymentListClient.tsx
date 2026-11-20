@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DotLabel from "../../__components/DotLabel";
@@ -196,13 +197,13 @@ export default function PaymentListClient(props: {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold">Payments</h1>
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     onClick={() => router.push("/admin")}
                 >
                     ← Admin
-                </button>
+                </AdminButton>
             </div>
 
             <SegmentTabs
@@ -291,16 +292,16 @@ export default function PaymentListClient(props: {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                    <AdminButton variant="secondary" type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                         Lọc
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={clearFilters}
                         className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     >
                         Clear
-                    </button>
+                    </AdminButton>
                     <div className="ml-auto text-sm text-gray-600">
                         Đã chọn: <b>{selectedIds.length}</b>
                     </div>
@@ -312,7 +313,7 @@ export default function PaymentListClient(props: {
                     <span className="font-medium text-blue-700">
                         {selectedIds.length} payment đã chọn
                     </span>
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
                             setSelectedIds([]);
@@ -321,7 +322,7 @@ export default function PaymentListClient(props: {
                         type="button"
                     >
                         Bỏ chọn
-                    </button>
+                    </AdminButton>
                 </div>
             )}
 
@@ -478,7 +479,7 @@ export default function PaymentListClient(props: {
                                             </td>
 
                                             <td className="px-3 py-4 align-middle text-right">
-                                                <button
+                                                <AdminButton variant="secondary" density="compact"
                                                     type="button"
                                                     className="px-2 py-1 border rounded-lg text-xs hover:bg-gray-50"
                                                     onClick={() => {
@@ -486,7 +487,7 @@ export default function PaymentListClient(props: {
                                                     }}
                                                 >
                                                     ⋮
-                                                </button>
+                                                </AdminButton>
                                             </td>
                                         </tr>
                                     );
@@ -502,22 +503,22 @@ export default function PaymentListClient(props: {
                     Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         className="px-3 py-2 border rounded-lg disabled:opacity-50"
                         disabled={props.page <= 1}
                         onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
                         ← Trước
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="secondary"
                         type="button"
                         className="px-3 py-2 border rounded-lg disabled:opacity-50"
                         disabled={props.page >= props.totalPages}
                         onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >
                         Sau →
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>

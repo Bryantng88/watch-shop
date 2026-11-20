@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type {
   OperationalBlueprintAction,
   OperationalBlueprintContract,
@@ -798,7 +799,7 @@ function OperationTemplatePicker({
           const validation = validateOperationalBlueprintContract(operation);
 
           return (
-            <button
+            <AdminButton variant="contextual"
               key={template.key}
               type="button"
               onClick={() => onSelect(template)}
@@ -833,7 +834,7 @@ function OperationTemplatePicker({
                   {operation.actions.length} actions
                 </span>
               </div>
-            </button>
+            </AdminButton>
           );
         })}
       </div>
@@ -872,7 +873,7 @@ export function OperationModelAuthoringPanel({
         <OperationTemplatePicker templates={templates} onSelect={onTemplateSelect} />
       ) : null}
       {sourceOperation && !operation ? (
-        <button
+        <AdminButton variant="primary"
           type="button"
           onClick={() =>
             onTemplateSelect({
@@ -886,7 +887,7 @@ export function OperationModelAuthoringPanel({
           className="w-full border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
         >
           Sao chép operation gốc
-        </button>
+        </AdminButton>
       ) : null}
 
       {operation ? (
@@ -914,13 +915,13 @@ export function OperationModelAuthoringPanel({
               </div>
             </div>
             {emptyModel ? (
-              <button
+              <AdminButton variant="primary"
                 type="button"
                 onClick={() => updateOperation(starterOperationFrom(operation))}
                 className="mt-3 w-full bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
               >
                 Dựng operation đầu tiên
-              </button>
+              </AdminButton>
             ) : null}
           </div>
 
@@ -933,13 +934,13 @@ export function OperationModelAuthoringPanel({
                 Model cần object, vai trò Workspace, event route, action và
                 workflow khớp với nhau trước khi có thể tạo Space thật.
               </div>
-              <button
+              <AdminButton variant="primary"
                 type="button"
                 onClick={() => updateOperation(starterOperationFrom(operation))}
                 className="mt-3 w-full bg-amber-950 px-3 py-2 text-sm font-medium text-white hover:bg-amber-900"
               >
                 Tự tạo model khởi đầu hợp lệ
-              </button>
+              </AdminButton>
               <div className="mt-3 space-y-1 text-xs text-amber-800">
                 {validation?.errors.slice(0, 4).map((error) => (
                   <div key={`${error.path}:${error.code}`}>
@@ -956,9 +957,9 @@ export function OperationModelAuthoringPanel({
           )}
 
           <details open className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Thông tin operation
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 grid gap-2">
               <TextInput
                 label="Mã operation"
@@ -1001,9 +1002,9 @@ export function OperationModelAuthoringPanel({
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Business object
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               {operation.objectTypes.map((objectType, index) => (
                 <div key={`${objectType.targetType}:${index}`} className="border border-slate-200 p-3">
@@ -1057,7 +1058,7 @@ export function OperationModelAuthoringPanel({
                       }
                     />
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(removeOperationListItem(operation, "objectTypes", index))
@@ -1065,10 +1066,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa object
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -1082,14 +1083,14 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm object
-              </button>
+              </AdminButton>
             </div>
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Vai trò Workspace
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               {operation.workspaceRoles.map((role, index) => (
                 <div key={`${role.key}:${index}`} className="border border-slate-200 p-3">
@@ -1202,7 +1203,7 @@ export function OperationModelAuthoringPanel({
                       }
                     />
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(removeOperationListItem(operation, "workspaceRoles", index))
@@ -1210,10 +1211,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa vai trò Workspace
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -1227,14 +1228,14 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm vai trò Workspace
-              </button>
+              </AdminButton>
             </div>
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Event đưa việc vào Workspace
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               <div className="border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
                 Mỗi dòng nghĩa là: khi event domain xảy ra, hệ thống lấy object
@@ -1277,7 +1278,7 @@ export function OperationModelAuthoringPanel({
                       <div className="border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                         Route này đang trỏ tới object cũ `{route.targetType}`. Object
                         domain hiện tại là `{operation.objectTypes[0]?.targetType ?? "chưa có"}`.
-                        <button
+                        <AdminButton variant="primary" density="compact"
                           type="button"
                           onClick={() =>
                             updateOperation(syncOperationRouteTarget(operation, index))
@@ -1285,7 +1286,7 @@ export function OperationModelAuthoringPanel({
                           className="mt-2 block w-full border border-amber-900 bg-amber-950 px-2 py-1.5 text-xs font-semibold text-white hover:bg-amber-900"
                         >
                           Đồng bộ route này theo object domain
-                        </button>
+                        </AdminButton>
                       </div>
                     ) : null}
                     <SelectInput
@@ -1327,7 +1328,7 @@ export function OperationModelAuthoringPanel({
                       }
                     />
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(removeOperationListItem(operation, "eventRoutes", index))
@@ -1335,10 +1336,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa event route
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -1352,14 +1353,14 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm event route
-              </button>
+              </AdminButton>
             </div>
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Luồng Workspace
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               {operation.coreFlows.map((flow, index) => (
                 <div key={`${flow.key}:${index}`} className="border border-slate-200 p-3">
@@ -1398,7 +1399,7 @@ export function OperationModelAuthoringPanel({
                         <div className="border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                           Luồng này đang có bước trùng Workspace. Nhiều bước cùng
                           là `Workspace chính` không tạo thêm ý nghĩa vận hành.
-                          <button
+                          <AdminButton variant="primary" density="compact"
                             type="button"
                             onClick={() =>
                               updateOperation(
@@ -1410,7 +1411,7 @@ export function OperationModelAuthoringPanel({
                             className="mt-2 block w-full border border-amber-900 bg-amber-950 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-900"
                           >
                             Gộp các bước trùng
-                          </button>
+                          </AdminButton>
                         </div>
                       ) : null}
                       <div className="space-y-2">
@@ -1429,7 +1430,7 @@ export function OperationModelAuthoringPanel({
                                   {step.isTerminal ? " / Kết thúc" : ""}
                                 </div>
                               </div>
-                              <button
+                              <AdminButton variant="danger" density="compact"
                                 type="button"
                                 onClick={() =>
                                   updateOperation(
@@ -1441,7 +1442,7 @@ export function OperationModelAuthoringPanel({
                                 className="text-xs font-medium text-rose-700"
                               >
                                 Xóa bước
-                              </button>
+                              </AdminButton>
                             </div>
                           ))
                         ) : (
@@ -1477,7 +1478,7 @@ export function OperationModelAuthoringPanel({
                       }
                     />
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(removeOperationListItem(operation, "coreFlows", index))
@@ -1485,10 +1486,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa luồng
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -1502,14 +1503,14 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm luồng
-              </button>
+              </AdminButton>
             </div>
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Action người dùng bấm
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               {operation.actions.map((action, actionIndex) => (
                 <div key={`${action.key}:${actionIndex}`} className="border border-slate-200 p-3">
@@ -1578,7 +1579,7 @@ export function OperationModelAuthoringPanel({
                       <div className="border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
                         Action này đang trỏ tới object cũ `{action.targetType}`.
                         Object domain hiện tại là `{operation.objectTypes[0]?.targetType ?? "chưa có"}`.
-                        <button
+                        <AdminButton variant="primary" density="compact"
                           type="button"
                           onClick={() =>
                             updateOperation(syncOperationActionTarget(operation, actionIndex))
@@ -1586,7 +1587,7 @@ export function OperationModelAuthoringPanel({
                           className="mt-2 block w-full border border-amber-900 bg-amber-950 px-2 py-1.5 text-xs font-semibold text-white hover:bg-amber-900"
                         >
                           Đồng bộ action này theo object domain
-                        </button>
+                        </AdminButton>
                       </div>
                     ) : null}
                     <TextInput
@@ -1694,7 +1695,7 @@ export function OperationModelAuthoringPanel({
                             />
                             Bắt buộc
                           </label>
-                          <button
+                          <AdminButton variant="danger" density="compact"
                             type="button"
                             onClick={() =>
                               updateOperation(
@@ -1708,10 +1709,10 @@ export function OperationModelAuthoringPanel({
                             className="text-left text-xs font-medium text-rose-700"
                           >
                             Xóa field
-                          </button>
+                          </AdminButton>
                         </div>
                       ))}
-                      <button
+                      <AdminButton variant="secondary" density="compact"
                         type="button"
                         onClick={() =>
                           updateOperation(
@@ -1726,10 +1727,10 @@ export function OperationModelAuthoringPanel({
                         className="w-full border border-slate-200 px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                       >
                         Thêm field
-                      </button>
+                      </AdminButton>
                     </div>
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(removeOperationListItem(operation, "actions", actionIndex))
@@ -1737,10 +1738,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa action
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -1754,14 +1755,14 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm action
-              </button>
+              </AdminButton>
             </div>
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Workflow của Workspace
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               {operation.workflows.map((workflow, index) => (
                 <div key={`${workflow.key}:${index}`} className="border border-slate-200 p-3">
@@ -1883,7 +1884,7 @@ export function OperationModelAuthoringPanel({
                                   )
                                 }
                               />
-                              <button
+                              <AdminButton variant="danger" density="compact"
                                 type="button"
                                 onClick={() =>
                                   updateOperation(
@@ -1897,7 +1898,7 @@ export function OperationModelAuthoringPanel({
                                 className="text-left text-xs font-medium text-rose-700 md:col-span-2"
                               >
                                 Xóa chuyển trạng thái
-                              </button>
+                              </AdminButton>
                             </div>
                           ))
                         ) : (
@@ -1906,7 +1907,7 @@ export function OperationModelAuthoringPanel({
                           </div>
                         )}
                       </div>
-                      <button
+                      <AdminButton variant="secondary"
                         type="button"
                         onClick={() =>
                           updateOperation(
@@ -1921,10 +1922,10 @@ export function OperationModelAuthoringPanel({
                         className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                       >
                         Thêm chuyển trạng thái
-                      </button>
+                      </AdminButton>
                     </div>
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(removeOperationListItem(operation, "workflows", index))
@@ -1932,10 +1933,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa workflow
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -1949,14 +1950,14 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm workflow
-              </button>
+              </AdminButton>
             </div>
           </details>
 
           <details className="border border-slate-200 p-3">
-            <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+            <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
               Projection cần làm mới
-            </summary>
+            </AdminDisclosureSummary>
             <div className="mt-3 space-y-3">
               {operation.projectionSubscriptions.map((subscription, index) => (
                 <div key={`${subscription.projectionKey}:${index}`} className="border border-slate-200 p-3">
@@ -2018,7 +2019,7 @@ export function OperationModelAuthoringPanel({
                       }
                     />
                   </div>
-                  <button
+                  <AdminButton variant="danger" density="compact"
                     type="button"
                     onClick={() =>
                       updateOperation(
@@ -2032,10 +2033,10 @@ export function OperationModelAuthoringPanel({
                     className="mt-2 text-xs font-medium text-rose-700"
                   >
                     Xóa projection
-                  </button>
+                  </AdminButton>
                 </div>
               ))}
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() =>
                   updateOperation(
@@ -2049,16 +2050,16 @@ export function OperationModelAuthoringPanel({
                 className="w-full border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
                 Thêm projection
-              </button>
+              </AdminButton>
             </div>
           </details>
         </div>
       ) : null}
 
       <details open className="border border-slate-200 p-3">
-        <summary className="cursor-pointer text-sm font-semibold text-slate-900">
+        <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-900">
           JSON kỹ thuật
-        </summary>
+        </AdminDisclosureSummary>
         <textarea
           value={operationEditorText}
           spellCheck={false}

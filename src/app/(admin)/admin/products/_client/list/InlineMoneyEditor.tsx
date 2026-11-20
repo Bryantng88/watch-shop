@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { Loader2, PencilLine } from "lucide-react";
 
@@ -49,19 +50,19 @@ export default function InlineMoneyEditor({
   if (!open) {
     if (iconOnly) {
       return (
-        <button
+        <AdminButton iconOnly variant="secondary" density="compact"
           type="button"
           onClick={() => setOpen(true)}
           className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           title={`Sửa ${label}`}
         >
           <PencilLine className="h-3.5 w-3.5" />
-        </button>
+        </AdminButton>
       );
     }
 
     return (
-      <button
+      <AdminButton variant="secondary" density="compact"
         type="button"
         onClick={() => setOpen(true)}
         className={[
@@ -71,7 +72,7 @@ export default function InlineMoneyEditor({
       >
         <PencilLine className="h-3.5 w-3.5" />
         {!compact ? <span>sửa</span> : null}
-      </button>
+      </AdminButton>
     );
   }
 
@@ -88,14 +89,14 @@ export default function InlineMoneyEditor({
           if (e.key === "Escape") setOpen(false);
         }}
       />
-      <button
+      <AdminButton variant="primary" density="compact"
         type="button"
         onClick={handleSave}
         disabled={saving}
         className="inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-2.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
       >
         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Lưu"}
-      </button>
+      </AdminButton>
     </div>
   );
 }

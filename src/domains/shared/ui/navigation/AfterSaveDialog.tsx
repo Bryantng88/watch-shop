@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -71,7 +72,7 @@ export default function AfterSaveDialog({
                 </div>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                    <button
+                    <AdminButton variant="contextual"
                         type="button"
                         onClick={handleContinue}
                         disabled={pending}
@@ -83,9 +84,9 @@ export default function AfterSaveDialog({
                             <ContinueIcon className="h-4 w-4" />
                         )}
                         {continueLabel}
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="contextual"
                         type="button"
                         disabled={pending}
                         onClick={() => {
@@ -99,9 +100,9 @@ export default function AfterSaveDialog({
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Quay lại
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="contextual"
                         type="button"
                         disabled={pending}
                         onClick={() => router.push(detailHref)}
@@ -109,7 +110,7 @@ export default function AfterSaveDialog({
                     >
                         <Eye className="h-4 w-4" />
                         Xem detail
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -274,16 +275,16 @@ export default function AcquisitionListClient(props: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
+                    <AdminButton variant="secondary" type="submit" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                         Lọc
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={clearFilters}
                         className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
                     >
                         Clear
-                    </button>
+                    </AdminButton>
                     <div className="ml-auto text-sm text-gray-600">
                         Đã chọn: <b>{selectedIds.length}</b>
                     </div>
@@ -293,7 +294,7 @@ export default function AcquisitionListClient(props: PageProps) {
             {showBulkBar && (
                 <div className="p-3 bg-blue-50 border rounded flex items-center gap-4">
                     <span className="font-medium text-blue-700">{selectedIds.length} phiếu đã chọn</span>
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         className="px-3 py-1 border rounded text-sm"
                         onClick={async () => {
                             const payload = displayItems
@@ -318,9 +319,9 @@ export default function AcquisitionListClient(props: PageProps) {
                         type="button"
                     >
                         Duyệt phiếu
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
                             setSelectedIds([]);
@@ -329,7 +330,7 @@ export default function AcquisitionListClient(props: PageProps) {
                         type="button"
                     >
                         Bỏ chọn
-                    </button>
+                    </AdminButton>
                 </div>
             )}
 
@@ -485,22 +486,22 @@ export default function AcquisitionListClient(props: PageProps) {
                     Tổng: <b>{props.total}</b> • Trang <b>{props.page}</b>/<b>{props.totalPages}</b>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         className="px-3 py-2 border rounded-lg disabled:opacity-50"
                         disabled={props.page <= 1}
                         onClick={() => goPage(Math.max(1, props.page - 1))}
                     >
                         ← Trước
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="secondary"
                         type="button"
                         className="px-3 py-2 border rounded-lg disabled:opacity-50"
                         disabled={props.page >= props.totalPages}
                         onClick={() => goPage(Math.min(props.totalPages, props.page + 1))}
                     >
                         Sau →
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>

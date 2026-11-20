@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   AlertCircle,
@@ -251,13 +252,13 @@ export default function WatchServiceQuickModal({
             </div>
           </div>
 
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={onClose}
             className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="h-5 w-5" />
-          </button>
+          </AdminButton>
         </div>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[1fr_360px]">
@@ -406,7 +407,7 @@ export default function WatchServiceQuickModal({
                   />
                 </label>
 
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   disabled={!canSubmit}
                   onClick={submitIssue}
@@ -414,7 +415,7 @@ export default function WatchServiceQuickModal({
                 >
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Lưu issue vào phiếu
-                </button>
+                </AdminButton>
               </div>
             </div>
           </aside>

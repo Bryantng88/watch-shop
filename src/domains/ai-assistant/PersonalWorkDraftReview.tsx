@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React from "react";
 import { reviewDate as date, reviewSchedule } from "./review-schedule";
 import { Plus, Sparkles } from "lucide-react";
@@ -146,7 +147,7 @@ export default function PersonalWorkDraftReview({
           );
         })}
       </div>
-      <button
+      <AdminButton variant="primary"
         data-ben-approve
         type="button"
         disabled={busy}
@@ -156,16 +157,16 @@ export default function PersonalWorkDraftReview({
         {busy
           ? "Đang lưu…"
           : `Duyệt ${total} thay đổi${hasCodex ? " · Giao Codex" : ""}`}
-      </button>
+      </AdminButton>
       {onEdit && (
-        <button
+        <AdminButton variant="secondary"
           type="button"
           disabled={busy}
           onClick={onEdit}
           className="mt-2 min-h-10 w-full rounded-xl text-sm font-medium text-violet-600 hover:bg-violet-50 disabled:opacity-50"
         >
           Chỉnh lại
-        </button>
+        </AdminButton>
       )}
     </section>
   );

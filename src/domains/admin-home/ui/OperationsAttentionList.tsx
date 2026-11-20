@@ -1,6 +1,7 @@
 "use client";
+import { AdminDisclosureSummary, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
-import Link from "next/link";
+
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { AdminUserAvatar, ADMIN_DOMAIN_TONE, ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals";
@@ -26,12 +27,12 @@ export function OperationsAttentionList({ items }: { items: OperationsDashboardA
     {!items.length ? <p className="py-6 text-xs text-slate-500">Chưa có mục cần can thiệp theo tiêu chí hiện tại.</p> : <>
       <div aria-hidden="true" className={styles.attentionColumns}><span>Mục cần xử lý</span><span>Lý do cần chú ý</span><span className="text-right">Không cập nhật</span><span /></div>
       <div className="divide-y divide-slate-100">{items.map(item => <details key={item.id} className={styles.attentionItem} data-attention-item={item.id}>
-        <summary className={styles.attentionSummary}>
+        <AdminDisclosureSummary className={styles.attentionSummary}>
           <span className={styles.attentionObject}><ItemImage key={item.imageUrl ?? item.id} item={item} /><span className="min-w-0"><span className="block text-sm font-semibold leading-5 text-slate-900">{item.title}</span><span className="mt-0.5 block text-xs leading-5 text-slate-500">{[item.reference, operationalDomainPresentation(item.domain.toLowerCase().replaceAll("_", "-")).label].filter(Boolean).join(" · ")}</span></span></span>
           <span className={styles.attentionReason}>{item.reason}</span>
           <span className={styles.attentionAge}>{item.ageLabel.split(/(\d+)/).map((part, index) => <span key={index} className={/^\d+$/.test(part) ? styles.attentionBadge : undefined}>{part}</span>)}</span><ChevronDown className={styles.attentionArrow} aria-hidden="true" />
-        </summary>
-        <div className={styles.attentionDetail}><p className="text-xs leading-5 text-slate-600">{item.ownerLabel}</p><Link href={item.href} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{item.actionLabel}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></Link></div>
+        </AdminDisclosureSummary>
+        <div className={styles.attentionDetail}><p className="text-xs leading-5 text-slate-600">{item.ownerLabel}</p><AdminLinkAction variant="secondary" density="compact" href={item.href} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded text-xs font-semibold text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">{item.actionLabel}<ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /></AdminLinkAction></div>
       </details>)}</div>
     </>}
   </section>;

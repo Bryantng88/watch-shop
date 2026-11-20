@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -109,16 +110,16 @@ type BadgeTone = VisualStatusTone;
 function Thumb({ src, alt, onClick }: { src?: string | null; alt: string; onClick?: () => void }) {
     if (!src) {
         return (
-            <button type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300 hover:bg-violet-50">
+            <AdminButton variant="secondary" type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300 hover:bg-violet-50">
                 <ImageIcon className="h-6 w-6 text-slate-400" />
-            </button>
+            </AdminButton>
         );
     }
 
     return (
-        <button type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300">
+        <AdminButton variant="contextual" type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300">
             <img src={src} alt={alt} className="h-full w-full object-cover object-center" />
-        </button>
+        </AdminButton>
     );
 }
 

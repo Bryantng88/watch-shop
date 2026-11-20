@@ -1,4 +1,6 @@
 "use client";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+
 
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -57,9 +59,9 @@ export default function TradeHistoryCard({
                         </Link>
                     ))}
                 </div>
-                <Link href="/admin/orders" className={operationButtonClass({ variant: "secondary", size: "sm", className: "mt-4 w-full text-xs" })}>
+                <AdminLinkAction variant="secondary" href="/admin/orders" className={operationButtonClass({ variant: "secondary", size: "sm", className: "mt-4 w-full text-xs" })}>
                     Xem toàn bộ
-                </Link>
+                </AdminLinkAction>
             </div>
         </aside>
     );

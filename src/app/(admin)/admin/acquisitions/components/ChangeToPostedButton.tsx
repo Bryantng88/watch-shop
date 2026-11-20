@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useTransition } from "react";
 
 export default function ActionButton({ id, status, vendor }: { id: string, status: string, vendor: string }) {
@@ -16,19 +17,19 @@ export default function ActionButton({ id, status, vendor }: { id: string, statu
     };
 
     return (
-        <button
+        <AdminButton variant="primary" density="compact"
             onClick={() => startTransition(handleClick)}
             className={`
-                px-2 py-1 
-                rounded 
-                bg-blue-600 
-                text-xs 
-                text-white 
+                px-2 py-1
+                rounded
+                bg-blue-600
+                text-xs
+                text-white
                 font-semibold
-                hover:bg-blue-700 
-                transition 
-                shadow-sm 
-                disabled:bg-blue-300 
+                hover:bg-blue-700
+                transition
+                shadow-sm
+                disabled:bg-blue-300
                 disabled:cursor-not-allowed
               `}
             style={{
@@ -38,6 +39,6 @@ export default function ActionButton({ id, status, vendor }: { id: string, statu
             }} disabled={status === "POSTED" || pending}
         >
             {status === "POSTED" ? "Đã Duyệt" : "Duyệt Phiếu"}
-        </button>
+        </AdminButton>
     );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+
 import { Loader2 } from "lucide-react";
 import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { fmtMoney } from "@/domains/order/ui/order-ui.helpers";
@@ -28,11 +29,11 @@ export default function OrderSummarySidebar({ itemsCount, subtotal, tradeInAmoun
       {tradeInAmount > 0 && <><span className="text-xs text-slate-500">Trade-in −{fmtMoney(tradeInAmount)}</span><span className="text-slate-500">Chênh lệch <strong className="text-slate-950">{fmtMoney(Math.max(0, subtotal - tradeInAmount))}</strong></span></>}
     </div>
     <div className="flex flex-wrap items-center gap-2">
-      {onCancel ? <button type="button" onClick={onCancel} className={`${ADMIN_UI.secondaryAction} h-10 px-3 text-sm`}>Hủy</button> : <Link href={backHref} className={`${ADMIN_UI.secondaryAction} inline-flex h-10 items-center px-3 text-sm`}>Hủy</Link>}
-      {onSaveDraft && <button type="button" onClick={onSaveDraft} disabled={submitting || !canEdit} className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Lưu nháp</button>}
-      <button type="button" onClick={onSubmit} disabled={submitting || !canEdit} className={`${ADMIN_UI.primaryAction} inline-flex h-10 items-center gap-2 px-4 text-sm`}>
+      {onCancel ? <AdminButton variant="secondary" type="button" onClick={onCancel} className={`${ADMIN_UI.secondaryAction} h-10 px-3 text-sm`}>Hủy</AdminButton> : <AdminLinkAction variant="secondary" href={backHref} className={`${ADMIN_UI.secondaryAction} inline-flex h-10 items-center px-3 text-sm`}>Hủy</AdminLinkAction>}
+      {onSaveDraft && <AdminButton variant="secondary" type="button" onClick={onSaveDraft} disabled={submitting || !canEdit} className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Lưu nháp</AdminButton>}
+      <AdminButton variant="secondary" type="button" onClick={onSubmit} disabled={submitting || !canEdit} className={`${ADMIN_UI.primaryAction} inline-flex h-10 items-center gap-2 px-4 text-sm`}>
         {submitting && <Loader2 className="h-4 w-4 animate-spin" />}{submitting ? "Đang lưu..." : isEdit ? "Lưu thay đổi" : submitLabel ?? "Tạo & duyệt đơn"}
-      </button>
+      </AdminButton>
     </div>
   </footer>;
 }

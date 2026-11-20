@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -225,9 +226,9 @@ export default function OrderListPageClient({
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50" type="submit">
+                    <AdminButton variant="secondary" className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50" type="submit">
                         Lọc
-                    </button>
+                    </AdminButton>
 
                     <Link href={pathname} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">
                         Clear
@@ -245,15 +246,15 @@ export default function OrderListPageClient({
                         {selectedIds.length} đơn hàng đã chọn
                     </span>
 
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => setShowBulkConfirm(true)}
                         type="button"
                     >
                         Duyệt các đơn đã chọn
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         className="px-3 py-1 border rounded text-sm"
                         onClick={() => {
                             setSelectedIds([]);
@@ -262,7 +263,7 @@ export default function OrderListPageClient({
                         type="button"
                     >
                         Bỏ chọn
-                    </button>
+                    </AdminButton>
                 </div>
             )}
 
@@ -276,15 +277,15 @@ export default function OrderListPageClient({
                         </div>
 
                         <div className="flex justify-end gap-2 pt-3">
-                            <button
+                            <AdminButton variant="secondary" density="compact"
                                 className="px-3 py-1 border rounded"
                                 onClick={() => setShowBulkConfirm(false)}
                                 type="button"
                             >
                                 Hủy
-                            </button>
+                            </AdminButton>
 
-                            <button
+                            <AdminButton variant="primary" density="compact"
                                 className="px-3 py-1 bg-blue-600 text-white rounded"
                                 onClick={async () => {
                                     await fetch("/api/admin/orders/bulk-post", {
@@ -297,7 +298,7 @@ export default function OrderListPageClient({
                                 type="button"
                             >
                                 Xác nhận duyệt
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 </div>

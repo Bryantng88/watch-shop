@@ -1,3 +1,4 @@
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -13,6 +14,6 @@ export default async function BenWorkDetail({params}:{params:Promise<{id:string}
     <h1 className="text-xl font-semibold text-slate-950">{item.title}</h1>
     <p className="text-sm text-slate-600">{item.status}</p>
     {item.dueAt && <p className="text-sm">{new Intl.DateTimeFormat("vi-VN",{dateStyle:"medium",timeStyle:"short",timeZone:"Asia/Bangkok"}).format(new Date(item.dueAt))}</p>}
-    <Link href="/admin/coordination/operation?view=ad-hoc-work" className="inline-flex rounded-lg bg-slate-950 px-4 py-2 text-sm text-white">Mở không gian vận hành</Link>
+    <AdminLinkAction variant="primary" href="/admin/coordination/operation?view=ad-hoc-work" className="inline-flex rounded-lg bg-slate-950 px-4 py-2 text-sm text-white">Mở không gian vận hành</AdminLinkAction>
   </main>;
 }

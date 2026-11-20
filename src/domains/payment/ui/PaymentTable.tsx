@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import {
     CheckCircle2,
@@ -276,7 +277,7 @@ export default function PaymentTable({
 
                                     <div className="flex justify-end gap-2">
                                         {canComplete(payment) ? (
-                                            <button
+                                            <AdminButton variant="secondary" density="compact"
                                                 type="button"
                                                 disabled={submitting}
                                                 onClick={() =>
@@ -287,18 +288,18 @@ export default function PaymentTable({
                                                 className="rounded-full px-3 py-1.5 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                                             >
                                                 Hoàn tất
-                                            </button>
+                                            </AdminButton>
                                         ) : null}
 
                                         {onCancelPayment && canCancel(payment) ? (
-                                            <button
+                                            <AdminButton variant="secondary" density="compact"
                                                 type="button"
                                                 disabled={submitting || cancelingPaymentId === payment.id}
                                                 onClick={() => submitCancelPayment(payment)}
                                                 className="rounded-full px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                                             >
                                                 {cancelingPaymentId === payment.id ? "Đang hủy" : "Hủy"}
-                                            </button>
+                                            </AdminButton>
                                         ) : null}
                                     </div>
                                 </div>
@@ -325,14 +326,14 @@ export default function PaymentTable({
                                                 className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
                                             />
 
-                                            <button
+                                            <AdminButton variant="primary"
                                                 type="button"
                                                 disabled={submitting}
                                                 onClick={() => submitCompletePayment(payment)}
                                                 className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50"
                                             >
                                                 Xác nhận
-                                            </button>
+                                            </AdminButton>
                                         </div>
                                     </div>
                                 ) : null}

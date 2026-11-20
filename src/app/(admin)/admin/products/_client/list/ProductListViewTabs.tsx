@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { Counts, ViewKey } from "./types";
 
 const items: Array<{ key: ViewKey; label: string }> = [
@@ -48,7 +49,7 @@ export default function ProductListViewTabs({
           const count = getCount(counts, item.key);
 
           return (
-            <button
+            <AdminButton variant="contextual"
               key={item.key}
               type="button"
               onClick={() => onChange(item.key)}
@@ -74,7 +75,7 @@ export default function ProductListViewTabs({
               {active ? (
                 <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-950" />
               ) : null}
-            </button>
+            </AdminButton>
           );
         })}
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -408,13 +409,13 @@ export default function TechnicalIssueBoardClient({ items, counts }: Props) {
                 className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm outline-none focus:border-stone-400"
               />
               {query ? (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => setQuery("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </AdminButton>
               ) : null}
             </div>
 
@@ -452,13 +453,13 @@ export default function TechnicalIssueBoardClient({ items, counts }: Props) {
             </FilterChip>
 
             {(query || areaFilter !== "ALL" || actionModeFilter !== "ALL") && (
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={clearFilters}
                 className="ml-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
               >
                 Xóa filter
-              </button>
+              </AdminButton>
             )}
           </div>
         </div>

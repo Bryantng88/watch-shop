@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 /* eslint-disable @next/next/no-img-element */
 
 import * as React from "react";
@@ -179,20 +180,20 @@ function ImagePreviewDialog({
 
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4">
-            <button
+            <AdminButton variant="secondary"
                 type="button"
                 className="absolute inset-0 cursor-default"
                 aria-label="Close image preview"
                 onClick={onClose}
             />
             <div className="relative max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-3xl bg-white p-3 shadow-2xl">
-                <button
+                <AdminButton variant="primary" density="compact"
                     type="button"
                     onClick={onClose}
                     className="absolute right-4 top-4 z-10 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white"
                 >
                     Close
-                </button>
+                </AdminButton>
                 <img
                     src={src}
                     alt={label ?? "Preview"}
@@ -200,21 +201,21 @@ function ImagePreviewDialog({
                 />
 
                 <div className="flex items-center gap-3 px-2 py-2">
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         type="button"
                         disabled={!canGoPrevious}
                         onClick={() => goToIndex(activeIndex - 1)}
                         className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                         ← Trước
-                    </button>
+                    </AdminButton>
                     <div className="min-w-0 flex-1 truncate text-xs font-medium text-slate-600">
                         {label}
                     </div>
                     <div className="shrink-0 text-xs tabular-nums text-slate-500">
                         {activeIndex + 1}/{preview.items.length}
                     </div>
-                    <button
+                    <AdminButton variant="primary" density="compact"
                         type="button"
                         onClick={() => onToggleSelection(activeItem, preview.source)}
                         className={preview.source === "chosen"
@@ -222,15 +223,15 @@ function ImagePreviewDialog({
                             : "rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"}
                     >
                         {preview.source === "chosen" ? "Chọn ảnh" : "Bỏ chọn"}
-                    </button>
-                    <button
+                    </AdminButton>
+                    <AdminButton variant="primary" density="compact"
                         type="button"
                         disabled={!canGoNext}
                         onClick={() => goToIndex(activeIndex + 1)}
                         className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                     >
                         Tiếp →
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>
@@ -268,7 +269,7 @@ function ChosenGrid({
 
     return (
         <div className="space-y-3">
-            {onCollapsedChange ? <button
+            {onCollapsedChange ? <AdminButton variant="contextual" density="compact"
                 type="button"
                 aria-expanded={!collapsed}
                 onClick={() => onCollapsedChange(!collapsed)}
@@ -277,7 +278,7 @@ function ChosenGrid({
                 <span aria-hidden="true">{collapsed ? "▸" : "▾"}</span>
                 Kho ảnh đã chọn tạm
                 <span className="text-xs font-normal tabular-nums text-slate-500">{items.length} ảnh</span>
-            </button> : <div className="text-sm font-medium text-slate-700">Kho ảnh đã chọn tạm</div>}
+            </AdminButton> : <div className="text-sm font-medium text-slate-700">Kho ảnh đã chọn tạm</div>}
 
             {collapsed ? null : items.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
@@ -303,16 +304,16 @@ function ChosenGrid({
                                     ].join(" ")}
                                 >
                                     {managementEnabled && !active ? (
-                                        <button
+                                        <AdminButton iconOnly variant="contextual" density="compact"
                                             type="button"
                                             onClick={() => onToggleManagement(item.key)}
                                             className={`absolute left-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-md border text-xs font-bold ${managementSelected ? "border-rose-500 bg-rose-500 text-white" : "border-white bg-black/55 text-white"}`}
                                             aria-label={managementSelected ? `Bỏ chọn quản lý ${label}` : `Chọn quản lý ${label}`}
                                         >
                                             {managementSelected ? "✓" : ""}
-                                        </button>
+                                        </AdminButton>
                                     ) : null}
-                                    <button
+                                    <AdminButton variant="contextual"
                                         type="button"
                                         onClick={() => onPreview(item)}
                                         className="block w-full"
@@ -333,7 +334,7 @@ function ChosenGrid({
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
-                                    </button>
+                                    </AdminButton>
 
                                     <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-2 py-2">
                                         <div className="min-w-0 flex-1 truncate text-[11px] text-slate-500">
@@ -341,7 +342,7 @@ function ChosenGrid({
                                         </div>
 
                                         <div className="flex items-center gap-1">
-                                            <button
+                                            <AdminButton variant="contextual" density="compact"
                                                 type="button"
                                                 onClick={() =>
                                                     onToggleSelect(item)
@@ -354,9 +355,9 @@ function ChosenGrid({
                                                 ].join(" ")}
                                             >
                                                 {active ? "Đã chọn" : "Chọn"}
-                                            </button>
+                                            </AdminButton>
 
-                                            {!managementEnabled ? <button
+                                            {!managementEnabled ? <AdminButton variant="primary" density="compact"
                                                 type="button"
                                                 onClick={(event) => {
                                                     event.preventDefault();
@@ -367,7 +368,7 @@ function ChosenGrid({
                                                 className="rounded-full bg-black px-2 py-1 text-[11px] text-white"
                                             >
                                                 X
-                                            </button> : null}
+                                            </AdminButton> : null}
                                         </div>
                                     </div>
                                 </div>
@@ -407,7 +408,7 @@ function SortableGalleryCard({
             style={{ transform: CSS.Transform.toString(transform), transition }}
             className={`relative h-28 w-24 overflow-hidden rounded-2xl border bg-white shadow-sm transition-[border-color,box-shadow,opacity] duration-200 ${isDragging ? "z-10 border-blue-400 opacity-25" : isOver ? "border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.18)]" : "border-blue-200 hover:border-blue-400"}`}
         >
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 className="block h-24 w-full cursor-grab touch-none overflow-hidden rounded-2xl active:cursor-grabbing"
                 onClick={() => onPreview(item)}
@@ -416,20 +417,20 @@ function SortableGalleryCard({
                 {...listeners}
             >
                 <img src={src} alt={label} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-            </button>
+            </AdminButton>
             <div className="absolute inset-x-0 bottom-0 flex h-7 items-center justify-between border-t border-slate-100 bg-white px-2">
-                <button type="button" disabled={index === 0} onClick={() => onMove(index, index - 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</button>
+                <AdminButton variant="secondary" density="compact" type="button" disabled={index === 0} onClick={() => onMove(index, index - 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</AdminButton>
                 <span className="text-[10px] font-semibold text-slate-600">{index + 1}</span>
-                <button type="button" disabled={index === itemCount - 1} onClick={() => onMove(index, index + 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</button>
+                <AdminButton variant="secondary" density="compact" type="button" disabled={index === itemCount - 1} onClick={() => onMove(index, index + 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</AdminButton>
             </div>
-            <button
+            <AdminButton variant="primary" density="compact"
                 type="button"
                 onClick={() => { onPreviewClose(); onRemove(getItemKey(item)); }}
                 className="absolute right-1 top-1 rounded-full bg-black/80 px-2 py-0.5 text-[11px] text-white"
                 aria-label={`Xóa ${label}`}
             >
                 X
-            </button>
+            </AdminButton>
         </div>
     );
 }
@@ -752,13 +753,13 @@ export default function MediaPickerMulti({
             ) : null}
 
             <div className="flex flex-wrap gap-2">
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     onClick={() => setOpen(true)}
                     className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
                     + Chọn ảnh từ kho
-                </button>
+                </AdminButton>
 
                 <div className="inline-flex items-center rounded-2xl bg-slate-100 px-3 py-2 text-sm text-slate-600">
                     Chosen: {visibleChosenItems.length}
@@ -776,24 +777,24 @@ export default function MediaPickerMulti({
                 <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <span className="text-xs font-medium text-slate-600">Đã chọn quản lý: {managementSelectedKeys.size}</span>
                     {onMoveToPost ? (
-                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("MOVE_TO_POST")} className="rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 disabled:opacity-40">
+                        <AdminButton variant="secondary" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("MOVE_TO_POST")} className="rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 disabled:opacity-40">
                             Đưa qua Post
-                        </button>
+                        </AdminButton>
                     ) : null}
                     {onReturnChosen ? (
-                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RETURN_TO_NAS")} className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-40">
+                        <AdminButton variant="secondary" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RETURN_TO_NAS")} className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-40">
                             Trả về NAS
-                        </button>
+                        </AdminButton>
                     ) : null}
                     {onRecycleChosen ? (
-                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RECYCLE")} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-40">
+                        <AdminButton variant="secondary" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RECYCLE")} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-40">
                             Đưa vào Recycle
-                        </button>
+                        </AdminButton>
                     ) : null}
                     {onDeleteChosen ? (
-                        <button type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("DELETE")} className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 disabled:opacity-40">
+                        <AdminButton variant="danger" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("DELETE")} className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 disabled:opacity-40">
                             Xóa vật lý
-                        </button>
+                        </AdminButton>
                     ) : null}
                     <span className="text-[11px] text-slate-500">Ảnh đang dùng cho watch không thể chọn ở đây.</span>
                 </div>

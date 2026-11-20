@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import DotLabel from "../../../__components/DotLabel";
 import type { ProductRow } from "./types";
 import { getDetailedPublishMissing, getQuickFixHints, hasMissingCoreReadinessInfo, hasMissingImageReadiness } from "./helpers";
@@ -28,7 +29,7 @@ export default function ProductReadinessModal({
             <div className="text-lg font-semibold text-slate-950">Kiểm tra thông tin sản phẩm</div>
             <div className="mt-1 text-sm text-slate-500">{product.title || "-"}</div>
           </div>
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50">Đóng</button>
+          <AdminButton variant="secondary" density="compact" type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50">Đóng</AdminButton>
         </div>
 
         <div className="space-y-4 px-5 py-4 text-sm">
@@ -57,8 +58,8 @@ export default function ProductReadinessModal({
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-100 px-5 py-4">
-          <button type="button" onClick={onClose} className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">Đóng</button>
-          <button type="button" onClick={() => onEdit(product.id)} className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Chỉnh sửa sản phẩm</button>
+          <AdminButton variant="secondary" type="button" onClick={onClose} className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">Đóng</AdminButton>
+          <AdminButton variant="primary" type="button" onClick={() => onEdit(product.id)} className="inline-flex h-10 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Chỉnh sửa sản phẩm</AdminButton>
         </div>
       </div>
     </div>

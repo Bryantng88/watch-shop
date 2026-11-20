@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -205,21 +206,21 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
                         {selectedIds.length} phiếu đã chọn
                     </span>
 
-                    <button
+                    <AdminButton variant="secondary"
                         className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
                         onClick={handleBulkPost}
                         type="button"
                     >
                         Duyệt phiếu
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="secondary"
                         className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm hover:bg-slate-50"
                         onClick={() => setSelectedIds([])}
                         type="button"
                     >
                         Bỏ chọn
-                    </button>
+                    </AdminButton>
                 </div>
             ) : null}
 

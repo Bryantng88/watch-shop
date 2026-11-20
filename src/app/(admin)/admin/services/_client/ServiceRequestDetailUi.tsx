@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import {
     AlertTriangle,
@@ -98,7 +99,7 @@ export function HeaderActionButton({
     icon?: React.ReactNode;
 }) {
     return (
-        <button
+        <AdminButton variant={primary ? "primary" : "secondary"}
             type="button"
             onClick={onClick}
             className={cx(
@@ -110,7 +111,7 @@ export function HeaderActionButton({
         >
             {icon}
             {children}
-        </button>
+        </AdminButton>
     );
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, ImageIcon, Loader2, X, ZoomIn } from "lucide-react";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
@@ -50,17 +51,17 @@ export function WatchPreviewGallery({ images, title, label = "Ảnh hiện có",
   }, [selected, count]);
   return <section aria-label={label} className="space-y-2">
     {showHeader && <div className="flex items-baseline justify-between gap-3"><h3 className="text-xs font-semibold text-slate-700">{label} <span className="ml-1 font-normal text-slate-400">{count}</span></h3><span className="text-[11px] text-slate-400">Bấm ảnh để xem lớn</span></div>}
-    {count ? <div className="flex gap-2 overflow-x-auto pb-1">{images.map((image, index) => <button key={image.id} type="button" aria-label={`Xem ảnh ${index + 1}: ${image.label}`} onClick={() => setSelected(index)} className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
+    {count ? <div className="flex gap-2 overflow-x-auto pb-1">{images.map((image, index) => <AdminButton variant="secondary" key={image.id} type="button" aria-label={`Xem ảnh ${index + 1}: ${image.label}`} onClick={() => setSelected(index)} className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400">
       <GalleryImage key={`${image.id}:${image.thumbnailUrl || image.url}`} src={image.thumbnailUrl || image.url} fallbackSrc={image.url} alt={image.alt} className="h-full w-full object-cover" />
       {image.selected && <span className="absolute left-1 top-1 rounded-full bg-violet-600 p-0.5 text-white" title="Đã chọn vào gallery"><Check className="h-3 w-3" /></span>}
       <span className="absolute bottom-1 left-1 rounded bg-white/90 px-1 text-[9px] font-medium text-slate-600">{image.label === "Cover" ? "Cover" : index + 1}</span><ZoomIn className="absolute right-1 top-1 h-4 w-4 text-white opacity-0 drop-shadow group-hover:opacity-100" />
-    </button>)}</div> : <p className="rounded-lg bg-slate-50 px-3 py-5 text-center text-xs text-slate-500">Chưa có ảnh để đánh giá.</p>}
+    </AdminButton>)}</div> : <p className="rounded-lg bg-slate-50 px-3 py-5 text-center text-xs text-slate-500">Chưa có ảnh để đánh giá.</p>}
     {current && <div ref={viewer} role="dialog" aria-modal="true" aria-label={`Ảnh ${selected! + 1} / ${count}: ${title}`} className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-3 bg-slate-950/95 p-4 sm:p-8" onClick={e => { e.stopPropagation(); setSelected(null); }}>
-      <button type="button" aria-label="Đóng ảnh" onClick={() => setSelected(null)} className="absolute right-4 top-4 rounded-full bg-white/10 p-3 text-white"><X className="h-5 w-5" /></button>
+      <AdminButton variant="secondary" type="button" aria-label="Đóng ảnh" onClick={() => setSelected(null)} className="absolute right-4 top-4 rounded-full bg-white/10 p-3 text-white"><X className="h-5 w-5" /></AdminButton>
       <div className="flex h-[70vh] w-full items-center justify-center gap-2" onClick={e => e.stopPropagation()}>
-        {count > 1 && <button type="button" aria-label="Ảnh trước" onClick={() => setSelected(i => (i! + count - 1) % count)} className="shrink-0 rounded-full bg-white/10 p-2 text-white"><ChevronLeft className="h-5 w-5" /></button>}
+        {count > 1 && <AdminButton variant="secondary" type="button" aria-label="Ảnh trước" onClick={() => setSelected(i => (i! + count - 1) % count)} className="shrink-0 rounded-full bg-white/10 p-2 text-white"><ChevronLeft className="h-5 w-5" /></AdminButton>}
         <div className="h-full min-w-0 flex-1"><GalleryImage key={current.id} src={current.url} alt={current.alt} className="h-full w-full object-contain" /></div>
-        {count > 1 && <button type="button" aria-label="Ảnh tiếp theo" onClick={() => setSelected(i => (i! + 1) % count)} className="shrink-0 rounded-full bg-white/10 p-2 text-white"><ChevronRight className="h-5 w-5" /></button>}
+        {count > 1 && <AdminButton variant="secondary" type="button" aria-label="Ảnh tiếp theo" onClick={() => setSelected(i => (i! + 1) % count)} className="shrink-0 rounded-full bg-white/10 p-2 text-white"><ChevronRight className="h-5 w-5" /></AdminButton>}
       </div>
       <p className="text-xs text-slate-300">{selected! + 1} / {count} · {current.label}</p>
     </div>}

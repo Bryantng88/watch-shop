@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Wrench } from "lucide-react";
 
 type QuickIssueCardProps = {
@@ -45,7 +46,7 @@ export default function QuickIssueCard({
                     </div>
                 </div>
 
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     onClick={onToggle}
                     disabled={disabled}
@@ -58,7 +59,7 @@ export default function QuickIssueCard({
                     ].join(" ")}
                 >
                     {isOpen ? "Đóng issue" : "Mở issue"}
-                </button>
+                </AdminButton>
             </div>
         </div>
     );

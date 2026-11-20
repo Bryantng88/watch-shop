@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2 } from "lucide-react";
@@ -178,14 +179,14 @@ export default function ItemPopover({
     // ==========================
     return (
         <>
-            <button
+            <AdminButton variant="secondary" density="compact"
                 ref={btnRef}
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 className="inline-flex items-center gap-1 rounded border bg-gray-50 hover:bg-gray-100 px-2 py-1 text-xs"
             >
                 {count}
-            </button>
+            </AdminButton>
 
             {open && rect &&
                 createPortal(
@@ -205,13 +206,13 @@ export default function ItemPopover({
                             <span>Dòng sản phẩm</span>
 
                             {canEdit && (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={addRow}
                                     className="text-blue-600 hover:underline"
                                 >
                                     + Thêm dòng
-                                </button>
+                                </AdminButton>
                             )}
                         </div>
 
@@ -317,7 +318,7 @@ export default function ItemPopover({
                                                 </td>
                                                 <td className="px-2 py-1 text-center w-8">
                                                     {canEdit && (
-                                                        <button
+                                                        <AdminButton variant="secondary"
                                                             type="button"
                                                             onClick={() => {
                                                                 const removed = items[idx];
@@ -333,7 +334,7 @@ export default function ItemPopover({
                                                             }}
                                                         >
                                                             <Trash2 size={16} />
-                                                        </button>
+                                                        </AdminButton>
                                                     )}
                                                 </td>
 
@@ -354,12 +355,12 @@ export default function ItemPopover({
                                     </b>
                                 </span>
 
-                                <button
+                                <AdminButton variant="primary" density="compact"
                                     onClick={handleSave}
                                     className="px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
                                 >
                                     Lưu thay đổi
-                                </button>
+                                </AdminButton>
                             </div>
                         )}
                     </div>,

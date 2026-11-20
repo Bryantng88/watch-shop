@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Radio, Users2 } from "lucide-react";
 
 import {
@@ -115,12 +116,12 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
     return (
-        <button
+        <AdminButton variant="primary"
             type="submit"
             className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
@@ -199,12 +200,12 @@ export default async function SystemChannelsPage() {
                         </div>
                     </div>
                     <form action={refreshZaloTokenAction}>
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="submit"
                             className="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100"
                         >
                             Try refresh
-                        </button>
+                        </AdminButton>
                     </form>
                 </div>
             ) : null}
@@ -296,7 +297,7 @@ export default async function SystemChannelsPage() {
                                                         name="enabled"
                                                         value={isEnabled ? "false" : "true"}
                                                     />
-                                                    <button
+                                                    <AdminButton variant={isEnabled ? "secondary" : "primary"} density="compact"
                                                         type="submit"
                                                         className={[
                                                             "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold transition",
@@ -307,7 +308,7 @@ export default async function SystemChannelsPage() {
                                                         disabled={!defaultRecipientGroupKey && !isEnabled}
                                                     >
                                                         {isEnabled ? "Disable" : "Enable"}
-                                                    </button>
+                                                    </AdminButton>
                                                 </form>
                                             </td>
                                             </tr>

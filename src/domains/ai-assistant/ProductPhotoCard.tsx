@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import Image from "next/image";
 import type { ProductCard } from "./simulation";
@@ -26,9 +27,9 @@ export default function ProductPhotoCard({ product, compact = false }: { product
         {!compact && product.sku && <p className="mt-1 break-all text-xs leading-4 text-slate-500">{product.sku}</p>}
         {!compact && images.length > 1 && <div aria-label={`Chọn ảnh ${product.title}`} className="mt-3 flex flex-wrap gap-1.5">
           {images.map((image, index) => (
-            <button key={image.src} type="button" aria-label={`Ảnh ${index + 1} của ${product.title}`} aria-pressed={active?.src === image.src} onClick={() => setSelectedSrc(image.src)} className={`relative h-10 w-10 overflow-hidden rounded-md border bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 ${active?.src === image.src ? "border-indigo-600 ring-1 ring-indigo-600" : "border-slate-200 hover:border-indigo-300"}`}>
+            <AdminButton iconOnly variant="contextual" key={image.src} type="button" aria-label={`Ảnh ${index + 1} của ${product.title}`} aria-pressed={active?.src === image.src} onClick={() => setSelectedSrc(image.src)} className={`relative h-10 w-10 overflow-hidden rounded-md border bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 ${active?.src === image.src ? "border-indigo-600 ring-1 ring-indigo-600" : "border-slate-200 hover:border-indigo-300"}`}>
               <Image unoptimized fill sizes="40px" src={image.src} alt="" loading="lazy" onError={() => fail(image.src)} className="object-contain" />
-            </button>
+            </AdminButton>
           ))}
         </div>}
         {!compact && active && <p className="mt-2 text-[11px] leading-4 text-slate-500">{images.length > 1 ? `${images.findIndex(image => image.src === active.src) + 1}/${images.length} · ` : ""}Bấm ảnh để xem lớn</p>}

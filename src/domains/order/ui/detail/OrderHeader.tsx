@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import { CalendarClock, ChevronRight, CreditCard, PackageCheck, Pencil, UserRound } from "lucide-react";
 import OrderStatusBadge from "@/domains/order/ui/OrderStatusBadge";
@@ -48,9 +49,9 @@ export default function OrderHeader({ data }: { data: OrderDetailData }) {
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-2">
-            <Link href={`/admin/orders/${data.id}/edit`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50">
+            <AdminLinkAction variant="secondary" density="compact" href={`/admin/orders/${data.id}/edit`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-xs font-bold text-slate-700 hover:bg-slate-50">
               <Pencil className="h-4 w-4" /> Chỉnh thông tin
-            </Link>
+            </AdminLinkAction>
             <span className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-bold text-white">
               <CreditCard className="h-4 w-4" /> {data.paymentMethod || "Payment"}
             </span>

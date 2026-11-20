@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
   CircleDollarSign,
   Clock3,
@@ -270,13 +271,13 @@ function TiCard({ card, dragging = false }: { card: Card; dragging?: boolean }) 
               {areaLabel(card.area)} · {card.product}
             </div>
           </div>
-          <button
+          <AdminButton iconOnly variant="contextual" density="compact"
             type="button"
             className="grid h-7 w-7 shrink-0 cursor-grab place-items-center rounded-md border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 active:cursor-grabbing"
             aria-label="Kéo TI"
           >
             <GripVertical className="h-4 w-4" />
-          </button>
+          </AdminButton>
         </div>
       </div>
 
@@ -293,7 +294,7 @@ function TiCard({ card, dragging = false }: { card: Card; dragging?: boolean }) 
               <Chip blue>{card.status}</Chip>
             </div>
           </div>
-          <button
+          <AdminButton iconOnly variant="secondary" density="compact"
             type="button"
             className={[
               "grid h-7 w-7 shrink-0 place-items-center rounded-md border bg-white transition",
@@ -302,7 +303,7 @@ function TiCard({ card, dragging = false }: { card: Card; dragging?: boolean }) 
             aria-label="Đánh dấu gấp"
           >
             <Zap className="h-3.5 w-3.5" />
-          </button>
+          </AdminButton>
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">

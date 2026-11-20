@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { ReactNode } from "react";
 import {
     Ban,
@@ -491,7 +492,7 @@ export function TaskSignalIcon({
     const n = Number(count ?? 0);
 
     return (
-        <button
+        <AdminButton variant="secondary"
             type="button"
             title={title}
             aria-label={title}
@@ -515,7 +516,7 @@ export function TaskSignalIcon({
                     {n > 9 ? "9+" : n}
                 </span>
             ) : null}
-        </button>
+        </AdminButton>
     );
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { Search } from "lucide-react";
 
@@ -73,7 +74,7 @@ export function ListSelect({
 
 export function ListFilterButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
-        <button
+        <AdminButton variant="primary"
             {...props}
             type={props.type ?? "submit"}
             className={cn(
@@ -86,7 +87,7 @@ export function ListFilterButton(props: React.ButtonHTMLAttributes<HTMLButtonEle
 
 export function ListClearButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
-        <button
+        <AdminButton variant="secondary"
             {...props}
             type={props.type ?? "button"}
             className={cn(

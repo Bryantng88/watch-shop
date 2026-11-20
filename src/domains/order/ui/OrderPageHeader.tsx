@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+
 import type { ReactNode } from "react";
 import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 
@@ -17,7 +18,7 @@ export default function OrderPageHeader({ eyebrow = "BÁN HÀNG / ĐƠN HÀNG", 
       {description && <div className={ADMIN_UI.pageDescription}>{description}</div>}
     </div>
     <div className="flex flex-wrap items-center gap-2">
-      {backHref && <Link href={backHref} className="inline-flex h-8 items-center rounded-md px-2 text-xs text-slate-500 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{backLabel}</Link>}
+      {backHref && <AdminLinkAction variant="secondary" density="compact" href={backHref} className="inline-flex h-8 items-center rounded-md px-2 text-xs text-slate-500 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200">{backLabel}</AdminLinkAction>}
       {actions}
     </div>
   </header>;

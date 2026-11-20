@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Share2, X } from "lucide-react";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 import type { PersonalWorkShare, PersonalWorkUser } from "../shared/personal-work.types";
@@ -69,7 +70,7 @@ export function PersonalWorkShareEditor({ users, shares, onChange, disabled }: P
                 <option value="VIEWER">Chỉ xem</option>
                 <option value="EDITOR">Có thể sửa</option>
               </select>
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={disabled}
                 onClick={() => onChange(shares.filter((item) => item.user.id !== share.user.id))}
@@ -77,7 +78,7 @@ export function PersonalWorkShareEditor({ users, shares, onChange, disabled }: P
                 className="rounded-md p-1.5 text-slate-400 transition hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </AdminButton>
             </div>
           ))}
         </div>

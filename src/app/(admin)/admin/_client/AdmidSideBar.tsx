@@ -1,11 +1,11 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import {
     LayoutDashboard,
     Package,
     Tags,
-    User,
     Menu,
     ChevronDown,
     ClipboardList,
@@ -19,13 +19,15 @@ import {
     BarChart3,
     ChartNoAxesCombined,
     CalendarCheck2,
-    MessageSquare,
     Globe,
-    Wrench,
+    ContactRound,
+    Images,
 } from "lucide-react";
 
 import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
+import styles from "./AdminSidebar.module.css";
+import { DIRECTORY_READ_PERMISSIONS, DIRECTORY_ROUTES } from "@/domains/contacts/shared/directory-navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 
 type Props = {
@@ -44,6 +46,8 @@ type NavItem = {
     label: string;
     icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
+    activePaths?: string[];
+    children?: NavItem[];
     permission?: string;
     permissionsAny?: string[];
     permissionsAll?: string[];
@@ -73,20 +77,10 @@ const NAV: NavEntry[] = [
                 icon: LayoutDashboard,
                 permission: PERMISSIONS.DASHBOARD_VIEW,
             },
-            {
-                type: "item",
-                href: "/admin/watches",
-                label: "Sản phẩm",
-                icon: Package,
-                permission: PERMISSIONS.PRODUCT_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/straps",
-                label: "Phụ kiện",
-                icon: Link2,
-                permission: PERMISSIONS.ACCESSORY_VIEW,
-            },
+            { type: "item", href: "/admin/watches", label: "Sản phẩm", icon: Package, children: [
+                { type: "item", href: "/admin/watches", label: "Đồng hồ", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW },
+                { type: "item", href: "/admin/straps", label: "Phụ kiện", icon: Link2, permission: PERMISSIONS.ACCESSORY_VIEW },
+            ] },
             {
                 type: "item",
                 href: "/admin/acquisitions",
@@ -103,25 +97,12 @@ const NAV: NavEntry[] = [
             },
             {
                 type: "item",
-                href: "/admin/coordination/sales",
-                label: "Sales",
-                icon: MessageSquare,
-                permissionsAll: [PERMISSIONS.TASK_VIEW, PERMISSIONS.TASK_MANAGE, PERMISSIONS.PRODUCT_VIEW, PERMISSIONS.CUSTOMER_VIEW],
-            },
-            {
-                type: "item",
-                href: "/admin/services/technician",
-                label: "Kỹ thuật",
-                icon: Wrench,
-                permission: PERMISSIONS.SERVICE_VIEW,
-            },
-            {
-                type: "item",
                 href: "/admin/coordination/operation",
                 label: "Vận hành",
                 icon: Workflow,
                 permission: PERMISSIONS.TASK_VIEW,
             },
+            { type: "item", href: "/admin/directory", label: "Danh bạ", icon: ContactRound, permissionsAny: [...DIRECTORY_READ_PERMISSIONS], activePaths: DIRECTORY_ROUTES },
             {
                 type: "item",
                 href: "/admin/personal-work",
@@ -163,7 +144,10 @@ const NAV: NavEntry[] = [
         type: "group",
         label: "Storefront",
         defaultOpen: true,
-        children: [{type:"item",href:"/admin/storefront/home",label:"Trang chủ website",icon:Globe,permission:PERMISSIONS.PRODUCT_UPDATE}],
+        children: [
+            { type: "item", href: "/admin/storefront/home", label: "Trang chủ website", icon: Globe, permission: PERMISSIONS.PRODUCT_UPDATE },
+            { type: "item", href: "/admin/storefront/media", label: "Thư viện ảnh website", icon: Images, permission: PERMISSIONS.PRODUCT_UPDATE },
+        ],
     },
     {
         type: "group",
@@ -184,22 +168,16 @@ const NAV: NavEntry[] = [
                 icon: Activity,
                 permission: PERMISSIONS.ACTIVITY_READ,
             },
-            {
-                type: "item",
-                href: "/admin/users",
-                label: "Users",
-                icon: User,
-                permissionsAny: [PERMISSIONS.USER_VIEW, PERMISSIONS.USER_CREATE, PERMISSIONS.USER_UPDATE, PERMISSIONS.USER_MANAGE],
-            },
         ],
     },
 ];
 
-function canAccess(user: Props["user"], item: NavItem) {
+function canAccess(user: Props["user"], item: NavItem): boolean {
     // ADMIN is a system-level bypass. Navigation must not disappear during a
     // permission-catalog migration just because the persisted role still has
     // legacy permission codes.
     if (user.roles?.includes("ADMIN")) return true;
+    if (item.children?.length) return item.children.some(child => canAccess(user, child));
     if (item.permissionsAny?.length) {
         return item.permissionsAny.some((permission) => user.permissions.includes(permission));
     }
@@ -289,6 +267,7 @@ export default function AdminSidebar({
 
     function renderNavItem(item: NavItem, nested = false) {
         const Icon = item.icon;
+        if (item.children?.length) return <ReportMenu key={item.label} label={item.label} icon={Icon} appearance="item" items={item.children.filter(child => canAccess(user, child))} expanded={isMobile || desktopExpanded || wideScreen} onNavigate={() => { if (isMobile) setOpen(false); }} />;
         return (
             <div
                 key={item.href}
@@ -300,6 +279,7 @@ export default function AdminSidebar({
                     title={item.label}
                     onNavigate={() => { if (isMobile) setOpen(false); }}
                     exact={item.exact}
+                    activePaths={item.activePaths}
                     expanded={isMobile || desktopExpanded}
                 >
                     <Icon size={18} className="shrink-0 opacity-80" />
@@ -328,18 +308,18 @@ export default function AdminSidebar({
         <>
             {isMobile ? (
                 <div className="sticky top-0 z-30 flex items-center gap-3 bg-gray-950 px-4 py-2 text-white lg:hidden">
-                    <button
+                    <AdminButton variant="contextual"
                         onClick={() => setOpen(true)}
                         className="inline-flex items-center gap-2"
                         type="button"
                     >
                         <Menu size={18} />
                         <span className="text-sm">Menu</span>
-                    </button>
+                    </AdminButton>
 
                     <div className="ml-auto flex items-center gap-3">
                         <span className="text-sm opacity-80">Admin</span>
-                        <button
+                        <AdminButton variant="contextual" density="compact"
                             type="button"
                             onClick={handleLogout}
                             disabled={loggingOut}
@@ -347,7 +327,7 @@ export default function AdminSidebar({
                         >
                             <LogOut className="h-3.5 w-3.5" />
                             Logout
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}
@@ -375,7 +355,7 @@ export default function AdminSidebar({
                         {desktopExpanded ? (
                             <span className="pl-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/55">Menu</span>
                         ) : null}
-                        <button
+                        <AdminButton iconOnly variant="contextual" density="compact"
                             type="button"
                             onClick={toggleDesktopSidebar}
                             className="grid h-9 w-9 place-items-center rounded-lg text-white/65 transition hover:bg-white/10 hover:text-white"
@@ -384,7 +364,7 @@ export default function AdminSidebar({
                             title={desktopExpanded ? "Thu gọn sidebar" : "Mở rộng sidebar"}
                         >
                             {desktopExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-                        </button>
+                        </AdminButton>
                     </div>
                 ) : null}
 
@@ -398,18 +378,18 @@ export default function AdminSidebar({
                     </span>
 
                     {isMobile ? (
-                        <button
+                        <AdminButton variant="contextual"
                             className="ml-auto text-white/80 hover:text-white"
                             onClick={() => setOpen(false)}
                             type="button"
                             aria-label="Close menu"
                         >
                             ✕
-                        </button>
+                        </AdminButton>
                     ) : null}
                 </div> : null}
 
-                <nav aria-label="Điều hướng quản trị" className="relative z-50 min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
+                <nav aria-label="Điều hướng quản trị" data-collapsed={!isMobile && !desktopExpanded && !wideScreen} className={`${styles.navigation} relative z-50 min-h-0 flex-1 space-y-1 px-3 py-3`}>
                     {allowedNav.map((entry, index) => {
                         if (entry.type === "group") {
                             if(entry.label === "Báo cáo") return <ReportMenu key="reports" items={entry.children||[]} expanded={isMobile||desktopExpanded||wideScreen} onNavigate={()=>{if(isMobile)setOpen(false);}}/>;
@@ -424,7 +404,7 @@ export default function AdminSidebar({
                                     className="pt-3 first:pt-0"
                                 >
                                     {hasChildren ? (
-                                        <button
+                                        <AdminButton variant="contextual" density="compact"
                                             type="button"
                                             onClick={() => toggleGroup(entry.label)}
                                             className={`mx-2 w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 ${(isMobile || desktopExpanded) ? "flex" : "hidden min-[2200px]:flex"}`}
@@ -437,7 +417,7 @@ export default function AdminSidebar({
                                                     isOpen ? "rotate-0" : "-rotate-90",
                                                 ].join(" ")}
                                             />
-                                        </button>
+                                        </AdminButton>
                                     ) : (
                                         <div className={`mx-2 border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 ${(isMobile || desktopExpanded) ? "block" : "hidden min-[2200px]:block"}`}>
                                             {entry.label}

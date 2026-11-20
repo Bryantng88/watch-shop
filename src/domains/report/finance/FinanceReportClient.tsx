@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -133,7 +134,7 @@ function MetricCard({
   };
 
   return (
-    <button
+    <AdminButton variant="contextual"
       type="button"
       onClick={onClick}
       className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
@@ -152,7 +153,7 @@ function MetricCard({
         <span className="text-[11px] text-slate-500">{note}</span>
         <ArrowRight className="h-3.5 w-3.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-700" />
       </div>
-    </button>
+    </AdminButton>
   );
 }
 
@@ -359,9 +360,9 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           </div>
-          <button type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <AdminButton variant="secondary" density="compact" type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
             <Download className="h-3.5 w-3.5" /> Xuất báo cáo
-          </button>
+          </AdminButton>
         </div>
       </header>
 
@@ -370,7 +371,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
           {channels.map((item) => {
             const active = item.key === channelKey;
             return (
-              <button
+              <AdminButton variant="contextual"
                 key={item.key}
                 type="button"
                 role="tab"
@@ -380,7 +381,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
               >
                 <span className="block text-xs font-bold">{item.label}</span>
                 <span className={`mt-0.5 block text-[9px] ${active ? "text-white/50" : "text-slate-400"}`}>{item.note}</span>
-              </button>
+              </AdminButton>
             );
           })}
         </div>
@@ -463,7 +464,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
                   ? "Kênh Nữ tăng nhanh hơn kỳ trước, biên lợi nhuận đang cải thiện."
                   : "Kênh Nam giữ doanh thu ổn định, cần theo dõi tỷ trọng giá vốn."}
             </div>
-            <button type="button" className="text-[11px] font-bold text-violet-700">Xem phân tích →</button>
+            <AdminButton variant="secondary" density="compact" type="button" className="text-[11px] font-bold text-violet-700">Xem phân tích →</AdminButton>
           </div>
         </article>
 
@@ -548,7 +549,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
               <h2 className="text-sm font-bold text-slate-950">Cơ cấu chi phí</h2>
               <p className="mt-1 text-xs text-slate-500">Chi phí thực tế của kênh {channel.label}</p>
             </div>
-            <button type="button" onClick={() => setDetail("cost")} className="text-[10px] font-bold text-violet-700 hover:text-violet-900">Giải trình →</button>
+            <AdminButton variant="secondary" density="compact" type="button" onClick={() => setDetail("cost")} className="text-[10px] font-bold text-violet-700 hover:text-violet-900">Giải trình →</AdminButton>
           </div>
           <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-slate-100">
             {costComposition.map((item) => (
@@ -557,7 +558,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
           </div>
           <div className="mt-4 space-y-3">
             {costComposition.map((item) => (
-              <button key={item.label} type="button" onClick={() => setDetail("cost")} className="group flex w-full items-center gap-3 text-left">
+              <AdminButton variant="contextual" key={item.label} type="button" onClick={() => setDetail("cost")} className="group flex w-full items-center gap-3 text-left">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${item.color}`} />
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs font-semibold text-slate-700">{item.label}</span>
@@ -567,7 +568,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
                   <span className="block text-xs font-bold text-slate-900">{money(item.value)}</span>
                   <span className="mt-0.5 block text-[9px] text-slate-400">{(period.revenue > 0 ? (item.value / period.revenue) * 100 : 0).toFixed(1)}% DT</span>
                 </span>
-              </button>
+              </AdminButton>
             ))}
           </div>
           <div className="mt-4 flex items-center justify-between rounded-xl bg-rose-50 px-3 py-2.5">
@@ -612,7 +613,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
 
                   <div className="mt-2 divide-y divide-slate-100 border-y border-slate-100">
                     {item.breakdown.map((part) => (
-                      <button key={part.label} type="button" className="group grid w-full grid-cols-[minmax(0,1fr)_34px_auto_14px] items-center gap-2 py-2.5 text-left">
+                      <AdminButton variant="contextual" key={part.label} type="button" className="group grid w-full grid-cols-[minmax(0,1fr)_34px_auto_14px] items-center gap-2 py-2.5 text-left">
                         <span className="min-w-0">
                           <span className="block truncate text-[11px] font-semibold text-slate-700">{part.label}</span>
                           <span className="mt-0.5 block truncate text-[8px] uppercase tracking-wide text-slate-400">{part.owner}</span>
@@ -625,7 +626,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
                           {item.tone === "emerald" ? "+" : "−"}{money(part.amount)}
                         </span>
                         <ArrowRight className="h-3 w-3 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-700" />
-                      </button>
+                      </AdminButton>
                     ))}
                   </div>
 
@@ -667,7 +668,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
           <aside className="h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div><p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-600">Giải trình chỉ số</p><h2 className="mt-1 text-lg font-bold text-slate-950">{detailTitle}</h2><p className="mt-1 text-xs text-slate-500">Các chứng từ đóng góp lớn nhất trong {period.label.toLowerCase()}.</p></div>
-              <button type="button" onClick={() => setDetail(null)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+              <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={() => setDetail(null)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></AdminButton>
             </div>
             <div className="mt-4 rounded-xl bg-slate-950 p-4 text-white">
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/45">Tổng giá trị</p>
