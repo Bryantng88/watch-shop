@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
-import { websiteMediaStorage as mediaStorage } from "@/domains/storefront/media/website-media.storage";
+import { mediaStorage } from "@/domains/media/storage";
 import { contentImages } from "@/domains/storefront/content/contract";
 export async function GET(
   _req: Request,

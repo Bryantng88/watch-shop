@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { NextRequest, NextResponse } from "next/server";
-import { websiteMediaStorage as mediaStorage } from "@/domains/storefront/media/website-media.storage";
+import { mediaStorage } from "@/domains/media/storage";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
 import { websiteFolder, WEBSITE_IMAGE_FOLDERS, websiteImageUrl } from "@/domains/storefront/media/website-media";

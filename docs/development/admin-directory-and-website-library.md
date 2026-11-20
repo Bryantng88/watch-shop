@@ -101,25 +101,6 @@ Folders exist automatically on first upload. For pre-creating visible empty S3
 folders on staging, run `node --import tsx scripts/ensure-website-image-folders.ts`
 for a read-only check, then add `--apply`. It checks the staging APP_URL and a
 staging/test bucket name, creates only missing zero-byte folder markers, and
-never touches existing images. It refuses a production application context. Production provisioning
+never touches existing images. It refuses production. Production provisioning
 remains part of the separately authorized release; first upload creates its
 section prefix without a filesystem mount or a bucket access-policy change.
-
-
-### Shared website storage across environments
-
-User explicitly chose shared NAS website images between staging and production.
-`WEBSITE_S3_ENDPOINT/REGION/BUCKET/ACCESS_KEY/SECRET_KEY` optionally select a website-only
-backend. An incomplete override fails closed. With no override, production continues
-to use its existing `S3_*` backend. General Watch/product media keeps using `S3_*`;
-its endpoint, credentials and bucket are not changed. Every operation through the
-website port rejects non-website keys and listings outside the six allowlisted
-prefixes. Home/articles and catalog Hero read/write the same website backend.
-
-Sharing files does not share StorefrontDocument/hero selections or publish content
-across databases. Production readers see the new section folders after deploying
-the compatible application; existing Hero/Editorial readers remain compatible.
-Stage may explicitly initialize shared folder markers with `--shared-website` in
-addition to `--apply`; the script still requires the staging APP_URL and only adds
-missing fixed website directory markers. Provision the override privately from the
-verified production storage configuration; never put its credentials in Git/logs.

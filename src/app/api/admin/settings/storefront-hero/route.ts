@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 
 import { PERMISSIONS } from "@/constants/permissions";
-import { websiteMediaStorage as mediaStorage } from "@/domains/storefront/media/website-media.storage";
+import { mediaStorage } from "@/domains/media/storage";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { prisma } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/storage-key";
