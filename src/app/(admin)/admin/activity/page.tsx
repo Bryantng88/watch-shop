@@ -1,3 +1,4 @@
+import { AdminWorkspaceNavigation } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation";
 import SystemWorkspace from "@/domains/system/client/SystemWorkspace";
 import { systemEntries } from "@/domains/shared/ui/navigation/section-navigation";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -35,5 +36,11 @@ export default async function ActivityPage({ searchParams }: Props) {
     pageSize: Number(first(params.pageSize) ?? 50),
   });
 
-  return <SystemWorkspace entries={systemEntries(user)} selected="/admin/activity"><GlobalActivityPage data={data} embedded /></SystemWorkspace>;
+  const periodHref = (value: string) => {
+    const query = new URLSearchParams(Object.entries(params).flatMap(([key, value]) => Array.isArray(value) ? value.map(item => [key, item]) : value == null ? [] : [[key, value]]));
+    query.delete("page"); query.set("period", value);
+    return `/admin/activity?${query.toString()}`;
+  };
+  const periodEntries = [{ value: "TODAY", label: "Hôm nay" }, { value: "7D", label: "7 ngày qua" }, { value: "30D", label: "30 ngày qua" }, { value: "ALL", label: "Toàn bộ" }].map(entry => ({ href: periodHref(entry.value), label: entry.label }));
+  return <SystemWorkspace entries={systemEntries(user)} selected="/admin/activity" extraNavigation={<AdminWorkspaceNavigation compact label="Khoảng thời gian" entries={periodEntries} selected={periodHref(period)} />}><GlobalActivityPage data={data} embedded /></SystemWorkspace>;
 }

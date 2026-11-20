@@ -1,4 +1,5 @@
 "use client";
+import { AdminWorkspaceFilter, useWorkspaceFilterHost } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters";
 import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -159,6 +160,7 @@ function MetricCard({
 }
 
 export function FinanceReportClient({ initialProjection, embedded = false }: { initialProjection?: FinanceReportProjectionData | null; embedded?: boolean }) {
+  const hosted = useWorkspaceFilterHost() && embedded;
   const [periodKey, setPeriodKey] = useState<PeriodKey>("month");
   const [channelKey, setChannelKey] = useState<ChannelKey>("all");
   const [detail, setDetail] = useState<DetailKey>(null);
@@ -329,6 +331,7 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
 
   return (
     <main className={embedded ? "min-w-0 space-y-4" : "w-full space-y-4 px-4 py-5 lg:px-6"}>
+      {hosted && <AdminWorkspaceFilter label="Kỳ báo cáo tài chính" value={periodKey} options={[{ value: "month", label: "Tháng này" }, { value: "quarter", label: "Quý này" }]} onChange={value => setPeriodKey(value as PeriodKey)} />}
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5">
         <p className="text-xs text-violet-800">
           {initialProjection
@@ -349,6 +352,7 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
           <p className="mt-1 text-sm text-slate-500">Đọc nhanh sức khoẻ kinh doanh và giải trình được từng con số.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {!hosted && (
           <div className="relative">
             <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <select
@@ -360,7 +364,7 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
               <option value="quarter">Quý này · Q3/2026</option>
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-          </div>
+          </div>)}
           <AdminButton variant="secondary" density="compact" type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
             <Download className="h-3.5 w-3.5" /> Xuất báo cáo
           </AdminButton>

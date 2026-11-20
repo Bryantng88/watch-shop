@@ -13,7 +13,7 @@
 .groupButton[aria-current="page"]:not([data-has-stages]), .stageButton[aria-pressed="true"] { background: #eff6ff; color: #020617; font-weight: 600; }
 .icon { width: 16px; height: 16px; flex-shrink: 0; color: #64748b; }
 .stages { margin: 4px 0 8px 20px; padding-left: 8px; border-left: 1px solid #f1f5f9; }
-.stageButton { gap: 12px; justify-content: space-between; padding: 8px 10px; font-size: 12px; line-height: 16px; }
+.stageButton { gap: 12px; justify-content: space-between; padding: 8px 10px; font-size: 13px; line-height: 20px; }
 .count { flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; color: #64748b; }
 .groupButton:focus-visible, .stageButton:focus-visible, .mobile select:focus-visible { outline: 2px solid #60a5fa; outline-offset: -2px; }
 .layout[data-wide="true"] .desktop { display: block; position: sticky; top: 16px; max-height: calc(100dvh - 160px); overflow-y: auto; }

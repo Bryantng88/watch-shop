@@ -18,6 +18,6 @@ export function AdminWorkspaceHeadingRow({ children, className }: { children: Re
   return <div className={clsx(s.row, className)} style={headingStyle}>{children}</div>;
 }
 
-export function AdminWorkspaceHeading({ children, navigation = false }: { children: ReactNode; navigation?: boolean }) {
-  return <h2 className={clsx(s.heading, navigation && s.navigation)} style={headingStyle}>{children}</h2>;
+export function AdminWorkspaceHeading({ children, navigation = false, compact = false }: { children: ReactNode; navigation?: boolean; compact?: boolean }) {
+  return <h2 className={clsx(s.heading, navigation && s.navigation)} style={compact ? { ...headingStyle, fontSize: f.typography.metadata.size, lineHeight: `${f.typography.metadata.lineHeight}px`, fontWeight: 600, minHeight: 24 } : headingStyle}>{children}</h2>;
 }

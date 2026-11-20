@@ -1300,3 +1300,25 @@ Nếu browser chặn localStorage, dùng mặc định và vẫn đo mode trư�
 Không thêm viewport guess vào server render hoặc thay query/filter để sửa
 layout. Test lifecycle giữ passive effects chưa chạy để xác nhận mode và
 saved width đã sẵn sàng; browser regression giữ các hành vi resize/navigation.
+
+### Shared sidebar filter groups
+
+Mục chọn trong navigation workspace dùng typography.navigation 13px/20px,
+nhóm lọc compact dùng heading 12px/16px, weight 600. Body danh sách/form vẫn
+14px; touch target giữ ít nhất 44px, không thu nhỏ target theo chữ.
+
+AdminWorkspaceFilters cung cấp filter slot và AdminWorkspaceFilter cho tiêu chí
+có state local. Consumer giữ state và callback; portal chỉ đặt control trong
+sidebar của AdminRouteWorkspace, không remount danh sách khi attach slot,
+resize hoặc thu/mở pane. Màn hình hẹp dùng native select với cùng giá trị.
+AdminWorkspaceNavigation compact dùng cho tiêu chí điều hướng bằng URL.
+
+Các surface hiện áp dụng: trạng thái Phiếu nhập/Đơn hàng, tình trạng bán
+Đồng hồ (saleStatus), trạng thái Dây đồng hồ, kỳ báo cáo Tài chính và khoảng
+thời gian Activity. Operation stages giữ callback riêng, cùng cỡ chữ 13px.
+Bỏ select trùng ở nội dung bên phải khi sidebar host hiện diện; các consumer
+standalone giữ control cũ. Activity giữ period trong hidden input của form GET,
+đổi kỳ giữ query/actor và reset page. Watch dùng pushParams/loadList hiện có,
+giữ các query khác và reset page 1 khi đổi saleStatus. Không tạo trạng thái
+nghiệp vụ giả cho trang không có tiêu chí tương ứng; trang như vậy vẫn có
+menu điều hướng nhỏ gọn chung. Không đổi API, permission hoặc công thức báo cáo.

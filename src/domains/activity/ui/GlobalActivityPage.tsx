@@ -188,12 +188,13 @@ export default function GlobalActivityPage({ data, embedded = false }: Props) {
               <option key={actor.id} value={actor.id}>{actor.name || actor.email || actor.id}</option>
             ))}
           </select>
+          {embedded ? <input type="hidden" name="period" value={data.filters.period} /> : (
           <select name="period" defaultValue={data.filters.period} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-violet-300">
             <option value="TODAY">Hôm nay</option>
             <option value="7D">7 ngày qua</option>
             <option value="30D">30 ngày qua</option>
             <option value="ALL">Toàn bộ</option>
-          </select>
+          </select>)}
           <AdminButton variant="primary" type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800">
             <Filter className="h-4 w-4" /> Lọc
           </AdminButton>

@@ -17,6 +17,7 @@ export const ADMIN_UI_FOUNDATION = {
     sectionTitle: { size: 14, lineHeight: 20, weight: 700 },
     rowTitle: { size: 14, lineHeight: 20, weight: 600 },
     body: { size: 14, lineHeight: 20, weight: 400 },
+    navigation: { size: 13, lineHeight: 20, weight: 400 },
     metadata: { size: 12, lineHeight: 16, weight: 400 },
     label: { size: 12, lineHeight: 16, weight: 500 },
     eyebrow: { size: 12, lineHeight: 16, weight: 600, trackingEm: 0.08 },

@@ -4,6 +4,11 @@ on:
     paths:
       - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/trading/**'
+      - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading*'
+      - 'src/domains/watch/ui/list/WatchListFilters.tsx'
+      - 'src/domains/watch/client/WatchListClient.tsx'
+      - 'scripts/check-workspace-sidebar-filters.cjs'
       - 'src/domains/strap/client/StrapInventoryTable*'
       - 'src/app/(admin)/admin/straps/page.tsx'
       - 'scripts/check-strap-list-ui.cjs'
@@ -109,6 +114,10 @@ jobs:
           scripts/check-trading-workspace.cjs
           scripts/check-split-workspace-first-paint.cjs
           scripts/check-section-workspaces.cjs
+          scripts/check-workspace-sidebar-filters.cjs
+          src/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters.tsx
+          src/domains/watch/ui/list/WatchListFilters.tsx
+          src/domains/watch/client/WatchListClient.tsx
           scripts/check-strap-list-ui.cjs
           src/domains/strap/client/StrapInventoryTable.tsx
           'src/app/(admin)/admin/straps/page.tsx'
@@ -156,6 +165,9 @@ jobs:
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
           STRAP_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/watch-straps.png
+      - run: node scripts/check-workspace-sidebar-filters.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
       - run: npm run build
       - uses: actions/upload-artifact@v4
         if: always()
