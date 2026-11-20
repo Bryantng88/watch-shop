@@ -74,3 +74,9 @@
   .pager { width: 100%; }
 }
 @media(pointer: coarse) { .list button, .filters select { min-height: var(--admin-list-touch); } .priority { opacity: 1; min-width: var(--admin-list-touch); } .filters select { font-size: 16px; } }
+
+/* Same neutral raised finish as Media row actions, without changing row geometry. */
+.move { border-color: var(--admin-button-neutral-border); background-image: var(--admin-button-neutral-gradient); box-shadow: var(--admin-button-neutral-shadow); }
+.move:hover:not(:disabled) { background-image: var(--admin-button-neutral-hover); border-color: var(--admin-button-neutral-hover-border); }
+.move:active:not(:disabled) { background-image: var(--admin-button-neutral-pressed); box-shadow: var(--admin-button-neutral-inset); }
+.move:disabled { background-image: none; box-shadow: none; }

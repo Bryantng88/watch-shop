@@ -57,6 +57,18 @@ export const ADMIN_UI_FOUNDATION = {
     dotSize: 6, dotGap: 6, iconSize: 16, iconGap: 8, countGap: 6,
     underlineHeight: 2, selectThreshold: 520, selectWhenOptionsExceed: 4,
   },
+  buttonSurface: {
+    neutral: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
+    neutralHover: 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)',
+    neutralPressed: 'linear-gradient(180deg, #e2e8f0 0%, #f8fafc 100%)',
+    neutralBorder: '#cbd5e1', neutralHoverBorder: '#94a3b8',
+    neutralShadow: 'inset 0 1px 0 rgb(255 255 255 / 90%), 0 1px 2px rgb(2 6 23 / 10%)',
+    neutralInset: 'inset 0 1px 2px rgb(2 6 23 / 14%)',
+    primary: 'linear-gradient(180deg, rgb(255 255 255 / 6%) 0%, transparent 45%, rgb(2 6 23 / 8%) 100%)',
+    primaryPressed: 'linear-gradient(180deg, rgb(2 6 23 / 10%) 0%, transparent 100%)',
+    primaryShadow: 'inset 0 1px 0 rgb(255 255 255 / 18%), 0 1px 2px rgb(2 6 23 / 18%)',
+    primaryInset: 'inset 0 1px 3px rgb(2 6 23 / 25%)',
+  },
   primaryAction: { background: "#2563eb", hover: "#1d4ed8", pressed: "#1e40af", border: "#1d4ed8", foreground: "#ffffff" },
   controls: {
     height: 40, compactHeight: 32, touchMinHeight: 44, inputPaddingX: 12,
