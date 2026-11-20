@@ -1971,7 +1971,10 @@ export default function OperationCoordinationWorkspace({
             {activeViewMode ? (
               <div className="text-xs text-slate-700">
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                  {isUnifiedOperation && <h2 className="m-0 text-sm font-bold text-slate-950">{technicalStagesInMenu ? navigationStages.find(stage => stage.key === technicalListState.scope)?.label : activeCoreFlow ? coreFlowLabel(activeCoreFlow) : modeLabel(activeViewMode)}</h2>}
+                  {isUnifiedOperation && <h2 className="m-0 text-sm font-bold text-slate-950">{[
+                    isMediaFlowMode ? "Sản xuất Media" : modeLabel(activeViewMode),
+                    navigationStages.find(stage => stage.key === (technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : activeFlowListStage))?.label,
+                  ].filter((label, index, labels) => label && labels.indexOf(label) === index).join(" – ")}</h2>}
                   <div className={isUnifiedOperation ? "hidden" : "min-w-0"}>
                     <div className="flex flex-wrap items-center gap-2">
                       {!isUnifiedOperation && data.viewConfig.modes.length > 1 ? (
@@ -2551,13 +2554,10 @@ export default function OperationCoordinationWorkspace({
             />
           ) : (
             <>
-          {isUnifiedOperation && activeCoreFlow && <div className="mb-3 mt-5 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-sm font-semibold text-slate-950">{navigationStages.find((stage) => stage.key === activeFlowListStage)?.label ?? "Danh sách"}</h3>
-          </div>}
           {activeCoreFlow ? <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}
             items={asyncFlowItems}
-            presentation={activeCoreFlow.key === "media-production-flow" ? "media" : "default"}
+            presentation={isUnifiedOperation ? activeCoreFlow.key === "media-production-flow" ? "media" : isPaymentCollectionFlow ? "payment" : "operation" : "default"}
             stages={orderedFlowStages}
             query=""
             statusFilter="ALL"
@@ -2590,7 +2590,7 @@ export default function OperationCoordinationWorkspace({
               )
             }
           /> : null}
-          <div className={cn(activeCoreFlow && "hidden")}>
+          <div className={cn(activeCoreFlow && "hidden", isUnifiedOperation && operationListStyles.workspaceList)} style={isUnifiedOperation ? ADMIN_OPERATION_LIST_STYLE : undefined}>
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
             {isTaskItemListMode ? (
               <>
@@ -2771,7 +2771,7 @@ export default function OperationCoordinationWorkspace({
             </>
           )}
 
-          <SpaceViewFooterTip
+          {!isUnifiedOperation && <SpaceViewFooterTip
             icon={<Info className="h-4 w-4" />}
             action={
               <button
@@ -2784,7 +2784,7 @@ export default function OperationCoordinationWorkspace({
             }
           >
             Chọn cách hiển thị hoặc giai đoạn để xem item. Mở Workspace để xem chi tiết và hoạt động.
-          </SpaceViewFooterTip>
+          </SpaceViewFooterTip>}
         </section>
         </OperationWorkspaceLayout>
         {isTechnicalIntakeOpen ? (
