@@ -10,6 +10,8 @@ on:
       - 'src/domains/coordination/shared/technical-issue-list.ts'
       - 'tests/browser/technical-issue-list.fixture.tsx'
       - 'scripts/check-operation-stage-menu.mjs'
+      - 'scripts/check-operation-resize.mjs'
+      - 'src/domains/shared/ui/space/SpaceViewShell.tsx'
       - 'scripts/smoke-technical-issue-list-browser.cjs'
       - 'src/domains/shared/ui/admin-design-contract/**'
       - 'scripts/smoke-operations-compact-ui.cjs'
@@ -70,6 +72,10 @@ jobs:
           tests/browser/technical-issue-list.fixture.tsx scripts/check-operation-stage-menu.mjs
           scripts/smoke-technical-issue-list-browser.cjs
           src/domains/shared/ui/admin-design-contract/AdminTechnicalList.ts
+          src/domains/shared/ui/admin-design-contract/AdminSplitResize.tsx
+          src/domains/shared/ui/space/SpaceViewShell.tsx
+          src/domains/coordination/ui/OperationWorkspaceLayout.tsx
+          scripts/check-operation-resize.mjs
       - run: node scripts/check-operation-stage-menu.mjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/operations-browser/node_modules/playwright
@@ -80,6 +86,10 @@ jobs:
           TI_PREVIEW_CSS: /tmp/operations-ui.css
           TI_DESKTOP_SCREENSHOT: /tmp/operations-compact/ti-list-desktop.png
           TI_MOBILE_SCREENSHOT: /tmp/operations-compact/ti-list-mobile.png
+      - run: node scripts/check-operation-resize.mjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/operations-browser/node_modules/playwright
+          OPERATION_RESIZE_SCREENSHOT_DIR: /tmp/operations-compact/resize
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -900,3 +900,24 @@ luồng mobile có label hạn / chi phí. Không dùng viewport để ép bản
 pane hoặc thêm thanh cuộn ngang. Containment chỉ ở list không chứa editor;
 popup dùng portal, các editor/move dialog hiện hữu ở ngoài vùng này. Menu stage,
 query, sort, pagination, load-more, priority và transition approval giữ logic cũ.
+
+
+### Draggable Operations menu divider
+
+Vận hành dùng opt-in AdminSplitResize cùng geometry của AdminSplitWorkspace.
+Không có nút thu gọn: đường phân cách dọc là separator kéo được, mặc định 280px,
+menu 200–400px và luôn chừa tối thiểu 600px cho vùng phải khi đủ chiều rộng.
+Kéo dưới ngưỡng 120px thu menu về 0; separator vẫn ở mép trái để kéo mở lại.
+Nhấp đúp đặt lại mặc định. Lưu riêng độ rộng menu Operations trên browser;
+không gộp với state sidebar admin chính hoặc state stage/filter/draft.
+
+Separator hỗ trợ pointer capture và touch, focus bằng Tab, Left/Right đổi 16px,
+Home thu gọn và End đặt lại. aria-valuenow/valuetext phản ánh độ rộng thật.
+Escape hoặc pointer-cancel trả lại độ rộng trước drag. Mobile/container dưới
+960px vẫn dùng selector native; không thêm rail thu gọn trên mobile. Resize chỉ
+đổi grid width, không unmount nội dung hoặc dùng containment giữ sai fixed editor.
+
+SpaceViewPage variant workspace có divider 1px slate-100 dưới title/description,
+padding-bottom 16px; flow bên ngoài sở hữu khoảng cách 16px tới vùng làm việc.
+Đây là phân tách page identity với menu/list, không thêm card, shadow hoặc gradient.
+Các variant default/compact giữ hình thức hiện tại.
