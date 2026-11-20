@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import Image from "next/image";
@@ -59,14 +60,14 @@ function PositionControl({
     <div className="rounded-xl border border-slate-200 bg-white px-3 py-3">
       <div className="flex items-center justify-between gap-2">
         <FieldLabel>{label}</FieldLabel>
-        <button type="button" onClick={() => onChange(0)} className="rounded-md bg-slate-50 px-2 py-1 text-[11px] font-bold tabular-nums text-violet-700 hover:bg-violet-50">
+        <AdminButton variant="secondary" density="compact" type="button" onClick={() => onChange(0)} className="rounded-md bg-slate-50 px-2 py-1 text-[11px] font-bold tabular-nums text-violet-700 hover:bg-violet-50">
           {clamped > 0 ? "+" : ""}{clamped}%
-        </button>
+        </AdminButton>
       </div>
       <div className="mt-2 grid grid-cols-[32px_1fr_32px] items-center gap-2">
-        <button type="button" onClick={() => onChange(Math.max(-20, clamped - 1))} disabled={clamped <= -20} className="h-8 rounded-lg border border-slate-200 text-base text-slate-700 hover:bg-slate-50 disabled:opacity-40">−</button>
+        <AdminButton variant="secondary" density="compact" type="button" onClick={() => onChange(Math.max(-20, clamped - 1))} disabled={clamped <= -20} className="h-8 rounded-lg border border-slate-200 text-base text-slate-700 hover:bg-slate-50 disabled:opacity-40">−</AdminButton>
         <input type="range" min={-20} max={20} step={1} value={clamped} onChange={(event) => onChange(Number(event.target.value))} className="w-full accent-violet-600" aria-label={`${label}, âm là ${negativeLabel}, dương là ${positiveLabel}`} />
-        <button type="button" onClick={() => onChange(Math.min(20, clamped + 1))} disabled={clamped >= 20} className="h-8 rounded-lg border border-slate-200 text-base text-slate-700 hover:bg-slate-50 disabled:opacity-40">+</button>
+        <AdminButton variant="secondary" density="compact" type="button" onClick={() => onChange(Math.min(20, clamped + 1))} disabled={clamped >= 20} className="h-8 rounded-lg border border-slate-200 text-base text-slate-700 hover:bg-slate-50 disabled:opacity-40">+</AdminButton>
       </div>
       <div className="mt-1 flex justify-between text-[10px] font-medium text-slate-400"><span>{negativeLabel} 20%</span><span>Giữa</span><span>{positiveLabel} 20%</span></div>
     </div>
@@ -193,13 +194,13 @@ export default function PhotoRoomAdjustmentDialog({
               </span>
             </div>
             <div className="mt-3 grid grid-cols-[36px_1fr_36px] items-center gap-2">
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={() => update("zoomPercent", Math.max(40, zoomPercent - 5))}
                 disabled={zoomPercent <= 40}
                 className="h-9 rounded-lg border border-slate-200 text-lg font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                 aria-label="Thu nhỏ 5%"
-              >−</button>
+              >−</AdminButton>
               <input
                 type="range"
                 min={40}
@@ -210,21 +211,21 @@ export default function PhotoRoomAdjustmentDialog({
                 className="w-full accent-violet-600"
                 aria-label="Mức thu phóng đồng hồ"
               />
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={() => update("zoomPercent", Math.min(200, zoomPercent + 5))}
                 disabled={zoomPercent >= 200}
                 className="h-9 rounded-lg border border-slate-200 text-lg font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
                 aria-label="Phóng lớn 5%"
-              >+</button>
+              >+</AdminButton>
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-medium text-slate-400">
               <span>40% · Toàn cảnh</span>
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={() => update("zoomPercent", 100)}
                 className="rounded-md px-2 py-1 font-semibold text-violet-700 hover:bg-violet-50"
-              >Vừa khung · 100%</button>
+              >Vừa khung · 100%</AdminButton>
               <span>200% · Cận cảnh</span>
             </div>
             {zoomPercent > 100 ? (
@@ -242,7 +243,7 @@ export default function PhotoRoomAdjustmentDialog({
             <FieldLabel>Nền</FieldLabel>
             <Select value={value.backgroundMode} onChange={(event) => update("backgroundMode", event.target.value as PhotoRoomAdjustment["backgroundMode"])} options={Object.entries(labels.backgroundMode).map(([value, label]) => ({ value, label }))} />
           </label>
-          <button
+          <AdminButton variant="contextual"
             type="button"
             role="switch"
             aria-checked={value.enhanceMetal}
@@ -256,7 +257,7 @@ export default function PhotoRoomAdjustmentDialog({
             <span className={`relative h-5 w-9 shrink-0 rounded-full transition ${value.enhanceMetal ? "bg-violet-600" : "bg-slate-300"}`}>
               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${value.enhanceMetal ? "left-[18px]" : "left-0.5"}`} />
             </span>
-          </button>
+          </AdminButton>
           </> : null}
           <label className="sm:col-span-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
             <span className="flex items-center justify-between gap-3">
@@ -275,14 +276,14 @@ export default function PhotoRoomAdjustmentDialog({
                 [90, "Phải 90°"],
                 [180, "Lật 180°"],
               ] as const).map(([degrees, label]) => (
-                <button
+                <AdminButton variant="contextual" density="compact"
                   key={degrees}
                   type="button"
                   onClick={() => update("orientationDegrees", degrees as PhotoRoomOrientationDegrees)}
                   className={`rounded-lg border px-2 py-2 text-[11px] font-semibold transition ${value.orientationDegrees === degrees ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
                 >
                   {label}
-                </button>
+                </AdminButton>
               ))}
             </span>
             <span className="mt-3 block text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tinh chỉnh</span>
@@ -301,14 +302,14 @@ export default function PhotoRoomAdjustmentDialog({
               <span>0°</span>
               <span>Phải 15°</span>
             </span>
-            <button
+            <AdminButton variant="contextual" density="compact"
               type="button"
               onClick={() => update("flipHorizontal", !value.flipHorizontal)}
               aria-pressed={value.flipHorizontal}
               className={`mt-3 w-full rounded-lg border px-3 py-2 text-[11px] font-semibold transition ${value.flipHorizontal ? "border-violet-500 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
             >
               {value.flipHorizontal ? "Đang lật hướng trái ↔ phải" : "Lật hướng trái ↔ phải"}
-            </button>
+            </AdminButton>
           </label>
         </div>
 
@@ -361,9 +362,9 @@ export default function PhotoRoomAdjustmentDialog({
       ) : null}
 
       <DialogFooter>
-        <button type="button" onClick={onClose} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Hủy</button>
+        <AdminButton variant="secondary" type="button" onClick={onClose} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">Hủy</AdminButton>
         {mode === "sharp" && onSubmitLocal ? (
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={() => onSubmitLocal(value)}
             disabled={pending || localPending || !localAvailable}
@@ -375,12 +376,12 @@ export default function PhotoRoomAdjustmentDialog({
             className="rounded-xl border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {localPending ? "Sharp đang xử lý..." : "Xử lý bằng Sharp · không quota"}
-          </button>
+          </AdminButton>
         ) : null}
-        {mode === "photoroom" ? <button type="button" onClick={() => onSubmit(value)} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
+        {mode === "photoroom" ? <AdminButton variant="primary" type="button" onClick={() => onSubmit(value)} disabled={pending} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
           <Sparkles className="h-4 w-4" />
           {pending ? "PhotoRoom đang xử lý..." : "Tạo bằng AI PhotoRoom"}
-        </button> : null}
+        </AdminButton> : null}
       </DialogFooter>
     </Dialog>
   );

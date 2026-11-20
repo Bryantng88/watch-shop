@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { Folder, Image as ImageIcon, RefreshCw, X } from "lucide-react";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
@@ -128,7 +129,7 @@ export default function AcquisitionBulkImagePicker({
 
     return (
         <>
-            <button
+            <AdminButton variant="secondary"
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen(true)}
@@ -136,7 +137,7 @@ export default function AcquisitionBulkImagePicker({
             >
                 <ImageIcon className="h-4 w-4" />
                 Chọn nhiều ảnh từ NAS
-            </button>
+            </AdminButton>
 
             {open ? (
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/40 p-6">
@@ -152,14 +153,14 @@ export default function AcquisitionBulkImagePicker({
                                     </div>
                                 </div>
 
-                                <button
+                                <AdminButton iconOnly variant="secondary"
                                     type="button"
                                     onClick={() => setOpen(false)}
                                     className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 text-slate-600 transition hover:bg-slate-50"
                                     aria-label="Đóng trình chọn ảnh"
                                 >
                                     <X className="h-4 w-4" />
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
 
@@ -175,39 +176,39 @@ export default function AcquisitionBulkImagePicker({
                                         </div>
                                     </div>
 
-                                    <button
+                                    <AdminButton iconOnly variant="secondary" density="compact"
                                         type="button"
                                         onClick={() => void load(currentPrefix)}
                                         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50"
                                         aria-label="Tải lại thư mục"
                                     >
                                         <RefreshCw className="h-4 w-4" />
-                                    </button>
+                                    </AdminButton>
                                 </div>
 
                                 <div className="mt-4 space-y-2">
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={() => void load(root)}
                                         className="flex w-full items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
                                     >
                                         <Folder className="h-4 w-4 shrink-0" />
                                         <span className="truncate">{root}</span>
-                                    </button>
+                                    </AdminButton>
 
                                     {currentPrefix !== root ? (
-                                        <button
+                                        <AdminButton variant="secondary"
                                             type="button"
                                             onClick={() => void load(parentPrefix(currentPrefix, root))}
                                             className="flex w-full items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
                                         >
                                             <Folder className="h-4 w-4 shrink-0" />
                                             <span>..</span>
-                                        </button>
+                                        </AdminButton>
                                     ) : null}
 
                                     {folders.map((folder) => (
-                                        <button
+                                        <AdminButton variant="secondary"
                                             key={folder.prefix}
                                             type="button"
                                             onClick={() => void load(folder.prefix)}
@@ -217,7 +218,7 @@ export default function AcquisitionBulkImagePicker({
                                             <span className="truncate">
                                                 {nameFromKey(folder.prefix)}
                                             </span>
-                                        </button>
+                                        </AdminButton>
                                     ))}
                                 </div>
                             </aside>
@@ -230,22 +231,22 @@ export default function AcquisitionBulkImagePicker({
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            <button
+                                            <AdminButton variant="secondary"
                                                 type="button"
                                                 onClick={() => setSelectedKeys([])}
                                                 className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                                             >
                                                 Bỏ chọn
-                                            </button>
+                                            </AdminButton>
 
-                                            <button
+                                            <AdminButton variant="primary"
                                                 type="button"
                                                 disabled={!selectedKeys.length}
                                                 onClick={submit}
                                                 className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 Xác nhận ảnh đã chọn
-                                            </button>
+                                            </AdminButton>
                                         </div>
                                     </div>
                                 </div>
@@ -265,7 +266,7 @@ export default function AcquisitionBulkImagePicker({
                                                 const active = selectedKeys.includes(file.key);
 
                                                 return (
-                                                    <button
+                                                    <AdminButton variant="contextual"
                                                         key={file.key}
                                                         type="button"
                                                         onClick={() => toggleKey(file.key)}
@@ -295,7 +296,7 @@ export default function AcquisitionBulkImagePicker({
                                                                 Đã chọn
                                                             </div>
                                                         ) : null}
-                                                    </button>
+                                                    </AdminButton>
                                                 );
                                             })}
                                         </div>

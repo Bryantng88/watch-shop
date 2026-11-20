@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState, useTransition } from "react";
 import { X, Trash2, Pencil, Plus, LockKeyhole, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -84,7 +85,7 @@ export function PersonalWorkCategoryManager({
           {category.label}
         </span>
         {editable ? (
-          <button
+          <AdminButton variant="secondary"
             type="button"
             aria-label={`Sửa ${category.label}`}
             title={
@@ -97,7 +98,7 @@ export function PersonalWorkCategoryManager({
             className="rounded p-1.5 text-slate-400 hover:bg-white hover:text-slate-900"
           >
             <Pencil className="h-3.5 w-3.5" />
-          </button>
+          </AdminButton>
         ) : (
           <LockKeyhole
             aria-label="Chỉ admin được đổi màu"
@@ -105,7 +106,7 @@ export function PersonalWorkCategoryManager({
           />
         )}
         {!category.isDefault && (
-          <button
+          <AdminButton variant="secondary"
             type="button"
             aria-label={`Xóa ${category.label}`}
             disabled={pending}
@@ -119,7 +120,7 @@ export function PersonalWorkCategoryManager({
             className="rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
           >
             <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          </AdminButton>
         )}
       </div>
     );
@@ -166,7 +167,7 @@ export function PersonalWorkCategoryManager({
             Loại công việc
           </h2>
           <div className="flex items-center gap-2">
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               disabled={pending}
               onClick={() => edit()}
@@ -174,8 +175,8 @@ export function PersonalWorkCategoryManager({
             >
               <Plus className="h-3.5 w-3.5" />
               Thêm loại
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton variant="secondary"
               autoFocus
               type="button"
               aria-label="Đóng quản lý loại công việc"
@@ -184,7 +185,7 @@ export function PersonalWorkCategoryManager({
               className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-800"
             >
               <X className="h-4 w-4" />
-            </button>
+            </AdminButton>
           </div>
         </header>
         <div className="overflow-y-auto px-5 pb-4">
@@ -249,7 +250,7 @@ export function PersonalWorkCategoryManager({
                 aria-label="Chọn màu"
               >
                 {COLORS.map((color) => (
-                  <button
+                  <AdminButton iconOnly variant="contextual" density="compact"
                     key={color}
                     type="button"
                     disabled={pending}
@@ -262,7 +263,7 @@ export function PersonalWorkCategoryManager({
                     {editing.color === color && (
                       <Check className="h-3.5 w-3.5" />
                     )}
-                  </button>
+                  </AdminButton>
                 ))}
                 <label className="relative flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-[10px] text-slate-500">
                   <span
@@ -290,7 +291,7 @@ export function PersonalWorkCategoryManager({
                   {editing.label || "Công việc của bạn"}
                 </span>
                 <div className="flex items-center gap-2">
-                  <button
+                  <AdminButton variant="secondary" density="compact"
                     type="button"
                     disabled={pending}
                     onClick={() => {
@@ -300,14 +301,14 @@ export function PersonalWorkCategoryManager({
                     className="px-2 py-1.5 text-xs text-slate-500"
                   >
                     Hủy
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton variant="primary" density="compact"
                     type="submit"
                     disabled={pending || !editing.label.trim()}
                     className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                   >
                     {pending ? "Đang lưu…" : "Lưu"}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
               {editing.isDefault && (
@@ -341,7 +342,7 @@ export function PersonalWorkCategoryManager({
                   ))}
               </select>
               <div className="flex justify-end gap-2">
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   disabled={pending}
                   onClick={() => {
@@ -351,8 +352,8 @@ export function PersonalWorkCategoryManager({
                   className="px-2 py-1.5 text-xs text-slate-500"
                 >
                   Hủy
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="danger" density="compact"
                   type="button"
                   disabled={pending}
                   onClick={() =>
@@ -368,7 +369,7 @@ export function PersonalWorkCategoryManager({
                   className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
                 >
                   Xóa và chuyển
-                </button>
+                </AdminButton>
               </div>
             </div>
           )}

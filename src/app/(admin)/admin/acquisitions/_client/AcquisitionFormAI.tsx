@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useMemo, useState } from "react";
 import { Sparkles, Save, Image as ImageIcon } from "lucide-react";
 
@@ -139,23 +140,23 @@ export default function AcquisitionFormAI({ vendors }: Props) {
             <div className="col-span-12 xl:col-span-4 space-y-6">
                 {/* ACTION */}
                 <div className="rounded-2xl border p-4 space-y-3">
-                    <button
+                    <AdminButton variant="primary"
                         onClick={runDraft}
                         disabled={!imageUrls.length}
                         className="w-full h-[42px] rounded-xl bg-black text-white flex items-center justify-center gap-2"
                     >
                         <Sparkles className="w-4 h-4" />
                         {drafting ? "Đang phân tích..." : "AI Generate Draft"}
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="secondary"
                         onClick={create}
                         disabled={!vendorId || !cost}
                         className="w-full h-[42px] rounded-xl border flex items-center justify-center gap-2"
                     >
                         <Save className="w-4 h-4" />
                         {saving ? "Đang tạo..." : "Post phiếu nhập"}
-                    </button>
+                    </AdminButton>
                 </div>
 
                 {/* AI RESULT */}

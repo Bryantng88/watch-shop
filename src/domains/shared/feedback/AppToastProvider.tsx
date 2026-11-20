@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React, {
     createContext,
     useCallback,
@@ -104,14 +105,14 @@ function ToastCard({ item, onClose }: { item: ToastItem; onClose: (id: string) =
                     <div className={`text-sm leading-5 ${styles.text}`}>{item.message}</div>
                 </div>
 
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     onClick={() => onClose(item.id)}
                     className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-black/5 hover:text-slate-700"
                     aria-label="Đóng thông báo"
                 >
                     ✕
-                </button>
+                </AdminButton>
             </div>
         </div>
     );

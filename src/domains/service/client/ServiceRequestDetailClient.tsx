@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -224,23 +225,23 @@ export default function ServiceRequestDetailClient({
   return (
     <div className="mx-auto w-full max-w-[1240px] space-y-5 px-6 py-6">
       <div className="flex items-center justify-between gap-3">
-        <button
+        <AdminButton variant="secondary"
           type="button"
           onClick={() => router.push("/admin/services")}
           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
         >
           <ArrowLeft className="h-4 w-4" />
           Quay lại
-        </button>
+        </AdminButton>
 
         {issueCount > 0 ? (
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={() => setIssueModalOpen(true)}
             className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
             Quản lý issue
-          </button>
+          </AdminButton>
         ) : null}
       </div>
 
@@ -324,7 +325,7 @@ export default function ServiceRequestDetailClient({
             </p>
           </div>
 
-          <button
+          <AdminButton variant="secondary" density="compact"
             type="button"
             onClick={() => setShowOptions((value) => !value)}
             className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50"
@@ -335,7 +336,7 @@ export default function ServiceRequestDetailClient({
             ) : (
               <ChevronDown className="h-3.5 w-3.5" />
             )}
-          </button>
+          </AdminButton>
         </div>
 
         <div className="mt-4 flex gap-2">
@@ -352,7 +353,7 @@ export default function ServiceRequestDetailClient({
             className="h-11 min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 text-sm outline-none focus:border-slate-400"
           />
 
-          <button
+          <AdminButton variant="primary"
             type="button"
             disabled={pending}
             onClick={createIssue}
@@ -360,7 +361,7 @@ export default function ServiceRequestDetailClient({
           >
             <Plus className="h-4 w-4" />
             {pending ? "Đang tạo..." : "Tạo"}
-          </button>
+          </AdminButton>
         </div>
 
         {showOptions ? (
@@ -496,14 +497,14 @@ export default function ServiceRequestDetailClient({
                       </div>
                     </div>
 
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                       type="button"
                       onClick={() => setIssueModalOpen(true)}
                       className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
                     >
                       Mở
                       <ExternalLink className="h-3.5 w-3.5" />
-                    </button>
+                    </AdminButton>
                   </div>
                 </div>
               );

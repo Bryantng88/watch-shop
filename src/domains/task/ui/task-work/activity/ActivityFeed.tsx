@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
   useEffect,
   useRef,
@@ -249,7 +250,7 @@ function ActivityBody({ body }: { body: string | null }) {
         {body}
       </div>
       {isLong ? (
-        <button
+        <AdminButton variant="secondary" density="compact"
           type="button"
           onClick={() => setExpanded((value) => !value)}
           className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition hover:text-slate-900"
@@ -260,7 +261,7 @@ function ActivityBody({ body }: { body: string | null }) {
             <ChevronRight className="h-3.5 w-3.5" />
           )}
           {expanded ? "Thu gọn nội dung" : "Xem nội dung"}
-        </button>
+        </AdminButton>
       ) : null}
     </div>
   );
@@ -398,7 +399,7 @@ function ActivityReplyComposer({
           {mentionOptions.length ? (
             <div className="mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
               {mentionOptions.map((user) => (
-                <button
+                <AdminButton variant="contextual"
                   key={user.id}
                   type="button"
                   onClick={() => selectMention(user)}
@@ -406,7 +407,7 @@ function ActivityReplyComposer({
                 >
                   <span className="font-semibold text-slate-800">{user.name || user.email}</span>
                   {user.name && user.email ? <span className="truncate text-xs text-slate-400">{user.email}</span> : null}
-                </button>
+                </AdminButton>
               ))}
             </div>
           ) : null}
@@ -419,15 +420,15 @@ function ActivityReplyComposer({
               </div>
             )}
             <div className="flex items-center gap-2">
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={onCancel}
                 disabled={submitting}
                 className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancel
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="primary" density="compact"
                 type="button"
                 onClick={() => void submitReply()}
                 disabled={!canSubmit}
@@ -435,7 +436,7 @@ function ActivityReplyComposer({
               >
                 <Send className="h-4 w-4" />
                 Send
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -475,7 +476,7 @@ function ActivityReplies({
 
   return (
     <div className="mt-3">
-      <button
+      <AdminButton variant="secondary" density="compact"
         type="button"
         onClick={onToggleOpen}
         className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
@@ -486,7 +487,7 @@ function ActivityReplies({
           <ChevronRight className="h-3.5 w-3.5" />
         )}
         {summary}
-      </button>
+      </AdminButton>
 
       {open ? (
         <div className="mt-3 space-y-3 border-l border-slate-200 pl-4">
@@ -522,14 +523,14 @@ function ActivityReplies({
               onSubmitted={onSubmitted}
             />
           ) : discussionEnabled ? (
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={onOpenComposer}
               className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
             >
               <Plus className="h-4 w-4" />
               Add discussion
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       ) : null}
@@ -671,7 +672,7 @@ export function ActivityViewModelFeed({
         { key: "MENTIONED", label: "Nhắc đến tôi", count: mentionCount },
         { key: "UNREAD", label: "Chưa đọc", count: unreadCount },
       ] as Array<{ key: ActivityCommentFilter; label: string; count: number }>).map((filter) => (
-        <button
+        <AdminButton variant="secondary" density="compact"
           key={filter.key}
           type="button"
           onClick={() => setCommentFilter(filter.key)}
@@ -684,10 +685,10 @@ export function ActivityViewModelFeed({
         >
           {filter.label}
           <span className="rounded-full bg-white/80 px-1.5 py-0.5 text-[10px]">{filter.count}</span>
-        </button>
+        </AdminButton>
       ))}
       {unreadCount > 0 && onMarkMentionsRead ? (
-        <button
+        <AdminButton variant="secondary" density="compact"
           type="button"
           disabled={markingRead}
           onClick={() => {
@@ -697,7 +698,7 @@ export function ActivityViewModelFeed({
           className="ml-auto h-8 rounded-full px-3 text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-60"
         >
           {markingRead ? "Đang cập nhật..." : "Đánh dấu đã đọc"}
-        </button>
+        </AdminButton>
       ) : null}
     </div>
   ) : null;
@@ -801,7 +802,7 @@ function ActivityCompactRow({
           {actor} - {formatDateTime(activity.occurredAt, "")}
         </span>
         {discussionEnabled || optimisticReplyCount ? (
-          <button
+          <AdminButton variant="secondary" density="compact"
             type="button"
             onClick={toggleReplies}
             className={cn(
@@ -813,12 +814,12 @@ function ActivityCompactRow({
           >
             <MessageSquare className="h-3.5 w-3.5" />
             {optimisticReplyCount ? optimisticReplyCount : "Comment"}
-          </button>
+          </AdminButton>
         ) : null}
       </div>
 
       {latestReply && !repliesOpen ? (
-        <button
+        <AdminButton variant="contextual" density="compact"
           type="button"
           onClick={() => setRepliesOpen(true)}
           className="mb-1 ml-1 flex max-w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
@@ -839,7 +840,7 @@ function ActivityCompactRow({
               +{optimisticReplyCount - 1}
             </span>
           ) : null}
-        </button>
+        </AdminButton>
       ) : null}
 
       {repliesOpen ? (
@@ -883,14 +884,14 @@ function ActivityCompactRow({
               onSubmitted={handleSubmitted}
             />
           ) : discussionEnabled ? (
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={() => setComposerOpen(true)}
               className="mt-2 inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-slate-500 transition hover:bg-white hover:text-slate-900"
             >
               <Plus className="h-3.5 w-3.5" />
               Add comment
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       ) : null}
@@ -989,7 +990,7 @@ function ActivityGroupedByQueue({
   return (
     <div>
       <div className="mb-2 flex items-center justify-end">
-        <button
+        <AdminButton variant="contextual" density="compact"
           type="button"
           onClick={() => setShowCommentedOnly((value) => !value)}
           className={cn(
@@ -1001,7 +1002,7 @@ function ActivityGroupedByQueue({
         >
           <MessageSquare className="h-3.5 w-3.5" />
           Has comments
-        </button>
+        </AdminButton>
       </div>
 
       <div className="divide-y divide-slate-100">
@@ -1057,7 +1058,7 @@ function ActivityGroupedByQueue({
                     />
                   ))}
                   {hiddenCount ? (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                       type="button"
                       onClick={() =>
                         setExpandedGroupIds((prev) =>
@@ -1069,7 +1070,7 @@ function ActivityGroupedByQueue({
                       className="mt-1 inline-flex h-7 items-center rounded-md px-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                     >
                       {expanded ? "Thu gọn" : `Xem thêm ${hiddenCount} hoạt động`}
-                    </button>
+                    </AdminButton>
                   ) : null}
                 </div>
               ) : (

@@ -1,8 +1,9 @@
 "use client";
 
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+
 import { Plus, ShoppingCart } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -487,13 +488,13 @@ export default function OrderListClient({
           meta={<span>Quản lý bán hàng · Thanh toán · Giao nhận</span>}
           actions={
             <div className="flex items-center gap-2">
-              <Link
+              <AdminLinkAction variant="primary" density="compact"
                 href="/admin/orders/new"
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
               >
                 <Plus className="h-4 w-4" />
                 Tạo đơn hàng
-              </Link>
+              </AdminLinkAction>
             </div>
           }
         />

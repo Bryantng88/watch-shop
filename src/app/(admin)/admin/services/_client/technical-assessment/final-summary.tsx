@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { ScorePill } from "./primitives";
 import { buildTechnicalSummaryForSale } from "./utils";
@@ -20,7 +21,7 @@ export function CollapsibleDefects({
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-white">
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -58,7 +59,7 @@ export function CollapsibleDefects({
                     <ScorePill score={score} />
                     <span className="text-sm text-slate-400">{open ? "−" : "+"}</span>
                 </div>
-            </button>
+            </AdminButton>
 
             {open && defects.length > preview.length ? (
                 <div className="border-t border-slate-200 px-4 py-4">

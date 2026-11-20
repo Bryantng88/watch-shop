@@ -2,6 +2,7 @@ name: Ben draggable launcher
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/ai-assistant/BenLauncher.tsx'
       - 'src/domains/ai-assistant/BenAvatar.tsx'
       - 'src/domains/ai-assistant/AiAssistant.tsx'

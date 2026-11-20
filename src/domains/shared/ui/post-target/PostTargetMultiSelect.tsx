@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { PostTargetChip } from "./PostTargetChip";
 
 export type PostTargetOption = {
@@ -62,9 +63,9 @@ export function PostTargetMultiSelect({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {selectedGroups.length ? selectedGroups.map((group) => (
-          <button key={group.key} type="button" onClick={() => toggle(group.key)} className="rounded-full" title="Bỏ chọn">
+          <AdminButton variant="secondary" key={group.key} type="button" onClick={() => toggle(group.key)} className="rounded-full" title="Bỏ chọn">
             <PostTargetChip trailing={<span className="text-slate-300">x</span>}>{group.name}</PostTargetChip>
-          </button>
+          </AdminButton>
         )) : <div className="text-sm text-slate-400">Chưa chọn page/kênh đăng</div>}
       </div>
       <select

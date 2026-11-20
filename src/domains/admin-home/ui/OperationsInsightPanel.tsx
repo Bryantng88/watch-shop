@@ -1,4 +1,5 @@
 "use client";
+import { AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState, type ReactNode } from "react";
 import styles from "./OperationsDashboard.module.css";
 
@@ -12,7 +13,7 @@ export function OperationsInsightPanel({ children }: { children: ReactNode }) {
     return () => screen.removeEventListener("change", sync);
   }, []);
   return <details className={styles.insightPanel} data-insight-panel open={open} onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary className="rounded py-3 text-sm font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Insight vận hành</summary>
+    <AdminDisclosureSummary className="rounded py-3 text-sm font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">Insight vận hành</AdminDisclosureSummary>
     <div className="space-y-7 pt-3 xl:pt-0">{children}</div>
   </details>;
 }

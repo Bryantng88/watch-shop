@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { BellRing } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -223,14 +224,14 @@ export function ZaloRuleComposer({
                         <div className={labelClasses()}>Message preset</div>
                         <div className="flex flex-wrap gap-2">
                             {PRESETS.map((preset) => (
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     key={preset.key}
                                     type="button"
                                     onClick={() => applyPreset(preset)}
                                     className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
                                 >
                                     {preset.label}
-                                </button>
+                                </AdminButton>
                             ))}
                         </div>
                     </div>
@@ -265,22 +266,22 @@ export function ZaloRuleComposer({
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {TEMPLATE_FIELDS.map((field) => (
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     key={field}
                                     type="button"
                                     onClick={() => insertField(field)}
                                     className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
                                 >
                                     {field}
-                                </button>
+                                </AdminButton>
                             ))}
                         </div>
                     </div>
 
                     <details className="rounded-lg border border-slate-200 px-3 py-2">
-                        <summary className="cursor-pointer text-sm font-semibold text-slate-700">
+                        <AdminDisclosureSummary className="cursor-pointer text-sm font-semibold text-slate-700">
                             Advanced rule options
-                        </summary>
+                        </AdminDisclosureSummary>
                         <div className="mt-3 grid gap-3 lg:grid-cols-2">
                             <div className="space-y-1.5">
                                 <label className={labelClasses()}>Rule name</label>
@@ -305,12 +306,12 @@ export function ZaloRuleComposer({
                         </div>
                     </details>
 
-                    <button
+                    <AdminButton variant="primary"
                         type="submit"
                         className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
                     >
                         Create rule
-                    </button>
+                    </AdminButton>
                 </div>
 
                 <aside className="space-y-3">

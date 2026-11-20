@@ -1,8 +1,12 @@
-// src/domains/media/client/MediaAssetAdminClient.tsx
 "use client";
 
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
+// src/domains/media/client/MediaAssetAdminClient.tsx
+
+
 import * as React from "react";
-import Link from "next/link";
+
 import {
   AlertTriangle,
   Database,
@@ -488,31 +492,31 @@ export default function MediaAssetAdminClient() {
 
             <div className="flex flex-col items-start gap-2 md:items-end">
               <div className="flex flex-wrap justify-end gap-2">
-                <Link
+                <AdminLinkAction variant="secondary"
                   href="/admin/media/recycle"
                   className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
                 >
                   Quản lý Recycle
-                </Link>
-                <button
+                </AdminLinkAction>
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={runManifestScan}
                   className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <ServerCrash className="h-4 w-4" />
                   {manifestCursor ? "Scan batch tiếp" : "Bắt đầu audit"}
-                </button>
+                </AdminButton>
 
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => runCanonicalImport(true)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
                 >
                   <ImageIcon className="h-4 w-4" />
                   Preview import
-                </button>
+                </AdminButton>
 
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   onClick={() => {
                     if (
@@ -527,37 +531,37 @@ export default function MediaAssetAdminClient() {
                 >
                   <RefreshCw className="h-4 w-4" />
                   Import batch
-                </button>
+                </AdminButton>
               </div>
 
               <details className="hidden" aria-hidden="true">
-                <summary className="cursor-pointer text-xs font-semibold text-slate-400">
+                <AdminDisclosureSummary className="cursor-pointer text-xs font-semibold text-slate-400">
                   Công cụ legacy
-                </summary>
+                </AdminDisclosureSummary>
                 <div className="mt-2 flex flex-wrap justify-end gap-2">
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => runReconcile()}
                   className="inline-flex items-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100"
                 >
                   <ImageIcon className="h-4 w-4" />
                   Check NAS legacy
-                </button>
+                </AdminButton>
 
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => runMigrateChosen(true)}
                   className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600"
                 >
                   <ImageIcon className="h-4 w-4" />
                   Dry-run chosen
-                </button>
-                <button type="button" disabled onClick={runOrganizeActive} className="hidden">
+                </AdminButton>
+                <AdminButton variant="secondary" type="button" disabled onClick={runOrganizeActive} className="hidden">
                   Organize deprecated
-                </button>
-                <button type="button" disabled onClick={() => runRebuild(true)} className="hidden">
+                </AdminButton>
+                <AdminButton variant="secondary" type="button" disabled onClick={() => runRebuild(true)} className="hidden">
                   Rebuild deprecated
-                </button>
+                </AdminButton>
                 </div>
               </details>
             </div>
@@ -646,7 +650,7 @@ export default function MediaAssetAdminClient() {
               className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-slate-400"
             />
 
-            <button
+            <AdminButton variant="secondary"
               type="button"
               onClick={() => {
                 setPage(1);
@@ -661,7 +665,7 @@ export default function MediaAssetAdminClient() {
             >
               <Filter className="h-4 w-4" />
               Missing
-            </button>
+            </AdminButton>
           </div>
         </div>
 
@@ -721,27 +725,27 @@ export default function MediaAssetAdminClient() {
           )}
 
           <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
-            <button
+            <AdminButton variant="secondary"
               type="button"
               disabled={assets.page <= 1 || loading}
               onClick={() => setPage((value) => Math.max(1, value - 1))}
               className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
             >
               Trước
-            </button>
+            </AdminButton>
 
             <div className="text-sm font-semibold text-slate-600">
               {assets.page} / {assets.pageCount}
             </div>
 
-            <button
+            <AdminButton variant="secondary"
               type="button"
               disabled={assets.page >= assets.pageCount || loading}
               onClick={() => setPage((value) => Math.min(assets.pageCount, value + 1))}
               className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40"
             >
               Sau
-            </button>
+            </AdminButton>
           </div>
         </div>
       </div>

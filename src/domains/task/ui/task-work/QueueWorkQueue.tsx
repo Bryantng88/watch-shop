@@ -1,4 +1,6 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition, type ReactNode, type Ref } from "react";
@@ -909,14 +911,14 @@ function CreateTechnicalIssueModal({
               Tạo technical issue trong hồ sơ SR hiện tại.
             </div>
           </div>
-          <button
+          <AdminButton iconOnly variant="secondary" density="compact"
             type="button"
             onClick={resetAndClose}
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
             aria-label="Đóng modal thêm TI"
           >
             <XCircle className="h-4 w-4" />
-          </button>
+          </AdminButton>
         </div>
 
         <div className="space-y-4 px-5 py-5">
@@ -980,15 +982,15 @@ function CreateTechnicalIssueModal({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4">
-          <button
+          <AdminButton variant="secondary" density="compact"
             type="button"
             disabled={isPending}
             onClick={resetAndClose}
             className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Hủy
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton variant="primary" density="compact"
             type="button"
             disabled={isPending}
             onClick={submit}
@@ -996,7 +998,7 @@ function CreateTechnicalIssueModal({
           >
             <Plus className="h-4 w-4" />
             {isPending ? "Đang tạo" : "Thêm TI"}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>
@@ -1136,7 +1138,7 @@ export function OpenTargetAction({
 
   return (
     <>
-      <button
+      <AdminButton variant="secondary"
         type="button"
         onClick={activate}
         className={className}
@@ -1145,7 +1147,7 @@ export function OpenTargetAction({
       >
         {iconOnly ? <Images className={iconClassName} /> : showIcon ? <ExternalLink className={iconClassName} aria-hidden="true" /> : null}
         {iconOnly ? null : triggerContent ?? label}
-      </button>
+      </AdminButton>
 
       {open ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4">
@@ -1160,7 +1162,7 @@ export function OpenTargetAction({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Link
+                <AdminLinkAction variant="secondary" density="compact"
                   href={href}
                   onClick={(event) => {
                     if (!targetDirty) return;
@@ -1173,15 +1175,15 @@ export function OpenTargetAction({
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   Full page
-                </Link>
-                <button
+                </AdminLinkAction>
+                <AdminButton iconOnly variant="secondary" density="compact"
                   type="button"
                   onClick={() => void closeTargetModal()}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
                   aria-label="Close modal"
                 >
                   <XCircle className="h-4 w-4" />
-                </button>
+                </AdminButton>
               </div>
             </div>
             <iframe
@@ -2231,14 +2233,14 @@ export function QueueWorkQueue({
             {items.length} {itemLabel}
           </span>
           {canCreateTechnicalIssue ? (
-            <button
+            <AdminButton variant="primary" density="compact"
               type="button"
               onClick={() => setCreateIssueOpen(true)}
               className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
             >
               <Plus className="h-3.5 w-3.5" />
               Thêm TI
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       }
@@ -2255,13 +2257,13 @@ export function QueueWorkQueue({
                     {actionError.message}
                   </div>
                 </div>
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   onClick={() => setActionError(null)}
                   className="ml-auto h-6 rounded-md px-2 text-xs font-semibold text-rose-700 hover:bg-rose-100"
                 >
                   Dismiss
-                </button>
+                </AdminButton>
               </div>
             ) : null}
             {selectedTransitions.length || selectedPaymentItems.length || selectedTechnicalItems.length ? (
@@ -2280,8 +2282,8 @@ export function QueueWorkQueue({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setSelectedIds([])} disabled={isBulkPending} className="h-9 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100">Bỏ chọn</button>
-                  <button
+                  <AdminButton variant="secondary" density="compact" type="button" onClick={() => setSelectedIds([])} disabled={isBulkPending} className="h-9 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100">Bỏ chọn</AdminButton>
+                  <AdminButton variant="primary" density="compact"
                     type="button"
                     disabled={isBulkPending}
                     onClick={isPaymentWorkspace
@@ -2301,7 +2303,7 @@ export function QueueWorkQueue({
                     : isServiceOperationWorkspace
                       ? blueprintSubmitLabel(selectedTechnicalItems[0].action)
                     : bulkLabel}
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             ) : null}
@@ -2311,7 +2313,7 @@ export function QueueWorkQueue({
                   const active = item.key === filter;
 
                   return (
-                    <button
+                    <AdminButton variant="contextual" density="compact"
                       key={item.key}
                       type="button"
                       onClick={() => setFilter(item.key)}
@@ -2331,7 +2333,7 @@ export function QueueWorkQueue({
                       >
                         {item.count}
                       </span>
-                    </button>
+                    </AdminButton>
                   );
                 })}
               </div>
@@ -2424,7 +2426,7 @@ export function QueueWorkQueue({
                         <div className="flex min-w-0 items-start gap-3">
                           <QueueItemThumbnail item={queueItem} />
                           <div className="min-w-0">
-                            <button
+                            <AdminButton variant="contextual"
                               type="button"
                               onClick={() => {
                                 if (businessPreview) previewState.openPreview(businessPreview);
@@ -2436,7 +2438,7 @@ export function QueueWorkQueue({
                               )}
                             >
                               {queueItemTitle(queueItem)}
-                            </button>
+                            </AdminButton>
                             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                               {srCaseHref ? (
                                 <Link
@@ -2471,7 +2473,7 @@ export function QueueWorkQueue({
                                 </div>
                               ) : null}
                               {workspaceWorkTypeKey === "photography" ? (
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                   type="button"
                                   aria-label={queueItem.reshootNote ? `Note chụp lại: ${queueItem.reshootNote}` : "Thêm note chụp lại"}
                                   onClick={() => {
@@ -2501,7 +2503,7 @@ export function QueueWorkQueue({
                                       {queueItem.reshootNote}
                                     </span>
                                   ) : null}
-                                </button>
+                                </AdminButton>
                               ) : null}
                               {workspaceWorkTypeKey === "publish" && postTargets.length ? (
                                 <>
@@ -2596,7 +2598,7 @@ export function QueueWorkQueue({
                           <div className="min-w-0 self-center">
                             {isServiceOperationWorkspace && blueprintItemActions.length ? (
                               <div className="flex flex-wrap items-center gap-1.5">
-                              <button
+                              <AdminButton variant="primary" density="compact"
                                 type="button"
                                 onClick={() =>
                                   setOpenBlueprintAction({
@@ -2607,15 +2609,15 @@ export function QueueWorkQueue({
                                 className="inline-flex h-8 items-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800"
                               >
                                 Xử lý
-                              </button>
+                              </AdminButton>
                               {srCaseHref ? (
-                                <Link
+                                <AdminLinkAction variant="secondary" density="compact"
                                   href={srCaseHref}
                                   className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                                 >
                                   <ExternalLink className="h-3.5 w-3.5" />
                                   Mở SR
-                                </Link>
+                                </AdminLinkAction>
                               ) : null}
                               </div>
                             ) : nextStepAction ? (
@@ -2643,7 +2645,7 @@ export function QueueWorkQueue({
                                   }
 
                                   return (
-                                    <button
+                                    <AdminButton variant="secondary" density="compact"
                                       key={transition.actionKey}
                                       type="button"
                                       disabled={disabled}
@@ -2656,7 +2658,7 @@ export function QueueWorkQueue({
                                       {pending
                                         ? "Applying"
                                         : effectiveTransitionLabel(transition, workspaceWorkTypeKey)}
-                                    </button>
+                                    </AdminButton>
                                   );
                                 })()}
 
@@ -2675,7 +2677,7 @@ export function QueueWorkQueue({
 
                                 {secondaryNextStepActions.length ? (
                                   <div className="relative">
-                                    <button
+                                    <AdminButton iconOnly variant="secondary" density="compact"
                                       type="button"
                                       onClick={() =>
                                         setOpenActionMenuId((current) =>
@@ -2687,7 +2689,7 @@ export function QueueWorkQueue({
                                       aria-expanded={openActionMenuId === queueItem.id}
                                     >
                                       <MoreHorizontal className="h-4 w-4" />
-                                    </button>
+                                    </AdminButton>
                                     {openActionMenuId === queueItem.id ? (
                                       <div className="absolute right-0 z-20 mt-1 min-w-36 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
                                         {secondaryNextStepActions.map((transition) => {
@@ -2712,7 +2714,7 @@ export function QueueWorkQueue({
                                           }
 
                                           return (
-                                            <button
+                                            <AdminButton variant="contextual" density="compact"
                                               key={transition.actionKey}
                                               type="button"
                                               disabled={disabled}
@@ -2725,7 +2727,7 @@ export function QueueWorkQueue({
                                               {pending
                                                 ? "Applying"
                                                 : effectiveTransitionLabel(transition, workspaceWorkTypeKey)}
-                                            </button>
+                                            </AdminButton>
                                           );
                                         })}
                                       </div>
@@ -2741,7 +2743,7 @@ export function QueueWorkQueue({
                                     const submitSupported = canSubmitBlueprintAction(action);
 
                                     return (
-                                      <button
+                                      <AdminButton variant="secondary" density="compact"
                                         key={action.key}
                                         type="button"
                                         disabled={!submitSupported}
@@ -2755,7 +2757,7 @@ export function QueueWorkQueue({
                                         title={submitSupported ? action.description : `Adapter pending: ${action.command}`}
                                       >
                                         {isPaymentWorkspace ? paymentActionLabel(queueItem, action) : action.label}
-                                      </button>
+                                      </AdminButton>
                                     );
                                   })}
                                 </div>
@@ -2765,7 +2767,7 @@ export function QueueWorkQueue({
                         ) : null}
 
                         <div className="self-center">
-                          <button
+                          <AdminButton variant="secondary" density="compact"
                             type="button"
                             disabled={!queueItem.activityCount && !queueItem.discussionCount}
                             onClick={() => onOpenQueueActivity?.(queueItem.id, "activity")}
@@ -2778,7 +2780,7 @@ export function QueueWorkQueue({
                             )}
                           >
                             {queueItem.discussionCount ?? 0}/{queueItem.activityCount ?? 0}
-                          </button>
+                          </AdminButton>
                         </div>
 
                         <div className="self-center text-xs text-slate-500">
@@ -2827,14 +2829,14 @@ export function QueueWorkQueue({
                   Kiểm tra lại thông tin trước khi cập nhật.
                 </p>
               </div>
-              <button
+              <AdminButton iconOnly variant="secondary" density="compact"
                 type="button"
                 onClick={() => setBulkPaymentConfirm(null)}
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 aria-label="Đóng"
               >
                 <XCircle className="h-4 w-4" />
-              </button>
+              </AdminButton>
             </div>
             <div className="space-y-3 px-5 py-5">
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -2862,14 +2864,14 @@ export function QueueWorkQueue({
               </p>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4">
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={() => setBulkPaymentConfirm(null)}
                 className="h-9 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
               >
                 Hủy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="primary" density="compact"
                 type="button"
                 onClick={() => {
                   setBulkPaymentConfirm(null);
@@ -2878,7 +2880,7 @@ export function QueueWorkQueue({
                 className="h-9 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800"
               >
                 Xác nhận {bulkPaymentConfirm.directionLabel.toLowerCase()}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -2895,14 +2897,14 @@ export function QueueWorkQueue({
                   {queueItemTitle(openBlueprintQueueItem)}
                 </div>
               </div>
-              <button
+              <AdminButton iconOnly variant="secondary" density="compact"
                 type="button"
                 onClick={() => setOpenBlueprintAction(null)}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                 aria-label="Đóng modal thao tác"
               >
                 <XCircle className="h-4 w-4" />
-              </button>
+              </AdminButton>
             </div>
             <form
               className="space-y-4 px-5 py-5"
@@ -2918,7 +2920,7 @@ export function QueueWorkQueue({
                       const active = action.key === openBlueprintModalAction.key;
 
                       return (
-                        <button
+                        <AdminButton variant="contextual" density="compact"
                           key={action.key}
                           type="button"
                           onClick={() =>
@@ -2938,7 +2940,7 @@ export function QueueWorkQueue({
                           <span className="mt-0.5 block line-clamp-2 text-[11px] leading-4 text-slate-500">
                             {action.description}
                           </span>
-                        </button>
+                        </AdminButton>
                       );
                     })}
                   </div>
@@ -3131,14 +3133,14 @@ export function QueueWorkQueue({
                 </div>
               ) : null}
               <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   onClick={() => setOpenBlueprintAction(null)}
                   className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   Hủy
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="primary" density="compact"
                   type="submit"
                   disabled={isPending && pendingId === `${openBlueprintQueueItem.id}:${openBlueprintModalAction.key}`}
                   className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -3146,7 +3148,7 @@ export function QueueWorkQueue({
                   {isPending && pendingId === `${openBlueprintQueueItem.id}:${openBlueprintModalAction.key}`
                     ? "Đang xử lý"
                     : blueprintSubmitLabel(openBlueprintModalAction)}
-                </button>
+                </AdminButton>
               </div>
             </form>
           </div>
@@ -3160,7 +3162,7 @@ export function QueueWorkQueue({
                 <h3 className="text-base font-semibold text-slate-950">Note chụp lại</h3>
                 <p className="mt-1 truncate text-sm text-slate-500">{reshootNoteDialog.title}</p>
               </div>
-              <button
+              <AdminButton iconOnly variant="secondary" density="compact"
                 type="button"
                 disabled={reshootNoteSaving}
                 onClick={() => setReshootNoteDialog(null)}
@@ -3168,7 +3170,7 @@ export function QueueWorkQueue({
                 aria-label="Đóng"
               >
                 <XCircle className="h-4 w-4" />
-              </button>
+              </AdminButton>
             </div>
             <div className="p-5">
               <label htmlFor="photoshoot-reshoot-note" className="text-sm font-semibold text-slate-800">
@@ -3191,22 +3193,22 @@ export function QueueWorkQueue({
               ) : null}
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4">
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 disabled={reshootNoteSaving}
                 onClick={() => setReshootNoteDialog(null)}
                 className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Hủy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="primary" density="compact"
                 type="button"
                 disabled={reshootNoteSaving || !reshootNoteDraft.trim()}
                 onClick={saveReshootNote}
                 className="h-9 rounded-lg bg-amber-500 px-4 text-sm font-semibold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {reshootNoteSaving ? "Đang lưu" : "Lưu note"}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>

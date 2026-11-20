@@ -1,3 +1,4 @@
+import { AdminButtonProvider } from "../../src/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Grid2X2, List, Search } from "lucide-react";
@@ -313,4 +314,4 @@ function App() {
     </AdminPageCanvas>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<AdminButtonProvider><App /></AdminButtonProvider>);

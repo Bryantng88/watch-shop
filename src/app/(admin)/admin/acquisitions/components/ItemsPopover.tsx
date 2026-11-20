@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAcqItems } from "../hooks/useAcgItems";
@@ -144,7 +145,7 @@ export default function AcqItemsPopover({
 
     return (
         <>
-            <button
+            <AdminButton variant="secondary" density="compact"
                 ref={btnRef}
                 type="button"
                 onClick={() => setOpen((v) => !v)}
@@ -152,7 +153,7 @@ export default function AcqItemsPopover({
                 title="Xem các dòng trong phiếu"
             >
                 {count}
-            </button>
+            </AdminButton>
 
             {open && rect &&
                 createPortal(
@@ -179,13 +180,13 @@ export default function AcqItemsPopover({
                                 </a>
 
                                 {isDraft && (
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={handleAddRow}
                                         className="text-blue-600 hover:underline font-medium"
                                     >
                                         + Thêm dòng
-                                    </button>
+                                    </AdminButton>
                                 )}
                             </div>
                         </div>
@@ -291,20 +292,20 @@ export default function AcqItemsPopover({
 
                         {isDraft && (
                             <div className="flex items-center justify-end gap-2 border-t p-2">
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     type="button"
                                     onClick={() => setOpen(false)}
                                     className="rounded border px-3 py-1 text-xs hover:bg-gray-50"
                                 >
                                     Đóng
-                                </button>
-                                <button
+                                </AdminButton>
+                                <AdminButton variant="primary" density="compact"
                                     type="button"
                                     onClick={handleSave}
                                     className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
                                 >
                                     Lưu
-                                </button>
+                                </AdminButton>
                             </div>
                         )}
                     </div>,

@@ -2,6 +2,7 @@ name: Order form compact UI
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/order/client/OrderFormClient.tsx'
       - 'src/domains/order/ui/form/**'
       - 'src/domains/order/ui/OrderSection.tsx'

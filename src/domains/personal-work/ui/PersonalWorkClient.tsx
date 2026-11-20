@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import {PersonalWorkListRow} from "./PersonalWorkListRow";
@@ -546,16 +547,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             />
 
             <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
-            <button
+            <AdminButton variant="primary"
               type="submit"
               disabled={pending}
               className="h-11 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             >
               {creatingEvent?"Thêm sự kiện":"Thêm việc"}
-            </button>
+            </AdminButton>
           </AdminFlatToolbar>
           <details className="mt-2 text-sm">
-            <summary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</summary>
+            <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</AdminDisclosureSummary>
             <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
               <label className="flex items-center gap-2 text-xs text-slate-600">
                 Số ngày dự kiến
@@ -623,7 +624,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 {targetResults.length > 0 && (
                   <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
                     {targetResults.map((item) => (
-                      <button
+                      <AdminButton variant="contextual"
                         type="button"
                         key={`${item.type}-${item.id}`}
                         onClick={() => {
@@ -635,33 +636,33 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       >
                         <span className="block text-sm font-medium text-slate-900">{item.label}</span>
                         {item.secondary && <span className="block text-xs text-slate-500">{item.secondary}</span>}
-                      </button>
+                      </AdminButton>
                     ))}
                   </div>
                 )}
                 {selectedTargets.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {selectedTargets.map((target) => (
-                      <button
+                      <AdminButton variant="secondary" density="compact"
                         type="button"
                         key={`${target.type}:${target.id}`}
                         onClick={() => setSelectedTargets((current) => current.filter((item) => item.type !== target.type || item.id !== target.id))}
                         className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-rose-50 hover:text-rose-700"
                       >
                         {target.label} ×
-                      </button>
+                      </AdminButton>
                     ))}
                   </div>
                 )}
                   </label>
-                  <button
+                  <AdminButton variant="secondary"
                 type="button"
                 disabled={pending || !targetType}
                 onClick={searchTargets}
                 className="mt-5 h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
               >
                 Tìm
-                  </button>
+                  </AdminButton>
                 </>
               )}
             </div>
@@ -669,7 +670,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         </form>
 
         <aside className="border-t border-slate-100 pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
-          <button
+          <AdminButton variant="contextual"
             type="button"
             aria-expanded={calendarOpen}
             aria-controls="personal-google-calendar-agenda"
@@ -699,8 +700,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
               />
             </div>
-          </button>
-          <AsyncActionButton
+          </AdminButton>
+          <AsyncActionButton variant="secondary"
             pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
             title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
             pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
@@ -737,7 +738,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       {Object.values(calendarSyncFailures).map(task => (
         <div key={task.id} role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <span>Đã lưu “{task.title}”. Chưa đồng bộ Google Calendar.</span>
-          <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${task.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(task)} className="rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Thử đồng bộ lại</AsyncActionButton>
+          <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${task.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(task)} className="rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Thử đồng bộ lại</AsyncActionButton>
         </div>
       ))}
 
@@ -754,26 +755,26 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => setCalendarCursor((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}
                   aria-label="Tháng trước"
                   className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </button>
+                </AdminButton>
                 <p className="min-w-32 text-center text-sm font-semibold capitalize text-slate-800">
                   {new Intl.DateTimeFormat("vi-VN", { month: "long", year: "numeric" }).format(calendarCursor)}
                 </p>
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => setCalendarCursor((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}
                   aria-label="Tháng sau"
                   className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
                 >
                   <ChevronRight className="h-4 w-4" />
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   onClick={() => {
                     const date = new Date();
@@ -782,7 +783,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                 >
                   Hôm nay
-                </button>
+                </AdminButton>
               </div>
             </div>
             {calendar.error ? (
@@ -871,7 +872,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                               );
                               return (
                                 <PersonalCalendarPreview key={event.id} event={event} item={linkedTask}>
-                                <button
+                                <AdminButton variant="contextual" density="compact"
                                   type="button"
                                   key={event.id}
                                   data-task-item-id={linkedTask?.id}
@@ -884,12 +885,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                 >
                                   {content}
                                   {startsVisibleWeekSegment && linkedTask && calendarShareLabel(linkedTask) && <Share2 aria-label={calendarShareLabel(linkedTask)!} className="ml-1 h-3 w-3 shrink-0 text-violet-600" />}
-                                </button>
+                                </AdminButton>
                                 </PersonalCalendarPreview>
                               );
                             })}
                             {dayEvents.length > 3 && (
-                              <button type="button" aria-label={`Xem tất cả ${dayEvents.length} lịch ngày ${key}`} onClick={(event) => {event.stopPropagation();setSelectedDay(key);}} className="rounded px-1 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">+{dayEvents.length - 3} lịch</button>
+                              <AdminButton variant="secondary" density="compact" type="button" aria-label={`Xem tất cả ${dayEvents.length} lịch ngày ${key}`} onClick={(event) => {event.stopPropagation();setSelectedDay(key);}} className="rounded px-1 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">+{dayEvents.length - 3} lịch</AdminButton>
                             )}
                           </div>
                         </div>
@@ -980,7 +981,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             className="h-[100dvh] w-full max-w-2xl overflow-y-auto overscroll-contain bg-white px-4 pb-5 sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:px-5 sm:shadow-2xl"
           >
             <div className="sticky top-0 z-10 border-b border-slate-100 bg-white pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-              <button type="button" onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</button>
+              <AdminButton variant="secondary" type="button" onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</AdminButton>
               <div>
                 <p className="font-mono text-xs text-slate-600">{personalWorkCode(editingItem.id, editingItem.personalWorkNumber, editingItem.workType)}</p>
                 <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.title}</h2>
@@ -1009,7 +1010,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <div className="space-y-2">
                     {editingItem.checklist.map((entry) => (
                       <div key={entry.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100">
-                        <button
+                        <AdminButton iconOnly variant="contextual" density="compact"
                           type="button"
                           disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           aria-busy={checklistMutation.isPending(`toggle:${entry.id}`)}
@@ -1042,7 +1043,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           ) : (
                             <Check className="h-3.5 w-3.5" />
                           )}
-                        </button>
+                        </AdminButton>
                         {entry.object&&<WorkObjectThumbnail object={entry.object}/>}
                         <PersonalChecklistTitle title={entry.title} done={entry.isDone}
                           disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
@@ -1058,7 +1059,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           router.refresh();
                         }}/>}
                         {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
-                          <button
+                          <AdminButton variant="danger"
                             type="button"
                             disabled={checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
                             aria-busy={checklistMutation.isPending(`delete:${entry.id}`)}
@@ -1086,7 +1087,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             ) : (
                               <Trash2 className="h-3.5 w-3.5" />
                             )}
-                          </button>
+                          </AdminButton>
                         )}
                       </div>
                     ))}
@@ -1101,7 +1102,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       placeholder="Thêm đầu việc mới..."
                       className="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                     />
-                    <AsyncActionButton
+                    <AsyncActionButton variant="secondary"
                       type="button"
                       pending={checklistMutation.isPending("checklist:add")}
                       pendingLabel="Đang thêm..."
@@ -1146,7 +1147,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     Đã xác nhận hoàn thành. Danh sách đầu việc đã được khóa.
                   </p>
                 ) : editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
-                  <AsyncActionButton
+                  <AsyncActionButton variant="primary"
                     type="button"
                     pending={checklistMutation.isPending("checklist:finalize")}
                     pendingLabel="Đang hoàn thành..."
@@ -1300,7 +1301,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {editTargets.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {editTargets.map((target) => (
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                           type="button"
                           key={`${target.type}:${target.id}`}
                           disabled={editingItem.access === "VIEWER"}
@@ -1312,7 +1313,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-rose-50 hover:text-rose-700 disabled:cursor-default disabled:hover:bg-blue-50 disabled:hover:text-blue-700"
                         >
                           {target.label}{editingItem.access !== "VIEWER" ? " ×" : ""}
-                        </button>
+                        </AdminButton>
                       ))}
                     </div>
                   )}
@@ -1341,7 +1342,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         {editTargetResults.length > 0 && (
                           <div className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
                             {editTargetResults.map((target) => (
-                              <button
+                              <AdminButton variant="contextual"
                                 type="button"
                                 key={`${target.type}:${target.id}`}
                                 onClick={() => {
@@ -1357,19 +1358,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                               >
                                 <span className="block text-sm font-medium text-slate-900">{target.label}</span>
                                 {target.secondary && <span className="block text-xs text-slate-500">{target.secondary}</span>}
-                              </button>
+                              </AdminButton>
                             ))}
                           </div>
                         )}
                       </div>
-                      <button
+                      <AdminButton variant="secondary"
                         type="button"
                         disabled={pending || !editTargetType}
                         onClick={searchEditTargets}
                         className="h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                       >
                         Tìm
-                      </button>
+                      </AdminButton>
                     </div>
                   )}
                 </div>
@@ -1380,7 +1381,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </p>
               )}
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
-              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
+              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
               </>}
             </div>
             {!editingItem.checklistOnly && <PersonalCodexPanel item={editingItem} configuration={data.codex} />}
@@ -1428,7 +1429,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </p>
             )}
             <div className="mt-6 flex items-center justify-between gap-3">
-              {editingItem.access === "OWNER" ? <button
+              {editingItem.access === "OWNER" ? <AdminButton variant="danger"
                 type="button"
                 disabled={pending}
                 onClick={async () => {
@@ -1443,22 +1444,22 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" /> Xóa
-              </button> : <span />}
+              </AdminButton> : <span />}
               <div className="flex gap-2">
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => setEditingItem(null)}
                   className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   {editingItem.checklistOnly?"Đóng":"Hủy"}
-                </button>
-                {!editingItem.checklistOnly && <button
+                </AdminButton>
+                {!editingItem.checklistOnly && <AdminButton variant="primary"
                   type="submit"
                   disabled={pending || editingItem.access === "VIEWER"}
                   className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                 >
                   {pending ? "Đang lưu..." : "Lưu thay đổi"}
-                </button>}
+                </AdminButton>}
               </div>
             </div>
           </form>
@@ -1470,20 +1471,20 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" onMouseDown={event => event.stopPropagation()} className="flex max-h-[75vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl shadow-slate-950/10">
             <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
               <div className="flex items-baseline gap-2.5"><h2 id="calendar-day-title" className="text-sm font-semibold text-slate-950">{calendarEventDate(selectedDay, true)}</h2><span className="text-xs text-slate-400">{eventsByDay.get(selectedDay)?.length || 0} lịch</span></div>
-              <button autoFocus type="button" aria-label="Đóng danh sách lịch trong ngày" onClick={() => setSelectedDay(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800"><X className="h-4 w-4" /></button>
+              <AdminButton variant="secondary" autoFocus type="button" aria-label="Đóng danh sách lịch trong ngày" onClick={() => setSelectedDay(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-800"><X className="h-4 w-4" /></AdminButton>
             </div>
             <div className="divide-y divide-slate-100 overflow-y-auto px-3 pb-3">
               {(eventsByDay.get(selectedDay) || []).map(event => {
                 const item = event.linkedTaskItemId ? itemMap.get(event.linkedTaskItemId) : undefined;
                 const share = item ? calendarShareLabel(item) : null;
-                return <PersonalCalendarPreview key={event.id} event={event} item={item}><button type="button" data-task-item-id={item?.id} onClick={() => openCalendarEvent(event)} className="group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
+                return <PersonalCalendarPreview key={event.id} event={event} item={item}><AdminButton variant="contextual" type="button" data-task-item-id={item?.id} onClick={() => openCalendarEvent(event)} className="group flex min-h-11 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{backgroundColor:item?.category.color || "#0ea5e9"}} />
                   {!event.allDay && <span className="shrink-0 text-[11px] tabular-nums text-slate-400">{scheduleTime(event.startAt)}</span>}
                   <span className={`min-w-0 flex-1 truncate text-sm font-medium ${item?.status === "DONE" ? "text-slate-400 line-through" : "text-slate-800"}`}>{event.title}</span>
                   {share && <Share2 aria-label={share} className="h-3 w-3 shrink-0 text-violet-500" />}
                   <span className="max-w-20 shrink-0 truncate text-[10px] text-slate-400">{item?.category.label || "Google"}</span>
                   <ChevronRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:text-slate-500" />
-                </button></PersonalCalendarPreview>;
+                </AdminButton></PersonalCalendarPreview>;
               })}
             </div>
           </section>
@@ -1554,7 +1555,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-600">Tạo từ Calendar</p>
                 <h2 id="calendar-create-title" className="mt-1 text-xl font-bold text-slate-950">{isPersonalEvent(calendarWorkType)?"Thêm sự kiện":"Thêm công việc"}</h2>
               </div>
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 aria-label="Đóng"
                 disabled={calendarCreating}
@@ -1562,7 +1563,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </AdminButton>
             </div>
             <fieldset disabled={calendarCreating} className="mt-5 min-w-0 space-y-4">
               <PersonalWorkKindField event={isPersonalEvent(calendarWorkType)} onChange={event=>setCalendarWorkType(event?"EVENT":PERSONAL_WORK_TYPES[calendarCreateDomain][0].key)}/>
@@ -1661,15 +1662,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             </fieldset>
             {calendarCreateError && <p role="alert" className="mt-3 text-sm text-rose-600">{calendarCreateError}</p>}
             <div className="mt-6 flex justify-end gap-2">
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={calendarCreating}
                 onClick={() => setCalendarCreateOpen(false)}
                 className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Hủy
-              </button>
-              <AsyncActionButton
+              </AdminButton>
+              <AsyncActionButton variant="primary"
                 type="submit"
                 pending={calendarCreating}
                 pendingLabel="Đang tạo…"

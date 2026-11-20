@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 
 type Picked = { key: string; url?: string };
@@ -136,7 +137,7 @@ export default function ImagePicker({
                             title={v.key}
                         >
                             <img src={imageSrc(v)} alt="" className="h-24 w-full object-cover group-hover:opacity-90" />
-                            <button
+                            <AdminButton variant="primary" density="compact"
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -145,7 +146,7 @@ export default function ImagePicker({
                                 className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-md text-xs px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition"
                             >
                                 ✕
-                            </button>
+                            </AdminButton>
                         </div>
                     ))}
                 </div>
@@ -156,13 +157,13 @@ export default function ImagePicker({
                     <div className="bg-white rounded-xl shadow-xl w-[900px] max-h-[80vh] overflow-auto p-4 space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-600 font-mono truncate">/{prefix || "products/edit/active"}</div>
-                            <button
+                            <AdminButton variant="secondary" density="compact"
                                 type="button"
                                 className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
                                 onClick={() => setOpen(false)}
                             >
                                 Close
-                            </button>
+                            </AdminButton>
                         </div>
 
                         {loading ? (
@@ -173,14 +174,14 @@ export default function ImagePicker({
                             <>
                                 <div className="flex flex-wrap gap-2">
                                     {folders.map((f) => (
-                                        <button
+                                        <AdminButton variant="secondary" density="compact"
                                             key={f.prefix}
                                             type="button"
                                             className="rounded border px-2 py-1 text-sm hover:bg-gray-50"
                                             onClick={() => load(f.prefix)}
                                         >
                                             {f.prefix.split("/").filter(Boolean).slice(-1)[0] || "/"}
-                                        </button>
+                                        </AdminButton>
                                     ))}
                                 </div>
 
@@ -190,7 +191,7 @@ export default function ImagePicker({
                                     {files.map((f) => {
                                         const picked = value.some((x) => x.key === f.key);
                                         return (
-                                            <button
+                                            <AdminButton variant="contextual"
                                                 key={f.key}
                                                 type="button"
                                                 onClick={() => toggle(f)}
@@ -199,7 +200,7 @@ export default function ImagePicker({
                                             >
                                                 <img src={imageSrc(f)} alt="" className="h-28 w-full object-cover" />
                                                 {picked && <div className="absolute inset-0 bg-blue-500/20" />}
-                                            </button>
+                                            </AdminButton>
                                         );
                                     })}
                                 </div>
@@ -211,13 +212,13 @@ export default function ImagePicker({
                         )}
 
                         <div className="flex justify-end">
-                            <button
+                            <AdminButton variant="primary"
                                 type="button"
                                 className="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
                                 onClick={() => setOpen(false)}
                             >
                                 Use selected images
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 </div>

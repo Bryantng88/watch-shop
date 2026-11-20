@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -153,7 +154,7 @@ function IssueDetail({
       className="fixed inset-0 m-0 h-[100dvh] max-h-[100dvh] w-full max-w-full overflow-y-auto bg-white p-0 text-slate-900 backdrop:bg-slate-950/30 sm:m-auto sm:h-auto sm:max-h-[90dvh] sm:max-w-lg sm:rounded-2xl"
     >
       <div className="sticky top-0 z-10 bg-white px-4 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <button
+        <AdminButton variant="secondary"
           type="button"
           disabled={busy}
           onClick={onClose}
@@ -161,7 +162,7 @@ function IssueDetail({
         >
           <ArrowLeft className="h-4 w-4" />
           Danh sách phiếu
-        </button>
+        </AdminButton>
         <div className="flex gap-3">
           <IssuePhoto item={item} />
           <div className="min-w-0">
@@ -199,14 +200,14 @@ function IssueDetail({
             className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700"
           >
             <p>{error}</p>
-            <button
+            <AdminButton variant="secondary"
               type="button"
               disabled={busy}
               onClick={onReload}
               className="mt-1 min-h-11 underline"
             >
               Tải lại danh sách
-            </button>
+            </AdminButton>
           </div>
         )}
         <section>
@@ -223,7 +224,7 @@ function IssueDetail({
             className={input + " py-2"}
           />
           {data.canUpdate && !ended && note !== item.note && (
-            <button
+            <AdminButton variant="secondary"
               disabled={busy}
               type="button"
               onClick={() => void run({ ...base, action: "note", note })}
@@ -232,7 +233,7 @@ function IssueDetail({
               }
             >
               Lưu ghi chú
-            </button>
+            </AdminButton>
           )}
         </section>
         {data.canUpdate && !ended && (
@@ -412,7 +413,7 @@ function IssueDetail({
               </>
             )}
             <div className="sticky bottom-0 bg-white py-3">
-              <button
+              <AdminButton variant="primary"
                 disabled={busy}
                 type="submit"
                 className={
@@ -426,7 +427,7 @@ function IssueDetail({
                   : stage === "READY"
                     ? "Bắt đầu xử lý"
                     : "Hoàn tất xử lý"}
-              </button>
+              </AdminButton>
               {stage === "IN_PROGRESS" && (
                 <p className="mt-2 text-xs text-slate-500">
                   Hoàn tất sẽ ghi nhận chi phí và tạo thanh toán theo quy trình
@@ -517,14 +518,14 @@ export default function TechnicianWorkspace({
             placeholder="Đồng hồ, SKU, mã phiếu…"
             className="h-11 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none"
           />
-          <button
+          <AdminButton iconOnly variant="secondary"
             disabled={pending}
             type="submit"
             aria-label="Tìm kiếm"
             className="grid h-11 w-9 shrink-0 place-items-center rounded text-slate-500 hover:bg-slate-100"
           >
             <Search className="h-4 w-4" />
-          </button>
+          </AdminButton>
           <select
             aria-label="Trạng thái phiếu"
             disabled={pending}
@@ -574,7 +575,7 @@ export default function TechnicianWorkspace({
             new Date(item.expectedCompletionAt).getTime() < Date.now();
           return (
             <div role="listitem" key={item.id}>
-              <button
+              <AdminButton variant="contextual"
                 type="button"
                 disabled={pending}
                 data-technician-row={item.id}
@@ -632,7 +633,7 @@ export default function TechnicianWorkspace({
                   aria-hidden="true"
                   className="h-4 w-4 shrink-0 text-slate-300 lg:col-start-7"
                 />
-              </button>
+              </AdminButton>
             </div>
           );
         })}
@@ -647,23 +648,23 @@ export default function TechnicianWorkspace({
           aria-label="Phân trang phiếu"
           className="flex items-center justify-between py-2 text-xs text-slate-500"
         >
-          <button
+          <AdminButton variant="secondary"
             disabled={pending || data.page === 1}
             onClick={() => navigate(data.view, data.q, data.page - 1)}
             className="min-h-11 rounded px-3 disabled:opacity-40"
           >
             Trước
-          </button>
+          </AdminButton>
           <span>
             {data.page}/{Math.ceil(data.total / data.pageSize)}
           </span>
-          <button
+          <AdminButton variant="secondary"
             disabled={pending || data.page * data.pageSize >= data.total}
             onClick={() => navigate(data.view, data.q, data.page + 1)}
             className="min-h-11 rounded px-3 disabled:opacity-40"
           >
             Sau
-          </button>
+          </AdminButton>
         </nav>
       )}
       {selected && (

@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton, AdminAnchorAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Folder, ImageOff, RefreshCw, Upload } from "lucide-react";
@@ -66,7 +67,7 @@ export default function WebsiteMediaLibrary() {
   const folderName = WEBSITE_IMAGE_FOLDERS.find(item => item.id === folder)!.label;
   return <AdminManagementPage eyebrow="Storefront" title="Thư viện ảnh website" description="Quản lý ảnh nội dung và ảnh mở đầu dùng cho website." actions={<a className={s.link} href="/admin/storefront/home" aria-disabled={uploading} onClick={event => { if (uploading) event.preventDefault(); }}>Chỉnh sửa trang chủ</a>}>
     <div className={s.mediaLayout}>
-      <nav className={s.folders} aria-label="Thư mục ảnh website">{WEBSITE_IMAGE_FOLDERS.map(item => <button key={item.id} className={s.folder} aria-pressed={item.id === folder} disabled={uploading} onClick={() => { if (item.id !== folder) { setFolder(item.id); setCursor(null); setItems([]); setNextCursor(null); setMessage(""); setUploadError(""); } }}><Folder aria-hidden="true" />{item.label}</button>)}</nav>
+      <nav className={s.folders} aria-label="Thư mục ảnh website">{WEBSITE_IMAGE_FOLDERS.map(item => <AdminButton variant="contextual" key={item.id} className={s.folder} aria-pressed={item.id === folder} disabled={uploading} onClick={() => { if (item.id !== folder) { setFolder(item.id); setCursor(null); setItems([]); setNextCursor(null); setMessage(""); setUploadError(""); } }}><Folder aria-hidden="true" />{item.label}</AdminButton>)}</nav>
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
         <div className={s.toolbar}><h2 className={s.sectionTitle} style={{ flex: "1 1 180px" }}>{folderName}</h2><Button disabled={loading || uploading} onClick={refresh} aria-label="Làm mới thư viện"><RefreshCw aria-hidden="true" /></Button><Button primary disabled={loading} pending={uploading} pendingLabel="Đang tải ảnh…" onClick={() => fileInput.current?.click()}><Upload aria-hidden="true" />Tải ảnh lên</Button><input ref={fileInput} hidden type="file" multiple accept="image/jpeg,image/png,image/webp" aria-label="Chọn ảnh tải lên website" disabled={uploading} onChange={event => void upload(event.target.files)} /></div>
         <p className={s.metadata}>JPEG, PNG, WebP · tối đa 20 MB/ảnh. Tải lên thư viện chưa thay đổi website đã xuất bản.</p>
@@ -77,7 +78,7 @@ export default function WebsiteMediaLibrary() {
         {!loading && !items.length && !error && <p className={s.metadata}>{nextCursor ? "Trang này chưa có ảnh website phù hợp. Tải thêm để tiếp tục." : "Thư mục chưa có ảnh. Tải ảnh lên để bắt đầu."}</p>}
         <div className={s.images} aria-label="Ảnh trong thư mục" aria-busy={loading}>{items.map(item => <figure className={s.image} key={item.key}>
           <ImagePreview item={item} /><figcaption>{item.name}{item.sizeBytes != null && <span> · {(item.sizeBytes / 1024).toLocaleString("vi-VN", { maximumFractionDigits: 0 })} KB</span>}</figcaption>
-          <div className={s.actions}><a className={s.button} href={item.url} target="_blank" rel="noreferrer">Xem ảnh</a><a className={s.button} aria-disabled={uploading} onClick={event => { if (uploading) event.preventDefault(); }} href={`/admin/storefront/home?libraryImage=${encodeURIComponent(item.key)}`}>Dùng trên Home</a></div>
+          <div className={s.actions}><AdminAnchorAction variant="secondary" className={s.button} href={item.url} target="_blank" rel="noreferrer">Xem ảnh</AdminAnchorAction><AdminAnchorAction variant="secondary" className={s.button} aria-disabled={uploading} onClick={event => { if (uploading) event.preventDefault(); }} href={`/admin/storefront/home?libraryImage=${encodeURIComponent(item.key)}`}>Dùng trên Home</AdminAnchorAction></div>
         </figure>)}</div>
         {nextCursor && <Button disabled={loading || uploading} onClick={() => setCursor(nextCursor)}>Tải thêm ảnh</Button>}
       </div>

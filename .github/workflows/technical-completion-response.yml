@@ -2,6 +2,7 @@ name: Technical completion response
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/task/actions/operational-action-response.actions.ts'
       - 'src/domains/task/client/operational-action.client.ts'
       - 'src/domains/task/shared/operational-action-response.ts'

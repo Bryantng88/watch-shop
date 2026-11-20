@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../ui/shared/AcquisitionMoneyInput";
 
 import { useState, useTransition } from "react";
@@ -362,13 +363,13 @@ export default function StrapAcquisitionFormClient({
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium">Nhà cung cấp</label>
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={() => setAddingVendor(true)}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700"
               >
                 <Plus className="h-3.5 w-3.5" /> Thêm nhà cung cấp
-              </button>
+              </AdminButton>
             </div>
             <select
               className={inputClass}
@@ -397,21 +398,21 @@ export default function StrapAcquisitionFormClient({
                     onChange={(e) => setVendorPhone(e.target.value)}
                     placeholder="Số điện thoại"
                   />
-                  <button
+                  <AdminButton variant="primary"
                     type="button"
                     disabled={vendorPending}
                     onClick={addVendor}
                     className="rounded-md bg-slate-950 px-4 text-sm font-semibold text-white"
                   >
                     Thêm
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton variant="secondary"
                     type="button"
                     onClick={() => setAddingVendor(false)}
                     className="px-2 text-slate-400"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             ) : null}
@@ -435,13 +436,13 @@ export default function StrapAcquisitionFormClient({
               Chính hãng cần brand; loại da và bề mặt chỉ áp dụng cho dây da.
             </p>
           </div>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={() => setLines((current) => [...current, newLine()])}
             className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
           >
             <Plus className="h-4 w-4" /> Thêm dòng
-          </button>
+          </AdminButton>
         </div>
         <div className="space-y-4 p-5">
           {lines.map((line) => (
@@ -471,7 +472,7 @@ export default function StrapAcquisitionFormClient({
                     ) : null}
                   </div>
                 </div>
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={lines.length === 1}
                   onClick={() =>
@@ -482,7 +483,7 @@ export default function StrapAcquisitionFormClient({
                   className="rounded-lg p-2 text-slate-400 transition hover:bg-white hover:text-rose-600 disabled:opacity-30"
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </AdminButton>
               </div>
               <div className="grid divide-y divide-slate-100 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
                 <div className="space-y-4 p-5">
@@ -592,13 +593,13 @@ export default function StrapAcquisitionFormClient({
                   <div className="block text-xs font-medium text-slate-600">
                     <div className="flex items-center justify-between">
                       <span>Màu sắc <span className="text-rose-500">*</span></span>
-                      <button
+                      <AdminButton variant="secondary"
                         type="button"
                         onClick={() => setAddingColorLineId(line.id)}
                         className="inline-flex items-center gap-1 font-semibold text-violet-700"
                       >
                         <Plus className="h-3.5 w-3.5" /> Thêm màu
-                      </button>
+                      </AdminButton>
                     </div>
                     <select
                       required
@@ -620,17 +621,17 @@ export default function StrapAcquisitionFormClient({
                           onChange={(event) => setColorName(event.target.value)}
                           placeholder="Tên màu mới"
                         />
-                        <button
+                        <AdminButton variant="primary" density="compact"
                           type="button"
                           disabled={colorPending || !colorName.trim()}
                           onClick={() => addColor(line.id)}
                           className="rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white disabled:opacity-50"
                         >
                           Thêm
-                        </button>
-                        <button type="button" onClick={() => setAddingColorLineId(null)} className="px-1 text-slate-400">
+                        </AdminButton>
+                        <AdminButton variant="secondary" type="button" onClick={() => setAddingColorLineId(null)} className="px-1 text-slate-400">
                           <X className="h-4 w-4" />
-                        </button>
+                        </AdminButton>
                       </div>
                     ) : null}
                   </div>
@@ -752,13 +753,13 @@ export default function StrapAcquisitionFormClient({
               {new Intl.NumberFormat("vi-VN").format(total)} VND
             </div>
           </div>
-          <button
+          <AdminButton variant="primary"
             disabled={saving}
             className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {saving ? "Đang lưu..." : "Lưu phiếu nháp"}
-          </button>
+          </AdminButton>
         </div>
       </footer>
     </form>

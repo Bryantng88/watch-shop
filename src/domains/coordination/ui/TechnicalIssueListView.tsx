@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
@@ -87,7 +88,7 @@ function RowActions({
   const label = primary?.label ?? "Xem nhanh";
   if (options.length > 1) return <AdminRowActionMenu triggerClassName={styles.move} label={`Thao tác TI: ${item.summary}`} status={<span>{label}</span>} disabled={pending}
     actions={[...options.map(option => ({ key: option.stage, label: option.label, onSelect: () => onMove(option.stage) })), { key: "preview", label: "Xem nhanh", onSelect: onPreview }]} />;
-  return <button type="button" className={styles.move} disabled={pending} aria-label={`${label}: ${item.summary}`} onClick={() => primary ? onMove(primary.stage) : onPreview()}>{label}<ChevronRight size={16} aria-hidden="true" /></button>;
+  return <AdminButton variant="secondary" density="compact" type="button" className={styles.move} disabled={pending} aria-label={`${label}: ${item.summary}`} onClick={() => primary ? onMove(primary.stage) : onPreview()}>{label}<ChevronRight size={16} aria-hidden="true" /></AdminButton>;
 }
 
 function TechnicalThumbnail({ src }: { src: string | null }) {
@@ -193,9 +194,9 @@ export default function TechnicalIssueListView({
     >
       <div className={styles.toolbar}>
         {stageNavigation === "inline" && <div className={styles.tabs} role="group" aria-label="Trạng thái TI">
-          {technicalIssueListNavigation(items, pagination, state, narrow).map(stage => <button type="button" key={stage.key} aria-pressed={scope === stage.key} onClick={() => change({ scope: stage.key })}>
+          {technicalIssueListNavigation(items, pagination, state, narrow).map(stage => <AdminButton variant="contextual" type="button" key={stage.key} aria-pressed={scope === stage.key} onClick={() => change({ scope: stage.key })}>
             {stage.label}<span>{stage.count.toLocaleString("vi-VN")}</span>
-          </button>)}
+          </AdminButton>)}
         </div>}
         <div className={styles.filters}>
           {scope === "DONE" && (
@@ -281,7 +282,7 @@ export default function TechnicalIssueListView({
                 className={`${styles.row} ${focusedIssueId === item.id ? styles.focused : ""}`}
               >
                 <div role="cell" className={styles.identity}>
-                  <button
+                  <AdminButton variant="secondary"
                     type="button"
                     className={styles.open}
                     onClick={() => onPreview(item)}
@@ -331,8 +332,8 @@ export default function TechnicalIssueListView({
                       </span>
                       <span className="sr-only">{item.processingDetails.join(" · ")}</span>
                     </span>
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton variant="contextual"
                     type="button"
                     aria-pressed={urgent}
                     aria-busy={busy}
@@ -350,7 +351,7 @@ export default function TechnicalIssueListView({
                     <span className={urgent ? "" : "sr-only"}>
                       {urgent ? "Gấp" : "Thường"}
                     </span>
-                  </button>
+                  </AdminButton>
                 </div>
                 <div role="cell" className={styles.owner}>
                   <span className={styles.stage} data-stage={item.stage}>{TECHNICAL_LIST_STAGES.find(stage => stage.key === item.stage)?.label}</span>
@@ -415,9 +416,9 @@ export default function TechnicalIssueListView({
               : "Thử đổi trạng thái hoặc xóa bộ lọc đang chọn."}
           </p>
           {attention !== "ALL" && (
-            <button type="button" onClick={() => change({ attention: "ALL" })}>
+            <AdminButton variant="secondary" type="button" onClick={() => change({ attention: "ALL" })}>
               Bỏ lọc chú ý
-            </button>
+            </AdminButton>
           )}
         </div>
       )}
@@ -436,27 +437,27 @@ export default function TechnicalIssueListView({
           )}
         </div>
         <div className={styles.pager}>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             aria-label="Trang TI trước"
             disabled={currentPage <= 1}
             onClick={() => onStateChange({ ...state, page: currentPage - 1 })}
           >
             <ChevronLeft size={15} />
-          </button>
+          </AdminButton>
           <span>
             {currentPage}/{pages}
           </span>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             aria-label="Trang TI sau"
             disabled={currentPage >= pages}
             onClick={() => onStateChange({ ...state, page: currentPage + 1 })}
           >
             <ChevronRight size={15} />
-          </button>
+          </AdminButton>
           {loadTarget && (
-            <button
+            <AdminButton variant="secondary"
               type="button"
               className={styles.load}
               disabled={!!loadingColumn}
@@ -474,7 +475,7 @@ export default function TechnicalIssueListView({
               {TECHNICAL_LIST_STAGES.find(
                 (stage) => stage.key === loadTarget,
               )?.label.toLocaleLowerCase("vi")}
-            </button>
+            </AdminButton>
           )}
         </div>
       </div>

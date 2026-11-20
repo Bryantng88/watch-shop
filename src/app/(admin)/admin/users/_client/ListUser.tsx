@@ -1,7 +1,9 @@
 "use client";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
+
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { Plus, RefreshCw, Shield } from "lucide-react";
 
@@ -162,12 +164,12 @@ export default function UserListPageClient(props: PageProps) {
     }
 
     return <AdminManagementSection title="Người dùng" actions={<>
-        {canManageRoles && <Link href="/admin/users/roles" className={s.button}><Shield aria-hidden="true" />Vai trò & quyền</Link>}
+        {canManageRoles && <AdminLinkAction variant="secondary" href="/admin/users/roles" className={s.button}><Shield aria-hidden="true" />Vai trò & quyền</AdminLinkAction>}
         {canCreate && <Button primary onClick={createUser}><Plus aria-hidden="true" />Tạo người dùng</Button>}
     </>}>
         <form data-admin-form action="/admin/users" className={`${s.toolbar} ${s.plainToolbar}`} role="search">
             <label className={s.searchField}><span className="sr-only">Tìm theo tên, email hoặc vai trò</span><input type="search" name="q" defaultValue={currentQuery ?? ""} className={s.input} placeholder="Tìm theo tên, email hoặc vai trò…" /></label>
-            <Button type="submit">Tìm</Button>{currentQuery && <Link href="/admin/users" className={s.button}>Xóa tìm</Link>}
+            <Button type="submit">Tìm</Button>{currentQuery && <AdminLinkAction variant="secondary" href="/admin/users" className={s.button}>Xóa tìm</AdminLinkAction>}
             <span className={`${s.metadata} ${s.resultCount}`} role="status">{total.toLocaleString("vi-VN")} người dùng</span>
             <Button onClick={() => router.refresh()}><RefreshCw aria-hidden="true" />Làm mới</Button>
         </form>
@@ -180,8 +182,8 @@ export default function UserListPageClient(props: PageProps) {
             {canUpdate && <Button className={s.rowAction} aria-label={`Sửa ${user.name || user.email}`} onClick={() => editUser(user)}>Sửa</Button>}
         </li>)}</ul> : <p className={s.metadata}>{currentQuery ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng."}</p>}
         <div className={s.footer}><p className={s.metadata}>Trang {page.toLocaleString("vi-VN")} / {totalPages.toLocaleString("vi-VN")}</p><div className={s.actions}>
-            {page > 1 ? <Link href={pageHref(page - 1)} className={s.button}>Trước</Link> : <Button disabled>Trước</Button>}
-            {page < totalPages ? <Link href={pageHref(page + 1)} className={s.button}>Sau</Link> : <Button disabled>Sau</Button>}
+            {page > 1 ? <AdminLinkAction variant="secondary" href={pageHref(page - 1)} className={s.button}>Trước</AdminLinkAction> : <Button disabled>Trước</Button>}
+            {page < totalPages ? <AdminLinkAction variant="secondary" href={pageHref(page + 1)} className={s.button}>Sau</AdminLinkAction> : <Button disabled>Sau</Button>}
         </div></div>
     </AdminManagementSection>;
 }

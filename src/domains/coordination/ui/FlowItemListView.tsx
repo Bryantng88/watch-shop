@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 import { useMediaDailyState } from "@/domains/watch/client/media-work/use-media-daily-state";
@@ -1014,17 +1015,17 @@ export default function FlowItemListView({
         <div className={isCompact ? styles.bulkBar : "flex flex-wrap items-center gap-3 border-b border-violet-100 bg-violet-50 px-5 py-3"}>
           <span className={isCompact ? "text-sm font-semibold text-slate-700" : "text-sm font-semibold text-violet-900"}>Đã chọn {selectedItems.length} công việc</span>
           {selectedPaymentItems.length ? (
-            <button
+            <AdminButton variant="primary" density="compact"
               type="button"
               disabled={isActionPending}
               onClick={openBulkReconcileModal}
               className={isCompact ? styles.bulkAction : "h-8 rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-60"}
             >
               Đối soát {selectedPaymentItems.length} khoản
-            </button>
+            </AdminButton>
           ) : null}
           {commonActions.slice(0, 2).map((transition) => (
-            <button
+            <AdminButton variant="primary" density="compact"
               key={transition.actionKey}
               type="button"
               disabled={isActionPending}
@@ -1032,10 +1033,10 @@ export default function FlowItemListView({
               className={isCompact ? styles.bulkAction : "h-8 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"}
             >
               {pendingActionId === "BULK" ? "Đang xử lý..." : manualTransitionActionLabel(transition)}
-            </button>
+            </AdminButton>
           ))}
           {!commonActions.length && !selectedPaymentItems.length ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
-          <button type="button" onClick={() => setSelectedIds([])} className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900">Bỏ chọn</button>
+          <AdminButton variant="secondary" density="compact" type="button" onClick={() => setSelectedIds([])} className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900">Bỏ chọn</AdminButton>
         </div>
       ) : null}
       {actionError ? (
@@ -1164,7 +1165,7 @@ export default function FlowItemListView({
                     />
                   </td>
                   <td className="px-2 py-3">
-                    <button
+                    <AdminButton variant="contextual"
                       type="button"
                       onClick={() => openItemPreview(item)}
                       className={cn("flex min-w-0 items-center gap-3 text-left", isCompact && styles.identity)}
@@ -1184,7 +1185,7 @@ export default function FlowItemListView({
                         <span title={item.preview.title || undefined} className={isCompact ? styles.title : "block max-w-[340px] truncate text-sm font-semibold text-slate-950"}>{item.preview.title || "Item chưa đặt tên"}</span>
                         <span className="mt-1 flex min-w-0 items-center gap-2 text-xs text-slate-500"><span className="truncate">{item.preview.ref || item.targetType}</span><WatchMediaWorkBadge state={dailyState(item.dailyMediaWork)}/></span>
                       </span>
-                    </button>
+                    </AdminButton>
                   </td>
                   {showStatusColumn ? (
                     <td className="px-4 py-3">
@@ -1266,7 +1267,7 @@ export default function FlowItemListView({
                       {item.payment ? (
                         <>
                           {canOpenReconciliation ? (
-                            <button
+                            <AdminButton variant="secondary"
                               type="button"
                               disabled={isActionPending}
                               onClick={() => openReconcileModal(item)}
@@ -1283,7 +1284,7 @@ export default function FlowItemListView({
                                 item.payment.currency,
                                 paymentDirection(item.payment.direction).sign,
                               )}
-                            </button>
+                            </AdminButton>
                           ) : (
                             <div className={cn(
                               "text-sm font-bold tabular-nums",
@@ -1327,9 +1328,9 @@ export default function FlowItemListView({
                             Mở {item.purchaseRequest.orderRefNo ?? "đơn hàng"}
                           </Link>
                         ) : (
-                          <button type="button" onClick={() => openItemPreview(item)} className="h-8 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                          <AdminButton variant="secondary" density="compact" type="button" onClick={() => openItemPreview(item)} className="h-8 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100">
                             Xem chi tiết
-                          </button>
+                          </AdminButton>
                         )}
                       </div>
                     ) : item.targetType === "WATCH" && showPublishChannels && enabledActions.length ? (
@@ -1346,7 +1347,7 @@ export default function FlowItemListView({
                             className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                           />
                         ) : (
-                          <button
+                          <AdminButton variant="secondary" density="compact"
                             type="button"
                             disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1356,7 +1357,7 @@ export default function FlowItemListView({
                           >
                             {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
                               : isMedia ? processingStatus : manualTransitionActionLabel(enabledActions[0])}
-                          </button>
+                          </AdminButton>
                         )
                       ) : (
                         <div className="flex items-center gap-1.5">
@@ -1372,7 +1373,7 @@ export default function FlowItemListView({
                               className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                             />
                           ) : (
-                            <button
+                            <AdminButton variant="secondary" density="compact"
                               type="button"
                               disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1382,16 +1383,16 @@ export default function FlowItemListView({
                             >
                               {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
                                 : isMedia ? processingStatus : manualTransitionActionLabel(enabledActions[0])}
-                            </button>
+                            </AdminButton>
                           )}
                           <details className="relative">
-                            <summary
+                            <AdminDisclosureSummary
                               title="Thêm thao tác"
                               aria-label="Thêm thao tác"
                               className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 [&::-webkit-details-marker]:hidden"
                             >
                               <MoreHorizontal className="h-4 w-4" />
-                            </summary>
+                            </AdminDisclosureSummary>
                             <div className="absolute right-0 z-30 mt-1 min-w-40 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
                               {enabledActions.slice(1).map((transition) =>
                                 isOpenTargetTransition(transition) ? (
@@ -1406,7 +1407,7 @@ export default function FlowItemListView({
                                     className="flex h-8 w-full items-center rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700"
                                   />
                                 ) : (
-                                  <button
+                                  <AdminButton variant="contextual" density="compact"
                                     key={transition.actionKey}
                                     type="button"
                                     disabled={isActionPending}
@@ -1415,7 +1416,7 @@ export default function FlowItemListView({
                                     className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:cursor-wait disabled:opacity-60"
                                   >
                                     {manualTransitionActionLabel(transition)}
-                                  </button>
+                                  </AdminButton>
                                 ),
                               )}
                             </div>
@@ -1428,7 +1429,7 @@ export default function FlowItemListView({
                           const transition = enabledActions[0];
                           const action = operationalActionFromMetadata(transition.metadata);
                           return (
-                            <button
+                            <AdminButton variant="secondary" density="compact"
                               type="button"
                               disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1442,19 +1443,19 @@ export default function FlowItemListView({
                             >
                               {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</>
                                 : manualTransitionActionLabel(transition)}
-                            </button>
+                            </AdminButton>
                           );
                         })()}
                         {enabledActions.length > 1 ? (
                           <details className="group relative">
-                            <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-300 hover:text-violet-700">
+                            <AdminDisclosureSummary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-300 hover:text-violet-700">
                               <MoreHorizontal className="h-4 w-4" />
-                            </summary>
+                            </AdminDisclosureSummary>
                             <div className="absolute right-0 top-9 z-30 min-w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
                               {enabledActions.slice(1).map((transition) => {
                                 const action = operationalActionFromMetadata(transition.metadata);
                                 return (
-                                  <button
+                                  <AdminButton variant="contextual" density="compact"
                                     key={transition.actionKey}
                                     type="button"
                                     disabled={isActionPending}
@@ -1467,7 +1468,7 @@ export default function FlowItemListView({
                                     className="block h-8 w-full rounded-lg px-2.5 text-left text-xs font-semibold text-slate-700 transition hover:bg-violet-50 hover:text-violet-700 disabled:opacity-50"
                                   >
                                     {manualTransitionActionLabel(transition)}
-                                  </button>
+                                  </AdminButton>
                                 );
                               })}
                             </div>
@@ -1490,7 +1491,7 @@ export default function FlowItemListView({
                         className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                       />
                     ) : primaryAction ? (
-                      <button
+                      <AdminButton variant="secondary" density="compact"
                         type="button"
                         disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1499,7 +1500,7 @@ export default function FlowItemListView({
                         className={isCompact ? styles.rowAction : "h-8 max-w-36 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60"}
                       >
                         {pendingActionId === item.id ? <><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />Đang xử lý…</> : isMedia ? processingStatus : manualTransitionActionLabel(primaryAction)}
-                      </button>
+                      </AdminButton>
                     ) : isMedia ? processingStatus : null}
                   </td> : null}
                   <td className="px-4 py-3">
@@ -1541,14 +1542,14 @@ export default function FlowItemListView({
                     </Link>
                   </td>}
                   <td className="px-4 py-3">
-                    <button
+                    <AdminButton variant="secondary"
                       type="button"
                       onClick={() => openItemPreview(item)}
                       aria-label="Xem nhanh item"
                       className={isCompact ? styles.previewButton : "text-slate-400 transition group-hover:text-violet-600"}
                     >
                       <ChevronRight className="h-4 w-4" />
-                    </button>
+                    </AdminButton>
                   </td>
                 </tr>
               );
@@ -1582,7 +1583,7 @@ export default function FlowItemListView({
                 <h2 id="purchase-request-title" className="mt-1 text-xl font-bold text-slate-950">{purchaseRequestItem.preview.ref}</h2>
                 <p className="mt-1 text-sm text-slate-500">Sale kiểm tra nhu cầu, liên hệ khách và xác thực trước khi chuyển bước.</p>
               </div>
-              <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setPurchaseRequestItem(null)} className="grid h-9 w-9 place-items-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50" aria-label="Đóng"><X className="h-5 w-5" /></button>
+              <AdminButton iconOnly variant="secondary" density="compact" type="button" disabled={Boolean(pendingActionId)} onClick={() => setPurchaseRequestItem(null)} className="grid h-9 w-9 place-items-center rounded-full text-slate-500 hover:bg-slate-100 disabled:opacity-50" aria-label="Đóng"><X className="h-5 w-5" /></AdminButton>
             </div>
 
             <div className="overflow-y-auto px-6 py-5">
@@ -1598,9 +1599,9 @@ export default function FlowItemListView({
                           {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "VERIFIED" ? "Đã xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "DELIVERY_FAILED" ? "Gửi thất bại" : "Chưa xác minh"}
                         </span>
                         {purchaseRequestItem.purchaseRequest.emailVerificationStatus !== "VERIFIED" ? (
-                          <button type="button" disabled={pendingActionId === purchaseRequestItem.id || purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING"} onClick={() => void sendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
+                          <AdminButton variant="secondary" density="compact" type="button" disabled={pendingActionId === purchaseRequestItem.id || purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING"} onClick={() => void sendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
                             {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "NOT_SENT" ? "Gửi email xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING" ? "Đang gửi..." : "Gửi lại email xác minh"}
-                          </button>
+                          </AdminButton>
                         ) : null}
                       </div>
                       {purchaseRequestItem.purchaseRequest.emailVerificationStatus !== "VERIFIED" ? <p className="mt-1 text-[11px] text-amber-700">Nên ưu tiên điện thoại hoặc kênh liên hệ khác cho đến khi email được xác minh.</p> : null}
@@ -1661,7 +1662,7 @@ export default function FlowItemListView({
                     {purchaseActivityType === "FOLLOW_UP" ? <input type="datetime-local" value={purchaseFollowUpAt} onChange={(event) => setPurchaseFollowUpAt(event.target.value)} className="h-10 rounded-xl border border-violet-200 bg-white px-3 text-sm" /> : null}
                   </div>
                   <textarea value={purchaseActivityNote} onChange={(event) => setPurchaseActivityNote(event.target.value)} rows={2} className="mt-3 w-full rounded-xl border border-violet-200 bg-white p-3 text-sm" placeholder="Kết quả trao đổi với khách..." />
-                  <div className="mt-3 flex justify-end"><button type="button" disabled={Boolean(pendingActionId) || (purchaseActivityType === "FOLLOW_UP" ? !purchaseFollowUpAt : !purchaseActivityNote.trim())} onClick={() => void savePurchaseRequestActivity()} className="h-9 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Lưu hoạt động</button></div>
+                  <div className="mt-3 flex justify-end"><AdminButton variant="primary" density="compact" type="button" disabled={Boolean(pendingActionId) || (purchaseActivityType === "FOLLOW_UP" ? !purchaseFollowUpAt : !purchaseActivityNote.trim())} onClick={() => void savePurchaseRequestActivity()} className="h-9 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white disabled:opacity-50">Lưu hoạt động</AdminButton></div>
                 </div>
               ) : null}
 
@@ -1708,16 +1709,16 @@ export default function FlowItemListView({
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
               {showPurchaseRequestCancellation ? (
                 <>
-                  <button type="button" disabled={Boolean(pendingActionId)} onClick={() => { setShowPurchaseRequestCancellation(false); setPurchaseRequestReason(""); }} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Quay lại</button>
-                  <button type="button" disabled={Boolean(pendingActionId) || !purchaseRequestReason.trim()} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "complete", { outcome: purchaseRequestOutcome, reason: purchaseRequestReason.trim() })} className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Xác nhận hủy"}</button>
+                  <AdminButton variant="secondary" type="button" disabled={Boolean(pendingActionId)} onClick={() => { setShowPurchaseRequestCancellation(false); setPurchaseRequestReason(""); }} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Quay lại</AdminButton>
+                  <AdminButton variant="danger" type="button" disabled={Boolean(pendingActionId) || !purchaseRequestReason.trim()} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "complete", { outcome: purchaseRequestOutcome, reason: purchaseRequestReason.trim() })} className="h-10 rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Xác nhận hủy"}</AdminButton>
                 </>
               ) : purchaseRequestItem.isWorkflowDone ? (
-                purchaseRequestItem.purchaseRequest.orderId ? <Link href={`/admin/orders/${purchaseRequestItem.purchaseRequest.orderId}`} className="h-10 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Mở {purchaseRequestItem.purchaseRequest.orderRefNo ?? "đơn hàng"}</Link> : <button type="button" onClick={() => setPurchaseRequestItem(null)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Đóng</button>
+                purchaseRequestItem.purchaseRequest.orderId ? <Link href={`/admin/orders/${purchaseRequestItem.purchaseRequest.orderId}`} className="h-10 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white">Mở {purchaseRequestItem.purchaseRequest.orderRefNo ?? "đơn hàng"}</Link> : <AdminButton variant="secondary" type="button" onClick={() => setPurchaseRequestItem(null)} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Đóng</AdminButton>
               ) : (
                 <>
-                  <button type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Kết thúc yêu cầu</button>
-                  {purchaseRequestItem.currentWorkflowState === "WAITING" ? <button type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "start")} className="h-10 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Tiếp nhận & xử lý"}</button> : null}
-                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <button type="button" title={purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "PENDING") ? "Cần xác định kết quả cho tất cả Watch" : undefined} disabled={Boolean(pendingActionId) || !purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "SELECTED") || purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "PENDING")} onClick={() => { setPurchaseRequestItem(null); setPurchaseRequestOrderItem(purchaseRequestItem); }} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</button> : null}
+                  <AdminButton variant="secondary" type="button" disabled={Boolean(pendingActionId)} onClick={() => setShowPurchaseRequestCancellation(true)} className="h-10 rounded-xl border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 disabled:opacity-50">Kết thúc yêu cầu</AdminButton>
+                  {purchaseRequestItem.currentWorkflowState === "WAITING" ? <AdminButton variant="primary" type="button" disabled={Boolean(pendingActionId)} onClick={() => void runPurchaseRequestAction(purchaseRequestItem, "start")} className="h-10 rounded-xl bg-violet-600 px-5 text-sm font-semibold text-white disabled:opacity-50">{pendingActionId ? "Đang xử lý..." : "Tiếp nhận & xử lý"}</AdminButton> : null}
+                  {purchaseRequestItem.currentWorkflowState === "PROCESSING" ? <AdminButton variant="primary" type="button" title={purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "PENDING") ? "Cần xác định kết quả cho tất cả Watch" : undefined} disabled={Boolean(pendingActionId) || !purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "SELECTED") || purchaseRequestItem.purchaseRequest.items.some((item) => item.decision === "PENDING")} onClick={() => { setPurchaseRequestItem(null); setPurchaseRequestOrderItem(purchaseRequestItem); }} className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white disabled:opacity-50">Lập đơn hàng</AdminButton> : null}
                 </>
               )}
             </div>
@@ -1749,25 +1750,25 @@ export default function FlowItemListView({
         <span>Hiển thị {visibleItems.length} / {effectiveTotal} item</span>
         {effectiveTotalPages > 1 ? (
           <div className="flex items-center gap-2">
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               disabled={pending || pagination.page <= 1}
               onClick={() => onPageChange(pagination.page - 1)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Trước
-            </button>
+            </AdminButton>
             <span className="min-w-20 text-center font-semibold text-slate-700">
               {pagination.page} / {effectiveTotalPages}
             </span>
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               disabled={pending || pagination.page >= effectiveTotalPages}
               onClick={() => onPageChange(pagination.page + 1)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 transition hover:border-violet-200 hover:text-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Sau
-            </button>
+            </AdminButton>
           </div>
         ) : null}
       </div>
@@ -1812,14 +1813,14 @@ export default function FlowItemListView({
                 </p>
                 </div>
               </div>
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setIsBulkReconcileOpen(false)}
                 className="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
               >
                 Đóng
-              </button>
+              </AdminButton>
             </div>
 
             <div className="overflow-y-auto px-6 py-5">
@@ -1983,15 +1984,15 @@ export default function FlowItemListView({
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setIsBulkReconcileOpen(false)}
                 className="h-10 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Hủy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="contextual"
                 type="button"
                 disabled={isActionPending}
                 onClick={submitBulkReconciliation}
@@ -2016,7 +2017,7 @@ export default function FlowItemListView({
                     : bulkAllExpense
                       ? `Xác nhận đã chi ${selectedPaymentItems.length} khoản`
                       : `Xác nhận ${selectedPaymentItems.length} Payment`}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -2051,14 +2052,14 @@ export default function FlowItemListView({
                 </p>
                 </div>
               </div>
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setReconcileItem(null)}
                 className="rounded-full px-3 py-1.5 text-sm font-semibold text-slate-500 hover:bg-slate-100"
               >
                 Đóng
-              </button>
+              </AdminButton>
             </div>
 
             <div className="space-y-5 px-6 py-5">
@@ -2196,15 +2197,15 @@ export default function FlowItemListView({
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setReconcileItem(null)}
                 className="h-10 rounded-xl px-4 text-sm font-semibold text-slate-600 hover:bg-slate-100"
               >
                 Hủy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="contextual"
                 type="button"
                 disabled={isActionPending}
                 onClick={submitReconciliation}
@@ -2227,7 +2228,7 @@ export default function FlowItemListView({
                     : reconciliationIsIncome
                       ? "Xác nhận đã nhận tiền"
                       : "Xác nhận đã chi tiền"}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -2251,14 +2252,14 @@ export default function FlowItemListView({
                   </p>
                 ) : null}
               </div>
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setOperationalAction(null)}
                 className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </AdminButton>
             </header>
             <div className="max-h-[65vh] space-y-4 overflow-y-auto px-5 py-4">
               {operationalAction.action.key === "dispatch_shipment" &&
@@ -2336,22 +2337,22 @@ export default function FlowItemListView({
               ) : null}
             </div>
             <footer className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setOperationalAction(null)}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
               >
                 Hủy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="primary"
                 type="button"
                 disabled={isActionPending}
                 onClick={submitOperationalAction}
                 className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:cursor-wait disabled:opacity-60"
               >
                 {isActionPending ? "Đang xử lý..." : "Xác nhận"}
-              </button>
+              </AdminButton>
             </footer>
           </div>
         </div>

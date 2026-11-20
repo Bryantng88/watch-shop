@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import {
     LayoutDashboard,
@@ -307,18 +308,18 @@ export default function AdminSidebar({
         <>
             {isMobile ? (
                 <div className="sticky top-0 z-30 flex items-center gap-3 bg-gray-950 px-4 py-2 text-white lg:hidden">
-                    <button
+                    <AdminButton variant="contextual"
                         onClick={() => setOpen(true)}
                         className="inline-flex items-center gap-2"
                         type="button"
                     >
                         <Menu size={18} />
                         <span className="text-sm">Menu</span>
-                    </button>
+                    </AdminButton>
 
                     <div className="ml-auto flex items-center gap-3">
                         <span className="text-sm opacity-80">Admin</span>
-                        <button
+                        <AdminButton variant="contextual" density="compact"
                             type="button"
                             onClick={handleLogout}
                             disabled={loggingOut}
@@ -326,7 +327,7 @@ export default function AdminSidebar({
                         >
                             <LogOut className="h-3.5 w-3.5" />
                             Logout
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}
@@ -354,7 +355,7 @@ export default function AdminSidebar({
                         {desktopExpanded ? (
                             <span className="pl-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/55">Menu</span>
                         ) : null}
-                        <button
+                        <AdminButton iconOnly variant="contextual" density="compact"
                             type="button"
                             onClick={toggleDesktopSidebar}
                             className="grid h-9 w-9 place-items-center rounded-lg text-white/65 transition hover:bg-white/10 hover:text-white"
@@ -363,7 +364,7 @@ export default function AdminSidebar({
                             title={desktopExpanded ? "Thu gọn sidebar" : "Mở rộng sidebar"}
                         >
                             {desktopExpanded ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-                        </button>
+                        </AdminButton>
                     </div>
                 ) : null}
 
@@ -377,14 +378,14 @@ export default function AdminSidebar({
                     </span>
 
                     {isMobile ? (
-                        <button
+                        <AdminButton variant="contextual"
                             className="ml-auto text-white/80 hover:text-white"
                             onClick={() => setOpen(false)}
                             type="button"
                             aria-label="Close menu"
                         >
                             ✕
-                        </button>
+                        </AdminButton>
                     ) : null}
                 </div> : null}
 
@@ -403,7 +404,7 @@ export default function AdminSidebar({
                                     className="pt-3 first:pt-0"
                                 >
                                     {hasChildren ? (
-                                        <button
+                                        <AdminButton variant="contextual" density="compact"
                                             type="button"
                                             onClick={() => toggleGroup(entry.label)}
                                             className={`mx-2 w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 ${(isMobile || desktopExpanded) ? "flex" : "hidden min-[2200px]:flex"}`}
@@ -416,7 +417,7 @@ export default function AdminSidebar({
                                                     isOpen ? "rotate-0" : "-rotate-90",
                                                 ].join(" ")}
                                             />
-                                        </button>
+                                        </AdminButton>
                                     ) : (
                                         <div className={`mx-2 border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 ${(isMobile || desktopExpanded) ? "block" : "hidden min-[2200px]:block"}`}>
                                             {entry.label}

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminAnchorAction, AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
   ArrowRight,
   CalendarDays,
@@ -36,13 +37,13 @@ export default function SpaceHeaderPrototypePage() {
               Demo độc lập, chưa thay đổi trang vận hành hiện tại.
             </p>
           </div>
-          <a
+          <AdminAnchorAction variant="secondary" density="compact"
             href="/ui-tests/flow-item-list"
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-violet-200 hover:text-violet-700"
           >
             Xem UI test danh sách
             <ArrowRight className="h-4 w-4" />
-          </a>
+          </AdminAnchorAction>
         </div>
 
         <section className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-4 sm:p-6">
@@ -102,14 +103,14 @@ export default function SpaceHeaderPrototypePage() {
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-                  <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700">
+                  <AdminButton variant="secondary" density="compact" className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-violet-200 hover:text-violet-700">
                     <SlidersHorizontal className="h-4 w-4" />
                     Tùy chỉnh hiển thị
-                  </button>
-                  <button className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700">
+                  </AdminButton>
+                  <AdminButton variant="primary" density="compact" className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700">
                     <Plus className="h-4 w-4" />
                     Workspace
-                  </button>
+                  </AdminButton>
                 </div>
               </div>
             </div>
@@ -134,10 +135,10 @@ export default function SpaceHeaderPrototypePage() {
                   </span>
                 </div>
               </div>
-              <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-semibold">
+              <AdminButton variant="secondary" density="compact" className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-semibold">
                 <SlidersHorizontal className="h-4 w-4" />
                 Tùy chỉnh hiển thị
-              </button>
+              </AdminButton>
             </div>
           </div>
 

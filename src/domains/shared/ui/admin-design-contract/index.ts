@@ -5,6 +5,7 @@ export * from "../progress";
 export * from "./AdminViewTabs";
 export * from "./admin-ui.foundation";
 export { ADMIN_OPERATION_LIST, ADMIN_OPERATION_LIST_STYLE } from "./AdminOperationList";
+export { ADMIN_SPLIT_WORKSPACE, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "./AdminSplitWorkspace";
 export * from "./AdminManagement";
-export * from "./AdminSplitWorkspace";
 export * from "./AdminWorkspaceNavigation";
+export * from "./AdminButton";

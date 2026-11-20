@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { LoaderCircle, ReceiptText, X } from "lucide-react";
 
@@ -79,11 +80,11 @@ export default function StandaloneExpensePaymentModal({
     <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
       <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
         <div className="flex gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white"><ReceiptText className="h-5 w-5" /></span><div><h2 className="font-bold text-slate-950">Tạo khoản thu / chi</h2><p className="mt-1 text-xs text-slate-500">Payment ngoài domain nghiệp vụ; vẫn phát event và cập nhật Finance Report.</p></div></div>
-        <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-50"><X className="h-5 w-5" /></button>
+        <AdminButton variant="secondary" type="button" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-50"><X className="h-5 w-5" /></AdminButton>
       </div>
       <div className="space-y-4 p-6">
         <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 sm:grid-cols-4">
-          {([['OPERATING_EXPENSE','Chi phí'],['SALARY','Lương'],['OTHER_INCOME','Thu khác'],['OPENING_BALANCE','Số dư đầu']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setKind(value)} className={`h-10 rounded-lg text-sm font-semibold ${kind === value ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>{label}</button>)}
+          {([['OPERATING_EXPENSE','Chi phí'],['SALARY','Lương'],['OTHER_INCOME','Thu khác'],['OPENING_BALANCE','Số dư đầu']] as const).map(([value,label]) => <AdminButton variant="secondary" key={value} type="button" onClick={() => setKind(value)} className={`h-10 rounded-lg text-sm font-semibold ${kind === value ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>{label}</AdminButton>)}
         </div>
         {loading ? <div className="flex h-24 items-center justify-center text-sm text-slate-500"><LoaderCircle className="mr-2 h-4 w-4 animate-spin" />Đang tải...</div> : <>
           {kind === "SALARY" ? <label className="block text-xs font-semibold text-slate-600">Nhân sự nhận lương<select value={payeeUserId} onChange={(e) => setPayeeUserId(e.target.value)} className={`${fieldClass} mt-1.5`}><option value="">Chọn user</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name || user.email} {user.name && user.email ? `· ${user.email}` : ''}</option>)}</select></label> : null}
@@ -98,7 +99,7 @@ export default function StandaloneExpensePaymentModal({
         </>}
         {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</div> : null}
       </div>
-      <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4"><button type="button" onClick={onClose} className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold">Hủy</button><button type="button" disabled={loading || submitting} onClick={() => void submit()} className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Đang tạo..." : "Tạo khoản thu / chi"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4"><AdminButton variant="secondary" type="button" onClick={onClose} className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold">Hủy</AdminButton><AdminButton variant="primary" type="button" disabled={loading || submitting} onClick={() => void submit()} className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Đang tạo..." : "Tạo khoản thu / chi"}</AdminButton></div>
     </div>
   </div>;
 }

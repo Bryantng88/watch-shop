@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminAnchorAction, AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type {
   OperationalBlueprintContract,
   OperationalBlueprintTemplate,
@@ -143,7 +144,7 @@ export function OperationModelWizard({
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-3">
             {templates.map((template) => (
-              <button
+              <AdminButton variant="contextual"
                 key={template.key}
                 type="button"
                 onClick={() => onTemplateSelect(template)}
@@ -159,7 +160,7 @@ export function OperationModelWizard({
                 <div className="mt-2 text-sm text-slate-600">
                   {templateDescription(template)}
                 </div>
-              </button>
+              </AdminButton>
             ))}
           </div>
         </div>
@@ -195,26 +196,26 @@ export function OperationModelWizard({
 
             <div className="mt-3 flex flex-wrap gap-2">
               {!validation.ok ? (
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   onClick={onBuildStarter}
                   className="bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
                 >
                   Dựng/sửa model tự động
-                </button>
+                </AdminButton>
               ) : null}
               {validation.ok && !published ? (
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   onClick={onPublish}
                   disabled={!canPublish || !publishPlan.ok || isPublishing}
                   className="border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isPublishing ? "Đang lưu..." : "Lưu version"}
-                </button>
+                </AdminButton>
               ) : null}
               {validation.ok && published && latestVersion && !spaceReady ? (
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   onClick={() => onCreateSpace?.(latestVersion.id)}
                   disabled={
@@ -225,15 +226,15 @@ export function OperationModelWizard({
                   {creatingSpaceVersionId === latestVersion.id
                     ? "Đang tạo..."
                     : "Tạo Space runtime"}
-                </button>
+                </AdminButton>
               ) : null}
               {spaceReady && spaceRuntimeTaskId ? (
-                <a
+                <AdminAnchorAction variant="primary"
                   href="/admin/coordination/operation"
                   className="inline-flex border border-slate-900 bg-slate-950 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
                 >
                   Mở Space runtime
-                </a>
+                </AdminAnchorAction>
               ) : null}
             </div>
             {spaceCreationNotice ? (

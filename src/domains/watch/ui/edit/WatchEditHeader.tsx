@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { ArrowLeft, Loader2, X, ZoomIn } from "lucide-react";
 import RegenerateTitleSkuButton from "@/domains/watch/ui/edit/RegenerateTitleSkuButton";
@@ -83,7 +84,7 @@ function HeaderImage({
 
     return (
         <>
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => src && setOpen(true)}
                 disabled={!src}
@@ -107,21 +108,21 @@ function HeaderImage({
                         No image
                     </div>
                 )}
-            </button>
+            </AdminButton>
 
             {open && src ? (
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
                     onClick={() => setOpen(false)}
                 >
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={() => setOpen(false)}
                         className="absolute right-5 top-5 rounded-full bg-white/95 p-2 text-slate-700 shadow-lg hover:bg-white"
                         aria-label="Đóng"
                     >
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
 
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -218,20 +219,20 @@ export default function WatchEditHeader({
 
                 <div className={compact ? "flex min-w-0 flex-wrap items-center gap-2 lg:justify-end [&_button]:min-h-11" : "flex shrink-0 flex-wrap items-center justify-end gap-2"}>
                     {!hideBack ? (
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={onBack}
                         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                     >
                         <ArrowLeft className="h-4 w-4" />
                         Quay lại
-                    </button>
+                    </AdminButton>
 
                     ) : null}
 
                     {productId ? (
                       <details className={compact ? "relative" : "contents"} open={compact ? undefined : true}>
-                        {compact && <summary className="flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-blue-600">Công cụ sản phẩm</summary>}
+                        {compact && <AdminDisclosureSummary className="flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-blue-600">Công cụ sản phẩm</AdminDisclosureSummary>}
                         <RegenerateTitleSkuButton
                             values={values}
                             brands={brands}
@@ -254,7 +255,7 @@ export default function WatchEditHeader({
                     {headerActions}
 
                     {!hideSubmit ? (
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         onClick={onSubmit}
                         disabled={pending}
@@ -268,7 +269,7 @@ export default function WatchEditHeader({
                         ) : (
                             "Lưu thay đổi"
                         )}
-                    </button>
+                    </AdminButton>
                     ) : null}
                 </div>
             </div>

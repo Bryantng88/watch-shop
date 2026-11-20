@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
@@ -46,14 +47,14 @@ export function AdminRowActionMenu({ label, status, actions, disabled = false, t
     };
   }, [open]);
   return <>
-    <button ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
+    <AdminButton variant="secondary" density="compact" ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); }
-    }}>{status}<ChevronDown size={F.icon.inline} aria-hidden="true" /></button>
+    }}>{status}<ChevronDown size={F.icon.inline} aria-hidden="true" /></AdminButton>
     {open && createPortal(<div ref={menu} id={id} role="menu" aria-label={label} className={styles.actionMenu} style={{ ...ADMIN_OPERATION_LIST_STYLE, ...position, zIndex: F.layers.popover }} onKeyDown={event => {
       const items = focusItems();
       const index = items.indexOf(document.activeElement as HTMLButtonElement);
       const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : event.key === "ArrowDown" ? (index + 1) % items.length : event.key === "ArrowUp" ? (index - 1 + items.length) % items.length : -1;
       if (next >= 0) { event.preventDefault(); items[next]?.focus(); }
-    }}>{actions.map(action => <button key={action.key} role="menuitem" type="button" disabled={action.disabled || disabled} onClick={() => { setOpen(false); trigger.current?.focus(); action.onSelect(); }}>{action.label}</button>)}</div>, document.body)}
+    }}>{actions.map(action => <AdminButton variant="contextual" key={action.key} role="menuitem" type="button" disabled={action.disabled || disabled} onClick={() => { setOpen(false); trigger.current?.focus(); action.onSelect(); }}>{action.label}</AdminButton>)}</div>, document.body)}
   </>;
 }

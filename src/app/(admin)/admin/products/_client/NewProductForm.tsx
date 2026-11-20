@@ -1,5 +1,6 @@
 'use client';
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import ImagePicker from '@/app/(admin)/admin/products/_components/ImagePicker';
@@ -348,13 +349,13 @@ export default function NewProductForm2({ vendors, brands, statusOptions, compli
                                         </option>
                                     ))}
                                 </select>
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     className="mt-1 rounded-md border border-gray-300 bg-[#11191f]  text-gray-200 text-sm px-3 py-2 font-medium shadow-sm"
                                     onClick={() => setShowQuickVendor(v => !v)}
                                 >
                                     {showQuickVendor ? "Ẩn" : "Thêm nhanh"}
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
 
@@ -424,21 +425,21 @@ export default function NewProductForm2({ vendors, brands, statusOptions, compli
 
             {/* ACTIONS */}
             <div className="flex justify-end gap-3">
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     className="mt-1 rounded-md   border px-3 py-2"
                     onClick={() => history.back()}
                     disabled={submitting}
                 >
                     Hủy
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="secondary"
                     type="submit"
                     className="mt-1 rounded-md border border-gray-300 bg-[#11191f]  text-gray-200 text-sm px-3 py-2 font-medium shadow-sm"
                     disabled={submitting}
                 >
                     {submitting ? "Đang lưu…" : "Lưu & quay lại"}
-                </button>
+                </AdminButton>
             </div>
         </form >
     );

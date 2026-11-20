@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, FolderSync, ImageIcon, Monitor, Smartphone } from "lucide-react";
@@ -114,7 +115,7 @@ export default function StorefrontHeroManager() {
             <h1 className="mt-2 text-2xl font-semibold text-slate-950">Hero trang đồng hồ</h1>
             <p className="mt-1 text-sm text-slate-500">Chép ảnh vào NAS <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{root}</code>, sau đó quét và chọn ảnh tại đây.</p>
           </div>
-          <button type="button" onClick={() => void load()} disabled={loading || pending} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FolderSync className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Quét lại NAS</button>
+          <AdminButton variant="secondary" type="button" onClick={() => void load()} disabled={loading || pending} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><FolderSync className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />Quét lại NAS</AdminButton>
         </div>
       </header>
 
@@ -143,7 +144,7 @@ export default function StorefrontHeroManager() {
           <label className="mt-5 block text-xs font-semibold text-slate-600">Điểm trọng tâm dọc · {adjustment.focalY}%<input type="range" min={0} max={100} value={adjustment.focalY} onChange={(event) => setAdjustment((current) => ({ ...current, focalY: Number(event.target.value) }))} className="mt-2 w-full accent-violet-600" /></label>
           <label className="mt-5 block text-xs font-semibold text-slate-600">Độ tối overlay · {adjustment.overlayOpacity}%<input type="range" min={20} max={85} value={adjustment.overlayOpacity} onChange={(event) => setAdjustment((current) => ({ ...current, overlayOpacity: Number(event.target.value) }))} className="mt-2 w-full accent-violet-600" /></label>
           <label className="mt-5 block text-xs font-semibold text-slate-600">Mô tả ảnh<input value={adjustment.altText} onChange={(event) => setAdjustment((current) => ({ ...current, altText: event.target.value }))} placeholder="Ví dụ: Đồng hồ vintage trong ánh sáng tối" className="mt-2 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal outline-none focus:border-violet-400" /></label>
-          <button type="button" onClick={() => void activate()} disabled={!selected || pending} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{pending ? "Đang xử lý ảnh..." : selected?.record?.isActive ? "Lưu điều chỉnh" : "Đặt làm Hero"}</button>
+          <AdminButton variant="primary" type="button" onClick={() => void activate()} disabled={!selected || pending} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{pending ? "Đang xử lý ảnh..." : selected?.record?.isActive ? "Lưu điều chỉnh" : "Đặt làm Hero"}</AdminButton>
           <p className="mt-3 text-[11px] leading-5 text-slate-400">Lần đầu chọn ảnh, hệ thống tạo WebP tối ưu. Ảnh nguồn trên NAS không bị move hoặc chỉnh sửa.</p>
         </aside>
       </section>
@@ -151,10 +152,10 @@ export default function StorefrontHeroManager() {
       <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between"><h2 className="font-semibold text-slate-950">Kho Hero trên NAS</h2><span className="text-xs text-slate-400">{items.length} ảnh</span></div>
         {loading ? <p className="mt-5 text-sm text-slate-400">Đang quét NAS...</p> : items.length ? <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {items.map((item) => <button key={item.storageKey} type="button" onClick={() => select(item)} className={`overflow-hidden rounded-2xl border text-left transition ${selectedKey === item.storageKey ? "border-violet-500 ring-2 ring-violet-100" : item.record?.isActive ? "border-emerald-400" : "border-slate-200 hover:border-slate-300"}`}>
+          {items.map((item) => <AdminButton variant="contextual" key={item.storageKey} type="button" onClick={() => select(item)} className={`overflow-hidden rounded-2xl border text-left transition ${selectedKey === item.storageKey ? "border-violet-500 ring-2 ring-violet-100" : item.record?.isActive ? "border-emerald-400" : "border-slate-200 hover:border-slate-300"}`}>
             <div className="relative aspect-[16/8] bg-slate-100"><Image src={item.url} alt={item.record?.altText || item.fileName} fill unoptimized className="object-cover" />{item.record?.isActive ? <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold text-white"><Check className="h-3 w-3" />Đang dùng</span> : null}</div>
             <div className="p-3"><div className="truncate text-sm font-semibold text-slate-800">{item.fileName}</div><div className="mt-1 text-xs text-slate-400">{item.sizeBytes ? `${(item.sizeBytes / 1024 / 1024).toFixed(1)} MB` : "Chưa rõ dung lượng"}</div></div>
-          </button>)}
+          </AdminButton>)}
         </div> : <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">Chưa có ảnh trong <code>{root}</code>. Hãy chép ảnh vào NAS rồi bấm “Quét lại NAS”.</div>}
       </section>
 

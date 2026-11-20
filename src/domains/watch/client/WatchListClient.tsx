@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminAnchorAction, AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
   useCallback,
   useEffect,
@@ -299,23 +300,23 @@ function Pagination({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
+        <AdminButton variant="secondary"
           type="button"
           className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           disabled={loading || page <= 1}
           onClick={() => onPage(Math.max(1, page - 1))}
         >
           ← Trước
-        </button>
+        </AdminButton>
 
-        <button
+        <AdminButton variant="secondary"
           type="button"
           className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           disabled={loading || page >= totalPages}
           onClick={() => onPage(Math.min(totalPages, page + 1))}
         >
           Sau →
-        </button>
+        </AdminButton>
       </div>
     </div>
   );
@@ -1732,27 +1733,27 @@ export default function WatchListClient(props: WatchListClientProps) {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3 shadow-sm">
           <div className="flex items-center gap-3 text-sm text-slate-700">
             <span>Đã chọn <strong className="text-violet-700">{selectedRows.length}</strong> watch</span>
-            <button type="button" onClick={() => setSelectionPanelOpen(true)} className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900">Xem đã chọn</button>
+            <AdminButton variant="secondary" type="button" onClick={() => setSelectionPanelOpen(true)} className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900">Xem đã chọn</AdminButton>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden text-xs font-medium text-slate-500 lg:inline">Tick đầu bảng chỉ chọn trang hiện tại</span>
             <div className="relative">
-              <button type="button" onClick={() => setBulkMenuOpen((open) => !open)} className="inline-flex h-9 items-center rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700">Thao tác ({selectedRows.length}) ▾</button>
+              <AdminButton variant="primary" density="compact" type="button" onClick={() => setBulkMenuOpen((open) => !open)} className="inline-flex h-9 items-center rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white transition hover:bg-violet-700">Thao tác ({selectedRows.length}) ▾</AdminButton>
               {bulkMenuOpen ? (
                 <div className="absolute right-0 top-11 z-30 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                  <button type="button" onClick={() => { setBulkMenuOpen(false); void sendSelectedToMediaSpace(); }} disabled={mediaReviewSubmitting || photoshootSubmitting} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-40">Đưa vào Space Media</button>
-                  <button type="button" onClick={() => { setBulkMenuOpen(false); setPurchaseRequestOpen(true); }} disabled={selectedRows.length > 20} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40">Tạo yêu cầu xử lý đơn hàng{selectedRows.length > 20 ? " (tối đa 20)" : ""}</button>
+                  <AdminButton variant="contextual" type="button" onClick={() => { setBulkMenuOpen(false); void sendSelectedToMediaSpace(); }} disabled={mediaReviewSubmitting || photoshootSubmitting} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-40">Đưa vào Space Media</AdminButton>
+                  <AdminButton variant="contextual" type="button" onClick={() => { setBulkMenuOpen(false); setPurchaseRequestOpen(true); }} disabled={selectedRows.length > 20} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-800 hover:bg-amber-50 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40">Tạo yêu cầu xử lý đơn hàng{selectedRows.length > 20 ? " (tối đa 20)" : ""}</AdminButton>
                 </div>
               ) : null}
             </div>
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={clearSelection}
               disabled={mediaReviewSubmitting || photoshootSubmitting}
               className="inline-flex h-9 items-center rounded-lg px-3 text-sm font-semibold text-slate-500 transition hover:bg-white hover:text-slate-800"
             >
               Bỏ chọn
-            </button>
+            </AdminButton>
           </div>
         </div>
       ) : null}
@@ -1886,7 +1887,7 @@ export default function WatchListClient(props: WatchListClientProps) {
               ) : null}
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4">
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={() => {
                   if (serviceIntakeProductId) return;
@@ -1898,15 +1899,15 @@ export default function WatchListClient(props: WatchListClientProps) {
                 disabled={Boolean(serviceIntakeProductId)}
               >
                 Huy
-              </button>
-              <button
+              </AdminButton>
+              <AdminButton variant="primary"
                 type="button"
                 onClick={() => void submitServiceIntake(false)}
                 className="inline-flex h-10 items-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
                 disabled={Boolean(serviceIntakeProductId)}
               >
                 Tao SR
-              </button>
+              </AdminButton>
             </div>
           </section>
         </div>
@@ -1994,20 +1995,20 @@ export default function WatchListClient(props: WatchListClientProps) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <a
+                <AdminAnchorAction variant="secondary" density="compact"
                   href={`/admin/watches/${quickMediaRow.productId}/edit?mode=media&focus=cover&entryPoint=WATCH_LIST_QUICK`}
                   className="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                 >
                   Full page
-                </a>
-                <button
+                </AdminAnchorAction>
+                <AdminButton iconOnly variant="secondary" density="compact"
                   type="button"
                   onClick={() => quickMediaCloseRef.current()}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lg leading-none text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
                   aria-label="Đóng"
                 >
                   ×
-                </button>
+                </AdminButton>
               </div>
             </div>
             <iframe

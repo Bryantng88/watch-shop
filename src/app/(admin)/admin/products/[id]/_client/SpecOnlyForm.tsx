@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
@@ -156,20 +157,20 @@ export default function ProductSpecOnlyForm({
             </div>
 
             <div className="flex justify-end gap-3">
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm"
                     onClick={() => router.back()}
                 >
                     Quay lại
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="primary"
                     type="submit"
                     disabled={saving}
                     className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-60"
                 >
                     {saving ? "Đang lưu..." : "Lưu watch spec"}
-                </button>
+                </AdminButton>
             </div>
         </form>
     );

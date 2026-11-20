@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import { ProductType } from "@prisma/client";
 import { useMemo, useState } from "react";
@@ -613,14 +614,14 @@ export default function EditAcqForm({
                         icon={<Package className="h-5 w-5" />}
                         right={
                             !readOnly ? (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={addLine}
                                     className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Thêm dòng
-                                </button>
+                                </AdminButton>
                             ) : null
                         }
                     >
@@ -659,14 +660,14 @@ export default function EditAcqForm({
                                             </div>
 
                                             {!readOnly ? (
-                                                <button
+                                                <AdminButton variant="danger" density="compact"
                                                     type="button"
                                                     onClick={() => removeLine(line.id)}
                                                     className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-medium text-rose-600 hover:bg-rose-50"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                     {formData.status === "POSTED" ? "Hủy dòng" : "Xóa dòng"}
-                                                </button>
+                                                </AdminButton>
                                             ) : null}
                                         </div>
 
@@ -952,17 +953,17 @@ export default function EditAcqForm({
                 <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
                     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap gap-2">
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 onClick={() => setLines((prev) => [...prev, newLine(ProductType.WATCH)])}
                                 className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
                             >
                                 <Watch className="h-4 w-4" />
                                 Thêm đồng hồ
-                            </button>
+                            </AdminButton>
 
                             {productTypes.includes(ProductType.WATCH_STRAP) ? (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() =>
                                         setLines((prev) => [...prev, newLine(ProductType.WATCH_STRAP)])
@@ -971,7 +972,7 @@ export default function EditAcqForm({
                                 >
                                     <Package className="h-4 w-4" />
                                     Thêm dây
-                                </button>
+                                </AdminButton>
                             ) : null}
                         </div>
 
@@ -983,14 +984,14 @@ export default function EditAcqForm({
                                 </div>
                             </div>
 
-                            <button
+                            <AdminButton variant="primary"
                                 type="submit"
                                 disabled={saving}
                                 className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                             >
                                 <Save className="h-4 w-4" />
                                 {saving ? "Đang lưu..." : "Lưu toàn bộ phiếu nhập"}
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 </div>

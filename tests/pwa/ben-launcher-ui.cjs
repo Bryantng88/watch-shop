@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const http=require('node:http');
-const esbuild=require('esbuild');
+const esbuild=require('../../scripts/lib/admin-fixture-esbuild.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
  const bundle=await esbuild.build({stdin:{contents:`import React,{useRef,useState}from'react';import{createRoot}from'react-dom/client';import BenLauncher from './src/domains/ai-assistant/BenLauncher';function App(){const ref=useRef(null),[open,setOpen]=useState(false);return <><div style={{height:1800}}>Trang nghiệp vụ mẫu</div><BenLauncher buttonRef={ref} open={open} live={true} onToggle={()=>setOpen(v=>!v)}/>{open&&<aside>Đang mở Ben<button onClick={()=>{setOpen(false);ref.current?.focus()}}>Đóng</button></aside>}</>}createRoot(document.getElementById('root')).render(<App/>);`,loader:'tsx',resolveDir:process.cwd()},bundle:true,platform:'browser',jsx:'automatic',write:false,define:{'process.env.NODE_ENV':'"production"'},plugins:[{name:'image',setup(build){build.onResolve({filter:/^next\/image$/},()=>({path:'image',namespace:'image'}));build.onLoad({filter:/.*/,namespace:'image'},()=>({contents:'import React from "react";export default function Image(props){return <img {...props}/>}',loader:'tsx',resolveDir:process.cwd()}));}}]});
@@ -31,3 +31,4 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
   console.log('PASS: mouse/touch drag, no accidental open/scroll, click/keyboard open and return focus, persistence, bounds at 320px and rotated viewport, blocked storage.');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);process.exitCode=1});
+

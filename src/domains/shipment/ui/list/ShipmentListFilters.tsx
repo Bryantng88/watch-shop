@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Search } from "lucide-react";
 import { Button, Input, Select } from "@/domains/shared/ui/form/fields";
 import { SHIPMENT_PAGE_SIZE_OPTIONS } from "./helpers";
@@ -32,13 +33,13 @@ export default function ShipmentListFilters({
 
       <Button type="button" onClick={onApply}>Lọc</Button>
 
-      <button
+      <AdminButton variant="secondary"
         type="button"
         onClick={onClear}
         className="inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
       >
         Xóa lọc
-      </button>
+      </AdminButton>
     </div>
   );
 }

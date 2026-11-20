@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
-const esbuild = require('esbuild');
+const esbuild = require('./lib/admin-fixture-esbuild.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 async function buildFixture() {
   const root = path.resolve(__dirname, '..');
@@ -186,3 +186,4 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     console.log('PASS: actual personal-work client at 320/390/768/1440; category/title and reference placement; view/scope/category filters; event and viewer restrictions; schedule/context/update popovers; completion payload and read-only open; desktop calendar layout.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(e => { console.error(e); process.exitCode = 1; });
+

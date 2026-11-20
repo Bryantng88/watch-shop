@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -230,13 +231,13 @@ export default function NewStrapBatchForm({ vendors }: Props) {
                                     ))}
                                 </select>
 
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     className="rounded-md bg-[#11191f] px-3 py-2 text-sm font-medium text-gray-200"
                                     onClick={() => setShowQuickVendor((v) => !v)}
                                 >
                                     {showQuickVendor ? "Ẩn" : "Thêm nhanh"}
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
 
@@ -314,13 +315,13 @@ export default function NewStrapBatchForm({ vendors }: Props) {
                                 </p>
                             </div>
 
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 onClick={addLine}
                                 className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
                             >
                                 + Thêm dòng
-                            </button>
+                            </AdminButton>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -479,14 +480,14 @@ export default function NewStrapBatchForm({ vendors }: Props) {
                                                 </td>
 
                                                 <td className="px-3 py-3 text-right">
-                                                    <button
+                                                    <AdminButton variant="secondary" density="compact"
                                                         type="button"
                                                         onClick={() => removeLine(line.id)}
                                                         className="rounded border px-2 py-1 text-xs hover:bg-gray-50"
                                                         disabled={lines.length <= 1}
                                                     >
                                                         Xóa
-                                                    </button>
+                                                    </AdminButton>
                                                 </td>
                                             </tr>
                                         );
@@ -514,22 +515,22 @@ export default function NewStrapBatchForm({ vendors }: Props) {
             {okMsg ? <div className="text-sm text-green-600">{okMsg}</div> : null}
 
             <div className="flex justify-end gap-3">
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     className="rounded-md border px-4 py-2"
                     onClick={() => history.back()}
                     disabled={submitting}
                 >
                     Hủy
-                </button>
+                </AdminButton>
 
-                <button
+                <AdminButton variant="secondary"
                     type="submit"
                     className="rounded-md bg-[#11191f] px-4 py-2 text-sm font-medium text-gray-200 shadow-sm"
                     disabled={submitting}
                 >
                     {submitting ? "Đang lưu..." : "Lưu nhiều dòng dây"}
-                </button>
+                </AdminButton>
             </div>
         </form>
     );

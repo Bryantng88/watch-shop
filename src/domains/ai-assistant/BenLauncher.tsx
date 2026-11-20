@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import BenAvatar from "./BenAvatar";
 
@@ -50,7 +51,7 @@ export default function BenLauncher({ buttonRef, open, live, onToggle }: {
     return () => { observer.disconnect(); window.removeEventListener("resize", fit); window.visualViewport?.removeEventListener("resize", fit); window.visualViewport?.removeEventListener("scroll", fit); };
   }, [buttonRef]);
 
-  return <button ref={buttonRef} type="button" aria-label="Mở Ben" aria-expanded={open} title="Bấm để mở Ben · Kéo hoặc dùng Alt + phím mũi tên để di chuyển"
+  return <AdminButton variant="contextual" ref={buttonRef} type="button" aria-label="Mở Ben" aria-expanded={open} title="Bấm để mở Ben · Kéo hoặc dùng Alt + phím mũi tên để di chuyển"
     style={{ ...(position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : {}), touchAction: "none", userSelect: "none", cursor: dragging ? "grabbing" : "grab" }}
     onPointerDown={event => {
       if (!event.isPrimary || event.button !== 0) return;
@@ -86,5 +87,5 @@ export default function BenLauncher({ buttonRef, open, live, onToggle }: {
     }}
     className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-blue-700 px-4 py-2.5 font-semibold text-white shadow-xl hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500">
     <span className="pointer-events-none flex items-center gap-2"><BenAvatar /><span>Ben</span>{!live && <span className="rounded bg-white/20 px-1.5 text-[10px]">MẪU</span>}</span>
-  </button>;
+  </AdminButton>;
 }

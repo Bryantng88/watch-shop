@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useMemo, useState, useTransition } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { completeTasksByIdsAction } from "../../actions/task.actions";
@@ -102,12 +103,12 @@ export default function RelatedTaskCompleteModal({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-4">
-          <button type="button" onClick={onClose} disabled={pending} className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">
+          <AdminButton variant="secondary" type="button" onClick={onClose} disabled={pending} className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">
             Để sau
-          </button>
-          <button type="button" onClick={completeSelected} disabled={pending || selectedCount === 0} className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+          </AdminButton>
+          <AdminButton variant="primary" type="button" onClick={completeSelected} disabled={pending || selectedCount === 0} className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
             {pending ? "Đang hoàn thành..." : `Hoàn thành đã chọn (${selectedCount})`}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

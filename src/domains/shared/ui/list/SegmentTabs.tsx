@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { cn } from "@/lib/utils";
 
 export type SegmentTabItem<TKey extends string> = {
@@ -38,7 +39,7 @@ export default function SegmentTabs<TKey extends string>({
           const active = value === item.key;
 
           return (
-            <button
+            <AdminButton variant="contextual" density="compact"
               key={item.key}
               type="button"
               disabled={item.disabled}
@@ -79,7 +80,7 @@ export default function SegmentTabs<TKey extends string>({
               {!isChips && active ? (
                 <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-slate-950" />
               ) : null}
-            </button>
+            </AdminButton>
           );
         })}
       </div>

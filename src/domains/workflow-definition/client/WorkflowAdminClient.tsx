@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type {
   BusinessEventCatalogItem,
@@ -724,7 +725,7 @@ function BlueprintList({
                 : "border-slate-100 hover:border-slate-200 hover:bg-slate-50/50"
             }`}
           >
-            <button
+            <AdminButton variant="contextual"
               type="button"
               onClick={() => onSelect(blueprint.key)}
               className="block w-full text-left"
@@ -756,15 +757,15 @@ function BlueprintList({
                   </span>
                 </div>
               ) : null}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={() => onDuplicate(blueprint.workflow.workflowKey ?? "")}
               disabled={busy || !blueprint.workflow.workflowKey}
               className="mt-3 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
             >
               Nhân bản thành Draft
-            </button>
+            </AdminButton>
           </div>
         );
       })}
@@ -794,7 +795,7 @@ function DraftList({
         const valid = Boolean(draft.validationJson?.valid);
 
         return (
-          <button
+          <AdminButton variant="contextual"
             key={draft.id}
             type="button"
             onClick={() => onSelect(draft.id)}
@@ -824,7 +825,7 @@ function DraftList({
                 {draftStatusLabel(draft.status)}
               </span>
             </div>
-          </button>
+          </AdminButton>
         );
       })}
     </div>
@@ -1416,14 +1417,14 @@ export default function WorkflowAdminClient({
             </p>
           </div>
 
-          <button
+          <AdminButton variant="primary"
             type="button"
             onClick={() => startTransition(() => void createDraft())}
             disabled={Boolean(busyKey)}
             className="inline-flex h-11 w-fit items-center justify-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
           >
             {busyKey === "create" ? "Đang tạo..." : "+ Tạo Blueprint Draft"}
-          </button>
+          </AdminButton>
         </section>
 
         {error ? (
@@ -1555,30 +1556,30 @@ export default function WorkflowAdminClient({
 
             {selectedDraft ? (
               <div className="flex flex-wrap gap-2">
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   onClick={() => void saveDraft(false)}
                   disabled={Boolean(busyKey) || !parsedEditor.ok}
                   className="inline-flex h-10 items-center rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:opacity-60"
                 >
                   {busyKey === "save" ? "Đang lưu..." : "Lưu"}
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => void saveDraft(true)}
                   disabled={Boolean(busyKey) || !parsedEditor.ok}
                   className="inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
                 >
                   {busyKey === "validate" ? "Đang validate..." : "Validate"}
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => void archiveDraft()}
                   disabled={Boolean(busyKey) || selectedDraft.status === "ARCHIVED"}
                   className="inline-flex h-10 items-center rounded-md border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                 >
                   Lưu trữ
-                </button>
+                </AdminButton>
               </div>
             ) : (
               <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -1623,7 +1624,7 @@ export default function WorkflowAdminClient({
               ["operation", "Mô hình vận hành"],
               ["developer", "Kỹ thuật"],
             ].map(([tab, label]) => (
-              <button
+              <AdminButton variant="secondary" density="compact"
                 key={tab}
                 type="button"
                 onClick={() => setDetailTab(tab as DetailTab)}
@@ -1634,7 +1635,7 @@ export default function WorkflowAdminClient({
                 }`}
               >
                 {label}
-              </button>
+              </AdminButton>
             ))}
           </div>
 
@@ -1987,13 +1988,13 @@ export default function WorkflowAdminClient({
                     Các bước trạng thái
                   </h3>
                   {selectedDraft ? (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                       type="button"
                       onClick={addStage}
                       className="border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                     >
                       Thêm stage
-                    </button>
+                    </AdminButton>
                   ) : null}
                 </div>
                 <p className="mt-1 text-sm text-slate-600">
@@ -2013,14 +2014,14 @@ export default function WorkflowAdminClient({
                           />
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs text-slate-500">{state.key}</span>
-                            <button
+                            <AdminButton variant="danger" density="compact"
                               type="button"
                               onClick={() => deleteStage(index)}
                               disabled={(detailDefinition?.states.length ?? 0) <= 1}
                               className="text-xs font-medium text-rose-700 disabled:text-slate-300"
                             >
                               Xóa
-                            </button>
+                            </AdminButton>
                           </div>
                         </div>
                       ) : (
@@ -2041,13 +2042,13 @@ export default function WorkflowAdminClient({
                     Cách công việc chuyển bước
                   </h3>
                   {selectedDraft ? (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                       type="button"
                       onClick={addTransition}
                       className="border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
                     >
                       Thêm transition
-                    </button>
+                    </AdminButton>
                   ) : null}
                 </div>
                 <p className="mt-1 text-sm text-slate-600">
@@ -2167,13 +2168,13 @@ export default function WorkflowAdminClient({
                               />
                             )}
                           </div>
-                          <button
+                          <AdminButton variant="danger" density="compact"
                             type="button"
                             onClick={() => deleteTransition(index)}
                             className="text-xs font-medium text-rose-700"
                           >
                             Xóa transition
-                          </button>
+                          </AdminButton>
                         </div>
                       ) : (
                         <>
@@ -2241,7 +2242,7 @@ export default function WorkflowAdminClient({
                     ["version", "Version"],
                     ["json", "JSON kỹ thuật"],
                   ].map(([tab, label]) => (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                       key={tab}
                       type="button"
                       onClick={() => setOperationInspectTab(tab as OperationInspectTab)}
@@ -2252,7 +2253,7 @@ export default function WorkflowAdminClient({
                       }`}
                     >
                       {label}
-                    </button>
+                    </AdminButton>
                   ))}
                 </div>
 

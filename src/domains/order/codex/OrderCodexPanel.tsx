@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {useEffect,useRef,useState} from 'react';
 import {departments,departmentLabels,workflowPlanSchema,type WorkflowPlan} from './workflow-plan';
 type Proposal={id:string;status:string;revision:number;planJson:unknown;errorCode:string|null;createdTaskIds:unknown};
@@ -23,7 +24,7 @@ export default function OrderCodexPanel({orderId}:{orderId:string}){
  <div><h2 className="text-lg font-semibold">Yêu cầu Codex</h2><p className="text-sm text-slate-500">Đề xuất việc liên phòng ban. Chỉ tạo việc sau khi bạn duyệt; không tự thu tiền, giao hàng hay nhắn khách.</p></div>
  <textarea aria-label="Yêu cầu nghiệp vụ" className="w-full rounded-lg border p-3 text-sm" rows={3} maxLength={6000} value={text} onChange={e=>{setText(e.target.value);key.current=null}} placeholder="Ví dụ: Kiểm tra máy, sau đó chụp tình trạng và nhờ sales xác nhận lịch giao. Chưa xác nhận khách đã thanh toán."/>
  <p className="text-xs text-slate-500">Codex nhận nội dung bạn nhập, mã/trạng thái đơn và tên hàng. Không tự gửi số điện thoại, địa chỉ hay hồ sơ khách.</p>
- <button type="button" disabled={busy||pending||text.trim().length<5} onClick={()=>send('request')} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white disabled:opacity-50">{pending?'Codex đang đề xuất…':'Đề xuất luồng công việc'}</button>
+ <AdminButton variant="primary" type="button" disabled={busy||pending||text.trim().length<5} onClick={()=>send('request')} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white disabled:opacity-50">{pending?'Codex đang đề xuất…':'Đề xuất luồng công việc'}</AdminButton>
  {error&&<p role="alert" className="text-sm text-red-600">{error}</p>}
  {pending&&<p role="status" className="text-sm text-indigo-600">{row?.status==='QUEUED'?'Đang chờ worker…':'Codex đang phân tích…'} Bạn có thể quay lại trang sau.</p>}
  {row?.status==='FAILED'&&<p role="alert" className="text-sm text-amber-700">Chưa tạo được đề xuất. Chưa có công việc nào được tạo. Bạn có thể gửi yêu cầu mới.</p>}
@@ -38,7 +39,7 @@ export default function OrderCodexPanel({orderId}:{orderId:string}){
  <textarea aria-label={`Chi tiết bước ${i+1}`} disabled={!editable} className="w-full rounded border p-2 text-sm" value={s.description} onChange={e=>change(i,'description',e.target.value)}/>
  <label className="block text-xs">Chờ các bước (mã cách nhau bằng dấu phẩy): <input disabled={!editable} className="rounded border p-1" value={s.dependsOn.join(', ')} onChange={e=>change(i,'dependsOn',e.target.value.split(',').map(v=>v.trim()).filter(Boolean))}/></label>
  </div>)}
- {row?.status==='DRAFT'&&<button type="button" onClick={()=>send('approve')} disabled={busy||plan.questions.length>0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50">Duyệt và tạo {plan.steps.length} công việc</button>}
+ {row?.status==='DRAFT'&&<AdminButton variant="primary" type="button" onClick={()=>send('approve')} disabled={busy||plan.questions.length>0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm text-white disabled:opacity-50">Duyệt và tạo {plan.steps.length} công việc</AdminButton>}
  </div>}
  {row?.status==='APPLIED'&&<div role="status" className="rounded-lg bg-emerald-50 p-3 text-sm">Đã tạo {tasks.length} công việc, không tạo lại khi tải trang.<p className="mt-2">Xem tại các bảng điều phối theo bộ phận:</p><div className="flex flex-wrap gap-3">{departments.map(d=><a key={d} href={`/admin/coordination/${['PAYMENT','OPERATION'].includes(d)?'operation?view=ad-hoc-work':d.toLowerCase()}`} className="underline">{departmentLabels[d]}</a>)}</div></div>}
  </section>

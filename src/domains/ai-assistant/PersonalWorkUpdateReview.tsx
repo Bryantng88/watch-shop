@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React from "react";
 import { reviewSchedule } from "./review-schedule";
 import { CalendarDays } from "lucide-react";
@@ -105,7 +106,7 @@ export default function PersonalWorkUpdateReview({
       })}
       {!embedded && (
         <>
-          <button
+          <AdminButton variant="primary"
             data-ben-approve
             type="button"
             disabled={busy}
@@ -113,16 +114,16 @@ export default function PersonalWorkUpdateReview({
             className="mt-3 min-h-11 w-full rounded-xl bg-violet-600 px-4 py-2.5 font-semibold text-white disabled:opacity-50"
           >
             Duyệt {items.length} thay đổi
-          </button>
+          </AdminButton>
           {onEdit && (
-            <button
+            <AdminButton variant="secondary"
               type="button"
               disabled={busy}
               onClick={onEdit}
               className="mt-2 min-h-10 w-full rounded-xl text-violet-600"
             >
               Chỉnh lại
-            </button>
+            </AdminButton>
           )}
         </>
       )}

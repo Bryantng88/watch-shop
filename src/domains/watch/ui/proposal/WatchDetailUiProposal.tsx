@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -342,7 +343,7 @@ export default function WatchDetailUiProposal({
                 {Math.max(values.media.galleryImages.length, images.length)} ảnh
               </span>
               {canEditMedia && (
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   onClick={() => setInlinePickerOpen(true)}
                   disabled={savingInline}
@@ -350,7 +351,7 @@ export default function WatchDetailUiProposal({
                 >
                   {savingInline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                   {values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
-                </button>
+                </AdminButton>
               )}
             </div>
 
@@ -401,10 +402,10 @@ export default function WatchDetailUiProposal({
 
           {live && (
             <div className="flex flex-wrap items-center justify-end gap-1.5">
-              <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-xs font-semibold text-violet-700"><Camera className="h-3.5 w-3.5" /> Xử lý Media</button>
-              <button type="button" title={latestServiceRequest ? "Xem Service Request gần nhất và thao tác" : "Tạo Service cho Watch"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><Wrench className="h-3.5 w-3.5" /> Service</button>
-              <button type="button" title={latestOrder ? "Xem và xử lý Order gần nhất" : "Tạo Order từ Watch"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ReceiptText className="h-3.5 w-3.5" /> Order</button>
-              <button type="button" title={latestAcquisition ? "Xem phiếu nhập và thao tác" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ArrowLeftRight className="h-3.5 w-3.5" /> Phiếu nhập / Buy Back</button>
+              <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-xs font-semibold text-violet-700"><Camera className="h-3.5 w-3.5" /> Xử lý Media</AdminButton>
+              <AdminButton variant="secondary" density="compact" type="button" title={latestServiceRequest ? "Xem Service Request gần nhất và thao tác" : "Tạo Service cho Watch"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><Wrench className="h-3.5 w-3.5" /> Service</AdminButton>
+              <AdminButton variant="secondary" density="compact" type="button" title={latestOrder ? "Xem và xử lý Order gần nhất" : "Tạo Order từ Watch"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ReceiptText className="h-3.5 w-3.5" /> Order</AdminButton>
+              <AdminButton variant="secondary" density="compact" type="button" title={latestAcquisition ? "Xem phiếu nhập và thao tác" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ArrowLeftRight className="h-3.5 w-3.5" /> Phiếu nhập / Buy Back</AdminButton>
             </div>
           )}
         </div>
@@ -420,9 +421,9 @@ export default function WatchDetailUiProposal({
                   <p className="mt-1 text-xs text-slate-400">Một nguồn thông tin tài chính duy nhất cho Watch.</p>
                 </div>
                 {canEditPrice ? (
-                  <button type="button" onClick={() => setPricingOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
+                  <AdminButton variant="secondary" density="compact" type="button" onClick={() => setPricingOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
                     <Pencil className="h-3.5 w-3.5" /> Chỉnh giá bán
-                  </button>
+                  </AdminButton>
                 ) : null}
               </div>
 
@@ -481,7 +482,7 @@ export default function WatchDetailUiProposal({
                   </div>
                   <div className="flex gap-2">
                     <WatchPublishAssetActions detail={detail} />
-                    <button type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</button>
+                    <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</AdminButton>
                   </div>
                 </div>
                 <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -539,7 +540,7 @@ export default function WatchDetailUiProposal({
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
-                  <button type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
+                  <AdminButton variant="contextual" type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${event.tone}`}>
                       {event.type === "ACQUISITION" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>
@@ -550,7 +551,7 @@ export default function WatchDetailUiProposal({
                       </div>
                       <div className="mt-1 truncate text-[10px] text-slate-400">{normalizeDate(event.occurredAt)} · {event.party}</div>
                     </div>
-                  </button>
+                  </AdminButton>
                 )) : (
                   <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">Watch chưa có giao dịch mua bán.</div>
                 )}
@@ -601,7 +602,7 @@ export default function WatchDetailUiProposal({
                 <h2 className="text-lg font-bold text-slate-950">Chỉnh giá bán</h2>
                 <p className="mt-1 text-xs text-slate-500">{title}</p>
               </div>
-              <button type="button" onClick={() => setPricingOpen(false)} disabled={savingPrice} aria-label="Đóng" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+              <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={() => setPricingOpen(false)} disabled={savingPrice} aria-label="Đóng" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></AdminButton>
             </div>
             <label className="mt-5 block text-[10px] font-bold uppercase tracking-wide text-slate-500" htmlFor="watch-sale-price">Giá bán</label>
             <div className="mt-2 flex h-12 items-center rounded-xl border border-slate-300 bg-white px-3 focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-50">
@@ -609,8 +610,8 @@ export default function WatchDetailUiProposal({
               <span className="text-sm font-semibold text-slate-500">đ</span>
             </div>
             <div className="mt-5 flex justify-end gap-2">
-              <button type="button" onClick={() => setPricingOpen(false)} disabled={savingPrice} className="h-10 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-600">Hủy</button>
-              <button type="button" onClick={() => void saveSalePrice()} disabled={savingPrice} className="h-10 rounded-lg bg-slate-950 px-5 text-xs font-bold text-white disabled:opacity-60">{savingPrice ? "Đang lưu..." : "Lưu giá bán"}</button>
+              <AdminButton variant="secondary" density="compact" type="button" onClick={() => setPricingOpen(false)} disabled={savingPrice} className="h-10 rounded-lg border border-slate-200 px-4 text-xs font-semibold text-slate-600">Hủy</AdminButton>
+              <AdminButton variant="primary" density="compact" type="button" onClick={() => void saveSalePrice()} disabled={savingPrice} className="h-10 rounded-lg bg-slate-950 px-5 text-xs font-bold text-white disabled:opacity-60">{savingPrice ? "Đang lưu..." : "Lưu giá bán"}</AdminButton>
             </div>
           </div>
         </div>
@@ -620,7 +621,7 @@ export default function WatchDetailUiProposal({
           <div className="flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10">
             <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4">
               <div className="min-w-0"><div className="truncate text-sm font-bold text-slate-950">Xử lý Media</div><div className="truncate text-xs text-slate-500">{title}</div></div>
-              <button type="button" onClick={() => setMediaOpen(false)} aria-label="Đóng Media" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"><X className="h-4 w-4" /></button>
+              <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(false)} aria-label="Đóng Media" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900"><X className="h-4 w-4" /></AdminButton>
             </div>
             <iframe src={mediaHref} title={`Xử lý Media - ${title}`} className="min-h-0 flex-1 border-0 bg-slate-50" />
           </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRef, type ReactNode } from "react";
 import { ChevronDown, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 
@@ -58,7 +59,7 @@ export function SpaceDataRefreshButton({
     minute: "2-digit",
   });
   return (
-    <button
+    <AdminButton variant="secondary"
       type="button"
       onClick={onRefresh}
       disabled={loading}
@@ -68,7 +69,7 @@ export function SpaceDataRefreshButton({
     >
       <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
       <span className="hidden xl:inline">{loading ? "Đang tải..." : "Làm mới"}</span>
-    </button>
+    </AdminButton>
   );
 }
 
@@ -124,7 +125,7 @@ export default function SpaceFilterBar({
 
         {selectFilters.length ? (
           <details data-dismissible-popover className="group relative shrink-0">
-            <summary className="relative flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <AdminDisclosureSummary className="relative flex h-11 cursor-pointer list-none items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
               <SlidersHorizontal className="h-4 w-4 text-slate-500" />
               Bộ lọc
               {activeFilterCount ? (
@@ -142,18 +143,18 @@ export default function SpaceFilterBar({
                 </span>
               ) : null}
               <ChevronDown className="h-4 w-4 text-slate-400 transition group-open:rotate-180" />
-            </summary>
+            </AdminDisclosureSummary>
             <div className="absolute left-0 top-full z-40 mt-2 w-[min(320px,calc(100vw-32px))] sm:left-auto sm:right-0 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
               <div className="mb-3 flex items-center justify-between">
                 <div className="text-sm font-bold text-slate-900">Bộ lọc</div>
                 {activeFilterCount ? (
-                  <button
+                  <AdminButton variant="secondary" density="compact"
                     type="button"
                     onClick={() => selectFilters.forEach((filter) => filter.onChange(filter.options[0]?.value ?? ""))}
                     className="text-xs font-semibold text-violet-600 hover:text-violet-800"
                   >
                     Xóa bộ lọc
-                  </button>
+                  </AdminButton>
                 ) : null}
               </div>
               <div className="grid gap-3">

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { CatalogKey } from "./types";
 
 type Props = {
@@ -22,7 +23,7 @@ export default function ProductListToolbar({
           </h1>
 
           <div className="inline-flex rounded-full bg-slate-100 p-1">
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={() => onCatalogChange("product")}
               className={[
@@ -33,9 +34,9 @@ export default function ProductListToolbar({
               ].join(" ")}
             >
               Sản phẩm
-            </button>
+            </AdminButton>
 
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={() => onCatalogChange("strap")}
               className={[
@@ -46,7 +47,7 @@ export default function ProductListToolbar({
               ].join(" ")}
             >
               Dây
-            </button>
+            </AdminButton>
           </div>
         </div>
 

@@ -2,6 +2,7 @@ name: Acquisition and media UI
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/acquisition/**'
       - 'src/domains/watch/**'
       - 'src/domains/personal-work/**'

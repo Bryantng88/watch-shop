@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 
 import type { WatchRow } from "./types";
@@ -65,7 +66,7 @@ export default function InternalPurchaseRequestModal({ open, rows, onClose, onCr
             <h2 className="mt-1 text-lg font-semibold text-slate-950">Tạo yêu cầu xử lý đơn hàng</h2>
             <p className="mt-1 text-sm text-slate-500">{rows.length} watch sẽ được gắn vào cùng một yêu cầu và gửi thông báo Zalo cho admin.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xl text-slate-400 hover:bg-slate-100">×</button>
+          <AdminButton variant="secondary" density="compact" type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-xl text-slate-400 hover:bg-slate-100">×</AdminButton>
         </header>
         <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
           <label className="text-sm font-medium text-slate-700">Tên khách hàng *
@@ -86,8 +87,8 @@ export default function InternalPurchaseRequestModal({ open, rows, onClose, onCr
           {error ? <p className="text-sm font-medium text-rose-600 sm:col-span-2">{error}</p> : null}
         </div>
         <footer className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Hủy</button>
-          <button type="button" onClick={() => void submit()} disabled={submitting || !customerName.trim() || !phone.trim()} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">{submitting ? "Đang tạo..." : "Tạo yêu cầu"}</button>
+          <AdminButton variant="secondary" type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Hủy</AdminButton>
+          <AdminButton variant="primary" type="button" onClick={() => void submit()} disabled={submitting || !customerName.trim() || !phone.trim()} className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">{submitting ? "Đang tạo..." : "Tạo yêu cầu"}</AdminButton>
         </footer>
       </div>
     </div>

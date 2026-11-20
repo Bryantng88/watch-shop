@@ -28,3 +28,4 @@ export function PageEditingState({ dirty, saving = false, uploading = false }: {
     {uploading ? "Đang tải ảnh…" : saving ? "Đang lưu…" : dirty ? "Có thay đổi chưa lưu" : null}
   </span>;
 }
+

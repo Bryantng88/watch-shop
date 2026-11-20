@@ -58,6 +58,7 @@ export const ADMIN_UI_FOUNDATION = {
     underlineHeight: 2, selectThreshold: 520, selectWhenOptionsExceed: 4,
   },
   buttonSurface: {
+    dangerHover: "#9f1239",
     neutral: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
     neutralHover: 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)',
     neutralPressed: 'linear-gradient(180deg, #e2e8f0 0%, #f8fafc 100%)',

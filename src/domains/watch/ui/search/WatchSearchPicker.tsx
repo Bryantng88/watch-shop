@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, ImageIcon, Loader2, Search } from "lucide-react";
 
@@ -134,7 +135,7 @@ export default function WatchSearchPicker({
       <div className="mt-2 grid gap-2">
         {items.map((item) => <WatchSearchResultRow key={item.productId} item={item} selected={selectedProductId === item.productId} onSelect={onSelect} />)}
       </div>
-      {hasMore ? <button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60">{loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Xem thêm {Math.min(pageSize, Math.max(0, total - items.length))} Watch</button> : null}
+      {hasMore ? <AdminButton variant="secondary" type="button" disabled={loadingMore} onClick={() => void loadMore()} className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60">{loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Xem thêm {Math.min(pageSize, Math.max(0, total - items.length))} Watch</AdminButton> : null}
     </div>
   );
 }
@@ -147,7 +148,7 @@ function WatchSearchResultRow({ item, selected, onSelect }: { item: WatchSearchR
   useEffect(() => setCandidateIndex(0), [item.productId]);
 
   return (
-    <button type="button" onClick={() => void onSelect(item)} className={cn("grid w-full grid-cols-[64px_1fr_auto] items-center gap-4 rounded-xl border p-3 text-left transition", selected ? "border-slate-500 bg-slate-50 ring-2 ring-slate-100" : "border-slate-200 hover:border-slate-400 hover:bg-slate-50")}>
+    <AdminButton variant="contextual" type="button" onClick={() => void onSelect(item)} className={cn("grid w-full grid-cols-[64px_1fr_auto] items-center gap-4 rounded-xl border p-3 text-left transition", selected ? "border-slate-500 bg-slate-50 ring-2 ring-slate-100" : "border-slate-200 hover:border-slate-400 hover:bg-slate-50")}>
       <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-lg bg-slate-100">
         {imageSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -156,6 +157,6 @@ function WatchSearchResultRow({ item, selected, onSelect }: { item: WatchSearchR
       </div>
       <div className="min-w-0"><div className="truncate font-bold text-slate-950">{item.title}</div><div className="mt-1 truncate text-sm text-slate-500">{item.sku || item.productId}</div><div className="mt-2 truncate text-xs font-medium text-slate-600">{item.brandName || "Watch"} · {item.serviceState || "Chưa tiếp nhận service"}</div></div>
       <ChevronRight className={cn("h-5 w-5", selected ? "text-slate-800" : "text-slate-400")} />
-    </button>
+    </AdminButton>
   );
 }

@@ -1,3 +1,4 @@
+import { AdminButtonProvider } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {benEnvironment} from "@/domains/ai-assistant/environment";
 import AdminShell from "./_client/AdminShell";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
@@ -26,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     perfLog("admin-layout", "totalBeforeRender", totalStartedAt);
 
     return (
-        <AppToastProvider>
+        <AdminButtonProvider><AppToastProvider>
             <AppDialogProvider>
                 <AppProgressProvider>
                     <AdminShell
@@ -46,6 +47,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     </AdminShell>
                 </AppProgressProvider>
             </AppDialogProvider>
-        </AppToastProvider>
+        </AppToastProvider></AdminButtonProvider>
     );
 }

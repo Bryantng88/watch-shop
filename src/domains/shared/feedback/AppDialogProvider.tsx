@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 
 type DialogTone = "default" | "success" | "warning" | "danger";
@@ -166,30 +167,30 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
 
                             <div className="mt-5 flex flex-wrap justify-end gap-3">
                                 {dialog.type === "confirm" ? (
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={handleCancel}
                                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                     >
                                         {dialog.cancelText ?? "Hủy"}
-                                    </button>
+                                    </AdminButton>
                                 ) : dialog.secondaryText ? (
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={handleCancel}
                                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                     >
                                         {dialog.secondaryText}
-                                    </button>
+                                    </AdminButton>
                                 ) : null}
 
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={handleConfirm}
                                     className={`rounded-xl px-4 py-2 text-sm font-medium transition ${styles.confirm}`}
                                 >
                                     {dialog.confirmText ?? "Đã hiểu"}
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
                     </div>

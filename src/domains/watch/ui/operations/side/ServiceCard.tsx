@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -216,7 +217,7 @@ export default function ServiceCard({
                             <div key={item.id} className="border-t border-slate-100">
                                 <div className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_88px] items-center gap-2 bg-slate-50/40 px-3 py-2 text-xs">
                                     {onPreview || item.workspaceHref ? (
-                                        <button
+                                        <AdminButton variant="secondary"
                                             type="button"
                                             onClick={() => {
                                                 if (onPreview) onPreview(item);
@@ -225,7 +226,7 @@ export default function ServiceCard({
                                             className="truncate text-left text-slate-600 hover:text-violet-700"
                                         >
                                             {item.refNo}
-                                        </button>
+                                        </AdminButton>
                                     ) : (
                                         <div className="truncate text-slate-600">{item.refNo}</div>
                                     )}
@@ -240,9 +241,9 @@ export default function ServiceCard({
                                     >
                                         <div className="min-w-0 pl-2">
                                             {onIssuePreview ? (
-                                                <button type="button" onClick={() => onIssuePreview(issue)} className="line-clamp-2 text-left font-medium leading-5 text-slate-800 hover:text-violet-700">
+                                                <AdminButton variant="secondary" type="button" onClick={() => onIssuePreview(issue)} className="line-clamp-2 text-left font-medium leading-5 text-slate-800 hover:text-violet-700">
                                                     {issue.summary}
-                                                </button>
+                                                </AdminButton>
                                             ) : (
                                                 <div className="line-clamp-2 font-medium leading-5 text-slate-800">
                                                     {issue.summary}
@@ -277,7 +278,7 @@ export default function ServiceCard({
                         ) : null}
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={openServiceBoard}
                             className={operationButtonClass({
@@ -287,8 +288,8 @@ export default function ServiceCard({
                             })}
                         >
                             Xem service board
-                        </button>
-                        <button
+                        </AdminButton>
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={() => {
                                 setError(null);
@@ -303,14 +304,14 @@ export default function ServiceCard({
                         >
                             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                             {submitting ? "Đang tạo..." : "Tạo service"}
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </aside>
 
             {intakeOpen && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         className="absolute inset-0 bg-slate-950/35"
                         aria-label="Đóng modal tạo service"
@@ -326,7 +327,7 @@ export default function ServiceCard({
                                     Nhập nghi ngờ kỹ thuật đầu tiên cho {watchLabel}.
                                 </div>
                             </div>
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 onClick={() => setIntakeOpen(false)}
                                 disabled={submitting}
@@ -337,7 +338,7 @@ export default function ServiceCard({
                                 })}
                             >
                                 <X className="h-4 w-4" />
-                            </button>
+                            </AdminButton>
                         </div>
 
                         <label className="mt-4 block">
@@ -361,15 +362,15 @@ export default function ServiceCard({
                         ) : null}
 
                         <div className="mt-5 flex justify-end gap-2">
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 onClick={() => setIntakeOpen(false)}
                                 disabled={submitting}
                                 className={operationButtonClass({ variant: "secondary", size: "sm" })}
                             >
                                 Hủy
-                            </button>
-                            <button
+                            </AdminButton>
+                            <AdminButton variant="primary"
                                 type="button"
                                 onClick={submitServiceIntake}
                                 disabled={submitting || !suspicion.trim()}
@@ -381,7 +382,7 @@ export default function ServiceCard({
                             >
                                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                                 {submitting ? "Đang tạo..." : "Tạo service"}
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 </div>,

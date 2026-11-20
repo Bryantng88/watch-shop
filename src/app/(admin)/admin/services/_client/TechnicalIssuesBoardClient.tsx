@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -281,7 +282,7 @@ function FilterChip({
     onClick?: () => void;
 }) {
     return (
-        <button
+        <AdminButton variant="contextual" density="compact"
             type="button"
             onClick={onClick}
             className={`rounded-full border px-3 py-1 text-xs transition ${active
@@ -290,7 +291,7 @@ function FilterChip({
                 }`}
         >
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
@@ -339,7 +340,7 @@ function IssueCard({
 
             <div className={`border-b border-stone-200 ${accent.headerBg} px-4 py-3`}>
                 <div className="flex items-start justify-between gap-3">
-                    <button
+                    <AdminButton variant="contextual"
                         type="button"
                         onClick={onOpen}
                         className="min-w-0 flex-1 text-left"
@@ -350,10 +351,10 @@ function IssueCard({
                         <div className="mt-1 line-clamp-2 text-xs text-stone-600">
                             {item.note || "Chưa có ghi chú kỹ thuật."}
                         </div>
-                    </button>
+                    </AdminButton>
 
                     <div className="flex items-center gap-2">
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -362,9 +363,9 @@ function IssueCard({
                             className="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
                         >
                             Mở phiếu
-                        </button>
+                        </AdminButton>
 
-                        <button
+                        <AdminButton variant="contextual" density="compact"
                             type="button"
                             {...dragHandleProps}
                             onClick={(e) => e.stopPropagation()}
@@ -373,12 +374,12 @@ function IssueCard({
                             title="Kéo thả issue"
                         >
                             <GripVertical className="h-4 w-4" />
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </div>
 
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={onOpen}
                 className="block w-full text-left"
@@ -445,7 +446,7 @@ function IssueCard({
                         </div>
                     </div>
                 </div>
-            </button>
+            </AdminButton>
         </div>
     );
 }
@@ -550,14 +551,14 @@ function BoardColumn({
                         {children}
 
                         {canLoadMore ? (
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 onClick={onLoadMore}
                                 disabled={loadingMore}
                                 className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
                             >
                                 {loadingMore ? "Đang tải..." : "Tải thêm"}
-                            </button>
+                            </AdminButton>
                         ) : null}
                     </>
                 )}
@@ -1012,13 +1013,13 @@ export default function TechnicalIssueBoardClient({
                                 className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm outline-none focus:border-stone-400"
                             />
                             {query ? (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => setQuery("")}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
                                 >
                                     <X className="h-4 w-4" />
-                                </button>
+                                </AdminButton>
                             ) : null}
                         </div>
 
@@ -1065,13 +1066,13 @@ export default function TechnicalIssueBoardClient({
                         </FilterChip>
 
                         {(query || areaFilter !== "ALL" || actionModeFilter !== "ALL") && (
-                            <button
+                            <AdminButton variant="secondary" density="compact"
                                 type="button"
                                 onClick={clearFilters}
                                 className="ml-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
                             >
                                 Xóa filter
-                            </button>
+                            </AdminButton>
                         )}
                     </div>
                 </div>
@@ -1211,13 +1212,13 @@ function IssueDrawer({
                             ) : null}
                         </div>
 
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             className="rounded-xl border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
                             onClick={onClose}
                         >
                             Đóng
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
 
@@ -1311,56 +1312,56 @@ function IssueDrawer({
                     <div className="rounded-2xl border border-stone-200 bg-white p-4">
                         <div className="flex flex-wrap gap-3">
                             {issue.boardColumn === "PENDING_CONFIRM" && (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     disabled={busyId === issue.id}
                                     onClick={() => onAction(issue.id, "confirm")}
                                     className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
                                 >
                                     Xác nhận
-                                </button>
+                                </AdminButton>
                             )}
 
                             {issue.boardColumn === "READY" && (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     disabled={busyId === issue.id}
                                     onClick={() => onAction(issue.id, "start")}
                                     className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
                                 >
                                     Bắt đầu
-                                </button>
+                                </AdminButton>
                             )}
 
                             {issue.boardColumn === "IN_PROGRESS" && (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     disabled={busyId === issue.id}
                                     onClick={() => onAction(issue.id, "complete")}
                                     className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
                                 >
                                     Hoàn tất
-                                </button>
+                                </AdminButton>
                             )}
 
                             {issue.boardColumn !== "DONE" && (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => onCancelIssue(issue.id)}
                                     disabled={cancelingIssueId === issue.id}
                                     className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                                 >
                                     {cancelingIssueId === issue.id ? "Đang hủy..." : "Hủy issue"}
-                                </button>
+                                </AdminButton>
                             )}
 
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm hover:bg-stone-50"
                                 onClick={onOpenServiceRequest}
                             >
                                 Mở Service Request
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 </div>

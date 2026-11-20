@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import Image from "next/image";
 import { Check, ChevronDown, ChevronUp, ImageIcon, LoaderCircle, Search, X } from "lucide-react";
@@ -153,19 +154,19 @@ export default function MediaPostCreateForm({
         <div className="flex items-center gap-3">
         <div className="inline-flex rounded-xl border border-violet-100 bg-violet-50 p-1">
           {(["THEME", "FREE"] as const).map((value) => (
-            <button
+            <AdminButton variant="secondary" density="compact"
               key={value}
               type="button"
               onClick={() => setMode(value)}
               className={`h-9 rounded-lg px-4 text-sm font-semibold transition ${mode === value ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}
             >
               {value === "THEME" ? "Theo chủ đề" : "Bài tự do"}
-            </button>
+            </AdminButton>
           ))}
         </div>
-        <button type="button" onClick={onCancel} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
+        <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={onCancel} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
           <X className="h-4 w-4" />
-        </button>
+        </AdminButton>
         </div>
       </div>
 
@@ -173,7 +174,7 @@ export default function MediaPostCreateForm({
       {mode === "THEME" ? (
         <>
           <div className="rounded-2xl border border-violet-100 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3"><span className="text-sm font-bold text-slate-900">Điều kiện chủ đề</span><button type="button" onClick={clearFilters} className="text-xs font-semibold text-slate-500 hover:text-violet-700">Xóa bộ lọc</button></div>
+            <div className="mb-3 flex items-center justify-between gap-3"><span className="text-sm font-bold text-slate-900">Điều kiện chủ đề</span><AdminButton variant="secondary" density="compact" type="button" onClick={clearFilters} className="text-xs font-semibold text-slate-500 hover:text-violet-700">Xóa bộ lọc</AdminButton></div>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="space-y-1.5 md:col-span-2"><span className="text-xs font-semibold text-slate-600">Tên chủ đề</span><input className={`${inputClass} w-full`} value={themeLabel} onChange={(event) => setThemeLabel(event.target.value)} placeholder="Ví dụ: Seiko automatic dưới 10 triệu" /></label>
             <label className="space-y-1.5 md:col-span-2"><span className="text-xs font-semibold text-slate-600">Từ khóa / hãng / tên / SKU / model / reference</span><input className={`${inputClass} w-full`} value={filters.query ?? ""} onChange={(event) => setFilters((current) => ({ ...current, query: event.target.value }))} placeholder="Ví dụ: Seiko" /></label>
@@ -196,10 +197,10 @@ export default function MediaPostCreateForm({
             <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Kênh sản phẩm</span><select className={`${inputClass} w-full`} value={filters.siteChannel ?? ""} onChange={(event) => setFilters((current) => ({ ...current, siteChannel: event.target.value }))}><option value="">Tất cả kênh</option>{MEDIA_POST_SITE_CHANNEL_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
             <label className="flex h-10 items-center gap-2 self-end rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700"><input type="checkbox" checked={filters.publishedOnly === true} onChange={(event) => setFilters((current) => ({ ...current, publishedOnly: event.target.checked }))} className="h-4 w-4 accent-violet-600" />Chỉ watch đang storefront</label>
             <label className="space-y-1.5 md:col-span-2"><span className="text-xs font-semibold text-slate-600">Brief / yêu cầu giọng văn</span><input className={`${inputClass} w-full`} value={brief} onChange={(event) => setBrief(event.target.value)} placeholder="Không bắt buộc" /></label>
-            <button type="button" onClick={() => void searchWatches()} disabled={searching} className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
+            <AdminButton variant="primary" type="button" onClick={() => void searchWatches()} disabled={searching} className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
               {searching ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               Tìm watch
-            </button>
+            </AdminButton>
             </div>
           </div>
 
@@ -223,9 +224,9 @@ export default function MediaPostCreateForm({
                   return (
                     <div key={watch.watchId} className={`rounded-2xl border bg-white p-3 transition ${selected ? "border-violet-300 ring-2 ring-violet-50" : "border-slate-200"}`}>
                       <div className="flex gap-3">
-                        <button type="button" onClick={() => toggleWatch(watch)} className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>
+                        <AdminButton variant="contextual" type="button" onClick={() => toggleWatch(watch)} className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>
                           {selected ? <Check className="h-3.5 w-3.5" /> : null}
-                        </button>
+                        </AdminButton>
                         <div
                           onDragOver={(event) => {
                             if (draggedImage?.watchId !== watch.watchId) return;
@@ -255,10 +256,10 @@ export default function MediaPostCreateForm({
                             {watch.complications.map((name) => <span key={name} className="rounded-md bg-amber-50 px-2 py-1 text-amber-800">{name}</span>)}
                             <span className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-700">{money(watch.price)}</span>
                           </div>
-                          <button type="button" onClick={() => setExpandedWatchId(expanded ? null : watch.watchId)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-700">
+                          <AdminButton variant="secondary" density="compact" type="button" onClick={() => setExpandedWatchId(expanded ? null : watch.watchId)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-700">
                             Ảnh Gallery {selectedImage ? watch.gallery.findIndex((image) => image.key === selectedImage.key) + 1 : 0}/{watch.gallery.length}
                             {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                          </button>
+                          </AdminButton>
                         </div>
                       </div>
                       {expanded ? (
@@ -266,7 +267,7 @@ export default function MediaPostCreateForm({
                           <div className="mb-2 text-[11px] font-medium text-slate-500">Bấm ảnh hoặc kéo ảnh vào ô đại diện phía trên. Lựa chọn này chưa được lưu.</div>
                           <div className="flex gap-2 overflow-x-auto">
                           {watch.gallery.map((image, index) => (
-                            <button
+                            <AdminButton variant="contextual"
                               key={image.key}
                               type="button"
                               draggable
@@ -284,7 +285,7 @@ export default function MediaPostCreateForm({
                             >
                               <Image src={image.url} alt="" width={80} height={96} unoptimized className="h-full w-full object-cover" />
                               <span className="absolute bottom-1 right-1 rounded bg-slate-950/70 px-1.5 py-0.5 text-[10px] font-bold text-white">{index + 1}</span>
-                            </button>
+                            </AdminButton>
                           ))}
                           </div>
                         </div>
@@ -294,7 +295,7 @@ export default function MediaPostCreateForm({
                 })}
               </div>
             </div>
-          ) : !searching ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center text-sm text-slate-500">{hasSearched ? <>{searchSuggestion ? <><div>Không có watch thỏa tất cả điều kiện. Điều kiện <strong>{searchSuggestion.label}</strong> đang làm kết quả về 0.</div><button type="button" onClick={() => { setFilters(searchSuggestion.filters); void searchWatches(searchSuggestion.filters); }} className="mt-4 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Bỏ {searchSuggestion.label} và xem {searchSuggestion.count} watch</button></> : <>Không tìm thấy watch phù hợp. Hãy nới lỏng một vài điều kiện rồi tìm lại.</>}</> : <>Nhập điều kiện rồi bấm <strong>Tìm watch</strong>. Giá được tính theo triệu đồng.</>}</div> : null}
+          ) : !searching ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center text-sm text-slate-500">{hasSearched ? <>{searchSuggestion ? <><div>Không có watch thỏa tất cả điều kiện. Điều kiện <strong>{searchSuggestion.label}</strong> đang làm kết quả về 0.</div><AdminButton variant="primary" type="button" onClick={() => { setFilters(searchSuggestion.filters); void searchWatches(searchSuggestion.filters); }} className="mt-4 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700">Bỏ {searchSuggestion.label} và xem {searchSuggestion.count} watch</AdminButton></> : <>Không tìm thấy watch phù hợp. Hãy nới lỏng một vài điều kiện rồi tìm lại.</>}</> : <>Nhập điều kiện rồi bấm <strong>Tìm watch</strong>. Giá được tính theo triệu đồng.</>}</div> : null}
         </>
       ) : (
         <input className={`${inputClass} w-full`} value={brief} onChange={(event) => setBrief(event.target.value)} placeholder="Brief / yêu cầu nội dung (không bắt buộc)" />
@@ -305,11 +306,11 @@ export default function MediaPostCreateForm({
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-5 py-4">
         <span className="text-sm font-semibold text-slate-600">{mode === "THEME" ? `${selectedCount} watch đã chọn` : "Bài post tự do"}</span>
         <div className="flex gap-2">
-        <button type="button" onClick={onCancel} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600">Hủy</button>
-        <button type="button" onClick={() => void create()} disabled={creating || (mode === "THEME" && !selectedCount)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">
+        <AdminButton variant="secondary" type="button" onClick={onCancel} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600">Hủy</AdminButton>
+        <AdminButton variant="primary" type="button" onClick={() => void create()} disabled={creating || (mode === "THEME" && !selectedCount)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">
           {creating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
           {creating ? "Đang tạo và sao chép ảnh..." : mode === "THEME" ? `Tạo bài với ${selectedCount} watch` : "Tạo ngay"}
-        </button>
+        </AdminButton>
         </div>
       </div>
       </div>

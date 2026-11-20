@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ProductType } from "@prisma/client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -511,14 +512,14 @@ export default function NewAcqForm({ vendors }: Props) {
                                                     ))}
                                                 </select>
 
-                                                <button
+                                                <AdminButton variant="secondary"
                                                     type="button"
                                                     onClick={() => setShowQuickVendor(true)}
                                                     className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                                                 >
                                                     <Plus className="h-4 w-4" />
                                                     Thêm nhanh vendor mới
-                                                </button>
+                                                </AdminButton>
                                             </div>
                                         ) : (
                                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -529,13 +530,13 @@ export default function NewAcqForm({ vendors }: Props) {
                                                     value={formData.quickVendorName}
                                                     onChange={handleChange}
                                                 />
-                                                <button
+                                                <AdminButton variant="secondary"
                                                     type="button"
                                                     onClick={() => setShowQuickVendor(false)}
                                                     className="mt-3 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-white"
                                                 >
                                                     Huỷ thêm mới
-                                                </button>
+                                                </AdminButton>
                                             </div>
                                         )}
                                     </div>
@@ -599,14 +600,14 @@ export default function NewAcqForm({ vendors }: Props) {
                             desc="Nhập mô tả nhanh để hệ thống parse rule như form kỹ thuật đang làm."
                             icon={<Watch className="h-5 w-5" />}
                             right={
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => setWatchLines((prev) => [...prev, newWatchLine()])}
                                     className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Thêm đồng hồ
-                                </button>
+                                </AdminButton>
                             }
                         >
                             <div className="space-y-4">
@@ -635,7 +636,7 @@ export default function NewAcqForm({ vendors }: Props) {
                                                     )}
                                                 </div>
 
-                                                <button
+                                                <AdminButton variant="danger" density="compact"
                                                     type="button"
                                                     onClick={() =>
                                                         setWatchLines((prev) =>
@@ -650,7 +651,7 @@ export default function NewAcqForm({ vendors }: Props) {
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                     Xoá
-                                                </button>
+                                                </AdminButton>
                                             </div>
 
                                             <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
@@ -732,14 +733,14 @@ export default function NewAcqForm({ vendors }: Props) {
                             desc="Giữ nguyên logic strapSpec, chỉ đổi layout cho dễ nhìn hơn."
                             icon={<Package className="h-5 w-5" />}
                             right={
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => setStrapLines((prev) => [...prev, newStrapLine()])}
                                     className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50"
                                 >
                                     <Plus className="h-4 w-4" />
                                     Thêm dây
-                                </button>
+                                </AdminButton>
                             }
                         >
                             {strapLines.length === 0 ? (
@@ -762,7 +763,7 @@ export default function NewAcqForm({ vendors }: Props) {
                                                         Dây #{index + 1}
                                                     </span>
 
-                                                    <button
+                                                    <AdminButton variant="danger" density="compact"
                                                         type="button"
                                                         onClick={() =>
                                                             setStrapLines((prev) =>
@@ -773,7 +774,7 @@ export default function NewAcqForm({ vendors }: Props) {
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                         Xoá
-                                                    </button>
+                                                    </AdminButton>
                                                 </div>
 
                                                 <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
@@ -989,32 +990,32 @@ export default function NewAcqForm({ vendors }: Props) {
             <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
                 <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap items-center gap-2">
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={() => setWatchLines((prev) => [...prev, newWatchLine()])}
                             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
                         >
                             <Plus className="h-4 w-4" />
                             Thêm đồng hồ
-                        </button>
+                        </AdminButton>
 
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={() => setStrapLines((prev) => [...prev, newStrapLine()])}
                             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
                         >
                             <Plus className="h-4 w-4" />
                             Thêm dây
-                        </button>
+                        </AdminButton>
 
                         {showAfterCreate ? (
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 onClick={resetFormForNew}
                                 className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
                             >
                                 Tạo phiếu mới
-                            </button>
+                            </AdminButton>
                         ) : null}
                     </div>
 
@@ -1026,14 +1027,14 @@ export default function NewAcqForm({ vendors }: Props) {
                             </div>
                         </div>
 
-                        <button
+                        <AdminButton variant="primary"
                             type="submit"
                             disabled={saving}
                             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                         >
                             <Save className="h-4 w-4" />
                             {saving ? "Đang lưu..." : "Lưu phiếu nhập"}
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </div>

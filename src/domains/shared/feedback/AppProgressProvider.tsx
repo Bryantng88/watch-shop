@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { CheckCircle2, Circle, Loader2, X, XCircle } from "lucide-react";
 
@@ -133,14 +134,14 @@ export function AppProgressProvider({
                             </div>
 
                             {state.cancellable ? (
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     type="button"
                                     onClick={cancel}
                                     className="ml-auto inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
                                 >
                                     <X className="h-4 w-4" />
                                     {state.cancelLabel}
-                                </button>
+                                </AdminButton>
                             ) : null}
                         </div>
 

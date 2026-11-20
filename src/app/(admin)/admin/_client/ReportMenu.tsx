@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useId, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
@@ -107,7 +108,7 @@ export default function ReportMenu({ items, expanded, onNavigate, label = "Báo 
     return (
         <div className={appearance === "group" ? "relative pt-3 first:pt-0" : "relative"}>
             {!expanded && appearance === "group" && <div className="mx-auto h-px w-7 bg-white/10" />}
-            <button
+            <AdminButton variant="contextual" density="compact"
                 ref={trigger}
                 type="button"
                 aria-label={label}
@@ -138,7 +139,7 @@ export default function ReportMenu({ items, expanded, onNavigate, label = "Báo 
                     <span className={appearance === "item" ? "min-w-0 flex-1" : undefined}>{label}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${groupOpen ? "rotate-0" : "-rotate-90"}`} />
                 </> : <MenuIcon size={18} className="shrink-0 opacity-80" />}
-            </button>
+            </AdminButton>
             {open && (expanded ? links : createPortal(links, document.body))}
         </div>
     );

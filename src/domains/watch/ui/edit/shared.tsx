@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { ReactNode, useState } from "react";
@@ -75,7 +76,7 @@ export function Button({
     variant?: "default" | "outline" | "ghost";
 }) {
     return (
-        <button
+        <AdminButton variant={variant === "default" ? "primary" : variant === "ghost" ? "contextual" : "secondary"}
             {...props}
             className={cx(
                 "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
@@ -101,8 +102,9 @@ export function Toggle({
     label: string;
 }) {
     return (
-        <button
+        <AdminButton variant="contextual"
             type="button"
+            aria-pressed={checked}
             onClick={() => onChange(!checked)}
             className={cx(
                 "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
@@ -118,7 +120,7 @@ export function Toggle({
                 )}
             />
             {label}
-        </button>
+        </AdminButton>
     );
 }
 type SectionCardProps = {
@@ -188,7 +190,7 @@ export function SectionCard({
                     {actions}
 
                     {collapsible ? (
-                        <button
+                        <AdminButton iconOnly variant="secondary" density="compact"
                             type="button"
                             onClick={handleToggle}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-700"
@@ -199,7 +201,7 @@ export function SectionCard({
                                     open ? "rotate-180" : "",
                                 ].join(" ")}
                             />
-                        </button>
+                        </AdminButton>
                     ) : null}
                 </div>
             </div>
@@ -245,7 +247,7 @@ export function Dialog({
 
     return (
         <div className="fixed inset-0 z-[100]">
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 aria-label="Close overlay"
                 onClick={onClose}
@@ -271,13 +273,13 @@ export function Dialog({
                             ) : null}
                         </div>
 
-                        <button
+                        <AdminButton iconOnly variant="secondary"
                             type="button"
                             onClick={onClose}
                             className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200"
                         >
                             <X className="h-4 w-4" />
-                        </button>
+                        </AdminButton>
                     </div>
 
                     <div className="px-6 py-5">{children}</div>

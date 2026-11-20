@@ -1,7 +1,8 @@
 "use client";
 
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import * as React from "react";
-import Link from "next/link";
+
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 
@@ -142,13 +143,13 @@ export default function AcquisitionListToolbar({
                             Đã chọn {selectedCount}
                         </span>
                     ) : null}
-                    <Link
+                    <AdminLinkAction variant="primary"
                         href={strapOnly ? "/admin/acquisitions/accessories/new" : "/admin/acquisitions/new"}
                         className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                     >
                         <Plus className="h-4 w-4" />
                         {strapOnly ? "Tạo phiếu phụ kiện" : "Tạo phiếu nhập"}
-                    </Link>
+                    </AdminLinkAction>
                 </>
             }
         />

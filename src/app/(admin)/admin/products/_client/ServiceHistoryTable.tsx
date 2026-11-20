@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
+
 import DotLabel from "../../__components/DotLabel";
 
 export type ServiceHistoryLog = {
@@ -115,12 +116,12 @@ export default function ServiceHistoryTable({ rows }: { rows: ServiceHistoryRow[
                                 <td className="px-4 py-4">{row.order?.refNo || "-"}</td>
                                 <td className="px-4 py-4">
                                     {detailHref ? (
-                                        <Link
+                                        <AdminLinkAction variant="secondary" density="compact"
                                             href={detailHref}
                                             className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
                                         >
                                             Mở chi tiết
-                                        </Link>
+                                        </AdminLinkAction>
                                     ) : (
                                         <span className="text-gray-400">-</span>
                                     )}

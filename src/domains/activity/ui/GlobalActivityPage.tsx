@@ -1,5 +1,7 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import Image from "next/image";
-import Link from "next/link";
+
 import {
   Activity,
   ArrowUpRight,
@@ -189,9 +191,9 @@ export default function GlobalActivityPage({ data }: Props) {
             <option value="30D">30 ngày qua</option>
             <option value="ALL">Toàn bộ</option>
           </select>
-          <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800">
+          <AdminButton variant="primary" type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800">
             <Filter className="h-4 w-4" /> Lọc
-          </button>
+          </AdminButton>
         </div>
       </form>
 
@@ -267,9 +269,9 @@ export default function GlobalActivityPage({ data }: Props) {
                       </div>
                     </td>
                     <td className="px-4 py-4 text-center align-top">
-                      <Link href={item.targetHref} title="Mở đối tượng" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700">
+                      <AdminLinkAction variant="secondary" density="compact" href={item.targetHref} title="Mở đối tượng" className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700">
                         <ArrowUpRight className="h-4 w-4" />
-                      </Link>
+                      </AdminLinkAction>
                     </td>
                   </tr>
                 );
@@ -291,12 +293,12 @@ export default function GlobalActivityPage({ data }: Props) {
             Hiển thị {data.items.length} / {data.pagination.total.toLocaleString("vi-VN")} activity · Trang {data.pagination.page}/{data.pagination.totalPages}
           </span>
           <div className="flex items-center gap-2">
-            <Link aria-disabled={data.pagination.page <= 1} href={hrefWithPage(data, Math.max(1, data.pagination.page - 1))} className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold ${data.pagination.page <= 1 ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 text-slate-700 hover:border-violet-200 hover:text-violet-700"}`}>
+            <AdminLinkAction variant="secondary" density="compact" aria-disabled={data.pagination.page <= 1} href={hrefWithPage(data, Math.max(1, data.pagination.page - 1))} className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold ${data.pagination.page <= 1 ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 text-slate-700 hover:border-violet-200 hover:text-violet-700"}`}>
               <ChevronLeft className="h-4 w-4" /> Trước
-            </Link>
-            <Link aria-disabled={data.pagination.page >= data.pagination.totalPages} href={hrefWithPage(data, Math.min(data.pagination.totalPages, data.pagination.page + 1))} className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold ${data.pagination.page >= data.pagination.totalPages ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 text-slate-700 hover:border-violet-200 hover:text-violet-700"}`}>
+            </AdminLinkAction>
+            <AdminLinkAction variant="secondary" density="compact" aria-disabled={data.pagination.page >= data.pagination.totalPages} href={hrefWithPage(data, Math.min(data.pagination.totalPages, data.pagination.page + 1))} className={`inline-flex h-9 items-center gap-1 rounded-lg border px-3 text-xs font-semibold ${data.pagination.page >= data.pagination.totalPages ? "pointer-events-none border-slate-100 text-slate-300" : "border-slate-200 text-slate-700 hover:border-violet-200 hover:text-violet-700"}`}>
               Sau <ChevronRight className="h-4 w-4" />
-            </Link>
+            </AdminLinkAction>
           </div>
         </div>
       </section>

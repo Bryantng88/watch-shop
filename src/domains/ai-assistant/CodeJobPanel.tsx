@@ -1,4 +1,5 @@
 'use client';
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { CodeDraft, CodeJob } from './code-contract';
 const labels: Record<string, string> = {
   QUEUED: 'Đang chờ worker',
@@ -50,14 +51,14 @@ export default function CodeJobPanel({
           <p className="mt-2 text-xs text-slate-500">
             Worker chạy trong checkout riêng; chưa merge hoặc deploy.
           </p>
-          <button
+          <AdminButton variant="primary"
             type="button"
             disabled={busy || !canRun}
             onClick={() => onCommand('approve', { revision: draft.revision })}
             className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
           >
             Bắt đầu sửa và mở PR
-          </button>
+          </AdminButton>
         </section>
       )}
       {job && (
@@ -103,17 +104,17 @@ export default function CodeJobPanel({
             {['QUEUED', 'RUNNING', 'MERGE_QUEUED', 'DEPLOY_QUEUED'].includes(
               job.status,
             ) && (
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={busy}
                 onClick={() => onCommand('cancel', { jobId: job.id })}
                 className="rounded-lg border px-3 py-2 text-sm"
               >
                 Dừng lượt chạy
-              </button>
+              </AdminButton>
             )}
             {job.status === 'PR_OPEN' && (
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={busy || !canMerge}
                 onClick={() =>
@@ -122,10 +123,10 @@ export default function CodeJobPanel({
                 className="rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-700 disabled:opacity-40"
               >
                 Merge PR #{job.prNumber} @ {job.headSha?.slice(0, 8)}
-              </button>
+              </AdminButton>
             )}
             {['PR_OPEN', 'MERGED', 'DEPLOY_FAILED'].includes(job.status) && (
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 disabled={busy || !canDeploy}
                 onClick={() =>
@@ -137,12 +138,12 @@ export default function CodeJobPanel({
                 className="rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-700 disabled:opacity-40"
               >
                 Deploy staging @ {(job.mergedSha || job.headSha)?.slice(0, 8)}
-              </button>
+              </AdminButton>
             )}
             {canDeployProduction &&
               job.mergedSha &&
               ['MERGED', 'DEPLOYED'].includes(job.status) && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={busy}
                   onClick={() => {
@@ -159,7 +160,7 @@ export default function CodeJobPanel({
                   className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-700"
                 >
                   Deploy production @ {job.mergedSha.slice(0, 8)}
-                </button>
+                </AdminButton>
               )}
           </div>
           {job.status === 'PR_OPEN' && !canMerge && (

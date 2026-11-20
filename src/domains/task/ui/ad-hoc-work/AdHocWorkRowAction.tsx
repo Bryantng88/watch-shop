@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, ClipboardPlus, UserRound, X } from "lucide-react";
@@ -145,7 +146,7 @@ export function useAdHocWorkRowAction<T>(
                     : "Việc tự do · Không gắn đối tượng nghiệp vụ"}
                 </p>
               </div>
-              <button type="button" onClick={close} className="rounded-full p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
+              <AdminButton variant="secondary" type="button" onClick={close} className="rounded-full p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></AdminButton>
             </div>
             <div className="space-y-4 px-5 py-4">
               <label className="block">
@@ -154,7 +155,7 @@ export function useAdHocWorkRowAction<T>(
               </label>
               <div className="relative">
                 <span className="text-sm font-medium text-slate-700">Người xử lý</span>
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => setAssigneeOpen((open) => !open)}
                   disabled={usersLoading}
@@ -165,23 +166,23 @@ export function useAdHocWorkRowAction<T>(
                     {usersLoading ? "Đang tải…" : selectedAssignee ? userLabel(selectedAssignee) : "Chưa gán"}
                   </span>
                   <ChevronDown className="h-4 w-4 text-slate-400" />
-                </button>
+                </AdminButton>
                 {assigneeOpen ? (
                   <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
-                    <button type="button" onClick={() => { setAssigneeId(""); setAssigneeOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-slate-50">
+                    <AdminButton variant="contextual" type="button" onClick={() => { setAssigneeId(""); setAssigneeOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-slate-50">
                       <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100"><UserRound className="h-3.5 w-3.5 text-slate-400" /></span>
                       <span className="flex-1">Chưa gán</span>
                       {!assigneeId ? <Check className="h-4 w-4 text-violet-600" /> : null}
-                    </button>
+                    </AdminButton>
                     {users.map((user) => (
-                      <button key={user.id} type="button" onClick={() => { setAssigneeId(user.id); setAssigneeOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-violet-50">
+                      <AdminButton variant="contextual" key={user.id} type="button" onClick={() => { setAssigneeId(user.id); setAssigneeOpen(false); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-violet-50">
                         <UserAvatar user={user} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium text-slate-800">{userLabel(user)}</span>
                           {user.name && user.email ? <span className="block truncate text-xs text-slate-400">{user.email}</span> : null}
                         </span>
                         {assigneeId === user.id ? <Check className="h-4 w-4 text-violet-600" /> : null}
-                      </button>
+                      </AdminButton>
                     ))}
                   </div>
                 ) : null}
@@ -193,8 +194,8 @@ export function useAdHocWorkRowAction<T>(
               </label>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
-              <button type="button" onClick={close} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Hủy</button>
-              <button type="button" onClick={submit} disabled={pending || !request.trim()} className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Tạo việc</button>
+              <AdminButton variant="secondary" type="button" onClick={close} disabled={pending} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600">Hủy</AdminButton>
+              <AdminButton variant="primary" type="button" onClick={submit} disabled={pending || !request.trim()} className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Tạo việc</AdminButton>
             </div>
           </div>
         </div>,

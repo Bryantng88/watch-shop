@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListChecks } from "lucide-react";
@@ -331,22 +332,22 @@ export default function ServiceRequestListClient(props: Props) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                         onClick={openGlobalIssueBoard}
                     >
                         <ListChecks className="h-4 w-4" />
                         Mở Issue Board
-                    </button>
+                    </AdminButton>
 
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                         onClick={() => router.push("/admin/orders")}
                     >
                         ← Orders
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
 

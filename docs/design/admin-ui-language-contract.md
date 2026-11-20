@@ -1043,3 +1043,47 @@ Không hover-lift/translate/scale nên hit area và hàng dữ liệu không d�
 Focus ring, pending, disabled và target coarse giữ contract hiện hữu. Disabled
 bỏ gradient/shadow; trạng thái không có lệnh được phép vẫn là text/badge phẳng,
 không render như nút. Không đổi nhãn, quyền, callback mở editor hoặc command.
+
+## Shared buttons across admin — 2026-11-20
+
+All admin routes, their reachable shared controls, forms, dialogs, drawers and
+portal menus use `AdminButton`, `AdminLinkAction` (Next navigation),
+`AdminAnchorAction` (native anchors) or an adapter backed by them.
+`AsyncActionButton` retains pending, disabled, spinner and pending label behavior;
+form `Button` and `AdminManagementButton` map their existing semantic variants.
+Import native primitives from `@/domains/shared/ui/admin-design-contract`; import
+`AdminLinkAction` from `@/domains/shared/ui/admin-design-contract/AdminLinkAction`.
+The separate Next.js entry keeps router code out of native button consumers.
+
+`AdminButtonProvider` wraps the admin providers, so the same appearance follows
+React portals. Shared controls outside that provider retain their public UI.
+Storefront is outside this migration. The provider does not supply callbacks,
+permissions, confirmation, mutation, navigation or form behavior.
+
+| Variant | Purpose |
+| --- | --- |
+| primary | Main action: blue surface, subtle top highlight and lower shadow |
+| secondary | Supporting action: neutral raised surface |
+| danger | Destructive action: rose surface, existing confirmation unchanged |
+| contextual | Tabs, navigation, calendar/content cells, image choices, menu items, text/close controls; retain their local semantic layout and selection states |
+
+Use `density="compact"` for 32px list controls, default 40px for forms/toolbars;
+coarse pointer action targets are at least 44px. `iconOnly` gives a square target
+and requires an accessible label. `AdminDisclosureSummary` keeps native
+`details/summary` behavior and the flat disclosure variant. Passive statuses stay
+flat. A control containing a record/image is not a raised action card.
+
+Tokens belong to `ADMIN_UI_FOUNDATION` and `ADMIN_BUTTON_SURFACE_STYLE`; no new
+page-local gradient/shadow recipes. Shared CSS owns action typography, border,
+radius and finish; legacy layout classes remain during this mechanical migration.
+Inline presentation colors cannot override action variants. Explicit contextual
+variants preserve domain geometry and selection semantics. Hover darkens softly;
+press uses an inset shadow, with no vertical movement. Focus-visible has a 2px
+blue ring. Disabled/pending removes the raised finish and prevents duplicate
+submission through the existing disabled logic. Preserve native `type` defaults,
+formAction, refs, callbacks and ARIA attributes.
+
+Run `npm run check:admin-buttons` to traverse admin imports, reject native button
+or summary controls outside the primitive, and check client directive placement.
+New adapters must be backed by these primitives. This migration standardizes
+controls; it does not claim that every legacy page layout meets all v2 recipes.

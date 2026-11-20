@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { X } from "lucide-react";
 import TechnicalIssuesBoardClient from "./TechnicalIssuesBoardClient";
@@ -74,14 +75,14 @@ export default function ServiceIssueManageModal({
             </div>
           </div>
 
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={onClose}
             className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
             aria-label="Đóng"
           >
             <X className="h-5 w-5" />
-          </button>
+          </AdminButton>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-5">

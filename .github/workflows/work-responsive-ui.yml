@@ -2,6 +2,7 @@ name: Responsive personal work UI
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/personal-work/ui/**'
       - 'src/domains/personal-work/server/google-calendar*'
       - 'src/app/api/admin/personal-work/calendar/**'

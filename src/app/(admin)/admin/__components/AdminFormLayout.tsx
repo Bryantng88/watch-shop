@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import Link from "next/link";
 import { ChevronRight, Save } from "lucide-react";
 
@@ -90,12 +92,12 @@ export function AdminHeader({
 
                 <div className="flex flex-col items-stretch gap-3 lg:items-end">
                     {rightStats}
-                    <Link
+                    <AdminLinkAction variant="secondary"
                         href={backHref}
                         className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50"
                     >
                         {backLabel}
-                    </Link>
+                    </AdminLinkAction>
                 </div>
             </div>
         </section>
@@ -161,7 +163,7 @@ export function AdminStickySubmit({
                 <div className="flex flex-wrap items-center gap-2">
                     {left}
                     {onCancelHref ? (
-                        <Link
+                        <AdminLinkAction variant="secondary"
                             href={onCancelHref}
                             className={ui(
                                 "inline-flex items-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50",
@@ -169,21 +171,21 @@ export function AdminStickySubmit({
                             )}
                         >
                             Hủy
-                        </Link>
+                        </AdminLinkAction>
                     ) : null}
                 </div>
 
                 <div className="flex items-center gap-3">
                     {total ? <div className="hidden text-right sm:block">{total}</div> : null}
 
-                    <button
+                    <AdminButton variant="primary"
                         type="submit"
                         disabled={saving}
                         className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                     >
                         <Save className="h-4 w-4" />
                         {saving ? "Đang lưu..." : submitLabel}
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
         </div>

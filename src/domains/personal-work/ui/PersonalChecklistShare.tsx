@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import { Share2, X, Loader2 } from "lucide-react";
 import type { PersonalWorkShare, PersonalWorkUser } from "../shared/personal-work.types";
@@ -51,12 +52,12 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
   }
 
   return <span ref={root} className="relative shrink-0">
-    <button ref={trigger} type="button" aria-label="Chia sẻ đầu việc" aria-expanded={open} aria-haspopup="dialog"
+    <AdminButton iconOnly variant="secondary" density="compact" ref={trigger} type="button" aria-label="Chia sẻ đầu việc" aria-expanded={open} aria-haspopup="dialog"
       title={shares.length ? shares.map(s => s.user.name || s.user.email).join(", ") : "Chia sẻ đầu việc"}
       onClick={() => { if (!busy) { setDraft(shares); setError(""); setOpen(!open); } }}
       className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md hover:bg-slate-100 ${shares.length ? "text-violet-600" : "text-slate-400"}`}>
       <Share2 className="h-3.5 w-3.5" />{shares.length > 0 && <span className="text-xs">{shares.length}</span>}
-    </button>
+    </AdminButton>
     {open && <span role="dialog" aria-label="Chia sẻ đầu việc" aria-busy={busy}
       className="absolute right-0 top-full z-40 mt-1 block w-64 max-w-[80vw] rounded-lg border border-slate-200 bg-white p-2 shadow-lg">
       <span className="flex items-center gap-1">
@@ -67,9 +68,9 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
           <option value="">+ Chia sẻ đầu việc</option>
           {users.filter(u => !draft.some(s => s.user.id === u.id)).map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
         </select>
-        <button type="button" disabled={busy} aria-label="Đóng chia sẻ đầu việc" onClick={() => { setOpen(false); trigger.current?.focus(); }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-slate-50">
+        <AdminButton iconOnly variant="secondary" density="compact" type="button" disabled={busy} aria-label="Đóng chia sẻ đầu việc" onClick={() => { setOpen(false); trigger.current?.focus(); }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-slate-50">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-        </button>
+        </AdminButton>
       </span>
       {draft.length > 0 && <span className="mt-1 block max-h-48 overflow-y-auto">{draft.map(share => {
         const name = share.user.name || share.user.email;
@@ -80,8 +81,8 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
             className="h-8 max-w-28 rounded-md bg-transparent text-xs text-slate-500 outline-none focus:ring-2 focus:ring-slate-200">
             <option value="VIEWER">Chỉ xem</option><option value="EDITOR">Cập nhật</option>
           </select>
-          <button type="button" disabled={busy} aria-label={`Bỏ chia sẻ đầu việc với ${name}`} onClick={() => void save(draft.filter(s => s.user.id !== share.user.id))}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600"><X className="h-3 w-3" /></button>
+          <AdminButton iconOnly variant="secondary" density="compact" type="button" disabled={busy} aria-label={`Bỏ chia sẻ đầu việc với ${name}`} onClick={() => void save(draft.filter(s => s.user.id !== share.user.id))}
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600"><X className="h-3 w-3" /></AdminButton>
         </span>;
       })}</span>}
       {error && <span role="alert" className="mt-1 block px-2 text-xs text-rose-700">{error}</span>}

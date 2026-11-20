@@ -1,3 +1,4 @@
+import { AdminAnchorAction, AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
 import {
     Activity,
@@ -51,9 +52,9 @@ const tabs = [
 
 function ActionButton({ children }: { children: React.ReactNode }) {
     return (
-        <button type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+        <AdminButton variant="secondary" density="compact" type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
@@ -73,9 +74,9 @@ export default function WatchHeaderUiTestPage() {
                 </nav>
                 <div className="flex items-center gap-2">
                     <ActionButton><Wrench className="h-4 w-4" />Mở Service Board</ActionButton>
-                    <button type="button" aria-label="Thao tác khác" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50">
+                    <AdminButton iconOnly variant="secondary" density="compact" type="button" aria-label="Thao tác khác" className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50">
                         <MoreHorizontal className="h-4 w-4" />
-                    </button>
+                    </AdminButton>
                 </div>
             </div>
 
@@ -88,9 +89,9 @@ export default function WatchHeaderUiTestPage() {
                                 <span className="absolute top-11 text-[9px] font-bold tracking-widest text-slate-500">GRAND SEIKO</span>
                             </div>
                             <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                                <button type="button" className="inline-flex h-8 items-center gap-2 rounded-lg bg-slate-950/90 px-3 text-[11px] font-semibold text-white backdrop-blur">
+                                <AdminButton variant="primary" density="compact" type="button" className="inline-flex h-8 items-center gap-2 rounded-lg bg-slate-950/90 px-3 text-[11px] font-semibold text-white backdrop-blur">
                                     <Camera className="h-3.5 w-3.5" />Xem gallery
-                                </button>
+                                </AdminButton>
                                 <span className="rounded-lg bg-slate-950/75 px-2.5 py-2 text-[10px] font-semibold text-white backdrop-blur">12 ảnh</span>
                             </div>
                         </div>
@@ -105,9 +106,9 @@ export default function WatchHeaderUiTestPage() {
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
                                         {[Star, Pencil, MoreHorizontal].map((Icon, index) => (
-                                            <button key={index} type="button" aria-label={["Theo dõi", "Chỉnh sửa", "Thao tác khác"][index]} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+                                            <AdminButton iconOnly variant="secondary" density="compact" key={index} type="button" aria-label={["Theo dõi", "Chỉnh sửa", "Thao tác khác"][index]} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
                                                 <Icon className="h-4 w-4" />
-                                            </button>
+                                            </AdminButton>
                                         ))}
                                     </div>
                                 </div>
@@ -164,9 +165,9 @@ export default function WatchHeaderUiTestPage() {
                         <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Giá bán hiện tại</div>
                         <div className="mt-4 text-[25px] font-semibold tracking-[-0.04em] text-slate-950">20.000.000 VND</div>
                         <div className="mt-2 text-[11px] leading-5 text-slate-500">Cập nhật gần nhất: 10:35, 17/07/2026</div>
-                        <a href="#pricing" className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-violet-300 text-xs font-semibold text-violet-700 hover:bg-violet-50">
+                        <AdminAnchorAction variant="secondary" density="compact" href="#pricing" className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-violet-300 text-xs font-semibold text-violet-700 hover:bg-violet-50">
                             <BadgeDollarSign className="h-4 w-4" />Chỉnh sửa giá
-                        </a>
+                        </AdminAnchorAction>
                     </section>
 
                     <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
@@ -187,16 +188,16 @@ export default function WatchHeaderUiTestPage() {
                             </div>
                         </div>
 
-                        <button type="button" className="mt-4 h-9 w-full rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Xem chi tiết</button>
+                        <AdminButton variant="secondary" density="compact" type="button" className="mt-4 h-9 w-full rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50">Xem chi tiết</AdminButton>
                     </section>
                 </aside>
             </div>
 
             <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2 shadow-[0_8px_24px_rgba(15,23,42,0.03)]">
                 {tabs.map(({ label, icon: Icon }, index) => (
-                    <button key={label} type="button" className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold ${index === 0 ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200" : "text-slate-600 hover:bg-slate-50"}`}>
+                    <AdminButton variant="secondary" density="compact" key={label} type="button" className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold ${index === 0 ? "bg-violet-50 text-violet-700 ring-1 ring-violet-200" : "text-slate-600 hover:bg-slate-50"}`}>
                         <Icon className="h-3.5 w-3.5" />{label}
-                    </button>
+                    </AdminButton>
                 ))}
             </div>
 
@@ -211,9 +212,9 @@ export default function WatchHeaderUiTestPage() {
                             <p className="mt-1 text-xs text-slate-500">Giá bán, giá vốn và các chi phí vận hành của Watch.</p>
                         </div>
                     </div>
-                    <button type="button" className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800">
+                    <AdminButton variant="primary" density="compact" type="button" className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-xs font-semibold text-white shadow-sm hover:bg-slate-800">
                         <Save className="h-4 w-4" />Lưu thay đổi
-                    </button>
+                    </AdminButton>
                 </div>
 
                 <div className="grid gap-5 p-5 xl:grid-cols-[310px_minmax(0,1fr)]">

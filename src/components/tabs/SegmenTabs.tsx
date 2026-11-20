@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 type Tab = {
     key: string;
     label: string;
@@ -22,7 +23,7 @@ export default function SegmentTabs({
                     const isActive = t.key === active;
 
                     return (
-                        <button
+                        <AdminButton variant="contextual"
                             key={t.key}
                             type="button"
                             onClick={() => onChange(t.key)}
@@ -43,7 +44,7 @@ export default function SegmentTabs({
                                     {t.count}
                                 </span>
                             )}
-                        </button>
+                        </AdminButton>
                     );
                 })}
             </div>

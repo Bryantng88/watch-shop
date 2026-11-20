@@ -123,3 +123,4 @@ The Operations hub hides legacy Space breadcrumbs, sharing and workspace-create
 controls; area creation is placed alongside the working-area heading, and count
 plus refresh stay inline. Source identifiers, backend models and permissions are
 unchanged. Website uses the same split adapter while keeping document save actions.
+

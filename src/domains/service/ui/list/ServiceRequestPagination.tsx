@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 type Props = {
     total: number;
     page: number;
@@ -15,22 +16,22 @@ export default function ServiceRequestPagination({ total, page, totalPages, onPa
             </div>
 
             <div className="flex items-center gap-2">
-                <button
+                <AdminButton variant="secondary"
                     type="button"
                     className="rounded-2xl border border-slate-200 px-4 py-2 font-medium transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={page <= 1}
                     onClick={() => onPageChange(Math.max(1, page - 1))}
                 >
                     ← Trước
-                </button>
-                <button
+                </AdminButton>
+                <AdminButton variant="secondary"
                     type="button"
                     className="rounded-2xl border border-slate-200 px-4 py-2 font-medium transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={page >= totalPages}
                     onClick={() => onPageChange(Math.min(totalPages, page + 1))}
                 >
                     Sau →
-                </button>
+                </AdminButton>
             </div>
         </div>
     );

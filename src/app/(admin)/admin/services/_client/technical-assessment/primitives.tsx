@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { cx } from "./utils"
 import { HealthStatus } from "./types";
@@ -75,7 +76,7 @@ export function Button({
     };
 
     return (
-        <button
+        <AdminButton variant="secondary"
             {...props}
             className={cx(
                 "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
@@ -84,7 +85,7 @@ export function Button({
             )}
         >
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
@@ -177,7 +178,7 @@ export function StatusToggle({
 
     return (
         <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
-            <button
+            <AdminButton variant="secondary"
                 type="button"
                 onClick={() => onChange("GOOD")}
                 className={cx(
@@ -188,8 +189,8 @@ export function StatusToggle({
                 )}
             >
                 {goodText}
-            </button>
-            <button
+            </AdminButton>
+            <AdminButton variant="secondary"
                 type="button"
                 onClick={() => onChange("ISSUE")}
                 className={cx(
@@ -200,7 +201,7 @@ export function StatusToggle({
                 )}
             >
                 {issueText}
-            </button>
+            </AdminButton>
         </div>
     );
 }

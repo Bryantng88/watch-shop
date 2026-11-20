@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useId, type ReactNode } from "react";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals/operational-domain-presentation";
 import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
@@ -50,19 +51,19 @@ export function OperationWorkspaceLayout({
             const active = group.key === activeGroup;
             const Icon = operationalDomainPresentation(group.domainKey ?? group.key).icon;
             return <div key={group.key} className={styles.group}>
-              <button type="button" aria-current={active ? "page" : undefined}
+              <AdminButton variant="secondary" type="button" aria-current={active ? "page" : undefined}
                 className={styles.groupButton} data-has-stages={active && stages.length > 0 || undefined}
                 onClick={() => onGroupChange(group.key)}>
                 <Icon className={styles.icon} aria-hidden="true" />
                 <span>{group.label}</span>
-              </button>
+              </AdminButton>
               {active && stages.length > 0 && <div className={styles.stages} role="group" aria-label={`Giai đoạn ${group.label}`}>
-                {stages.map((stage) => <button key={stage.key} type="button"
+                {stages.map((stage) => <AdminButton variant="contextual" key={stage.key} type="button"
                   className={styles.stageButton} aria-pressed={stage.key === activeStage}
                   onClick={() => onStageChange(stage.key)}>
                   <span>{stage.label}</span>
                   {stage.count !== undefined && <span className={styles.count}>{countLabel(stage.count)}</span>}
-                </button>)}
+                </AdminButton>)}
               </div>}
             </div>;
           })}

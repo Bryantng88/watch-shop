@@ -1,4 +1,5 @@
 'use client';
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from 'react';
 
 type InstallEvent = Event & {
@@ -145,7 +146,7 @@ export default function BenPwaRuntime() {
         </p>
       )}
       {!installed && (
-        <button
+        <AdminButton variant="secondary"
           type="button"
           disabled={installing}
           onClick={() => void install()}
@@ -156,7 +157,7 @@ export default function BenPwaRuntime() {
             : installable
               ? 'Cài Ben trên thiết bị'
               : 'Cài Ben'}
-        </button>
+        </AdminButton>
       )}
       {help && !installed && (
         <p className="pb-2 leading-5">
@@ -168,19 +169,19 @@ export default function BenPwaRuntime() {
       {workerError && (
         <p role="status" className="py-2">
           Chưa chuẩn bị được bản cài. Bạn vẫn có thể dùng chat khi có mạng.{' '}
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={() => setAttempt((value) => value + 1)}
             className="min-h-11 text-blue-700 underline"
           >
             Thử lại
-          </button>
+          </AdminButton>
         </p>
       )}
       {updateReady && (
         <p role="status">
           Có bản cập nhật.{' '}
-          <button
+          <AdminButton variant="secondary"
             type="button"
             className="min-h-11 text-blue-700 underline"
             onClick={() => {
@@ -189,7 +190,7 @@ export default function BenPwaRuntime() {
             }}
           >
             Tải lại Ben
-          </button>
+          </AdminButton>
         </p>
       )}
     </section>

@@ -28,6 +28,8 @@ const esbuild = require("esbuild"),
       {
         name: "fixture-next-image",
         setup(build) {
+          build.onResolve({ filter: /^next\/link$/ }, () => ({ path: "next-link", namespace: "fixture" }));
+          build.onLoad({ filter: /^next-link$/, namespace: "fixture" }, () => ({ contents: 'import {createElement,forwardRef} from "react";export default forwardRef(function Link({prefetch,replace,scroll,onNavigate,...props},ref){return createElement("a",{...props,ref})})', loader: "jsx", resolveDir: root }));
           build.onResolve({ filter: /^next\/image$/ }, () => ({
             path: "next-image",
             namespace: "fixture",
@@ -79,6 +81,7 @@ const esbuild = require("esbuild"),
       }),
       errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    page.on("pageerror", error => console.error("TI fixture:", error.message));
     await page.goto(origin + "/?view=technical-issue-flow&tiLayout=list");
     await page
       .getByRole("table", { name: "Danh sách TI", exact: true })

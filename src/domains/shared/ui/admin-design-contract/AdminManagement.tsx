@@ -32,7 +32,7 @@ export function AdminManagementSection({ title, description, actions, children }
   </section>;
 }
 export function AdminManagementButton({ primary, pending, pendingLabel, className = "", style, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; pending?: boolean; pendingLabel?: string }) {
-  return <AsyncActionButton type="button" className={`${styles.button} ${primary ? ADMIN_PRIMARY_ACTION : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} style={{ ...(primary ? ADMIN_PRIMARY_ACTION_STYLE : {}), ...style }} {...props} />;
+  return <AsyncActionButton variant={primary ? "primary" : "secondary"} type="button" className={`${styles.button} ${primary ? ADMIN_PRIMARY_ACTION : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} style={{ ...(primary ? ADMIN_PRIMARY_ACTION_STYLE : {}), ...style }} {...props} />;
 }
 export function AdminManagementField({ label, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
   const id = useId();

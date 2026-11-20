@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -157,19 +158,19 @@ export default function RowActionsMenu({
 
     if (!visibleActions.length) {
         return (
-            <button
+            <AdminButton iconOnly variant="secondary" density="compact"
                 type="button"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-300"
                 disabled
             >
                 <MoreHorizontal className="h-4.5 w-4.5" />
-            </button>
+            </AdminButton>
         );
     }
 
     return (
         <div ref={wrapRef} className="relative inline-flex overflow-visible">
-            <button
+            <AdminButton iconOnly variant="secondary" density="compact"
                 ref={buttonRef}
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
@@ -182,7 +183,7 @@ export default function RowActionsMenu({
                 aria-expanded={open}
             >
                 <MoreHorizontal className="h-4.5 w-4.5" />
-            </button>
+            </AdminButton>
 
             {open && menuPosition ? createPortal(
                 <div
@@ -239,7 +240,7 @@ export default function RowActionsMenu({
                         }
 
                         return (
-                            <button
+                            <AdminButton variant="contextual"
                                 key={key}
                                 type="button"
                                 disabled={item.disabled}
@@ -252,7 +253,7 @@ export default function RowActionsMenu({
                                 role="menuitem"
                             >
                                 {content}
-                            </button>
+                            </AdminButton>
                         );
                     })}
                 </div>

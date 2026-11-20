@@ -16,3 +16,4 @@ export function uiFeedbackMessage(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : "";
   return message && !/unexpected|syntaxerror|failed to|fetch failed|networkerror|json|<html/i.test(message) ? message : fallback;
 }
+

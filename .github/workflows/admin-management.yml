@@ -2,6 +2,7 @@ name: Admin directory and website library
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/contacts/**'
       - 'src/domains/storefront/media/**'
       - 'src/domains/storefront/content/StorefrontManager.tsx'
