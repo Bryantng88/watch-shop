@@ -387,7 +387,7 @@ export default function StorefrontManager({
       if(openPreview)setPreview(`/storefront-preview?${record.kind==="ARTICLE"?`article=${record.id}&`:""}v=${result.record.revision}`);
       // The mutation result is authoritative. A separate list refresh must not
       // turn a committed publication into a false save failure.
-      if(record.kind==="ARTICLE")setArticles(rows=>rows.map(row=>row.id===result.record.id?{id:row.id,content:result.record.draft,publishedAt:result.record.publishedAt}:row));
+      if(result.record.kind==="ARTICLE"){const saved=result.record;setArticles(rows=>rows.map(row=>row.id===saved.id?{id:row.id,content:saved.draft,publishedAt:saved.publishedAt}:row));}
       return result;
     }});
   }
