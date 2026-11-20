@@ -27,6 +27,7 @@ import {
 
 import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
+import styles from "./AdminSidebar.module.css";
 import { DIRECTORY_READ_PERMISSIONS, DIRECTORY_ROUTES } from "@/domains/contacts/shared/directory-navigation";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -410,7 +411,7 @@ export default function AdminSidebar({
                     ) : null}
                 </div> : null}
 
-                <nav aria-label="Điều hướng quản trị" className="relative z-50 min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-3">
+                <nav aria-label="Điều hướng quản trị" data-collapsed={!isMobile && !desktopExpanded && !wideScreen} className={`${styles.navigation} relative z-50 min-h-0 flex-1 space-y-1 px-3 py-3`}>
                     {allowedNav.map((entry, index) => {
                         if (entry.type === "group") {
                             if(entry.label === "Báo cáo") return <ReportMenu key="reports" items={entry.children||[]} expanded={isMobile||desktopExpanded||wideScreen} onNavigate={()=>{if(isMobile)setOpen(false);}}/>;
