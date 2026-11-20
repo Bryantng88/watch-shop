@@ -947,3 +947,21 @@ Không hover-lift/translate/scale nên hit area và hàng dữ liệu không d�
 Focus ring, pending, disabled và target coarse giữ contract hiện hữu. Disabled
 bỏ gradient/shadow; trạng thái không có lệnh được phép vẫn là text/badge phẳng,
 không render như nút. Không đổi nhãn, quyền, callback mở editor hoặc command.
+
+### Unified Operations pane title and list presentation
+
+Heading vùng làm việc ghép tên khu vực và stage đang chọn bằng dấu –,
+ví dụ “Sản xuất Media – Chụp ảnh” hoặc “Thanh toán – Cần đối soát”. Không
+lặp stage thành một heading riêng trên bảng; board không ghép stage khi không
+có stage selection. Page identity Vận hành và CTA theo khu vực giữ vị trí cũ.
+
+Flow lists trong hub OPERATION dùng chung AdminOperationList: hàng phẳng,
+thumbnail 36px, title 14/20 semibold, metadata 12/16, avatar sm, timestamp và
+liên kết hoạt động cùng cột, selection/focus và nút phụ trung tính. Thanh toán
+giữ các cột đối tượng, loại khoản và số tiền; phương thức dùng label domain,
+không đổi tiền tệ, dấu thu/chi, quyền hoặc callback đối soát. Bảng rộng cuộn
+ngang trong pane, không làm body tràn. Loading/empty giữ đúng cấu trúc cột.
+Các luồng vận chuyển/đơn hàng dùng cùng adapter, giữ command và editor cũ;
+workspace index/việc phát sinh chuẩn hóa heading và khoảng cách hàng. Không
+tuyên bố đã thiết kế lại board hoặc các modal nghiệp vụ trong phạm vi này.
+Các route chuyên biệt ngoài hub tiếp tục dùng presentation hiện hữu.

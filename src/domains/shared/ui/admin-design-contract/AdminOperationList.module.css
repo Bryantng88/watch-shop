@@ -1,7 +1,22 @@
 .mediaScroll { position: relative; max-width: 100%; overflow-x: auto; }
 .mediaTable { width: 100%; min-width: 760px; table-layout: fixed; border-collapse: collapse; }
 .mediaTable.withProgress { min-width: 960px; }
-.mediaTable.withChannels { min-width: 1040px; }
+.mediaTable.withChannels { min-width: 992px; }
+.mediaTable.withPayment { min-width: 1120px; }
+.mediaTable.withPayment th:nth-child(2) { width: 224px; }
+.mediaTable .counterpartyColumn { width: 176px; }
+.mediaTable .purposeColumn { width: 144px; }
+.mediaTable .amountColumn { width: 160px; }
+.mediaTable td { font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); color: var(--admin-list-body); }
+.mediaTable.withPayment td { overflow-wrap: anywhere; }
+.workspaceList > div:first-child { background: transparent; font-weight: 500; text-transform: none; letter-spacing: normal; border-color: var(--admin-list-divider); padding: 12px; }
+.workspaceList > div:nth-child(2) { border-color: var(--admin-list-divider); }
+.workspaceList > div:nth-child(2) > div { padding: 12px; gap: 12px; border-color: var(--admin-list-divider); }
+.bulkBar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--admin-list-divider); background: var(--admin-list-softSurface); }
+.bulkAction { min-height: var(--admin-list-action-height); padding: 0 var(--admin-list-action-padding); border: 1px solid var(--admin-list-controlBorder); border-radius: var(--admin-list-action-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font-size: var(--admin-list-meta-size); font-weight: 600; }
+.bulkAction:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
+.bulkAction:disabled { opacity: .5; }
+@media(pointer:coarse) { .bulkAction { min-height: var(--admin-list-touch); } }
 .mediaTable th, .mediaTable td { padding: var(--admin-list-cell-padding); vertical-align: middle; }
 .mediaTable thead tr { background: transparent; border-bottom-color: var(--admin-list-divider); color: var(--admin-list-muted); font-size: 12px; font-weight: 500; letter-spacing: normal; text-transform: none; }
 .mediaTable th { font-weight: 500; white-space: nowrap; }
@@ -9,7 +24,7 @@
 .mediaTable th:first-child, .mediaTable td:first-child { padding-left: 8px; padding-right: 8px; }
 .mediaTable .statusColumn { width: 96px; }
 .mediaTable .progressColumn { width: 112px; }
-.mediaTable .channelColumn { width: 176px; }
+.mediaTable .channelColumn { width: 128px; }
 .mediaTable .actionColumn { width: 152px; }
 .mediaTable .userColumn { width: 112px; }
 .mediaTable .updatedColumn { width: 144px; }
@@ -17,6 +32,7 @@
 .mediaTable td:last-child { padding-left: 0; padding-right: 0; }
 .identity { width: 100%; min-width: 0; }
 .thumbnail > :first-child { width: var(--admin-list-thumbnail); height: var(--admin-list-thumbnail); box-shadow: none; }
+.thumbnail { width: var(--admin-list-thumbnail); height: var(--admin-list-thumbnail); overflow: hidden; border-radius: var(--admin-list-action-radius); }
 .title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); font-weight: var(--admin-list-title-weight); color: var(--admin-list-text); overflow-wrap: anywhere; }
 .mediaTable .activity { display: flex; align-items: center; gap: 4px; min-width: 0; margin-top: 4px; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); }
 .activity > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
