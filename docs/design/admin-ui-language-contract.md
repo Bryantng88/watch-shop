@@ -1195,3 +1195,27 @@ Navigation entries dùng đúng các quyền đọc Phiếu nhập/Đơn hàng h
 không thay quyền API, quy tắc duyệt, thanh toán, giao nhận hoặc lưu dữ liệu.
 Vận chuyển dùng Truck trong operationalDomainPresentation để mọi consumer
 nhận cùng icon, không dùng Workflow của Vận hành.
+
+### Sản phẩm, Báo cáo và shared route workspace
+
+Thanh chính hiển thị một link Sản phẩm và một link Báo cáo, không mở submenu
+ở thanh chính hay icon rail. Các route con vẫn active mục cha.
+Sản phẩm dùng Đồng hồ/Phụ kiện trong menu trái; Báo cáo dùng Tổng quan,
+Tài chính, Bán hàng & truy cập. Landing chọn route đầu tiên có quyền đọc.
+Tài chính giữ điều kiện AND của REPORT_FINANCE_VIEW, PRODUCT_COST_VIEW và
+PAYMENT_VIEW_ALL; không suy ra quyền tài chính từ các quyền báo cáo khác.
+
+AdminRouteWorkspace là shell dùng chung cho Sản phẩm, Báo cáo và Mua bán.
+Shell tái sử dụng AdminManagementPage, AdminWorkspaceNavigation,
+AdminSplitWorkspace và AdminSplitResize; không có CSS recipe riêng.
+Mỗi khu vực lưu độ rộng độc lập (admin:products:menu-width:v1,
+admin:reports:menu-width:v1, admin:trading:menu-width:v1).
+Một h1 cho khu vực; heading nội dung là AdminWorkspaceHeading.
+BusinessListPageHeader có variant embedded để bỏ hero/card/icon tile và
+dùng heading row chung, vẫn giữ nguyên các action/callback hiện có.
+Nội dung embedded bỏ padding trang lồng; native select ở màn hình hẹp
+và dirty guard của link không bị thay bằng router shortcut.
+URL danh sách, filter, detail/create và các quyền route/API cũ giữ nguyên.
+Các component báo cáo giữ chế độ standalone mặc định cho UI-test/consumer
+khác; chỉ route báo cáo chính bật embedded. Không viết lại công thức,
+projection, nội dung thống kê hoặc nghiệp vụ khi đổi navigation shell.

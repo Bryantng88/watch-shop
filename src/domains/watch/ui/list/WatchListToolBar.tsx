@@ -8,6 +8,7 @@ import {
 } from "@/domains/shared/ui/business-list";
 
 type Props = {
+    embedded?: boolean;
     audienceSegment?: "MEN" | "WOMEN";
     onAudienceSegmentChange?: (segment: "MEN" | "WOMEN") => void;
     selectedCount: number;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 export default function WatchListToolbar({
+    embedded = false,
     audienceSegment = "MEN",
     onAudienceSegmentChange,
     selectedCount,
@@ -52,10 +54,10 @@ export default function WatchListToolbar({
     }
 
     return (
-        <BusinessListPageHeader
+        <BusinessListPageHeader embedded={embedded}
             title={
                 <span className="flex flex-wrap items-center gap-3">
-                    Watch
+                    {embedded ? "Đồng hồ" : "Watch"}
                     {duplicateView ? (
                         <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                             Đang xem hàng chờ trùng

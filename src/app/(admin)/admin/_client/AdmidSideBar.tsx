@@ -12,11 +12,9 @@ import {
     Workflow,
     BellRing,
     Activity,
-    Link2,
     PanelLeftClose,
     PanelLeftOpen,
     BarChart3,
-    ChartNoAxesCombined,
     CalendarCheck2,
     Globe,
     ContactRound,
@@ -24,6 +22,8 @@ import {
 } from "lucide-react";
 
 import { TRADING_READ_PERMISSIONS, TRADING_ROUTES } from "@/domains/trading/shared/trading-navigation";
+
+import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries } from "@/domains/shared/ui/navigation/section-navigation";
 
 import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
@@ -78,10 +78,7 @@ const NAV: NavEntry[] = [
                 icon: LayoutDashboard,
                 permission: PERMISSIONS.DASHBOARD_VIEW,
             },
-            { type: "item", href: "/admin/watches", label: "Sản phẩm", icon: Package, children: [
-                { type: "item", href: "/admin/watches", label: "Đồng hồ", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW },
-                { type: "item", href: "/admin/straps", label: "Phụ kiện", icon: Link2, permission: PERMISSIONS.ACCESSORY_VIEW },
-            ] },
+            { type: "item", href: "/admin/products", label: "Sản phẩm", icon: Package, permissionsAny: [...PRODUCT_READ_PERMISSIONS], activePaths: PRODUCT_ROUTES },
             { type: "item", href: "/admin/trading", label: "Mua bán", icon: ArrowLeftRight, permissionsAny: [...TRADING_READ_PERMISSIONS], activePaths: TRADING_ROUTES },
             {
                 type: "item",
@@ -100,34 +97,7 @@ const NAV: NavEntry[] = [
             },
         ],
     },
-    {
-        type: "group",
-        label: "Báo cáo",
-        defaultOpen: true,
-        children: [
-            {
-                type: "item",
-                href: "/admin/reports/overview",
-                label: "Tổng quan",
-                icon: BarChart3,
-                permission: PERMISSIONS.DASHBOARD_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/reports/finance",
-                label: "Tài chính",
-                icon: BarChart3,
-                permissionsAll: [PERMISSIONS.REPORT_FINANCE_VIEW, PERMISSIONS.PRODUCT_COST_VIEW, PERMISSIONS.PAYMENT_VIEW_ALL],
-            },
-            {
-                type: "item",
-                href: "/admin/reports/sales",
-                label: "Bán hàng & truy cập",
-                icon: ChartNoAxesCombined,
-                permission: PERMISSIONS.REPORT_SALES_VIEW,
-            },
-        ],
-    },
+    { type: "item", href: "/admin/reports", label: "Báo cáo", icon: BarChart3, permissionsAny: [...REPORT_READ_PERMISSIONS], activePaths: REPORT_ROUTES },
     {
         type: "group",
         label: "Storefront",
@@ -255,6 +225,7 @@ export default function AdminSidebar({
 
     function renderNavItem(item: NavItem, nested = false) {
         const Icon = item.icon;
+        if (item.href === "/admin/reports" && reportEntries(user).length === 0) return null;
         if (item.children?.length) return <ReportMenu key={item.label} label={item.label} icon={Icon} appearance="item" items={item.children.filter(child => canAccess(user, child))} expanded={isMobile || desktopExpanded || wideScreen} onNavigate={() => { if (isMobile) setOpen(false); }} />;
         return (
             <div
@@ -380,7 +351,6 @@ export default function AdminSidebar({
                 <nav aria-label="Điều hướng quản trị" data-collapsed={!isMobile && !desktopExpanded && !wideScreen} className={`${styles.navigation} relative z-50 min-h-0 flex-1 space-y-1 px-3 py-3`}>
                     {allowedNav.map((entry, index) => {
                         if (entry.type === "group") {
-                            if(entry.label === "Báo cáo") return <ReportMenu key="reports" items={entry.children||[]} expanded={isMobile||desktopExpanded||wideScreen} onNavigate={()=>{if(isMobile)setOpen(false);}}/>;
                             const hasChildren = Boolean(entry.children?.length);
                             const isCollapsed = collapsedGroups.has(entry.label);
                             // Keep rail shortcuts visible when their group header is hidden.

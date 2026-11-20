@@ -1,4 +1,5 @@
 "use client";
+import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 
 import {
   Banknote,
@@ -19,12 +20,12 @@ function money(value: number) {
   return `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} VND`;
 }
 
-export default function AdminDashboardClient({ data }: { data: AdminDashboardData }) {
+export default function AdminDashboardClient({ data, embedded = false }: { data: AdminDashboardData; embedded?: boolean }) {
   return (
-    <main className={ADMIN_OPERATION_CONTENT_CLASS}>
+    <main className={embedded ? "min-w-0 space-y-4" : ADMIN_OPERATION_CONTENT_CLASS}>
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-950">Báo cáo tổng quan</h1>
+          {embedded ? <AdminWorkspaceHeading>Báo cáo tổng quan</AdminWorkspaceHeading> : <h1 className="text-3xl font-bold tracking-tight text-slate-950">Báo cáo tổng quan</h1>}
           <p className="mt-2 text-sm text-slate-500">
             Theo dõi nhanh watch, đơn hàng, giao hàng, payment và nguồn hàng.
           </p>
