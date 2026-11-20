@@ -9,7 +9,7 @@ export function productEntries(user: User) {
   const admin = user.roles?.includes("ADMIN");
   return [
     { href: "/admin/watches", label: "Đồng hồ", allowed: admin || user.permissions.includes(P.PRODUCT_VIEW) },
-    { href: "/admin/straps", label: "Phụ kiện", allowed: admin || user.permissions.includes(P.ACCESSORY_VIEW) },
+    { href: "/admin/straps", label: "Dây đồng hồ", allowed: admin || user.permissions.includes(P.ACCESSORY_VIEW) },
   ].filter(entry => entry.allowed).map(({ href, label }) => ({ href, label }));
 }
 export function reportEntries(user: User) {

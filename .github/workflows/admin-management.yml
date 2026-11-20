@@ -4,6 +4,9 @@ on:
     paths:
       - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/trading/**'
+      - 'src/domains/strap/client/StrapInventoryTable*'
+      - 'src/app/(admin)/admin/straps/page.tsx'
+      - 'scripts/check-strap-list-ui.cjs'
       - 'src/domains/system/**'
       - 'src/app/(admin)/admin/system/**'
       - 'src/app/(admin)/admin/activity/page.tsx'
@@ -104,6 +107,9 @@ jobs:
           'src/app/(admin)/admin/trading/page.tsx'
           scripts/check-trading-workspace.cjs
           scripts/check-section-workspaces.cjs
+          scripts/check-strap-list-ui.cjs
+          src/domains/strap/client/StrapInventoryTable.tsx
+          'src/app/(admin)/admin/straps/page.tsx'
           scripts/check-system-workspace.cjs
           src/domains/system/client/SystemWorkspace.tsx
           src/domains/activity/ui/GlobalActivityPage.tsx
@@ -143,6 +149,10 @@ jobs:
       - run: node scripts/check-system-workspace.cjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+      - run: node scripts/check-strap-list-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          STRAP_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/watch-straps.png
       - run: npm run build
       - uses: actions/upload-artifact@v4
         if: always()

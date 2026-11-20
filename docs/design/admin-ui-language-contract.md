@@ -1263,3 +1263,26 @@ vẫn thuộc mục Trang chủ website khi xác định active route.
 Giữ đúng từng điều kiện quyền hiện có, ADMIN bypass, tooltip/focus cho rail
 và đóng menu mobile khi điều hướng. Không dùng state nhóm hoặc flyout
 để khôi phục phân tầng trên thanh chính.
+
+### Dây đồng hồ — inventory list
+
+Mục /admin/straps trong Sản phẩm và heading danh sách dùng tên Dây đồng hồ.
+Giữ route, ACCESSORY_VIEW, projection và luồng danh mục/đặt hàng/chi tiết cũ.
+
+Danh sách dùng shared flat BusinessListFilterBar, shared list foundation và
+heading/action row trong product workspace. Không bọc bảng bằng card bo góc,
+không có icon tile/KPI trang trí. Tổng biến thể và số chiếc tồn là metadata
+gọn; tồn chỉ cộng inventoryPolicy STOCKED, không suy đoán NON_STOCK thành 0.
+
+Bảng gồm tên dây (SKU, hãng, loại dây/da, màu), kích thước càng/khóa,
+nguồn, tồn kho căn phải và tình trạng. Không hiển thị mũi tên giữa kích thước
+biết và khóa chưa biết; null khóa ghi Chưa rõ cỡ khóa, thiếu SKU ghi Chưa có SKU.
+Trạng thái gắn đồng hồ ưu tiên như projection cũ, link đồng hồ tách riêng
+khỏi link chi tiết dây. Không thêm mutation khi click hàng.
+
+Đủ sáu bộ lọc cũ trong shared filter panel: loại dây, kích thước, trạng thái,
+loại da, nguồn và màu; tìm kiếm thêm normalization tiếng Việt không dấu.
+Áp dụng bằng Enter hoặc nút Áp dụng; xóa field/tất cả có phản hồi danh sách.
+Luôn có số kết quả và empty state riêng cho danh sách rỗng/kết quả lọc rỗng.
+Khi pane dưới 680px, hàng chuyển sang cặp label/value theo thứ tự đọc,
+không giữ bảng tối thiểu 1120px hoặc đẩy cả trang tràn ngang.
