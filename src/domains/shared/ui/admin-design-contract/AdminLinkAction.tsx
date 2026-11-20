@@ -1,7 +1,7 @@
 "use client";
 
 import Link, { type LinkProps } from "next/link";
-import { forwardRef, type AnchorHTMLAttributes } from "react";
+import React, { forwardRef, type AnchorHTMLAttributes } from "react";
 import { useAdminButtonAppearance, type AdminButtonAppearance } from "./AdminButton";
 
 export const AdminLinkAction = forwardRef<HTMLAnchorElement, Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps> & LinkProps & AdminButtonAppearance>(

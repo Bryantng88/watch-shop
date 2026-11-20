@@ -27,6 +27,8 @@ async pending semantics are mapped by adapters. See the button section in
   optional `PLAYWRIGHT_MODULE_PATH` and `CHROMIUM_PATH` select installed tools.
 - Existing directory/library/home and TI browser fixtures now wrap the button
   provider and exercise actual management/list components with synthetic APIs.
+- Node SSR tests preload `scripts/lib/admin-css-test-loader.cjs` to compile real
+  CSS-module class exports; browser suites continue to load actual stylesheets.
 - `.github/workflows/admin-buttons-contract.yml` runs the scanner, primitive lint,
   type checking and browser assertions in CI.
 
