@@ -280,7 +280,7 @@ export default function MediaBrowserDialog({
                 const qs = new URLSearchParams({
                     profile,
                     prefix,
-                    maxKeys: "120",
+                    maxKeys: "60",
                     _t: String(Date.now()),
                 });
                 if (audienceSegment) qs.set("segment", audienceSegment);
@@ -731,8 +731,8 @@ export default function MediaBrowserDialog({
                                                                 alt={item.key}
                                                                 loading="lazy"
                                                                 decoding="async"
-                                                                width={320}
-                                                                height={320}
+                                                                width={256}
+                                                                height={256}
                                                                 onError={(event) => {
                                                                     if (
                                                                         item.signedUrl &&

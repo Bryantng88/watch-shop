@@ -7,6 +7,7 @@ import {
   nasBrowserThumbnailCacheKey,
   nasBrowserThumbnailUrl,
   renderNasMediaThumbnail,
+  selectNasMediaThumbnailPrewarmCandidates,
 } from "./nas-media-thumbnail.service";
 
 test("NAS browser thumbnail cache key is stable and versioned", () => {
@@ -44,9 +45,24 @@ test("NAS browser thumbnail renderer emits a bounded WebP image", async () => {
   const metadata = await sharp(thumbnail).metadata();
 
   assert.equal(metadata.format, "webp");
-  assert.equal(metadata.width, 320);
-  assert.equal(metadata.height, 320);
+  assert.equal(metadata.width, 256);
+  assert.equal(metadata.height, 256);
   assert.ok(thumbnail.byteLength < source.byteLength);
+});
+
+test("NAS browser thumbnail prewarm is deduplicated and bounded", () => {
+  const items = Array.from({ length: 30 }, (_, index) => ({
+    key: `products/edit/active/watch-${index}.jpg`,
+    version: `etag-${index}`,
+  }));
+  items.splice(2, 0, items[0]);
+  items.splice(3, 0, { key: "products/edit/active/readme.txt", version: "text" });
+
+  const selected = selectNasMediaThumbnailPrewarmCandidates(items);
+
+  assert.equal(selected.length, 24);
+  assert.equal(new Set(selected.map((item) => item.key)).size, 24);
+  assert.equal(selected.some((item) => item.key.endsWith(".txt")), false);
 });
 
 test("NAS browser thumbnail URL preserves the source key and cache version", () => {

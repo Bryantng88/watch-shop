@@ -10,7 +10,10 @@ import {
     normalizeKey,
     sanitizeBrowsePrefix,
 } from "@/server/lib/product-image-storage";
-import { nasBrowserThumbnailUrl } from "./nas-media-thumbnail.service";
+import {
+    nasBrowserThumbnailUrl,
+    prewarmNasMediaThumbnails,
+} from "./nas-media-thumbnail.service";
 
 const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
 
@@ -120,7 +123,7 @@ export async function browseMediaFolder(input: {
 
     const dedup = new Set<string>();
 
-    const files = result.items
+    const sourceFiles = result.items
         .map(toNasFile)
         .filter((item): item is NasMediaFile => Boolean(item))
         .filter((item) => item.key !== prefix && item.key !== `${prefix}/`)
@@ -129,8 +132,9 @@ export async function browseMediaFolder(input: {
             dedup.add(item.key);
             return true;
         })
-        .sort((a, b) => b.lastModified - a.lastModified)
-        .map((item) => ({
+        .sort((a, b) => b.lastModified - a.lastModified);
+
+    const files = sourceFiles.map((item) => ({
             key: item.key,
             fileKey: item.fileKey,
             name: item.name,
@@ -142,6 +146,13 @@ export async function browseMediaFolder(input: {
                 version: item.etag || String(item.lastModified || ""),
             }),
         }));
+
+    prewarmNasMediaThumbnails(
+        sourceFiles.map((item) => ({
+            key: item.key,
+            version: item.etag || String(item.lastModified || ""),
+        })),
+    );
 
     return {
         success: true,
