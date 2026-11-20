@@ -120,6 +120,7 @@ export default function FilterBar({
     onClearAll,
     onSaveView,
     trailingActions,
+    variant = "default",
 }: {
     values: FilterBarValues;
     total?: number;
@@ -134,6 +135,7 @@ export default function FilterBar({
     onClearAll: () => void;
     onSaveView?: () => void;
     trailingActions?: ReactNode;
+    variant?: "default" | "flat";
 }) {
     const [advancedOpen, setAdvancedOpen] = useState(false);
     const activeFields = [...primaryFields, ...advancedFields].filter((field) =>
@@ -144,8 +146,8 @@ export default function FilterBar({
     const hasVisibleCount = typeof visibleCount === "number" && Number.isFinite(visibleCount);
 
     return (
-        <div className="rounded-t-xl border border-b-0 border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className={variant === "flat" ? "bg-white py-3" : "rounded-t-xl border border-b-0 border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,23,42,0.025)]"}>
+            <div className={variant === "flat" ? "flex items-center gap-2" : "flex flex-col gap-3 sm:flex-row sm:items-center"}>
                 {search ? (
                     <label className="relative block min-w-0 flex-1">
                         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -161,15 +163,17 @@ export default function FilterBar({
                     </label>
                 ) : null}
 
-                <AdminButton variant={advancedOpen ? "primary" : "secondary"}
+                <AdminButton variant={variant === "flat" ? "quiet" : advancedOpen ? "primary" : "secondary"} iconOnly={variant === "flat"}
+                    aria-label={`Bộ lọc${activeCount ? ` · ${activeCount} đang áp dụng` : ""}`} title="Bộ lọc"
                     type="button"
                     onClick={() => setAdvancedOpen((current) => !current)}
                     aria-expanded={advancedOpen}
-                    className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${advancedOpen ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"}`}
+                    className={variant === "flat" ? "relative" : `inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${advancedOpen ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white"}`}
                 >
                     <Filter className="h-4 w-4" />
-                    Bộ lọc
-                    {activeCount ? (
+                    {variant === "flat" && activeCount > 0 && <span aria-hidden="true" className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                    {variant !== "flat" && "Bộ lọc"}
+                    {variant !== "flat" && activeCount ? (
                         <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-950 px-1.5 text-[11px] text-white">
                             {activeCount}
                         </span>

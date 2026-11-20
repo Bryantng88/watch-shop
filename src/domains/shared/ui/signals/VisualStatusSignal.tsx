@@ -64,6 +64,8 @@ type Props = {
     detailClassName?: string;
     singleLine?: boolean;
     iconOnly?: boolean;
+    variant?: "default" | "inline";
+    category?: string;
 };
 
 export function VisualStatusSignal({
@@ -77,9 +79,17 @@ export function VisualStatusSignal({
     detailClassName,
     singleLine = false,
     iconOnly = false,
+    variant = "default",
+    category,
 }: Props) {
     const Icon = ICONS[icon];
     const styles = TONE_CLASSES[tone];
+    if (variant === "inline") {
+        const titleText = [category, label, detail].filter(Boolean).join(" · ");
+        const line = <><Icon aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0", styles.detail)} strokeWidth={1.75} />{category && <span className="w-12 shrink-0 text-xs font-normal text-slate-500">{category}</span>}<span className="min-w-0 truncate text-xs font-medium leading-5 text-slate-700">{label}</span></>;
+        const lineClass = "flex min-w-0 max-w-full items-center gap-1.5 rounded text-left";
+        return onClick ? <AdminButton variant="contextual" type="button" onClick={onClick} aria-label={titleText} title={titleText} className={cn(lineClass,"hover:text-blue-700 hover:underline [@media(pointer:coarse)]:min-h-11",className)}>{line}</AdminButton> : <span title={titleText} className={cn(lineClass,className)}>{line}</span>;
+    }
     const content = (
         <>
             <span className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border", styles.icon)}>

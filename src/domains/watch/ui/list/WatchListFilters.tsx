@@ -179,11 +179,11 @@ export default function WatchListFilters({
     ];
 
     return (
-        <BusinessListFilterBar
+        <BusinessListFilterBar variant="flat"
             values={filters}
             total={total}
             visibleCount={visibleCount}
-            search={{ key: "q", placeholder: "Tìm theo title / brand / model / ref..." }}
+            search={{ key: "q", placeholder: "Tìm đồng hồ, thương hiệu, model, mã tham chiếu…" }}
             primaryFields={primaryFields}
             advancedFields={advancedFields}
             sortField={sortField}

@@ -1731,10 +1731,10 @@ export default function WatchListClient(props: WatchListClientProps) {
       }
     >
       {selectedRows.length && !duplicateView ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-white py-2">
           <div className="flex items-center gap-3 text-sm text-slate-700">
             <span>Đã chọn <strong className="text-violet-700">{selectedRows.length}</strong> watch</span>
-            <AdminButton variant="secondary" type="button" onClick={() => setSelectionPanelOpen(true)} className="font-semibold text-violet-700 underline decoration-violet-300 underline-offset-4 hover:text-violet-900">Xem đã chọn</AdminButton>
+            <AdminButton variant="quiet" type="button" onClick={() => setSelectionPanelOpen(true)}>Xem đã chọn</AdminButton>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden text-xs font-medium text-slate-500 lg:inline">Tick đầu bảng chỉ chọn trang hiện tại</span>
@@ -1747,7 +1747,7 @@ export default function WatchListClient(props: WatchListClientProps) {
                 </div>
               ) : null}
             </div>
-            <AdminButton variant="secondary" density="compact"
+            <AdminButton variant="quiet" density="compact"
               type="button"
               onClick={clearSelection}
               disabled={mediaReviewSubmitting || photoshootSubmitting}

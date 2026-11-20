@@ -1219,3 +1219,18 @@ URL danh sách, filter, detail/create và các quyền route/API cũ giữ nguy�
 Các component báo cáo giữ chế độ standalone mặc định cho UI-test/consumer
 khác; chỉ route báo cáo chính bật embedded. Không viết lại công thức,
 projection, nội dung thống kê hoặc nghiệp vụ khi đổi navigation shell.
+
+### Wide watch list and temporary navigation collapse
+
+AdminRouteWorkspace có icon thu/mở ngay đường phân cách hai pane khi đủ rộng.
+Khi thu, icon ở dải mỏng bên trái nội dung; không đưa vào cụm hành động tiêu đề. Dùng cùng
+resize state, nhớ lựa chọn và độ rộng trước khi thu; không remount pane nội dung,
+không đổi query, bộ lọc, selection hoặc phân trang. Khi menu đã thu, nội dung
+nhận toàn bộ chiều rộng; nút mở lại luôn có nhãn và focus. Mobile giữ select.
+
+Danh sách Đồng hồ dùng một cột Tình trạng gồm ba dòng Bán / Media / Kỹ thuật,
+icon 14px và nhãn ngắn; Media/Kỹ thuật giữ callback xem nhanh hiện hữu. Chi tiết
+phụ nằm trong title accessible, hiển thị storefront cạnh identity. Không ẩn trạng
+thái dựa vào viewport. Ảnh 36px có fallback, tên 14/20, metadata 12/16, tiền có ₫.
+Ngày tạo/cập nhật chung một cột; hoạt động và menu dòng giữ nguyên. Header sentence
+case, hàng phẳng, không card/gradient/shadow; bảng rộng chỉ cuộn trong pane.

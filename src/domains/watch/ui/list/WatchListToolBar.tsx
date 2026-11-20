@@ -70,7 +70,7 @@ export default function WatchListToolbar({
             actions={
                 <>
                 <div
-                    className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold"
+                    className="inline-flex items-center gap-1 text-sm"
                     aria-label="Chọn danh sách Watch"
                 >
                     {(["MEN", "WOMEN"] as const).map((segment) => (
@@ -81,7 +81,7 @@ export default function WatchListToolbar({
                             aria-pressed={audienceSegment === segment}
                             className={`h-8 rounded-lg px-3 transition ${
                                 audienceSegment === segment
-                                    ? "bg-white text-violet-700 shadow-sm ring-1 ring-slate-200/70"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-500 hover:text-slate-800"
                             }`}
                         >
@@ -89,7 +89,7 @@ export default function WatchListToolbar({
                         </AdminButton>
                     ))}
                 </div>
-                <AdminButton variant="secondary" density="compact"
+                <AdminButton variant="quiet" density="compact"
                     type="button"
                     onClick={onToggleDuplicateView}
                     className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"

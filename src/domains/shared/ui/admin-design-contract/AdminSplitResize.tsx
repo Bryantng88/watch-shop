@@ -16,24 +16,28 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
   const [width, setWidth] = useState<number>(F.splitWorkspace.sidebarWidth);
   const [maximum, setMaximum] = useState<number>(spec.maxSidebarWidth);
   const [resizing, setResizing] = useState(false);
+  const [wide, setWide] = useState(false);
+  const expanded = useRef<number>(F.splitWorkspace.sidebarWidth);
   const latest = useRef<number>(F.splitWorkspace.sidebarWidth);
   const drag = useRef<{ id: number; x: number; width: number; previous: number } | null>(null);
   const limit = () => Math.min(spec.maxSidebarWidth, Math.max(spec.minSidebarWidth, (layout.current?.clientWidth ?? F.splitWorkspace.collapseWidth) - spec.minContentWidth - F.page.splitGap));
-  const apply = (value: number) => { latest.current = value; setWidth(value); };
+  const apply = (value: number) => { latest.current = value; if (value > 0) expanded.current = value; setWidth(value); };
   const normalize = (value: number) => value < spec.collapseAt ? 0 : Math.min(limit(), Math.max(spec.minSidebarWidth, value));
-  const persist = (value: number) => { try { localStorage.setItem(storageKey, String(value)); } catch { /* Storage is optional; resizing still works. */ } };
+  const persist = (value: number) => { try { localStorage.setItem(storageKey, String(value)); localStorage.setItem(`${storageKey}:expanded`, String(value > 0 ? value : expanded.current)); } catch { /* Storage is optional; resizing still works. */ } };
   useEffect(() => {
     if (!enabled) return;
     try {
+      const restored = Number(localStorage.getItem(`${storageKey}:expanded`));
+      if (restored >= spec.minSidebarWidth && restored <= spec.maxSidebarWidth) expanded.current = restored;
       const raw = localStorage.getItem(storageKey);
       const saved = raw === null ? NaN : Number(raw);
-      if (Number.isFinite(saved) && (saved === 0 || saved >= spec.minSidebarWidth && saved <= spec.maxSidebarWidth)) { latest.current = saved; setWidth(saved); }
+      if (Number.isFinite(saved) && (saved === 0 || saved >= spec.minSidebarWidth && saved <= spec.maxSidebarWidth)) { latest.current = saved; if (saved > 0) expanded.current = saved; setWidth(saved); }
     } catch { /* Restricted browser storage uses the default width. */ }
   }, [enabled, storageKey]);
   useEffect(() => {
     const node = layout.current;
     if (!enabled || !node) return;
-    const update = () => setMaximum(Math.min(spec.maxSidebarWidth, Math.max(spec.minSidebarWidth, node.clientWidth - spec.minContentWidth - F.page.splitGap)));
+    const update = () => { setWide(node.clientWidth >= F.splitWorkspace.collapseWidth); setMaximum(Math.min(spec.maxSidebarWidth, Math.max(spec.minSidebarWidth, node.clientWidth - spec.minContentWidth - F.page.splitGap))); };
     update(); const observer = new ResizeObserver(update); observer.observe(node);
     return () => observer.disconnect();
   }, [enabled, layout]);
@@ -70,5 +74,5 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
       if (next !== null) { event.preventDefault(); const value = normalize(next); apply(value); persist(value); }
     },
   };
-  return { width: effectiveWidth, resizing, separatorProps: props, style: { ...ADMIN_SPLIT_RESIZE_STYLE, "--admin-split-width": `${effectiveWidth}px` } as CSSProperties };
+  return { width: effectiveWidth, wide, toggle: () => { const next = effectiveWidth === 0 ? normalize(expanded.current) : 0; apply(next); persist(next); }, resizing, separatorProps: props, style: { ...ADMIN_SPLIT_RESIZE_STYLE, "--admin-split-width": `${effectiveWidth}px` } as CSSProperties };
 }

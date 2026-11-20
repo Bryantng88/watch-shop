@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import { Package, Link2, BarChart3, ChartNoAxesCombined, Tags, ShoppingBag } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package, Link2, BarChart3, ChartNoAxesCombined, Tags, ShoppingBag } from "lucide-react";
+import { AdminButton } from "./AdminButton";
 import { AdminManagementPage } from "./AdminManagement";
 import { AdminWorkspaceNavigation } from "./AdminWorkspaceNavigation";
 import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "./AdminSplitWorkspace";
@@ -19,7 +20,8 @@ export function AdminRouteWorkspace({ title, description, navigationLabel, stora
   const pane = useAdminSplitResize(ref, storageKey);
   const id = useId();
   return <AdminManagementPage title={title} description={description}>
-    <div ref={ref} className={`${split.layout} ${resize.layout}`} data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={{ ...ADMIN_SPLIT_WORKSPACE_STYLE, ...pane.style }}>
+    <div ref={ref} className={`${split.layout} ${resize.layout}`} data-has-pane-toggle="true" data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={{ ...ADMIN_SPLIT_WORKSPACE_STYLE, ...pane.style }}>
+      {pane.wide && <div className={resize.toggleRail}><AdminButton variant="quiet" iconOnly className={resize.toggleButton} type="button" aria-controls={id} aria-expanded={pane.width !== 0} aria-label={pane.width === 0 ? `Mở menu ${navigationLabel.toLocaleLowerCase("vi-VN")}` : `Thu menu ${navigationLabel.toLocaleLowerCase("vi-VN")}`} title={pane.width === 0 ? "Mở menu · giữ nguyên bộ lọc và trang" : "Thu menu để xem danh sách rộng hơn"} onClick={pane.toggle}>{pane.width === 0 ? <ChevronRight aria-hidden="true" size={16} /> : <ChevronLeft aria-hidden="true" size={16} />}</AdminButton></div>}
       <aside id={id} data-admin-pane="sidebar" className="space-y-6">
         <AdminWorkspaceNavigation label={navigationLabel} entries={entries.map(entry => {
           const Icon = icons[entry.href as keyof typeof icons];
