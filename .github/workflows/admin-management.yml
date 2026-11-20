@@ -8,6 +8,9 @@ on:
       - 'src/domains/shared/ui/admin-design-contract/AdminManagement*'
       - 'src/domains/shared/ui/admin-design-contract/AdminSplitWorkspace*'
       - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminPrimaryAction*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminSplitResize*'
+      - 'src/app/(admin)/admin/_client/ReportMenu.tsx'
       - 'src/app/(admin)/admin/users/**'
       - 'src/app/(admin)/admin/directory/**'
       - 'src/app/(admin)/admin/_client/AdminActiveLink.tsx'
@@ -52,6 +55,9 @@ jobs:
           src/domains/shared/ui/admin-design-contract/AdminManagement.tsx
           src/domains/shared/ui/admin-design-contract/AdminSplitWorkspace.ts
           src/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation.tsx
+          src/domains/shared/ui/admin-design-contract/AdminPrimaryAction.ts
+          src/domains/shared/ui/admin-design-contract/AdminSplitResize.tsx
+          'src/app/(admin)/admin/_client/ReportMenu.tsx'
           src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts
           src/domains/shared/ui/admin-design-contract/index.ts
           'src/app/(admin)/admin/users/page.tsx'

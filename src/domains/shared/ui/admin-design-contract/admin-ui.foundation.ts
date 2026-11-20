@@ -7,7 +7,7 @@
  */
 export const ADMIN_UI_FOUNDATION = {
   version: 2,
-  fontFamily: 'var(--font-geist-sans), Arial, Helvetica, sans-serif',
+  fontFamily: 'var(--font-geist-sans, Arial), Arial, Helvetica, sans-serif',
   spacing: { micro: 2, tight: 4, inline: 6, control: 8, related: 12, block: 16, panel: 20, section: 24, pane: 28, major: 32 },
   typography: {
     pageTitle: { size: 24, lineHeight: 32, weight: 700 },
@@ -42,7 +42,10 @@ export const ADMIN_UI_FOUNDATION = {
     regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
   },
-  splitWorkspace: { sidebarWidth: 280, sidebarInset: 16, collapseWidth: 960 },
+  splitWorkspace: {
+    sidebarWidth: 280, sidebarInset: 16, collapseWidth: 960,
+    resize: { minSidebarWidth: 200, maxSidebarWidth: 400, minContentWidth: 600, collapseAt: 120, step: 16, hitArea: 12, touchHitArea: 24 },
+  },
   focusPanel: {
     padding: 20, mobilePadding: 16, titleGap: 4, chipsGap: 6,
     metadataGap: 8, actionsGap: 8, actionsMarginTop: 16, chartGap: 16,
@@ -54,6 +57,7 @@ export const ADMIN_UI_FOUNDATION = {
     dotSize: 6, dotGap: 6, iconSize: 16, iconGap: 8, countGap: 6,
     underlineHeight: 2, selectThreshold: 520, selectWhenOptionsExceed: 4,
   },
+  primaryAction: { background: "#2563eb", hover: "#1d4ed8", pressed: "#1e40af", border: "#1d4ed8", foreground: "#ffffff" },
   controls: {
     height: 40, compactHeight: 32, touchMinHeight: 44, inputPaddingX: 12,
     buttonPaddingX: 16, compactPaddingX: 12, iconGap: 8,

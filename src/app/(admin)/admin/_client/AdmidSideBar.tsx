@@ -18,9 +18,7 @@ import {
     BarChart3,
     ChartNoAxesCombined,
     CalendarCheck2,
-    MessageSquare,
     Globe,
-    Wrench,
     ContactRound,
     Images,
 } from "lucide-react";
@@ -48,6 +46,7 @@ type NavItem = {
     icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
     activePaths?: string[];
+    children?: NavItem[];
     permission?: string;
     permissionsAny?: string[];
     permissionsAll?: string[];
@@ -77,20 +76,10 @@ const NAV: NavEntry[] = [
                 icon: LayoutDashboard,
                 permission: PERMISSIONS.DASHBOARD_VIEW,
             },
-            {
-                type: "item",
-                href: "/admin/watches",
-                label: "Sản phẩm",
-                icon: Package,
-                permission: PERMISSIONS.PRODUCT_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/straps",
-                label: "Phụ kiện",
-                icon: Link2,
-                permission: PERMISSIONS.ACCESSORY_VIEW,
-            },
+            { type: "item", href: "/admin/watches", label: "Sản phẩm", icon: Package, children: [
+                { type: "item", href: "/admin/watches", label: "Đồng hồ", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW },
+                { type: "item", href: "/admin/straps", label: "Phụ kiện", icon: Link2, permission: PERMISSIONS.ACCESSORY_VIEW },
+            ] },
             {
                 type: "item",
                 href: "/admin/acquisitions",
@@ -104,20 +93,6 @@ const NAV: NavEntry[] = [
                 label: "Đơn hàng",
                 icon: ClipboardList,
                 permission: PERMISSIONS.ORDER_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/coordination/sales",
-                label: "Sales",
-                icon: MessageSquare,
-                permissionsAll: [PERMISSIONS.TASK_VIEW, PERMISSIONS.TASK_MANAGE, PERMISSIONS.PRODUCT_VIEW, PERMISSIONS.CUSTOMER_VIEW],
-            },
-            {
-                type: "item",
-                href: "/admin/services/technician",
-                label: "Kỹ thuật",
-                icon: Wrench,
-                permission: PERMISSIONS.SERVICE_VIEW,
             },
             {
                 type: "item",
@@ -196,11 +171,12 @@ const NAV: NavEntry[] = [
     },
 ];
 
-function canAccess(user: Props["user"], item: NavItem) {
+function canAccess(user: Props["user"], item: NavItem): boolean {
     // ADMIN is a system-level bypass. Navigation must not disappear during a
     // permission-catalog migration just because the persisted role still has
     // legacy permission codes.
     if (user.roles?.includes("ADMIN")) return true;
+    if (item.children?.length) return item.children.some(child => canAccess(user, child));
     if (item.permissionsAny?.length) {
         return item.permissionsAny.some((permission) => user.permissions.includes(permission));
     }
@@ -290,6 +266,7 @@ export default function AdminSidebar({
 
     function renderNavItem(item: NavItem, nested = false) {
         const Icon = item.icon;
+        if (item.children?.length) return <ReportMenu key={item.label} label={item.label} icon={Icon} appearance="item" items={item.children.filter(child => canAccess(user, child))} expanded={isMobile || desktopExpanded || wideScreen} onNavigate={() => { if (isMobile) setOpen(false); }} />;
         return (
             <div
                 key={item.href}
