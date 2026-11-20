@@ -10,3 +10,21 @@
 .layout[data-resizing="true"] { user-select: none; cursor: col-resize; }
 .layout[data-resizing="true"] .separator::before { background: var(--admin-resize-focus); width: 2px; }
 @media(pointer: coarse) { .layout[data-wide="true"] > .separator { width: var(--admin-resize-touch-hit); left: max(0px, calc(var(--admin-split-width) - var(--admin-resize-touch-hit) / 2)); } }
+
+.layout[data-wide="true"][data-has-pane-toggle="true"][data-sidebar-collapsed="true"] { grid-template-columns: minmax(0,1fr); gap: 0; }
+.layout[data-wide="true"][data-has-pane-toggle="true"][data-sidebar-collapsed="true"] > [data-admin-pane="content"] { grid-column: 1; }
+.layout[data-wide="true"][data-has-pane-toggle="true"][data-sidebar-collapsed="true"] > .separator { display: none; }
+
+/* The control belongs to the pane boundary, not the page action header. */
+.toggleRail { display: none; }
+.layout[data-wide="true"] > .toggleRail { display: block; position: absolute; left: calc(var(--admin-split-width) - 16px); top: 4px; bottom: 0; width: 32px; z-index: 3; pointer-events: none; }
+.toggleButton { position: sticky; top: 16px; pointer-events: auto; background-color: white; }
+.layout[data-wide="true"][data-has-pane-toggle="true"] > .separator::before { top: 48px; }
+.layout[data-wide="true"][data-has-pane-toggle="true"] > .separator::after { top: 64px; opacity: 0; }
+.layout[data-wide="true"][data-has-pane-toggle="true"] > .separator:is(:hover,:focus-visible)::after,
+.layout[data-wide="true"][data-has-pane-toggle="true"][data-resizing="true"] > .separator::after { opacity: 1; }
+.layout .toggleRail .toggleButton.toggleButton.toggleButton[data-admin-button] { background-color: white; }
+.layout[data-wide="true"][data-has-pane-toggle="true"][data-sidebar-collapsed="true"] > .toggleRail { left: 0; }
+.layout[data-wide="true"][data-has-pane-toggle="true"][data-sidebar-collapsed="true"] > [data-admin-pane="content"] { padding-left: 40px; }
+@media(pointer:coarse) { .layout[data-wide="true"] > .toggleRail { width: 44px; left: calc(var(--admin-split-width) - 22px); } .layout[data-wide="true"][data-sidebar-collapsed="true"] > [data-admin-pane="content"] { padding-left: 52px; } }
+@media(pointer:coarse) { .layout[data-wide="true"][data-has-pane-toggle="true"] > .separator::before { top: 60px; } .layout[data-wide="true"][data-has-pane-toggle="true"] > .separator::after { top: 76px; } }

@@ -1,7 +1,7 @@
 "use client";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
 import {
     Eye,
@@ -108,19 +108,14 @@ function LastActionAvatar({
 type BadgeTone = VisualStatusTone;
 
 function Thumb({ src, alt, onClick }: { src?: string | null; alt: string; onClick?: () => void }) {
-    if (!src) {
-        return (
-            <AdminButton variant="secondary" type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300 hover:bg-violet-50">
-                <ImageIcon className="h-6 w-6 text-slate-400" />
-            </AdminButton>
-        );
-    }
-
-    return (
-        <AdminButton variant="contextual" type="button" onClick={onClick} title="Chọn lại ảnh INLINE" className="h-[64px] w-[64px] shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-violet-300">
-            <img src={src} alt={alt} className="h-full w-full object-cover object-center" />
-        </AdminButton>
-    );
+    const [failed, setFailed] = useState(false);
+    const content = src && !failed
+        // Small table thumbnail retains an inline fallback for missing legacy media.
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img ref={image => { if (image?.complete && !image.naturalWidth) setFailed(true); }} src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
+        : <ImageIcon aria-hidden="true" className="h-4 w-4 text-slate-400" />;
+    const className = "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100";
+    return onClick ? <AdminButton variant="contextual" type="button" onClick={onClick} aria-label={`Chọn lại ảnh ${alt}`} title="Chọn lại ảnh" className={className}>{content}</AdminButton> : <span className={className} title={alt}>{content}</span>;
 }
 
 function upper(value: unknown) {
@@ -166,6 +161,8 @@ function WatchStatusSignal({
                     : normalized === "ISSUE" ? "Cần kiểm tra"
                         : "Đã kiểm tra");
     return <VisualStatusSignal
+        variant="inline"
+        category={kind === "media" ? "Media" : "Kỹ thuật"}
         label={label}
         detail={detail}
         detailClassName={detailClassName}
@@ -228,6 +225,7 @@ function SaleStatusBadge({
 
     return (
         <VisualStatusSignal
+            variant="inline" category="Bán"
             label={label || "Không rõ"}
             detail={config.detail}
             tone={config.tone}
@@ -334,9 +332,6 @@ export default function WatchListRow({
         imageUrl: row.imageUrl,
         href: `/admin/watches/${row.productId}`,
     }));
-    const isRecent =
-        product.updatedAt &&
-        Date.now() - new Date(product.updatedAt).getTime() < 1000 * 60 * 60 * 24;
     const saleState = upper(product.saleState);
 
     const isLockedForQuickOrder = saleState === "HOLD" || saleState === "SOLD";
@@ -553,17 +548,18 @@ export default function WatchListRow({
                     checked={checked}
                     onChange={(e) => onCheckedChange(e.target.checked)}
                     className="h-4 w-4 rounded border-slate-300"
+                    aria-label={`Chọn ${product.title}`}
                 />
             </td>
 
             <td className="px-3 py-3 sm:px-4">
                 <div className="flex min-w-0 items-center gap-3">
-                    <Thumb src={product.imageUrl} alt={product.title} onClick={onRepairInline ? () => onRepairInline(product) : undefined} />
+                    <Thumb key={product.imageUrl || "missing"} src={product.imageUrl} alt={product.title} onClick={onRepairInline ? () => onRepairInline(product) : undefined} />
 
                     <div className="min-w-0 flex-1">
                         <Link
                             href={`/admin/watches/${product.productId}`}
-                            className="line-clamp-2 text-[15px] font-semibold text-slate-900 hover:text-blue-700"
+                            className="line-clamp-2 text-sm font-semibold text-slate-900 hover:text-blue-700"
                         >
                             {product.title}
                         </Link>
@@ -572,127 +568,31 @@ export default function WatchListRow({
                             <span>SKU: {product.sku || "-"}</span>
                             {product.brandName ? <span>{product.brandName}</span> : null}
                         </div>
-                        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500 xl:hidden">
-                            <span className="truncate">Media: {media.label} · {storefrontLabel}</span>
-                            <span aria-hidden="true">·</span>
-                            <span className="truncate">Service: {service.label}</span>
-                        </div>
+                        <span className="mt-0.5 block text-xs text-slate-500">{storefrontLabel}</span>
                     </div>
                 </div>
             </td>
 
-            <td className="hidden px-2 py-3 align-middle xl:table-cell">
-                <WatchStatusSignal
-                    kind="media"
-                    label={media.label}
-                    status={media.status}
-                    tone={media.tone}
-                    detail={storefrontLabel}
-                    detailClassName={storefrontPublished ? "text-emerald-600" : "text-slate-400"}
-                    onClick={onPreview ? () => { onPreview(mediaPreview); /*
-                        onPreview({
-                            type: "WATCH",
-                            id: product.id,
-                            title: "Media",
-                            subtitle: product.title,
-                            status: media.label,
-                            imageUrl: product.imageUrl,
-                            href: media.href ?? `/admin/watches/${product.productId}`,
-                            facts: [
-                                { label: "Watch", value: product.title },
-                                { label: "SKU", value: product.sku || "-" },
-                                { label: "Trạng thái media", value: media.label },
-                            ],
-                            sections: [
-                                {
-                                    title: "Media workspace",
-                                    subtitle: "Trạng thái media hiện tại của watch",
-                                    items: [
-                                        {
-                                            title: media.label,
-                                            subtitle: product.sku || product.brandName || null,
-                                            status: product.v2Row?.mediaStatus ?? null,
-                                            href: media.href,
-                                            facts: [
-                                                { label: "Brand", value: product.brandName || "-" },
-                                            ],
-                                        },
-                                    ],
-                                },
-                            ],
-                            actions: media.href ? [{ label: "Mở workspace media", href: media.href }] : undefined,
-                    */ } : null}
-                />
-            </td>
-
-            <td className="hidden px-2 py-3 align-middle xl:table-cell">
-                <WatchStatusSignal
-                    kind="service"
-                    label={service.label}
-                    status={service.status}
-                    tone={service.tone}
-                    detail={
-                        service.expectedCompletionAt
-                            ? `Dự kiến ${new Intl.DateTimeFormat("vi-VN", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                            }).format(new Date(service.expectedCompletionAt))}`
-                            : null
-                    }
-                    onClick={onPreview ? () => { onPreview(servicePreview); /*
-                        onPreview({
-                            type: service.serviceRequestId ? "SERVICE" : "WATCH",
-                            id: service.serviceRequestId ?? product.id,
-                            title: "Service preview",
-                            subtitle: product.title,
-                            status: service.label,
-                            imageUrl: product.imageUrl,
-                            href: service.href ?? `/admin/watches/${product.productId}`,
-                            facts: [
-                                { label: "Watch", value: product.title },
-                                { label: "SKU", value: product.sku || "-" },
-                                { label: "Trạng thái service", value: service.label },
-                            ],
-                            actions: service.href ? [{ label: "Mở workspace SR", href: service.href }] : undefined,
-                        */ } : null}
-                />
-            </td>
-
-            <td className="px-2 py-3 align-middle">
-                <SaleStatusBadge
-                    label={sale.label}
-                    status={product.v2Row?.saleStatus ?? product.saleState}
-                />
+            <td className="px-3 py-3 align-middle">
+                <div className="flex min-w-0 flex-col gap-0.5" aria-label="Tình trạng đồng hồ">
+                    <SaleStatusBadge label={sale.label} status={product.v2Row?.saleStatus ?? product.saleState} />
+                    <WatchStatusSignal kind="media" label={media.label} status={media.status} tone={media.tone} detail={storefrontLabel} onClick={onPreview ? () => onPreview(mediaPreview) : null} />
+                    <WatchStatusSignal kind="service" label={service.label} status={service.status} tone={service.tone} detail={service.expectedCompletionAt ? `Dự kiến ${formatDateTime(service.expectedCompletionAt)}` : null} onClick={onPreview ? () => onPreview(servicePreview) : null} />
+                </div>
             </td>
 
             <td className="px-4 py-3">
-                <div className="min-w-[110px] text-sm font-semibold text-orange-600">
-                    {formatMoney(product.salePrice)}
+                <div className="min-w-[110px] text-sm font-semibold text-slate-950 tabular-nums">
+                    {product.salePrice == null ? <span className="text-xs font-normal text-slate-500">Chưa có giá</span> : <>{formatMoney(product.salePrice)} <span className="text-xs font-normal text-slate-500">₫</span></>}
                 </div>
             </td>
 
-            <td className="px-4 py-3 align-middle">
-                <div
-                    className="text-sm text-slate-700"
-                    title="Thời điểm Watch được tạo từ phiếu nhập"
-                >
-                    {formatDateTime(product.createdAt)}
-                </div>
+            <td className="px-3 py-3 align-middle text-xs leading-5 text-slate-500 tabular-nums">
+                <div title="Thời điểm cập nhật"><span className="sr-only">Cập nhật </span>{formatDateTime(product.updatedAt)}</div>
+                <div title="Thời điểm tạo đồng hồ">Tạo {formatDateTime(product.createdAt)}</div>
             </td>
 
-            <td className="px-4 py-3 align-middle">
-                <div
-                    className={cn(
-                        "text-sm",
-                        isRecent ? "font-semibold text-emerald-500" : "text-slate-700",
-                    )}
-                >
-                    {formatDateTime(product.updatedAt)}
-                </div>
-            </td>
-
-            <td className="px-4 py-3 align-middle">
+            <td className="px-3 py-3 align-middle">
                 {product.v2Row?.lastAction ? (
                     <div
                         className="min-w-0"
@@ -724,7 +624,7 @@ export default function WatchListRow({
                 )}
             </td>
 
-            <td className="sticky right-0 z-[1] bg-white px-3 py-3 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
+            <td className="sticky right-0 z-[1] bg-white px-1 py-3 text-right">
                 <RowActions<WatchRow>
                     row={product}
                     actions={actions}
