@@ -20,6 +20,7 @@ function App() {
     <p data-testid="count">{count}</p>
     <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginTop:16}}>
       <AdminButton data-testid="compact" density="compact" type="button">Phân loại lỗi</AdminButton>
+      <AdminButton data-testid="svg-icon" type="button" aria-label="Làm mới" style={{width:40,height:40}}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8a6 6 0 1 0 2-4" /></svg></AdminButton>
       <AdminButton data-testid="icon" density="compact" iconOnly type="button" aria-label="Thêm">+</AdminButton>
       <AdminRowActionMenu label="Xử lý Media" status="Chưa xử lý" actions={[{key:"start",label:"Bắt đầu xử lý",onSelect:()=>setCount(v=>v+1)},{key:"locked",label:"Bị khóa",disabled:true,onSelect:()=>setCount(999)}]} />
       <AdminAnchorAction data-testid="anchor" href="#preview">Mở website</AdminAnchorAction>

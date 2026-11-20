@@ -57,8 +57,10 @@
 }
 @media (prefers-reduced-motion: reduce) { .control.control.control[data-admin-button] { transition: none; } }
 
+.control.control.control[data-admin-button]:not([data-admin-button="contextual"]):has(> svg:only-child),
 .control.control.control[data-admin-icon="true"]:not([data-admin-button="contextual"]) { width: var(--admin-button-height); min-width: var(--admin-button-height); padding: 8px; }
+.control.control.control[data-admin-density="compact"]:not([data-admin-button="contextual"]):has(> svg:only-child),
 .control.control.control[data-admin-icon="true"][data-admin-density="compact"]:not([data-admin-button="contextual"]) { width: var(--admin-button-compact-height); min-width: var(--admin-button-compact-height); padding: 6px; }
-@media (pointer: coarse) { .control.control.control[data-admin-icon="true"][data-admin-density]:not([data-admin-button="contextual"]) { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
+@media (pointer: coarse) { .control.control.control[data-admin-button][data-admin-density]:not([data-admin-button="contextual"]):has(> svg:only-child), .control.control.control[data-admin-icon="true"][data-admin-density]:not([data-admin-button="contextual"]) { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
 
 .control.control.control[data-admin-button="primary"]:not([data-admin-button="contextual"]):active:not(:disabled):not([aria-disabled="true"]) { background-color: var(--admin-button-primary-pressed-bg); }
