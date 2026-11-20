@@ -1,3 +1,5 @@
+import { getCurrentUserPermissions } from "@/server/auth/requirePermission";
+import { tradingEntries } from "@/domains/trading/shared/trading-navigation";
 // app/(admin)/admin/orders/page.tsx
 
 import OrderListClient from "@/domains/order/client/OrderListClient";
@@ -16,6 +18,7 @@ export default async function OrderListPage({
 }: {
     searchParams: Promise<SearchParams>;
 }) {
+    const { user, permissions } = await getCurrentUserPermissions();
     const resolvedSearchParams = await searchParams;
     const sp = new URLSearchParams(
         Object.entries(resolvedSearchParams).flatMap(([key, value]) => {
@@ -38,6 +41,7 @@ export default async function OrderListPage({
 
     return (
         <OrderListClient
+            tradingEntries={tradingEntries({ roles: user?.roles, permissions })}
             items={serializeForClient(result.items)}
             total={result.total}
             totalValue={result.totalValue}

@@ -1174,3 +1174,48 @@ Warning counts are plain emphasized text without a second badge inside the link.
 The completion trend is a flat section; the chart remains the focus surface.
 The shared dimensional button treatment applies to actual action controls, not
 to every clickable number or metadata item on the dashboard.
+
+### Mua bán — shared split workspace
+
+Menu chính Mua bán thay hai mục Phiếu nhập và Đơn hàng. Route
+`/admin/trading` mở nhóm đầu tiên mà người dùng có quyền; các URL hiện có
+`/admin/acquisitions` và `/admin/orders`, màn hình chi tiết và thao tác nghiệp vụ
+được giữ nguyên. Menu hiện active cho cả các route con.
+
+Trang danh sách dùng AdminManagementPage, AdminWorkspaceNavigation,
+AdminSplitWorkspace và AdminSplitResize: một h1 Mua bán, nhóm bên trái và
+nội dung bên phải; độ rộng lưu riêng tại `admin:trading:menu-width:v1`.
+Nhóm Trạng thái bên trái dùng chính query status/view hiện có, không lặp
+select trạng thái ở toolbar phải. Đổi trạng thái giữ tìm kiếm, vendor và
+sắp xếp, bỏ phân trang/focus và bộ lọc tiến độ phụ thuộc trạng thái đơn hàng.
+Màn hình hẹp dùng native select theo shared contract. Không thêm nút thu gọn
+hoặc đường ngang giữa page title và nội dung. Heading nhóm phải và tạo mới
+dùng AdminWorkspaceHeadingRow và shared primary action; không bọc card.
+Navigation entries dùng đúng các quyền đọc Phiếu nhập/Đơn hàng hiện có,
+không thay quyền API, quy tắc duyệt, thanh toán, giao nhận hoặc lưu dữ liệu.
+Vận chuyển dùng Truck trong operationalDomainPresentation để mọi consumer
+nhận cùng icon, không dùng Workflow của Vận hành.
+
+### Sản phẩm, Báo cáo và shared route workspace
+
+Thanh chính hiển thị một link Sản phẩm và một link Báo cáo, không mở submenu
+ở thanh chính hay icon rail. Các route con vẫn active mục cha.
+Sản phẩm dùng Đồng hồ/Phụ kiện trong menu trái; Báo cáo dùng Tổng quan,
+Tài chính, Bán hàng & truy cập. Landing chọn route đầu tiên có quyền đọc.
+Tài chính giữ điều kiện AND của REPORT_FINANCE_VIEW, PRODUCT_COST_VIEW và
+PAYMENT_VIEW_ALL; không suy ra quyền tài chính từ các quyền báo cáo khác.
+
+AdminRouteWorkspace là shell dùng chung cho Sản phẩm, Báo cáo và Mua bán.
+Shell tái sử dụng AdminManagementPage, AdminWorkspaceNavigation,
+AdminSplitWorkspace và AdminSplitResize; không có CSS recipe riêng.
+Mỗi khu vực lưu độ rộng độc lập (admin:products:menu-width:v1,
+admin:reports:menu-width:v1, admin:trading:menu-width:v1).
+Một h1 cho khu vực; heading nội dung là AdminWorkspaceHeading.
+BusinessListPageHeader có variant embedded để bỏ hero/card/icon tile và
+dùng heading row chung, vẫn giữ nguyên các action/callback hiện có.
+Nội dung embedded bỏ padding trang lồng; native select ở màn hình hẹp
+và dirty guard của link không bị thay bằng router shortcut.
+URL danh sách, filter, detail/create và các quyền route/API cũ giữ nguyên.
+Các component báo cáo giữ chế độ standalone mặc định cho UI-test/consumer
+khác; chỉ route báo cáo chính bật embedded. Không viết lại công thức,
+projection, nội dung thống kê hoặc nghiệp vụ khi đổi navigation shell.

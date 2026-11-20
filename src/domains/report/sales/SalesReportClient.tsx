@@ -1,4 +1,5 @@
 "use client";
+import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
@@ -18,7 +19,7 @@ function Metric({ label, value, note, icon: Icon }: { label: string; value: stri
   </article>;
 }
 
-export default function SalesReportClient({ data, internalDevice }: { data: SalesReportData; internalDevice: boolean }) {
+export default function SalesReportClient({ data, internalDevice, embedded = false }: { data: SalesReportData; internalDevice: boolean; embedded?: boolean }) {
   const router = useRouter();
   const [savingInternal, setSavingInternal] = useState(false);
   async function toggleInternalDevice() {
@@ -30,9 +31,9 @@ export default function SalesReportClient({ data, internalDevice }: { data: Sale
       setSavingInternal(false);
     }
   }
-  return <main className="w-full space-y-4 px-4 py-5 lg:px-6">
-    <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4">
-      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Báo cáo / Bán hàng</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Hiệu quả bán hàng</h1><p className="mt-1 text-sm text-slate-500">Traffic → yêu cầu mua → đơn hàng, đặt cạnh tồn kho và kết quả tài chính.</p></div>
+  return <main className={embedded ? "min-w-0 space-y-4" : "w-full space-y-4 px-4 py-5 lg:px-6"}>
+    <header className={embedded ? "flex flex-wrap items-start justify-between gap-4" : "flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4"}>
+      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Báo cáo / Bán hàng</p>{embedded ? <AdminWorkspaceHeading>Hiệu quả bán hàng</AdminWorkspaceHeading> : <h1 className="mt-2 text-2xl font-bold text-slate-950">Hiệu quả bán hàng</h1>}<p className="mt-1 text-sm text-slate-500">Traffic → yêu cầu mua → đơn hàng, đặt cạnh tồn kho và kết quả tài chính.</p></div>
       <div className="flex flex-wrap items-center gap-2">
         <AdminButton variant="contextual" density="compact" type="button" onClick={toggleInternalDevice} disabled={savingInternal} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${internalDevice ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>{savingInternal ? "Đang lưu…" : internalDevice ? "Thiết bị nội bộ · đang bật" : "Đánh dấu thiết bị nội bộ"}</AdminButton>
         <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">Tháng hiện tại · {data.period.days} ngày</span>

@@ -70,6 +70,7 @@ const WATCH_INLINE_REPAIR_ENABLED =
 const WATCH_SELECTION_STORAGE_KEY = "watch-list:selection:v1";
 
 type WatchListClientProps = Partial<WatchListPageProps> & {
+  embedded?: boolean;
   initialResult?: WatchListResult;
   vendors?: { id: string; name: string }[];
   brands?: { id: string; name: string }[];
@@ -1683,9 +1684,9 @@ export default function WatchListClient(props: WatchListClientProps) {
   }, [quickMediaProductId]);
 
   return (
-    <BusinessListShell
+    <BusinessListShell className={props.embedded ? "!px-0 !pt-0 !pb-0" : undefined}
       header={
-        <WatchListToolbar
+        <WatchListToolbar embedded={props.embedded}
           audienceSegment={params.get("segment") === "WOMEN" ? "WOMEN" : "MEN"}
           onAudienceSegmentChange={(segment) => {
             const next = new URLSearchParams(params.toString());

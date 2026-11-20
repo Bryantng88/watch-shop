@@ -1,4 +1,5 @@
 "use client";
+import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useMemo, useState } from "react";
@@ -157,7 +158,7 @@ function MetricCard({
   );
 }
 
-export function FinanceReportClient({ initialProjection }: { initialProjection?: FinanceReportProjectionData | null }) {
+export function FinanceReportClient({ initialProjection, embedded = false }: { initialProjection?: FinanceReportProjectionData | null; embedded?: boolean }) {
   const [periodKey, setPeriodKey] = useState<PeriodKey>("month");
   const [channelKey, setChannelKey] = useState<ChannelKey>("all");
   const [detail, setDetail] = useState<DetailKey>(null);
@@ -327,7 +328,7 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
     : detailRows.map((row) => ({ ...row, id: row.code, href: "#" }));
 
   return (
-    <main className="w-full space-y-4 px-4 py-5 lg:px-6">
+    <main className={embedded ? "min-w-0 space-y-4" : "w-full space-y-4 px-4 py-5 lg:px-6"}>
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5">
         <p className="text-xs text-violet-800">
           {initialProjection
@@ -339,12 +340,12 @@ export function FinanceReportClient({ initialProjection }: { initialProjection?:
         </Link>
       </section>
 
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4">
+      <header className={embedded ? "flex flex-wrap items-start justify-between gap-4" : "flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4"}>
         <div>
           <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             <LineChart className="h-3.5 w-3.5" /> Báo cáo / Tài chính
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-[-0.025em] text-slate-950">Hiệu quả tài chính</h1>
+          {embedded ? <AdminWorkspaceHeading>Hiệu quả tài chính</AdminWorkspaceHeading> : <h1 className="mt-2 text-2xl font-bold tracking-[-0.025em] text-slate-950">Hiệu quả tài chính</h1>}
           <p className="mt-1 text-sm text-slate-500">Đọc nhanh sức khoẻ kinh doanh và giải trình được từng con số.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -3,6 +3,16 @@ on:
   pull_request:
     paths:
       - 'scripts/lib/admin-fixture-esbuild.cjs'
+      - 'src/domains/trading/**'
+      - 'src/domains/shared/ui/admin-design-contract/AdminRouteWorkspace*'
+      - 'src/domains/shared/ui/navigation/section-navigation.ts'
+      - 'src/domains/report/**'
+      - 'src/domains/watch/ui/list/WatchListToolBar.tsx'
+      - 'src/app/(admin)/admin/products/page.tsx'
+      - 'src/app/(admin)/admin/reports/**'
+      - 'scripts/check-section-workspaces.cjs'
+      - 'src/app/(admin)/admin/trading/**'
+      - 'scripts/check-trading-workspace.cjs'
       - 'src/domains/contacts/**'
       - 'src/domains/storefront/media/**'
       - 'src/domains/storefront/content/StorefrontManager.tsx'
@@ -81,6 +91,17 @@ jobs:
           scripts/check-contact-directory-db.mjs
           'src/app/(admin)/admin/users/_client/RolePermissionManager.tsx'
           scripts/check-role-permission-ui.cjs
+          src/domains/trading/client/TradingWorkspace.tsx
+          src/domains/trading/shared/trading-navigation.ts
+          'src/app/(admin)/admin/trading/page.tsx'
+          scripts/check-trading-workspace.cjs
+          scripts/check-section-workspaces.cjs
+          src/domains/shared/ui/admin-design-contract/AdminRouteWorkspace.tsx
+          src/domains/shared/ui/navigation/section-navigation.ts
+          src/domains/report/ReportWorkspace.tsx
+          'src/app/(admin)/admin/reports/layout.tsx'
+          'src/app/(admin)/admin/reports/page.tsx'
+          'src/app/(admin)/admin/products/page.tsx'
       - run: npx tsc --noEmit
       - run: node scripts/check-admin-management-api.mjs
       - run: node scripts/check-contact-directory-db.mjs
@@ -94,6 +115,13 @@ jobs:
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
           ROLE_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/roles.png
+      - run: node scripts/check-trading-workspace.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          TRADING_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/trading.png
+      - run: node scripts/check-section-workspaces.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
       - run: npm run build
       - uses: actions/upload-artifact@v4
         if: always()

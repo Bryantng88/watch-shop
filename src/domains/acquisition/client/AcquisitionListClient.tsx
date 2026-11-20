@@ -1,5 +1,11 @@
 "use client";
 
+import { Plus } from "lucide-react";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
+import TradingWorkspace from "@/domains/trading/client/TradingWorkspace";
+import type { TradingEntry } from "@/domains/trading/shared/trading-navigation";
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -8,7 +14,7 @@ import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
 import AcquisitionEditModal from "@/domains/acquisition/ui/edit/AcquisitionEditModal";
 import BusinessListShell from "@/domains/shared/ui/business-list/BusinessListShell";
-import { AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
+
 
 import type { AcquisitionListClientProps } from "../ui/list";
 import {
@@ -42,7 +48,7 @@ function isSelectable(item: { approvalStatus: string }) {
     return String(item.approvalStatus).toUpperCase() !== "POSTED";
 }
 
-export default function AcquisitionListClient(props: AcquisitionListClientProps & { strapOnly?: boolean; canManage?: boolean; canViewFinancials?: boolean }) {
+export default function AcquisitionListClient(props: AcquisitionListClientProps & { tradingEntries: TradingEntry[]; strapOnly?: boolean; canManage?: boolean; canViewFinancials?: boolean }) {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
@@ -181,13 +187,14 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
     }
 
     return (
-        <BusinessListShell className="min-h-screen bg-white"
+        <TradingWorkspace entries={props.tradingEntries} selected="/admin/acquisitions">
+        <BusinessListShell className="!px-0 !pt-0 !pb-0"
             header={
-                <AdminPageHeader
-                    title="Phiếu nhập"
-                    eyebrow="KHO HÀNG"
-                    description="Quản lý nhập kho, duyệt phiếu và thanh toán đầu vào."
-                />
+                <AdminWorkspaceHeadingRow><AdminWorkspaceHeading>Phiếu nhập</AdminWorkspaceHeading>
+                  <AdminLinkAction variant="primary" density="compact" href={props.strapOnly ? "/admin/acquisitions/accessories/new" : "/admin/acquisitions/new"} className="inline-flex items-center gap-2">
+                    <Plus className="h-4 w-4" />{props.strapOnly ? "Tạo phiếu phụ kiện" : "Tạo phiếu nhập"}
+                  </AdminLinkAction>
+                </AdminWorkspaceHeadingRow>
             }
             filters={
                 <AcquisitionListToolbar
@@ -249,5 +256,6 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
             ) : null}
 
         </BusinessListShell>
+    </TradingWorkspace>
     );
 }
