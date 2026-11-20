@@ -1950,7 +1950,7 @@ export default function OperationCoordinationWorkspace({
         {adHocWorkCreate.modal}
         <OperationWorkspaceLayout
           enabled={isUnifiedOperation}
-          groups={data.viewConfig.modes.map((mode) => ({ key: mode.key, label: mode.key === "technical-issue-flow" ? "Kỹ thuật" : mode.key === "media-production-flow" ? "Media" : modeLabel(mode), domainKey: mode.coreFlowKey ?? mode.key }))}
+          groups={data.viewConfig.modes.filter((mode) => !["sr-cases", "ad-hoc-work", "workspaces"].includes(mode.key)).map((mode) => ({ key: mode.key, label: mode.key === "technical-issue-flow" ? "Kỹ thuật" : mode.key === "media-production-flow" ? "Media" : modeLabel(mode), domainKey: mode.coreFlowKey ?? mode.key }))}
           activeGroup={activeViewMode?.key ?? activeViewModeKey}
           onGroupChange={changeActiveViewMode}
           stages={navigationStages}
