@@ -10,7 +10,7 @@ import styles from "./AdminOperationList.module.css";
 export type AdminRowMenuAction = { key: string; label: string; disabled?: boolean; onSelect: () => void };
 
 /** One status/action trigger; editors stay mounted in their domain outside this popup. */
-export function AdminRowActionMenu({ label, status, actions, disabled = false }: { label: string; status: ReactNode; actions: AdminRowMenuAction[]; disabled?: boolean }) {
+export function AdminRowActionMenu({ label, status, actions, disabled = false, triggerClassName }: { label: string; status: ReactNode; actions: AdminRowMenuAction[]; disabled?: boolean; triggerClassName?: string }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -46,7 +46,7 @@ export function AdminRowActionMenu({ label, status, actions, disabled = false }:
     };
   }, [open]);
   return <>
-    <button ref={trigger} type="button" className={styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
+    <button ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); }
     }}>{status}<ChevronDown size={F.icon.inline} aria-hidden="true" /></button>
     {open && createPortal(<div ref={menu} id={id} role="menu" aria-label={label} className={styles.actionMenu} style={{ ...ADMIN_OPERATION_LIST_STYLE, ...position, zIndex: F.layers.popover }} onKeyDown={event => {
