@@ -15,7 +15,7 @@ function visitFile(file) {
   if (seen.has(file) || file.includes("/__generated__/")) return;
   seen.add(file);
   if (!/\.[jt]sx?$/.test(file)) return;
-  const relative = path.relative(root, file);
+  const relative = path.relative(root, file).split(path.sep).join("/");
   const sf = ts.createSourceFile(file, fs.readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const client = sf.statements.find(s => ts.isExpressionStatement(s) && ts.isStringLiteral(s.expression) && s.expression.text === "use client");
   if (client && sf.statements[0] !== client) failures.push(`${relative}: use client must precede imports`);
