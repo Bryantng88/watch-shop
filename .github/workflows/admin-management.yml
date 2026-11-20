@@ -128,6 +128,7 @@ jobs:
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright/index.mjs
           MANAGEMENT_SCREENSHOT_DIR: ${{ runner.temp }}/admin-management
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/admin-buttons-global.css --minify
       - run: node scripts/check-role-permission-ui.cjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
