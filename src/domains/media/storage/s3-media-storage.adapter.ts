@@ -17,18 +17,19 @@ import type {
 } from "./media-storage.port";
 import { deleteStoredObjectWithVerification } from "./verified-delete";
 
-function copySource(key: string) {
-  return `${S3_BUCKET}/${encodeURIComponent(normalizeKey(key)).replace(/%2F/g, "/")}`;
+function copySource(key: string, bucket: string) {
+  return `${bucket}/${encodeURIComponent(normalizeKey(key)).replace(/%2F/g, "/")}`;
 }
 
 export class S3MediaStorage implements MediaStorage {
+  constructor(private readonly client = s3, private readonly bucket = S3_BUCKET) {}
   async stat(key: string): Promise<StoredMediaMetadata | null> {
     const normalized = normalizeKey(key);
     if (!normalized) return null;
 
     try {
-      const result = await s3.send(
-        new HeadObjectCommand({ Bucket: S3_BUCKET, Key: normalized }),
+      const result = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: normalized }),
       );
       return {
         key: normalized,
@@ -56,8 +57,8 @@ export class S3MediaStorage implements MediaStorage {
   async read(key: string) {
     const normalized = normalizeKey(key);
     if (!normalized) throw new Error("Media key is required.");
-    const result = await s3.send(
-      new GetObjectCommand({ Bucket: S3_BUCKET, Key: normalized }),
+    const result = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: normalized }),
     );
     if (!result.Body) throw new Error(`Media object body is empty: ${normalized}`);
     return {
@@ -72,8 +73,8 @@ export class S3MediaStorage implements MediaStorage {
   async write(input: WriteStoredMediaInput) {
     const key = normalizeKey(input.key);
     if (!key) throw new Error("Media key is required.");
-    await s3.send(new PutObjectCommand({
-      Bucket: S3_BUCKET,
+    await this.client.send(new PutObjectCommand({
+      Bucket: this.bucket,
       Key: key,
       Body: input.bytes,
       ContentType: input.contentType,
@@ -95,10 +96,10 @@ export class S3MediaStorage implements MediaStorage {
     const sourceMetadata = await this.stat(source);
     if (!sourceMetadata) throw new Error(`Media source does not exist: ${source}`);
 
-    await s3.send(
+    await this.client.send(
       new CopyObjectCommand({
-        Bucket: S3_BUCKET,
-        CopySource: copySource(source),
+        Bucket: this.bucket,
+        CopySource: copySource(source, this.bucket),
         Key: destination,
       }),
     );
@@ -150,7 +151,7 @@ export class S3MediaStorage implements MediaStorage {
     await deleteStoredObjectWithVerification({
       key: normalized,
       deleteOnce: async () => {
-        await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: normalized }));
+        await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: normalized }));
       },
       sourceExists: async () => Boolean(await this.stat(normalized)),
     });
@@ -158,8 +159,8 @@ export class S3MediaStorage implements MediaStorage {
 
   async sign(key: string, expiresInSeconds = 600) {
     return getSignedUrl(
-      s3,
-      new GetObjectCommand({ Bucket: S3_BUCKET, Key: normalizeKey(key) }),
+      this.client,
+      new GetObjectCommand({ Bucket: this.bucket, Key: normalizeKey(key) }),
       { expiresIn: expiresInSeconds },
     );
   }
@@ -178,9 +179,9 @@ export class S3MediaStorage implements MediaStorage {
       normalizedPrefix && String(input.prefix ?? "").replaceAll("\\", "/").endsWith("/")
         ? `${normalizedPrefix}/`
         : normalizedPrefix;
-    const result = await s3.send(
+    const result = await this.client.send(
       new ListObjectsV2Command({
-        Bucket: S3_BUCKET,
+        Bucket: this.bucket,
         Prefix: prefix || undefined,
         Delimiter: input.delimiter,
         ContinuationToken: input.cursor || undefined,

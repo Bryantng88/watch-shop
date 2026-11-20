@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/client";
-import { mediaStorage } from "@/domains/media/storage";
+import { websiteMediaStorage as mediaStorage } from "@/domains/storefront/media/website-media.storage";
 export async function GET() {
   const hero = await prisma.storefrontHeroImage.findFirst({
     where: { isActive: true },

@@ -2,7 +2,7 @@ import { websiteImageUrl } from "../media/website-media";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
-import { mediaStorage } from "@/domains/media/storage";
+import { websiteMediaStorage as mediaStorage } from "@/domains/storefront/media/website-media.storage";
 import { mapPublicWatchCard } from "../server/public-catalog.service";
 import { publicWatchEligibilityWhere, publicWatchListSelect } from "../server/public-catalog.repo";
 import {

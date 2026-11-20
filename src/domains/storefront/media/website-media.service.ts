@@ -1,4 +1,4 @@
-import { mediaStorage } from "@/domains/media/storage";
+import { websiteMediaStorage as mediaStorage } from "@/domains/storefront/media/website-media.storage";
 import { editorialKey } from "../content/contract";
 import { WEBSITE_IMAGE_FOLDERS, websiteImageUrl, type WebsiteFolder } from "./website-media";
 export async function findWebsiteImage(key: string) {
