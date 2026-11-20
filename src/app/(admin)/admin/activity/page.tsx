@@ -1,3 +1,5 @@
+import SystemWorkspace from "@/domains/system/client/SystemWorkspace";
+import { systemEntries } from "@/domains/shared/ui/navigation/section-navigation";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
@@ -15,7 +17,7 @@ function first(value: string | string[] | undefined) {
 }
 
 export default async function ActivityPage({ searchParams }: Props) {
-  await requirePermission(PERMISSIONS.ACTIVITY_READ);
+  const user = await requirePermission(PERMISSIONS.ACTIVITY_READ);
   const params = await searchParams;
   const periodValue = first(params.period);
   const period: GlobalActivityQuery["period"] =
@@ -33,5 +35,5 @@ export default async function ActivityPage({ searchParams }: Props) {
     pageSize: Number(first(params.pageSize) ?? 50),
   });
 
-  return <GlobalActivityPage data={data} />;
+  return <SystemWorkspace entries={systemEntries(user)} selected="/admin/activity"><GlobalActivityPage data={data} embedded /></SystemWorkspace>;
 }

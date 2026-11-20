@@ -1,3 +1,4 @@
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import Image from "next/image";
@@ -20,6 +21,7 @@ import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { ADMIN_OPERATION_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
 
 type Props = {
+  embedded?: boolean;
   data: GlobalActivityResult;
 };
 
@@ -107,9 +109,10 @@ function SummaryCard({
   );
 }
 
-export default function GlobalActivityPage({ data }: Props) {
+export default function GlobalActivityPage({ data, embedded = false }: Props) {
   return (
-    <div className={ADMIN_OPERATION_CONTENT_CLASS}>
+    <div className={embedded ? "min-w-0 space-y-4" : ADMIN_OPERATION_CONTENT_CLASS}>
+      {embedded ? <AdminWorkspaceHeadingRow><div><AdminWorkspaceHeading>Activity</AdminWorkspaceHeading><p className="mt-1 text-xs text-slate-500">Nhật ký sự kiện nghiệp vụ trên toàn hệ thống</p></div><span className="text-xs text-slate-500">Chỉ đọc</span></AdminWorkspaceHeadingRow> : (
       <section className="overflow-hidden rounded-2xl border border-violet-100 bg-gradient-to-r from-white via-white to-violet-50 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 border-l-4 border-violet-500 px-6 py-5">
           <div className="flex items-center gap-3">
@@ -127,7 +130,7 @@ export default function GlobalActivityPage({ data }: Props) {
             Projection log · chỉ đọc
           </div>
         </div>
-      </section>
+      </section>) }
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

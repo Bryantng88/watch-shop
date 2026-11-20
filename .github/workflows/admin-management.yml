@@ -4,6 +4,14 @@ on:
     paths:
       - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/trading/**'
+      - 'src/domains/system/**'
+      - 'src/app/(admin)/admin/system/**'
+      - 'src/app/(admin)/admin/activity/page.tsx'
+      - 'scripts/check-system-workspace.cjs'
+      - 'src/domains/activity/ui/GlobalActivityPage.tsx'
+      - 'src/app/(admin)/admin/system/**'
+      - 'src/app/(admin)/admin/activity/page.tsx'
+      - 'scripts/check-system-workspace.cjs'
       - 'src/domains/shared/ui/admin-design-contract/AdminRouteWorkspace*'
       - 'src/domains/shared/ui/navigation/section-navigation.ts'
       - 'src/domains/report/**'
@@ -96,6 +104,15 @@ jobs:
           'src/app/(admin)/admin/trading/page.tsx'
           scripts/check-trading-workspace.cjs
           scripts/check-section-workspaces.cjs
+          scripts/check-system-workspace.cjs
+          src/domains/system/client/SystemWorkspace.tsx
+          src/domains/activity/ui/GlobalActivityPage.tsx
+          'src/app/(admin)/admin/system/page.tsx'
+          'src/app/(admin)/admin/system/channels/page.tsx'
+          'src/app/(admin)/admin/activity/page.tsx'
+          scripts/check-system-workspace.cjs
+          src/domains/system/client/SystemWorkspace.tsx
+          'src/app/(admin)/admin/system/page.tsx'
           src/domains/shared/ui/admin-design-contract/AdminRouteWorkspace.tsx
           src/domains/shared/ui/navigation/section-navigation.ts
           src/domains/report/ReportWorkspace.tsx
@@ -120,6 +137,9 @@ jobs:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
           TRADING_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/trading.png
       - run: node scripts/check-section-workspaces.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+      - run: node scripts/check-system-workspace.cjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
       - run: npm run build

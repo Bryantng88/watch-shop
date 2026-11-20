@@ -6,26 +6,22 @@ import {
     LayoutDashboard,
     Package,
     Menu,
-    ChevronDown,
     ArrowLeftRight,
     LogOut,
     Workflow,
-    BellRing,
-    Activity,
+    Settings,
     PanelLeftClose,
     PanelLeftOpen,
     BarChart3,
     CalendarCheck2,
     Globe,
     ContactRound,
-    Images,
 } from "lucide-react";
 
 import { TRADING_READ_PERMISSIONS, TRADING_ROUTES } from "@/domains/trading/shared/trading-navigation";
 
-import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries } from "@/domains/shared/ui/navigation/section-navigation";
+import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries, SYSTEM_READ_PERMISSIONS, SYSTEM_ROUTES } from "@/domains/shared/ui/navigation/section-navigation";
 
-import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
 import styles from "./AdminSidebar.module.css";
 import { DIRECTORY_READ_PERMISSIONS, DIRECTORY_ROUTES } from "@/domains/contacts/shared/directory-navigation";
@@ -48,86 +44,23 @@ type NavItem = {
     icon: ComponentType<{ size?: number; className?: string }>;
     exact?: boolean;
     activePaths?: string[];
-    children?: NavItem[];
     permission?: string;
     permissionsAny?: string[];
     permissionsAll?: string[];
 };
 
-type NavGroup = {
-    type: "group";
-    label: string;
-    children?: NavItem[];
-    defaultOpen?: boolean;
-};
-
-type NavEntry = NavItem | NavGroup;
-
 const DESKTOP_SIDEBAR_STORAGE_KEY = "admin-sidebar:expanded";
 
-const NAV: NavEntry[] = [
-    {
-        type: "group",
-        label: "Business",
-        defaultOpen: true,
-        children: [
-            {
-                type: "item",
-                href: "/admin/dashboard",
-                label: "Trang chủ",
-                icon: LayoutDashboard,
-                permission: PERMISSIONS.DASHBOARD_VIEW,
-            },
-            { type: "item", href: "/admin/products", label: "Sản phẩm", icon: Package, permissionsAny: [...PRODUCT_READ_PERMISSIONS], activePaths: PRODUCT_ROUTES },
-            { type: "item", href: "/admin/trading", label: "Mua bán", icon: ArrowLeftRight, permissionsAny: [...TRADING_READ_PERMISSIONS], activePaths: TRADING_ROUTES },
-            {
-                type: "item",
-                href: "/admin/coordination/operation",
-                label: "Vận hành",
-                icon: Workflow,
-                permission: PERMISSIONS.TASK_VIEW,
-            },
-            { type: "item", href: "/admin/directory", label: "Danh bạ", icon: ContactRound, permissionsAny: [...DIRECTORY_READ_PERMISSIONS], activePaths: DIRECTORY_ROUTES },
-            {
-                type: "item",
-                href: "/admin/personal-work",
-                label: "Quản lý công việc",
-                icon: CalendarCheck2,
-                permission: PERMISSIONS.TASK_VIEW,
-            },
-        ],
-    },
+const NAV: NavItem[] = [
+    { type: "item", href: "/admin/dashboard", label: "Trang chủ", icon: LayoutDashboard, permission: PERMISSIONS.DASHBOARD_VIEW },
+    { type: "item", href: "/admin/products", label: "Sản phẩm", icon: Package, permissionsAny: [...PRODUCT_READ_PERMISSIONS], activePaths: PRODUCT_ROUTES },
+    { type: "item", href: "/admin/trading", label: "Mua bán", icon: ArrowLeftRight, permissionsAny: [...TRADING_READ_PERMISSIONS], activePaths: TRADING_ROUTES },
+    { type: "item", href: "/admin/coordination/operation", label: "Vận hành", icon: Workflow, permission: PERMISSIONS.TASK_VIEW },
+    { type: "item", href: "/admin/directory", label: "Danh bạ", icon: ContactRound, permissionsAny: [...DIRECTORY_READ_PERMISSIONS], activePaths: DIRECTORY_ROUTES },
+    { type: "item", href: "/admin/personal-work", label: "Quản lý công việc", icon: CalendarCheck2, permission: PERMISSIONS.TASK_VIEW },
     { type: "item", href: "/admin/reports", label: "Báo cáo", icon: BarChart3, permissionsAny: [...REPORT_READ_PERMISSIONS], activePaths: REPORT_ROUTES },
-    {
-        type: "group",
-        label: "Storefront",
-        defaultOpen: true,
-        children: [
-            { type: "item", href: "/admin/storefront/home", label: "Trang chủ website", icon: Globe, permission: PERMISSIONS.PRODUCT_UPDATE },
-            { type: "item", href: "/admin/storefront/media", label: "Thư viện ảnh website", icon: Images, permission: PERMISSIONS.PRODUCT_UPDATE },
-        ],
-    },
-    {
-        type: "group",
-        label: "System",
-        defaultOpen: true,
-        children: [
-            {
-                type: "item",
-                href: "/admin/system/channels",
-                label: "Channels",
-                icon: BellRing,
-                permission: PERMISSIONS.SYSTEM_JOB_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/activity",
-                label: "Activity",
-                icon: Activity,
-                permission: PERMISSIONS.ACTIVITY_READ,
-            },
-        ],
-    },
+    { type: "item", href: "/admin/storefront/home", label: "Trang chủ website", icon: Globe, permission: PERMISSIONS.PRODUCT_UPDATE, activePaths: ["/admin/storefront/home", "/admin/storefront/media"] },
+    { type: "item", href: "/admin/system", label: "System", icon: Settings, permissionsAny: [...SYSTEM_READ_PERMISSIONS], activePaths: SYSTEM_ROUTES },
 ];
 
 function canAccess(user: Props["user"], item: NavItem): boolean {
@@ -135,7 +68,6 @@ function canAccess(user: Props["user"], item: NavItem): boolean {
     // permission-catalog migration just because the persisted role still has
     // legacy permission codes.
     if (user.roles?.includes("ADMIN")) return true;
-    if (item.children?.length) return item.children.some(child => canAccess(user, child));
     if (item.permissionsAny?.length) {
         return item.permissionsAny.some((permission) => user.permissions.includes(permission));
     }
@@ -146,31 +78,7 @@ function canAccess(user: Props["user"], item: NavItem): boolean {
 }
 
 function buildAllowedNav(user: Props["user"]) {
-    const result: NavEntry[] = [];
-
-    for (let i = 0; i < NAV.length; i++) {
-        const entry = NAV[i];
-
-        if (entry.type === "item") {
-            if (canAccess(user, entry)) result.push(entry);
-            continue;
-        }
-
-        if (entry.children?.length) {
-            const children = entry.children.filter((item) => canAccess(user, item));
-            if (children.length) result.push({ ...entry, children });
-            continue;
-        }
-
-        const hasAllowedItemAfterGroup = NAV.slice(i + 1).some((next) => {
-            if (next.type === "group") return false;
-            return canAccess(user, next);
-        });
-
-        if (hasAllowedItemAfterGroup) result.push(entry);
-    }
-
-    return result;
+    return NAV.filter(item => canAccess(user, item) && (item.href !== "/admin/reports" || reportEntries(user).length > 0));
 }
 
 export default function AdminSidebar({
@@ -185,27 +93,12 @@ export default function AdminSidebar({
     const [desktopExpanded, setDesktopExpanded] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
     useEffect(()=>{if(!isMobile)onExpandedChange?.(desktopExpanded);},[desktopExpanded,isMobile,onExpandedChange]);
-    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-        () => new Set(),
-    );
     useEffect(() => {
         if (isMobile) return;
         setDesktopExpanded(window.localStorage.getItem(DESKTOP_SIDEBAR_STORAGE_KEY) === "true");
     }, [isMobile]);
 
     const allowedNav = useMemo(() => buildAllowedNav(user), [user]);
-
-    const toggleGroup = useCallback((label: string) => {
-        setCollapsedGroups((current) => {
-            const next = new Set(current);
-            if (next.has(label)) {
-                next.delete(label);
-            } else {
-                next.add(label);
-            }
-            return next;
-        });
-    }, []);
 
     const handleLogout = useCallback(async () => {
         if (loggingOut) return;
@@ -223,10 +116,8 @@ export default function AdminSidebar({
         });
     }, []);
 
-    function renderNavItem(item: NavItem, nested = false) {
+    function renderNavItem(item: NavItem) {
         const Icon = item.icon;
-        if (item.href === "/admin/reports" && reportEntries(user).length === 0) return null;
-        if (item.children?.length) return <ReportMenu key={item.label} label={item.label} icon={Icon} appearance="item" items={item.children.filter(child => canAccess(user, child))} expanded={isMobile || desktopExpanded || wideScreen} onNavigate={() => { if (isMobile) setOpen(false); }} />;
         return (
             <div
                 key={item.href}
@@ -247,7 +138,6 @@ export default function AdminSidebar({
                         <span
                             className={[
                                 "truncate text-[14px] leading-none",
-                                nested ? "text-white/75" : "",
                             ].join(" ")}
                         >
                             {item.label}
@@ -349,54 +239,7 @@ export default function AdminSidebar({
                 </div> : null}
 
                 <nav aria-label="Điều hướng quản trị" data-collapsed={!isMobile && !desktopExpanded && !wideScreen} className={`${styles.navigation} relative z-50 min-h-0 flex-1 space-y-1 px-3 py-3`}>
-                    {allowedNav.map((entry, index) => {
-                        if (entry.type === "group") {
-                            const hasChildren = Boolean(entry.children?.length);
-                            const isCollapsed = collapsedGroups.has(entry.label);
-                            // Keep rail shortcuts visible when their group header is hidden.
-                            const isOpen = hasChildren && (!isCollapsed || (!isMobile && !desktopExpanded && !wideScreen));
-
-                            return (
-                                <div
-                                    key={`group-${entry.label}-${index}`}
-                                    className="pt-3 first:pt-0"
-                                >
-                                    {hasChildren ? (
-                                        <AdminButton variant="contextual" density="compact"
-                                            type="button"
-                                            onClick={() => toggleGroup(entry.label)}
-                                            className={`mx-2 w-[calc(100%-1rem)] items-center justify-between border-t border-white/10 pt-3 text-left text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45 transition hover:text-white/70 ${(isMobile || desktopExpanded) ? "flex" : "hidden min-[2200px]:flex"}`}
-                                            aria-expanded={isOpen}
-                                        >
-                                            <span>{entry.label}</span>
-                                            <ChevronDown
-                                                className={[
-                                                    "h-3.5 w-3.5 transition-transform",
-                                                    isOpen ? "rotate-0" : "-rotate-90",
-                                                ].join(" ")}
-                                            />
-                                        </AdminButton>
-                                    ) : (
-                                        <div className={`mx-2 border-t border-white/10 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35 ${(isMobile || desktopExpanded) ? "block" : "hidden min-[2200px]:block"}`}>
-                                            {entry.label}
-                                        </div>
-                                    )}
-
-                                    <div className={`mx-auto h-px w-7 bg-white/10 min-[2200px]:hidden ${(isMobile || desktopExpanded) ? "hidden" : "block"}`} />
-
-                                    {isOpen ? (
-                                        <div className={`mt-1 space-y-1 ${(isMobile || desktopExpanded) ? "pl-2" : "min-[2200px]:pl-2"}`}>
-                                            {entry.children?.map((item) =>
-                                                renderNavItem(item, true),
-                                            )}
-                                        </div>
-                                    ) : null}
-                                </div>
-                            );
-                        }
-
-                        return renderNavItem(entry);
-                    })}
+                    {allowedNav.map(item => renderNavItem(item))}
                 </nav>
 
                 <div className="mt-auto p-3 text-[11px] opacity-50">

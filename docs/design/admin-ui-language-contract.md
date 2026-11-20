@@ -1234,3 +1234,32 @@ phụ nằm trong title accessible, hiển thị storefront cạnh identity. Kh�
 thái dựa vào viewport. Ảnh 36px có fallback, tên 14/20, metadata 12/16, tiền có ₫.
 Ngày tạo/cập nhật chung một cột; hoạt động và menu dòng giữ nguyên. Header sentence
 case, hàng phẳng, không card/gradient/shadow; bảng rộng chỉ cuộn trong pane.
+
+### System — flat main navigation
+
+System là một link trên thanh chính, không còn group accordion Channels/Activity.
+Landing /admin/system mở mục đầu tiên có quyền. Channels và Activity giữ URL
+cũ, SYSTEM_JOB_VIEW và ACTIVITY_READ tương ứng, không suy ra quyền ghi từ
+quyền điều hướng. Các guard route, server action, filter và query cũ giữ nguyên.
+Users tiếp tục ở Danh bạ, không lặp trong System.
+
+Hai màn hình dùng AdminRouteWorkspace với menu trái Khu vực hệ thống, độ rộng
+lưu riêng admin:system:menu-width:v1, native select ở màn hình hẹp và cùng
+cơ chế kéo vách ngăn. Một h1 System; heading nội dung dùng shared section
+heading, bỏ padding trang lồng. Activity có embedded mode, standalone vẫn giữ
+hành vi cũ. Không thay cấu hình kênh, dispatch, refresh token hay dữ liệu log
+khi thay navigation. Resize không remount nội dung form Channels.
+
+### Main sidebar — flat route list
+
+Thanh chính là một danh sách route phẳng: không heading Business/Storefront,
+không accordion, không submenu, không thụt lề theo nhóm. Mọi mục cùng cấp,
+thứ tự và biểu tượng nhất quán ở desktop rail, desktop mở rộng và mobile.
+Sản phẩm, Mua bán, Vận hành, Danh bạ, Báo cáo và System tiếp tục có
+navigation nội bộ trong workspace, không chuyển mục con trở lại sidebar.
+Thư viện ảnh website không còn là mục ở thanh chính. URL, dữ liệu media,
+quyền và các đường truy cập từ tính năng website không bị xóa; route media
+vẫn thuộc mục Trang chủ website khi xác định active route.
+Giữ đúng từng điều kiện quyền hiện có, ADMIN bypass, tooltip/focus cho rail
+và đóng menu mobile khi điều hướng. Không dùng state nhóm hoặc flyout
+để khôi phục phân tầng trên thanh chính.
