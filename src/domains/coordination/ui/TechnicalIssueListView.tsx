@@ -241,7 +241,7 @@ export default function TechnicalIssueListView({
       </div>}
       {(loading || loadingColumn) && (
         <p role="status" className={styles.loading}>
-          <Loader2 size={14} className="animate-spin" />
+          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
           Đang tải dữ liệu TI…
         </p>
       )}
@@ -282,87 +282,106 @@ export default function TechnicalIssueListView({
                 className={`${styles.row} ${focusedIssueId === item.id ? styles.focused : ""}`}
               >
                 <div role="cell" className={styles.identity}>
-                  <AdminButton variant="contextual"
+                  <AdminButton
+                    variant="contextual"
                     type="button"
                     className={styles.open}
                     onClick={() => onPreview(item)}
                     aria-label={`Xem nhanh TI ${item.summary}`}
-                    title={item.processingDetails.length ? item.processingDetails.join(" · ") : undefined}
-                  >
-                    <TechnicalThumbnail key={image || "missing"} src={image} />
-                    <span className={styles.identityText}>
+                    title={
+                      item.processingDetails.length
+                        ? item.processingDetails.join(" · ")
+                        : undefined
+                    }
+                  />
+                  <TechnicalThumbnail key={image || "missing"} src={image} />
+                  <div className={styles.identityText}>
+                    <div className={styles.titleLine}>
                       <span className={styles.title}>{item.summary}</span>
-                      <span
-                        className={styles.product}
+                      <AdminButton
+                        variant="contextual"
+                        type="button"
+                        aria-pressed={urgent}
+                        aria-busy={busy}
+                        disabled={busy}
+                        aria-label={`${urgent ? "Bỏ gấp" : "Đánh dấu gấp"}: ${item.summary}`}
                         title={
-                          item.serviceRequest.productTitle ||
-                          item.serviceRequest.sku ||
-                          undefined
+                          urgent ? "Bỏ ưu tiên gấp" : "Đánh dấu ưu tiên gấp"
                         }
+                        className={`${styles.priority} ${urgent ? styles.urgent : ""}`}
+                        onClick={() => onTogglePriority(item)}
                       >
-                        {item.serviceRequest.productTitle ||
-                          item.serviceRequest.sku ||
-                          "Đồng hồ chưa đặt tên"}
-                      </span>
-                      <span className={styles.meta}>
-                        <span>
-                          {item.serviceRequest.refNo || "Chưa có mã SR"}
-                        </span>
-                        <span>
-                          {areaLabel(item.area)}
-                        </span>
-                        {item.requestOrigin === "CUSTOMER_ORDER" && (
-                          <span className={styles.order}>Đơn khách</span>
+                        {busy ? (
+                          <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Zap size={14} aria-hidden="true" />
                         )}
-                        {(item.commentCount > 0 ||
-                          item.unreadMentionCount > 0) && (
-                          <span
-                            className={
-                              item.unreadMentionCount ? styles.unread : ""
-                            }
-                            title={`${item.commentCount} bình luận · ${item.unreadMentionCount} nhắc bạn chưa đọc`}
-                          >
-                            <MessageCircle size={12} />
-                            {item.commentCount}
-                            {item.unreadMentionCount > 0
-                              ? ` · @${item.unreadMentionCount}`
-                              : ""}
-                          </span>
-                        )}
+                      </AdminButton>
+                    </div>
+                    <span
+                      className={styles.product}
+                      title={
+                        item.serviceRequest.productTitle ||
+                        item.serviceRequest.sku ||
+                        undefined
+                      }
+                    >
+                      {item.serviceRequest.productTitle ||
+                        item.serviceRequest.sku ||
+                        "Đồng hồ chưa đặt tên"}
+                    </span>
+                    <span className={styles.meta}>
+                      <span>
+                        {item.serviceRequest.refNo || "Chưa có mã SR"}
                       </span>
-                      <span className="sr-only">{item.processingDetails.join(" · ")}</span>
+                      <span>{areaLabel(item.area)}</span>
+                      {item.requestOrigin === "CUSTOMER_ORDER" && (
+                        <span className={styles.order}>Đơn khách</span>
+                      )}
+                      {(item.commentCount > 0 ||
+                        item.unreadMentionCount > 0) && (
+                        <span
+                          className={
+                            item.unreadMentionCount ? styles.unread : ""
+                          }
+                          title={`${item.commentCount} bình luận · ${item.unreadMentionCount} nhắc bạn chưa đọc`}
+                        >
+                          <MessageCircle size={12} />
+                          {item.commentCount}
+                          {item.unreadMentionCount > 0
+                            ? ` · @${item.unreadMentionCount}`
+                            : ""}
+                        </span>
+                      )}
                     </span>
-                  </AdminButton>
-                  <AdminButton variant="contextual"
-                    type="button"
-                    aria-pressed={urgent}
-                    aria-busy={busy}
-                    disabled={busy}
-                    aria-label={`${urgent ? "Bỏ gấp" : "Đánh dấu gấp"}: ${item.summary}`}
-                    title={urgent ? "Bỏ ưu tiên gấp" : "Đánh dấu ưu tiên gấp"}
-                    className={`${styles.priority} ${urgent ? styles.urgent : ""}`}
-                    onClick={() => onTogglePriority(item)}
-                  >
-                    {busy ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Zap size={14} />
-                    )}
-                    <span className={urgent ? "" : "sr-only"}>
-                      {urgent ? "Gấp" : "Thường"}
+                    <span className="sr-only">
+                      {item.processingDetails.join(" · ")}
                     </span>
-                  </AdminButton>
+                  </div>
                 </div>
                 <div role="cell" className={styles.owner}>
-                  <span className={styles.stage} data-stage={item.stage}>{TECHNICAL_LIST_STAGES.find(stage => stage.key === item.stage)?.label}</span>
-                  <span className={styles.ownerName}>{ownerLabel(item.actionMode, item.vendorName)}</span>
-                  <span className="sr-only">Cập nhật: {item.lastUpdatedBy.label} · {date(item.updatedAt)}</span>
+                  <span className={styles.stage} data-stage={item.stage}>
+                    {
+                      TECHNICAL_LIST_STAGES.find(
+                        (stage) => stage.key === item.stage,
+                      )?.label
+                    }
+                  </span>
+                  <span className={styles.ownerName}>
+                    {ownerLabel(item.actionMode, item.vendorName)}
+                  </span>
+                  <span className="sr-only">
+                    Cập nhật: {item.lastUpdatedBy.label} ·{" "}
+                    {date(item.updatedAt)}
+                  </span>
                 </div>
                 <div role="cell" className={styles.due}>
                   <span className={styles.mobileLabel}>Thời hạn</span>
                   <span
                     className={late && item.stage !== "DONE" ? styles.late : ""}
-                    aria-label={!item.expectedCompletionAt ? "Chưa hẹn hạn" : undefined}
+                    aria-label={
+                      !item.expectedCompletionAt ? "Chưa hẹn hạn" : undefined
+                    }
                   >
                     {item.expectedCompletionAt
                       ? date(item.expectedCompletionAt)
@@ -377,7 +396,15 @@ export default function TechnicalIssueListView({
                     </small>
                   )}
                 </div>
-                <div role="cell" className={styles.cost} aria-label={item.actualCost == null && item.estimatedCost == null ? "Chưa có chi phí" : undefined}>
+                <div
+                  role="cell"
+                  className={styles.cost}
+                  aria-label={
+                    item.actualCost == null && item.estimatedCost == null
+                      ? "Chưa có chi phí"
+                      : undefined
+                  }
+                >
                   <span className={styles.mobileLabel}>Chi phí</span>
                   <span>
                     {item.actualCost != null
@@ -467,7 +494,7 @@ export default function TechnicalIssueListView({
               }
             >
               {loadingColumn === `technical:${loadTarget}` ? (
-                <Loader2 size={14} className="animate-spin" />
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
               ) : (
                 <ArrowDown size={14} />
               )}

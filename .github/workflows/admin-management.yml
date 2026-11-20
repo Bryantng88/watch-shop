@@ -25,6 +25,7 @@ on:
       - 'src/server/auth/admin-api-policy.ts'
       - 'scripts/check-admin-management-*.mjs'
       - 'scripts/check-contact-directory-db.mjs'
+      - 'scripts/check-role-permission-ui.cjs'
       - '.github/workflows/admin-management.yml'
 permissions:
   contents: read
@@ -78,6 +79,8 @@ jobs:
           src/server/auth/admin-api-policy.ts
           scripts/check-admin-management-api.mjs scripts/check-admin-management-ui.mjs
           scripts/check-contact-directory-db.mjs
+          'src/app/(admin)/admin/users/_client/RolePermissionManager.tsx'
+          scripts/check-role-permission-ui.cjs
       - run: npx tsc --noEmit
       - run: node scripts/check-admin-management-api.mjs
       - run: node scripts/check-contact-directory-db.mjs
@@ -87,6 +90,10 @@ jobs:
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright/index.mjs
           MANAGEMENT_SCREENSHOT_DIR: ${{ runner.temp }}/admin-management
+      - run: node scripts/check-role-permission-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          ROLE_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/roles.png
       - run: npm run build
       - uses: actions/upload-artifact@v4
         if: always()

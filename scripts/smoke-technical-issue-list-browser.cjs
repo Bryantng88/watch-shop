@@ -87,6 +87,53 @@ const esbuild = require("esbuild"),
       .getByRole("table", { name: "Danh sách TI", exact: true })
       .waitFor();
     assert.equal(await page.locator("[data-technical-issue-id]").count(), 25);
+    const urgentIcon = page.getByRole('button',{name:/^Bỏ gấp:/}).first();
+    assert.equal(await urgentIcon.innerText(),'', 'urgency is icon-only visually');
+    assert.match(await urgentIcon.getAttribute('title'),/gấp/);
+    assert.equal(await urgentIcon.getAttribute('aria-pressed'),'true');
+    assert.equal(await urgentIcon.locator('svg').evaluate(el=>el.getBoundingClientRect().width),14);
+    assert.equal(await urgentIcon.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');
+    assert.equal(await urgentIcon.evaluate(el=>el.getBoundingClientRect().width),24);
+
+    // Header text, identity, urgency and data share a stable first-line axis.
+    const geometry = await page.locator('[data-technical-issue-id]').evaluateAll(rows => rows.map(row => {
+      const cells = row.querySelectorAll(':scope > [role="cell"]');
+      const preview = cells[0].querySelector('button[aria-label^="Xem nhanh TI"]');
+      const priority = cells[0].querySelector('button[aria-pressed]');
+      const title = priority.parentElement.querySelector('span');
+      const product = priority.parentElement.nextElementSibling;
+      const titleRect = title.getBoundingClientRect(), priorityRect = priority.getBoundingClientRect();
+      const titleRange = document.createRange(); titleRange.selectNodeContents(title);
+      const titleText = titleRange.getClientRects()[0];
+      const header = row.closest('[role="table"]').querySelector('[role="columnheader"]');
+      const range = document.createRange(); range.selectNodeContents(header);
+      const text = document.createRange(); text.selectNodeContents(cells[1].querySelector('span'));
+      const stage = text.getBoundingClientRect();
+      return {
+        id: row.dataset.technicalIssueId,
+        headerX: range.getBoundingClientRect().left, titleX: titleRect.left,
+        gap: priorityRect.left-titleRect.right,
+        centerDelta: Math.abs((titleText.top+titleText.bottom)-(priorityRect.top+priorityRect.bottom))/2,
+        stageDelta: Math.abs((titleText.top+titleText.bottom)/2-(stage.top+stage.bottom)/2),
+        actionWidth: cells[4].querySelector('button')?.getBoundingClientRect().width,
+        expectedWidth: cells[4].getBoundingClientRect().width,
+        nestedButtons: Boolean(preview.querySelector('button')),
+        previewCoversIdentity: Math.abs(preview.getBoundingClientRect().height-cells[0].getBoundingClientRect().height)<1,
+        productX: product.getBoundingClientRect().left,
+      };
+    }));
+    for (const row of geometry) {
+      assert.ok(Math.abs(row.headerX-row.titleX)<1, 'TI header aligns with title '+row.id);
+      assert.ok(Math.abs(row.productX-row.titleX)<1, 'watch and reference align '+row.id);
+      assert.ok(row.gap>=7 && row.gap<=9, 'priority follows title '+row.id);
+      assert.ok(row.centerDelta<=2, 'priority shares title axis '+row.id);
+      assert.ok(row.stageDelta<=3, 'processing starts on first line '+row.id);
+      assert.ok(Math.abs(row.actionWidth-row.expectedWidth)<1, 'uniform action width '+row.id);
+      assert.equal(row.nestedButtons,false);
+      assert.equal(row.previewCoversIdentity,true);
+    }
+
+    await page.screenshot({path: process.env.TI_VIEWPORT_SCREENSHOT || "/tmp/ti-aligned-viewport.png", fullPage: false});
     await page.screenshot({
       path:
         process.env.TI_DESKTOP_SCREENSHOT ||
@@ -133,15 +180,22 @@ const esbuild = require("esbuild"),
         .getAttribute("aria-expanded"),
       "false",
     );
-    await first.getByRole("button", { name: /^Xem nhanh TI/ }).click();
+    await first.getByRole("button", { name: /^Xem nhanh TI/ }).click({position:{x:8,y:8}});
     await page.getByRole("dialog", { name: "Xem nhanh TI" }).waitFor();
     assert.equal(
       (await page.evaluate(() => window.__tiQA.getCalls())).at(-1).id,
       firstId,
     );
     await page.getByRole("button", { name: "Đóng xem nhanh" }).click();
+    await first.getByRole("button", {name:/^Xem nhanh TI/}).focus();
+    await page.keyboard.press('Enter');
+    await page.getByRole('dialog',{name:'Xem nhanh TI'}).waitFor();
+    assert.equal((await page.evaluate(()=>window.__tiQA.getCalls())).at(-1).id,firstId);
+    await page.getByRole("button", { name: "Đóng xem nhanh" }).click();
     const priority = first.getByRole("button", { name: /gấp:/ });
+    const previewCount = await page.evaluate(() => window.__tiQA.getCalls().filter(call => call.type === 'preview').length);
     await priority.click();
+    assert.equal(await page.evaluate(() => window.__tiQA.getCalls().filter(call => call.type === 'preview').length), previewCount, 'priority must not open preview');
     assert.equal(await priority.getAttribute("aria-busy"), "true");
     await page.waitForFunction(
       () => document.querySelectorAll('[aria-busy="true"]').length === 0,
@@ -192,6 +246,10 @@ const esbuild = require("esbuild"),
       (await page.evaluate(() => window.__tiQA.getState())).scope,
       "READY",
     );
+    for (const width of [1440, 1280, 1024, 920, 768, 520, 390, 320]) {
+      await page.setViewportSize({width,height:844});
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),false,'TI layout overflow '+width);
+    }
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
       await page.evaluate(
