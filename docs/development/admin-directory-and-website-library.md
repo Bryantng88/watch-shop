@@ -77,3 +77,30 @@ valid. Private signed previews can be renewed with Làm mới.
 
 The fixtures do not establish live object-store, authenticated end-to-end or
 production publication acceptance. No deployment or publication is part of this PR.
+
+
+## Website media by section (2026-11-20)
+
+Uploads from the editor and library use the NAS S3 storage port, not a File Station
+filesystem mount. Allowlisted sibling folders are `storefront/hero/`, `about/`,
+`collections/`, `journal/`, `branding/` and the existing `editorial/` (each under
+`storefront/`). Desktop/mobile share Hero; About uses about; collection images use
+collections; article covers/body images use journal; logo uses branding. Featured
+watches retain catalog images; Closing has no image slot. Existing objects and
+published references are not moved, renamed or deleted.
+
+The editor expands an inline thumbnail picker in the current field, starting in
+its section folder. Its folder selector can reuse existing images, and real
+continuation cursors allow browsing beyond the initial page. Choosing/clearing
+only changes the draft; uploads keep the existing image validation/20MB/Sharp
+pipeline and never publish. Image previews stream through a PRODUCT_UPDATE-gated,
+same-origin route; only allowlisted website keys are accepted. Public image URLs
+still resolve document/slot from published snapshots, not arbitrary keys.
+
+Folders exist automatically on first upload. For pre-creating visible empty S3
+folders on staging, run `node --import tsx scripts/ensure-website-image-folders.ts`
+for a read-only check, then add `--apply`. It checks the staging APP_URL and a
+staging/test bucket name, creates only missing zero-byte folder markers, and
+never touches existing images. It refuses production. Production provisioning
+remains part of the separately authorized release; first upload creates its
+section prefix without a filesystem mount or a bucket access-policy change.

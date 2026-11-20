@@ -4,14 +4,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { mediaStorage } from "@/domains/media/storage";
 import { requirePermissionApi } from "@/server/auth/requirePermissionApi";
 import { PERMISSIONS } from "@/constants/permissions";
-import { websiteFolder } from "@/domains/storefront/media/website-media";
+import { websiteFolder, WEBSITE_IMAGE_FOLDERS, websiteImageUrl } from "@/domains/storefront/media/website-media";
 import { editorialKey } from "@/domains/storefront/content/contract";
 export const maxDuration = 60;
 export async function GET() {
   const auth = await requirePermissionApi(PERMISSIONS.PRODUCT_UPDATE);
   if (auth instanceof Response) return auth;
   const lists = await Promise.all(
-    ["storefront/editorial/", "storefront/hero/"].map((prefix) =>
+    WEBSITE_IMAGE_FOLDERS.map(({ prefix }) =>
       mediaStorage.list({ prefix, maxKeys: 500 }),
     ),
   );
@@ -24,7 +24,7 @@ export async function GET() {
     entries.map(async (i) => ({
       key: i.key,
       name: i.key.split("/").pop(),
-      url: await mediaStorage.sign(i.key, 600),
+      url: websiteImageUrl(i.key),
     })),
   );
   return NextResponse.json(
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const key = `storefront/${folder.data}/${randomUUID()}.webp`;
     await mediaStorage.write({ key, bytes: output, contentType: "image/webp" });
     return NextResponse.json({
-      item: { key, name: file.name, url: await mediaStorage.sign(key, 600) },
+      item: { key, name: file.name, url: websiteImageUrl(key) },
     });
   } catch (e) {
     return NextResponse.json(

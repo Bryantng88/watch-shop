@@ -6,6 +6,9 @@ import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSp
 import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeedback";
 import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
+import { WebsiteImagePicker } from "../media/WebsiteImagePicker";
+import { WEBSITE_IMAGE_FOLDERS, websiteImageUrl, type WebsiteFolder } from "../media/website-media";
+import { ADMIN_UI_FOUNDATION as foundation } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {AdminPageCanvas,AdminPageHeader,AdminDocumentFooter} from "@/domains/shared/ui/admin-design-contract";
 import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
@@ -87,30 +90,37 @@ function ImageField({
   onUpload,
   disabled,
   emptyHint,
+  folder = "editorial",
 }: {
   label: string;
   value: EditorialImage;
   onChange: (s: EditorialImage) => void;
   library: LibraryImage[];
-  onUpload: (file: File) => Promise<LibraryImage | null>;
+  onUpload: (file: File, folder: WebsiteFolder) => Promise<LibraryImage | null>;
   disabled: boolean;
   emptyHint?: string;
+  folder?: WebsiteFolder;
 }) {
   const hintId = useId();
   const showHint = !value.key && Boolean(emptyHint);
   const fileInput=useRef<HTMLInputElement>(null);
   const current = library.find((i) => i.key === value.key);
+  const [browsing, setBrowsing] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const pickerId = useId(), chooseButton = useRef<HTMLButtonElement>(null);
+  const folderName = WEBSITE_IMAGE_FOLDERS.find(item => item.id === folder)!.label;
+  function closePicker() { setBrowsing(false); chooseButton.current?.focus(); }
   return (
-    <fieldset className="sfc-image">
+    <fieldset className="sfc-image" style={{ "--website-line": foundation.colors.divider, "--website-body": foundation.colors.body, "--website-ring": foundation.colors.focusRing, "--website-soft": foundation.colors.softSurface, "--website-link": foundation.colors.link, "--website-canvas": foundation.colors.canvas, "--website-muted": foundation.colors.muted, "--website-error": foundation.colors.danger } as React.CSSProperties}>
       <legend>{label}</legend>
       <div className="sfc-image-row">
         <div className="sfc-thumbnail">
-          {current ? (
+          {value.key ? (
             <Image
               unoptimized
               width={140}
               height={115}
-              src={current.url}
+              src={current?.url || websiteImageUrl(value.key)}
               alt={value.alt}
               style={{ objectPosition: `${value.focalX}% ${value.focalY}%` }}
             />
@@ -119,46 +129,37 @@ function ImageField({
           )}
         </div>
         <div className="sfc-image-controls">
-          <select
-            aria-label={`Chọn ${label}`}
-            aria-describedby={showHint ? hintId : undefined}
-            value={value.key}
-            onChange={(e) => onChange({ ...value, key: e.target.value })}
-          >
-            <option value="">Chưa chọn ảnh</option>
-            {value.key && !current ? (
-              <option value={value.key}>Ảnh đã chọn (ngoài 300 ảnh mới nhất)</option>
-            ) : null}
-            {library.map((i) => (
-              <option key={i.key} value={i.key}>
-                {i.name}
-              </option>
-            ))}
-          </select>
-          <AdminButton variant="secondary" type="button" className="sfc-upload" disabled={disabled} aria-label={`Tải ${label}`} onClick={()=>fileInput.current?.click()}><ImagePlus size={15}/>Tải ảnh mới</AdminButton>
+          <AdminButton ref={chooseButton} variant="quiet" type="button" disabled={disabled} aria-label={`Chọn ${label}`} aria-expanded={browsing} aria-controls={pickerId} aria-describedby={showHint ? hintId : undefined} onClick={() => setBrowsing(value => !value)}><ImagePlus size={15} />Chọn ảnh</AdminButton>
+          <AdminButton variant="quiet" type="button" className="sfc-upload" disabled={disabled} aria-label={`Tải ${label}`} onClick={()=>fileInput.current?.click()}><ImagePlus size={15}/>Tải ảnh mới</AdminButton>
             <input
               ref={fileInput}
               hidden
               type="file"
+              aria-label={`Tải ${label} vào ${folderName}`}
               accept="image/jpeg,image/png,image/webp"
               disabled={disabled}
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  const item = await onUpload(file);
-                  if (item) onChange({ ...value, key: item.key });
+                  const item = await onUpload(file, folder);
+                  if (item) { onChange({ ...value, key: item.key }); setRefreshVersion(version => version + 1); }
                 }
                 e.target.value = "";
               }}
             />
+          <small className="sfc-image-hint">{folderName}</small>
           {value.key ? (
-            <AdminButton variant="secondary" type="button" onClick={() => onChange(emptyImage())}>
+            <AdminButton variant="quiet" type="button" onClick={() => onChange(emptyImage())}>
               Bỏ ảnh
             </AdminButton>
           ) : null}
           {showHint ? <small id={hintId} className="sfc-image-hint">{emptyHint}</small> : null}
         </div>
       </div>
+      {browsing && <div id={pickerId} role="region" aria-label={`Thư viện ${label}`} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); closePicker(); } }}>
+        <div className="sfc-row"><strong>Chọn ảnh · {folderName}</strong><AdminButton variant="quiet" type="button" disabled={disabled} onClick={closePicker} aria-label={`Đóng thư viện ${label}`}><X size={16} /></AdminButton></div>
+        <WebsiteImagePicker initialFolder={folder} selectedKey={value.key} disabled={disabled} refreshVersion={refreshVersion} onChoose={item => { onChange({ ...value, key: item.key }); closePicker(); }} />
+      </div>}
       <Field label="Mô tả ảnh" value={value.alt} onChange={(alt) => onChange({ ...value, alt })} />
       <details className="sfc-advanced"><AdminDisclosureSummary>Chỉnh vị trí ảnh</AdminDisclosureSummary>
       <div className="sfc-grid">
@@ -388,10 +389,10 @@ export default function StorefrontManager({
     setDirty(true);
 
   }
-  async function upload(file: File) {
+  async function upload(file: File, folder: WebsiteFolder) {
     setError("");
     return await uploadMutation.run({key:"media-upload",notifyOnError:false,onError:(error)=>setError(error instanceof Error?error.message:"Không thể tải ảnh. Vui lòng thử lại."),action:async()=>{
-      const data=new FormData();data.append("file",file);
+      const data=new FormData();data.append("file",file);data.append("folder",folder);
       const result=await jsonRequest("/api/admin/storefront/media",{method:"POST",body:data});
       libraryRequest.current += 1; setLibrary(value=>[result.item,...value]);return result.item as LibraryImage;
     }}) || null;
@@ -625,6 +626,7 @@ export default function StorefrontManager({
                   <div className="sfc-grid">
                     <ImageField
                       {...imageProps}
+                      folder="hero"
                       label="Ảnh desktop"
                       emptyHint="Để trống để dùng ảnh đồng hồ đủ điều kiện từ danh mục."
                       value={home.hero.image}
@@ -632,6 +634,7 @@ export default function StorefrontManager({
                     />
                     <ImageField
                       {...imageProps}
+                      folder="hero"
                       label="Ảnh mobile (bỏ trống để dùng desktop)"
                       value={home.hero.mobileImage}
                       onChange={(mobileImage) =>
@@ -679,7 +682,8 @@ export default function StorefrontManager({
                   />
                   <ImageField
                     {...imageProps}
-                    label="Ảnh giới thiệu"
+                    folder="about"
+                      label="Ảnh giới thiệu"
                     emptyHint="Ảnh không bắt buộc. Chưa chọn ảnh: phần giới thiệu hiển thị dạng văn bản gọn."
                     value={home.about.image}
                     onChange={(image) => edit({ ...home, about: { ...home.about, image } })}
@@ -725,6 +729,7 @@ export default function StorefrontManager({
                       ))}
                       <ImageField
                         {...imageProps}
+                        folder="collections"
                         label={`Ảnh nhóm ${i + 1}`}
                         emptyHint="Ảnh không bắt buộc. Chưa chọn ảnh: nhóm hiển thị thành liên kết gọn."
                         value={collection.image}
@@ -821,6 +826,7 @@ export default function StorefrontManager({
                     <AdminDisclosureSummary>Thông tin chung & footer</AdminDisclosureSummary>
                     <ImageField
                       {...imageProps}
+                      folder="branding"
                       label="Logo (bỏ trống để dùng chữ Vintic)"
                       value={home.general.logo}
                       onChange={(logo) => edit({ ...home, general: { ...home.general, logo } })}
@@ -931,7 +937,8 @@ export default function StorefrontManager({
                 />
                 <ImageField
                   {...imageProps}
-                  label="Ảnh bìa"
+                  folder="journal"
+                      label="Ảnh bìa"
                   value={article.cover}
                   onChange={(cover) => edit({ ...article, cover })}
                 />
@@ -946,6 +953,7 @@ export default function StorefrontManager({
                   <div key={i}>
                     <ImageField
                       {...imageProps}
+                      folder="journal"
                       label={`Ảnh trong bài ${i + 1}`}
                       value={image}
                       onChange={(value) =>

@@ -5,7 +5,7 @@ export const editorialKey = z
   .refine(
     (v) =>
       v === "" ||
-      /^storefront\/(?:editorial\/[a-z0-9-]+\.webp|hero\/(?!.*(?:\.\.|\\))[^\x00-\x1f]+\.(?:jpe?g|png|webp))$/i.test(
+      /^storefront\/(?:(?:editorial|about|collections|journal|branding)\/[a-z0-9-]+\.webp|hero\/(?!.*(?:\.\.|\\))[^\x00-\x1f]+\.(?:jpe?g|png|webp))$/i.test(
         v,
       ),
     "Chọn ảnh từ thư viện Storefront.",

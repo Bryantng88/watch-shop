@@ -41,6 +41,7 @@ const db={customer:model('customers'),vendor:model('vendors'),$transaction:async
 const storageCalls=[];state.storage={
  list:async input=>{storageCalls.push(['list',input]);return{items:[{key:input.prefix+'image.webp',sizeBytes:100,lastModified:new Date('2026-11-19T00:00:00Z')},{key:'watches/private.webp',sizeBytes:10,lastModified:null}],nextCursor:input.cursor?null:'next-page',truncated:!input.cursor}},
  stat:async key=>{storageCalls.push(['stat',key]);return{key,sizeBytes:100}},
+ read:async key=>{storageCalls.push(['read',key]);return{bytes:new Uint8Array([1,2,3]),sizeBytes:3}},
  sign:async(key,expiry)=>{storageCalls.push(['sign',key,expiry]);return'https://example.invalid/'+key},
  write:async input=>{storageCalls.push(['write',input.key]);return{key:input.key,sizeBytes:input.bytes.length}},
 };
@@ -85,6 +86,12 @@ const writesBefore=storageCalls.filter(([method])=>method==='write').length;
 assert.equal((await upload.POST(uploadRequest('../watches'))).status,400);assert.equal(storageCalls.filter(([method])=>method==='write').length,writesBefore);
 response=await upload.POST(uploadRequest());assert.equal(response.status,200);assert.match((await response.json()).item.key,/^storefront\/editorial\/[a-f0-9-]+\.webp$/);
 response=await upload.POST(uploadRequest('hero'));assert.equal(response.status,200);assert.match((await response.json()).item.key,/^storefront\/hero\/[a-f0-9-]+\.webp$/);
+for(const folder of ['about','collections','journal','branding']){response=await upload.POST(uploadRequest(folder));assert.equal(response.status,200);const item=(await response.json()).item;assert.ok(item.key.startsWith('storefront/'+folder+'/'));assert.ok(item.url.startsWith('/api/admin/storefront/media/image?key='));response=await media.GET(mediaRequest('folder='+folder));assert.equal(response.status,200);assert.equal((await response.json()).items.length,1);}
+const image=await load('src/app/api/admin/storefront/media/image/route.ts');
+state.user=null;const reads=storageCalls.length;assert.equal((await image.GET(mediaRequest('key=storefront/about/image.webp'))).status,401);assert.equal(storageCalls.length,reads);
+state.user={roles:[],permissions:['PRODUCT_VIEW']};assert.equal((await image.GET(mediaRequest('key=storefront/about/image.webp'))).status,403);
+state.user={roles:[],permissions:['PRODUCT_UPDATE']};assert.equal((await image.GET(mediaRequest('key=media/objects/private.webp'))).status,404);assert.equal(storageCalls.length,reads);
+response=await image.GET(mediaRequest('key=storefront/about/image.webp'));assert.equal(response.status,200);assert.equal(response.headers.get('content-type'),'image/webp');assert.equal(response.headers.get('cache-control'),'private, no-store');assert.equal((await response.arrayBuffer()).byteLength,3);
 state.user={roles:[],permissions:['PRODUCT_VIEW']};assert.equal((await upload.POST(uploadRequest('hero'))).status,403);
 const policy=await load('src/server/auth/admin-api-policy.ts');assert.ok(policy.getAdminApiPolicy('/api/admin/contacts','GET'));assert.ok(policy.getAdminPagePolicy('/admin/vendors'));assert.deepEqual(Array.from(policy.getAdminPagePolicy('/admin/storefront/media').anyOf),['PRODUCT_UPDATE']);assert.deepEqual(Array.from(policy.getAdminApiPolicy('/api/admin/storefront/media','POST').anyOf),['PRODUCT_UPDATE']);
 console.log('PASS actual APIs with synthetic DB/storage: per-directory auth and write gates, strict fields, paging, duplicate phone, stale-update fencing and field preservation; website-only keys, folder validation, cursors and legacy/default+Hero upload conversion. No real database/storage writes or production data.');
