@@ -28,7 +28,7 @@ export default function TradingWorkspace({ entries, selected, children }: { entr
   const active = statuses.some(([value]) => value === current) ? href(current) : "";
   if (!active) statusEntries.push({ href: href(current), label: "Bộ lọc hiện tại" });
   return <AdminRouteWorkspace title="Mua bán" description="Quản lý phiếu nhập và đơn hàng." navigationLabel="Khu vực mua bán" storageKey="admin:trading:menu-width:v1" entries={entries} selected={selected}
-    extraNavigation={<AdminWorkspaceNavigation label={`Trạng thái ${orders ? "đơn hàng" : "phiếu nhập"}`} entries={statusEntries} selected={active || href(current)} />}>
+    extraNavigation={<AdminWorkspaceNavigation compact label={`Trạng thái ${orders ? "đơn hàng" : "phiếu nhập"}`} entries={statusEntries} selected={active || href(current)} />}>
     {children}
   </AdminRouteWorkspace>;
 }

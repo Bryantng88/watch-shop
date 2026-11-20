@@ -1726,6 +1726,7 @@ export default function WatchListClient(props: WatchListClientProps) {
           onApply={handleApplyFilters}
           onClear={handleClearFilters}
           onClearField={handleClearField}
+          onSidebarFilterChange={props.embedded ? (key, value) => pushParams(next => { setParam(next, key, value); next.set("page", "1"); }, { meta: "full", withTotal: true }) : undefined}
           onSaveView={handleSaveView}
         />
       }

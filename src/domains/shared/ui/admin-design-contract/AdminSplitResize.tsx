@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type RefObject } from "react";
 import { ADMIN_UI_FOUNDATION as F } from "./admin-ui.foundation";
 import styles from "./AdminSplitResize.module.css";
 
@@ -24,7 +24,8 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
   const apply = (value: number) => { latest.current = value; if (value > 0) expanded.current = value; setWidth(value); };
   const normalize = (value: number) => value < spec.collapseAt ? 0 : Math.min(limit(), Math.max(spec.minSidebarWidth, value));
   const persist = (value: number) => { try { localStorage.setItem(storageKey, String(value)); localStorage.setItem(`${storageKey}:expanded`, String(value > 0 ? value : expanded.current)); } catch { /* Storage is optional; resizing still works. */ } };
-  useEffect(() => {
+  // Measure/restore during commit so a remounted workspace never paints its narrow defaults.
+  useLayoutEffect(() => {
     if (!enabled) return;
     try {
       const restored = Number(localStorage.getItem(`${storageKey}:expanded`));
@@ -34,7 +35,7 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
       if (Number.isFinite(saved) && (saved === 0 || saved >= spec.minSidebarWidth && saved <= spec.maxSidebarWidth)) { latest.current = saved; if (saved > 0) expanded.current = saved; setWidth(saved); }
     } catch { /* Restricted browser storage uses the default width. */ }
   }, [enabled, storageKey]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = layout.current;
     if (!enabled || !node) return;
     const update = () => { setWide(node.clientWidth >= F.splitWorkspace.collapseWidth); setMaximum(Math.min(spec.maxSidebarWidth, Math.max(spec.minSidebarWidth, node.clientWidth - spec.minContentWidth - F.page.splitGap))); };

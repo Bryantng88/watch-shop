@@ -1263,3 +1263,62 @@ vẫn thuộc mục Trang chủ website khi xác định active route.
 Giữ đúng từng điều kiện quyền hiện có, ADMIN bypass, tooltip/focus cho rail
 và đóng menu mobile khi điều hướng. Không dùng state nhóm hoặc flyout
 để khôi phục phân tầng trên thanh chính.
+
+### Dây đồng hồ — inventory list
+
+Mục /admin/straps trong Sản phẩm và heading danh sách dùng tên Dây đồng hồ.
+Giữ route, ACCESSORY_VIEW, projection và luồng danh mục/đặt hàng/chi tiết cũ.
+
+Danh sách dùng shared flat BusinessListFilterBar, shared list foundation và
+heading/action row trong product workspace. Không bọc bảng bằng card bo góc,
+không có icon tile/KPI trang trí. Tổng biến thể và số chiếc tồn là metadata
+gọn; tồn chỉ cộng inventoryPolicy STOCKED, không suy đoán NON_STOCK thành 0.
+
+Bảng gồm tên dây (SKU, hãng, loại dây/da, màu), kích thước càng/khóa,
+nguồn, tồn kho căn phải và tình trạng. Không hiển thị mũi tên giữa kích thước
+biết và khóa chưa biết; null khóa ghi Chưa rõ cỡ khóa, thiếu SKU ghi Chưa có SKU.
+Trạng thái gắn đồng hồ ưu tiên như projection cũ, link đồng hồ tách riêng
+khỏi link chi tiết dây. Không thêm mutation khi click hàng.
+
+Đủ sáu bộ lọc cũ trong shared filter panel: loại dây, kích thước, trạng thái,
+loại da, nguồn và màu; tìm kiếm thêm normalization tiếng Việt không dấu.
+Áp dụng bằng Enter hoặc nút Áp dụng; xóa field/tất cả có phản hồi danh sách.
+Luôn có số kết quả và empty state riêng cho danh sách rỗng/kết quả lọc rỗng.
+Khi pane dưới 680px, hàng chuyển sang cặp label/value theo thứ tự đọc,
+không giữ bảng tối thiểu 1120px hoặc đẩy cả trang tràn ngang.
+
+### Split workspace — pre-paint initialization
+
+Khi remount do chuyển route (ví dụ Phiếu nhập ↔ Đơn hàng), shared split hooks
+đo available width và khôi phục độ rộng/trạng thái menu trong layout effects,
+trước lần paint của client commit. Không chờ passive effect rồi đổi native
+select toàn chiều ngang sang menu trái, hoặc đổi từ độ rộng mặc định sang
+độ rộng đã lưu sau khi nội dung đã hiện.
+Giữ ResizeObserver cho thay đổi kích thước về sau, ngưỡng native select,
+storage key riêng từng khu vực và giới hạn pane theo available width.
+Nếu browser chặn localStorage, dùng mặc định và vẫn đo mode trước paint.
+Không thêm viewport guess vào server render hoặc thay query/filter để sửa
+layout. Test lifecycle giữ passive effects chưa chạy để xác nhận mode và
+saved width đã sẵn sàng; browser regression giữ các hành vi resize/navigation.
+
+### Shared sidebar filter groups
+
+Mục chọn trong navigation workspace dùng typography.navigation 13px/20px,
+nhóm lọc compact dùng heading 12px/16px, weight 600. Body danh sách/form vẫn
+14px; touch target giữ ít nhất 44px, không thu nhỏ target theo chữ.
+
+AdminWorkspaceFilters cung cấp filter slot và AdminWorkspaceFilter cho tiêu chí
+có state local. Consumer giữ state và callback; portal chỉ đặt control trong
+sidebar của AdminRouteWorkspace, không remount danh sách khi attach slot,
+resize hoặc thu/mở pane. Màn hình hẹp dùng native select với cùng giá trị.
+AdminWorkspaceNavigation compact dùng cho tiêu chí điều hướng bằng URL.
+
+Các surface hiện áp dụng: trạng thái Phiếu nhập/Đơn hàng, tình trạng bán
+Đồng hồ (saleStatus), trạng thái Dây đồng hồ, kỳ báo cáo Tài chính và khoảng
+thời gian Activity. Operation stages giữ callback riêng, cùng cỡ chữ 13px.
+Bỏ select trùng ở nội dung bên phải khi sidebar host hiện diện; các consumer
+standalone giữ control cũ. Activity giữ period trong hidden input của form GET,
+đổi kỳ giữ query/actor và reset page. Watch dùng pushParams/loadList hiện có,
+giữ các query khác và reset page 1 khi đổi saleStatus. Không tạo trạng thái
+nghiệp vụ giả cho trang không có tiêu chí tương ứng; trang như vậy vẫn có
+menu điều hướng nhỏ gọn chung. Không đổi API, permission hoặc công thức báo cáo.

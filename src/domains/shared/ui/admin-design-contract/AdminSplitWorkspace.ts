@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, type CSSProperties } from "react";
 import { ADMIN_UI_FOUNDATION as F } from "./admin-ui.foundation";
 import styles from "./AdminSplitWorkspace.module.css";
 
@@ -15,7 +15,8 @@ export const ADMIN_SPLIT_WORKSPACE_STYLE = {
 /** Available-width adaptation without containment that would trap fixed dialogs. */
 export function useAdminSplitWorkspace<T extends HTMLElement>(enabled = true) {
   const ref = useRef<T>(null);
-  useEffect(() => {
+  // Measure/restore during commit so a remounted workspace never paints its narrow defaults.
+  useLayoutEffect(() => {
     const node = ref.current;
     if (!enabled || !node) return;
     const update = () => {
