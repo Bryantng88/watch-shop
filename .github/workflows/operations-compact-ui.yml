@@ -10,6 +10,7 @@ on:
       - 'src/domains/coordination/shared/technical-issue-list.ts'
       - 'tests/browser/technical-issue-list.fixture.tsx'
       - 'scripts/check-operation-stage-menu.mjs'
+      - 'scripts/smoke-technical-issue-list-browser.cjs'
       - 'src/domains/shared/ui/admin-design-contract/**'
       - 'scripts/smoke-operations-compact-ui.cjs'
       - 'scripts/smoke-operations-execution.ts'
@@ -67,10 +68,18 @@ jobs:
           src/domains/shared/ui/admin-design-contract/AdminRowActionMenu.tsx
           src/domains/shared/ui/admin-design-contract/AdminOperationList.ts
           tests/browser/technical-issue-list.fixture.tsx scripts/check-operation-stage-menu.mjs
+          scripts/smoke-technical-issue-list-browser.cjs
+          src/domains/shared/ui/admin-design-contract/AdminTechnicalList.ts
       - run: node scripts/check-operation-stage-menu.mjs
         env:
           PLAYWRIGHT_MODULE_PATH: /tmp/operations-browser/node_modules/playwright
           STAGE_MENU_SCREENSHOT_DIR: /tmp/operations-compact/stages
+      - run: node scripts/smoke-technical-issue-list-browser.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/operations-browser/node_modules/playwright
+          TI_PREVIEW_CSS: /tmp/operations-ui.css
+          TI_DESKTOP_SCREENSHOT: /tmp/operations-compact/ti-list-desktop.png
+          TI_MOBILE_SCREENSHOT: /tmp/operations-compact/ti-list-mobile.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:

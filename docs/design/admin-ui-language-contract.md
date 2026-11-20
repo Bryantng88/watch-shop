@@ -878,6 +878,29 @@ không bị table clipping, hỗ trợ keyboard/Escape/outside/focus return và 
 Các editor launcher luôn được mount bên ngoài popup để đóng menu không làm mất
 editor. Giữ nguyên action keys, binding, quyền, confirmation và dirty guards.
 
+
+### Compact technical issue list
+
+Danh sách TI dùng adapter AdminTechnicalList: hàng phẳng, 5 cột Lỗi / Đồng hồ,
+Xử lý, Thời hạn, Chi phí, Thao tác. Identity là lỗi 14/20 semibold, đồng hồ và
+mã SR / khu vực / tín hiệu comment ở metadata 12/16. Thumbnail 36px có fallback
+khi ảnh thiếu/lỗi. Không lặp nội dung xử lý thành dòng thứ tư hoặc avatar người
+cập nhật trong mỗi row; các field dữ liệu vẫn giữ nguyên, xem qua preview và
+metadata accessible. Stage và đơn vị nội bộ/vendor chung một cột. Không thêm
+badge nền cho mọi metadata. Ưu tiên gấp hiển thị rõ; control ưu tiên thường xuất
+hiện qua hover/focus, luôn hiện trên touch/narrow.
+
+Ngày dùng dd/MM/yyyy và timezone sản phẩm. Chi phí căn phải, thiếu là —, zero
+vẫn là 0 ₫; giữ phân biệt thực tế / dự kiến và thông tin quá hạn. Một control
+thao tác có nhãn: một lựa chọn thực hiện callback hiện hữu; nhiều lựa chọn mở
+AdminRowActionMenu gồm mọi lệnh được phép và Xem nhanh. Không có nút … riêng.
+
+Reflow theo chiều rộng list: dưới 920px chuyển row về hai tầng, dưới 520px về
+luồng mobile có label hạn / chi phí. Không dùng viewport để ép bảng rộng hơn
+pane hoặc thêm thanh cuộn ngang. Containment chỉ ở list không chứa editor;
+popup dùng portal, các editor/move dialog hiện hữu ở ngoài vùng này. Menu stage,
+query, sort, pagination, load-more, priority và transition approval giữ logic cũ.
+
 ## Danh bạ workspace
 
 Sidebar chính có một destination Danh bạ. Trong workspace, menu trái liệt kê
