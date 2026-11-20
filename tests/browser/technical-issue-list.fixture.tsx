@@ -42,7 +42,7 @@ function fixture(stage: Item["stage"], i: number): Item {
   return {
     id: `${stage.toLowerCase()}-${i}`,
     serviceRequestId: `sr-${stage}-${i}`,
-    summary: titles[i % titles.length],
+    summary: i === 8 ? "Kiểm tra bộ máy, căn chỉnh sai số và xử lý núm chỉnh bị kẹt sau khi vệ sinh đồng hồ" : titles[i % titles.length],
     note: null,
     area: i % 3 === 0 ? "CASE" : "MOVEMENT",
     actionMode: i % 3 === 0 ? "VENDOR" : "INTERNAL",

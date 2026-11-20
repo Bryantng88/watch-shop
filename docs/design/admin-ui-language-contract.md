@@ -881,6 +881,14 @@ editor. Giữ nguyên action keys, binding, quyền, confirmation và dirty guar
 
 ### Compact technical issue list
 
+Header Lỗi / Đồng hồ căn theo tên lỗi, sau thumbnail 36px và gap 12px. Các ô
+căn đầu hàng; cột nội dung chia theo tỷ lệ 2.4 / 1.05 / .9 / .8, với độ rộng
+tối thiểu cho Xử lý / Thời hạn / Chi phí là 144 / 136 / 120px. Cột thao tác
+rộng 164px khi đủ chỗ. Ưu tiên nằm cạnh
+tên lỗi, không dạt về mép cột; các nút thao tác cùng chiều rộng. Một preview
+hit area phủ identity, còn nút ưu tiên độc lập để không lồng button vào button.
+
+
 Danh sách TI dùng adapter AdminTechnicalList: hàng phẳng, 5 cột Lỗi / Đồng hồ,
 Xử lý, Thời hạn, Chi phí, Thao tác. Identity là lỗi 14/20 semibold, đồng hồ và
 mã SR / khu vực / tín hiệu comment ở metadata 12/16. Thumbnail 36px có fallback
