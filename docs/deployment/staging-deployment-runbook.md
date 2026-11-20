@@ -37,6 +37,17 @@ ssh -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes `
 
 Expected uid=1000(user), administrators group. Verified ED25519 host fingerprint: SHA256:XqCsTAsAFLhvaW7c9Y9heW+0CkXsTxCu2T9RGTg/73k. If the client lacks a known-host entry, verify it through a trusted channel and use an explicit verified known-hosts file; never disable host checking. Do not assume passwords, ssh-agent or default id_ed25519. No sudo, SSH changes, Docker socket grants or production access are required for ordinary staging deployment.
 
+## Production storage and secret boundary
+
+Keep production secrets, access keys and S3 connection settings in production.
+Staging uses its own database, media endpoint, bucket and credentials, including
+website images. Do not inspect/copy production environment values to provision
+staging or add a production-backed website override. Test the website upload
+feature against isolated staging storage; production use/testing happens only
+after a separately authorized production release. Never copy assets, publish
+content or rotate production keys as part of staging cleanup. Retired staging
+containers must not retain production credential copies.
+
 ## State verified on 2026-11-03
 
 - Admin image: sha256:37e9ab3345c8081034197c5b4f0e95f5f71aa23a55aea76f293ec69283bac1ca. This is an image identity, NOT proof of its exact Git commit. Establish a revision label/build record before reporting a deployed commit.
