@@ -969,3 +969,27 @@ PageEditingState ở heading form; lỗi lưu ở trong form và giữ dữ li�
 chỉ toast một lần. Hủy/chuyển route/chọn bản ghi khác kiểm tra dirty draft trước.
 API, role grant và semantics lưu không thay đổi. Trang quản lý vai trò riêng
 không thuộc phạm vi chuẩn hóa này.
+
+
+### Directory refresh, sidebar hierarchy and primary buttons
+
+Danh bạ dùng cùng split/resize primitive với Vận hành, với key độ rộng riêng;
+menu Nhóm liên hệ và stage/route selection không mất state khi kéo. Không đặt
+line ngang giữa title/description và nội dung. Heading section 14/20 bold,
+row identity 14/20 semibold, metadata 12/16; font stack có fallback khi biến
+Geist chưa có để shorthand font không vô hiệu hóa size/weight. Cột thao tác
+rộng 72px thống nhất giữa header/row, không lấy auto-width khác nhau từng hàng.
+Email và vai trò dài giữ đầy đủ trong dữ liệu/DOM/title và form sửa, hiển thị
+gọn trong list. Reflow theo list container; không lấy viewport để đo pane.
+
+Sidebar chỉ có một entry Sản phẩm với Đồng hồ / Phụ kiện bên trong; rail mở
+flyout, expanded/mobile dùng disclosure cùng primitive Báo cáo. Lọc từng child
+bằng quyền route hiện hữu, kể cả tài khoản chỉ có quyền xem phụ kiện. Bỏ hai
+shortcut Sales / Kỹ thuật khỏi sidebar; không xóa route, workflow hay đổi quyền.
+
+ADMIN_PRIMARY_ACTION / STYLE là variant dùng chung từ foundation.primaryAction,
+xanh 2563eb với hover/pressed tương ứng, chữ trắng; áp vào nút primary của
+AdminManagement và CTA Vận hành. Giữ 40px desktop / 44px coarse, radius 8px,
+14/20 semibold, icon 16px và focus/pending/disabled. Nút phụ trung tính;
+destructive giữ semantic riêng. Không dùng kích thước nhỏ của nút Configure
+tham chiếu, không tuyên bố mọi button legacy đã migrate.

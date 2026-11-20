@@ -161,7 +161,7 @@ export default function UserListPageClient(props: PageProps) {
         }
     }
 
-    return <AdminManagementSection title="Người dùng" description="Tài khoản, trạng thái và quyền truy cập nội bộ." actions={<>
+    return <AdminManagementSection title="Người dùng" actions={<>
         {canManageRoles && <Link href="/admin/users/roles" className={s.button}><Shield aria-hidden="true" />Vai trò & quyền</Link>}
         {canCreate && <Button primary onClick={createUser}><Plus aria-hidden="true" />Tạo người dùng</Button>}
     </>}>
@@ -174,9 +174,9 @@ export default function UserListPageClient(props: PageProps) {
         {editor && <UserEditor key={editor.id || "new"} state={editor} roles={roles} busy={busy} dirty={dirty} error={saveError} onChange={patch => setEditor(current => current ? { ...current, ...patch } : current)} onClose={() => void closeEditor()} onSave={() => void saveUser()} />}
         <div aria-hidden="true" className={`${s.columnHeader} ${s.userRow}`}><span>Người dùng</span><span>Vai trò</span><span>Trạng thái</span><span>{canUpdate ? "Thao tác" : ""}</span></div>
         {items.length ? <ul className={s.list} aria-label="Danh sách người dùng">{items.map(user => <li key={user.id} className={`${s.row} ${s.userRow}`}>
-            <div className={s.identity}><AdminUserAvatar user={user} size="sm" /><div><h3 className={s.rowTitle}>{user.name || "Chưa đặt tên"}</h3><p className={s.metadata}>{user.email}</p></div></div>
-            <div className={`${s.metadata} ${s.roleList}`}>{user.roles.length ? user.roles.map(role => <span key={role.id}>{role.name}</span>) : "Chưa gán vai trò"}</div>
-            <div><p className={`${s.metadata} ${s.status}`}>{user.isActive ? "Hoạt động" : "Đã khóa"}</p><p className={s.metadata}>Cập nhật {dateText(user.updatedAt)}</p></div>
+            <div className={s.identity}><AdminUserAvatar user={user} size="sm" /><div><h3 className={s.rowTitle}>{user.name || "Chưa đặt tên"}</h3><p className={`${s.metadata} ${s.secondaryText}`} title={user.email}>{user.email}</p></div></div>
+            <div className={`${s.metadata} ${s.roleList}`}>{user.roles.length ? user.roles.map(role => <span key={role.id} title={role.name}>{role.name}</span>) : "Chưa gán vai trò"}</div>
+            <div><p className={`${s.metadata} ${s.status}`} data-active={user.isActive}>{user.isActive ? "Hoạt động" : "Đã khóa"}</p><p className={s.metadata}>Cập nhật {dateText(user.updatedAt)}</p></div>
             {canUpdate && <Button className={s.rowAction} aria-label={`Sửa ${user.name || user.email}`} onClick={() => editUser(user)}>Sửa</Button>}
         </li>)}</ul> : <p className={s.metadata}>{currentQuery ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng."}</p>}
         <div className={s.footer}><p className={s.metadata}>Trang {page.toLocaleString("vi-VN")} / {totalPages.toLocaleString("vi-VN")}</p><div className={s.actions}>

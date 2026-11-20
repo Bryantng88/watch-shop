@@ -3,12 +3,13 @@ import { useId } from "react";
 import { AdminPageCanvas, AdminPageHeader } from "./AdminPage";
 import { ADMIN_UI_FOUNDATION as f } from "./admin-ui.foundation";
 import { AsyncActionButton } from "../mutation/AsyncActionButton";
+import { ADMIN_PRIMARY_ACTION, ADMIN_PRIMARY_ACTION_STYLE } from "./AdminPrimaryAction";
 import styles from "./AdminManagement.module.css";
 export { styles as ADMIN_MANAGEMENT };
 
 export function AdminManagementPage({ title, eyebrow, description, actions, children }: { title: string; eyebrow?: string; description?: string; actions?: ReactNode; children: ReactNode }) {
   const variables = {
-    "--am-font": f.fontFamily, "--am-text": f.colors.text, "--am-body": f.colors.body, "--am-muted": f.colors.muted,
+    "--am-font": f.fontFamily, "--am-success": f.colors.success, "--am-text": f.colors.text, "--am-body": f.colors.body, "--am-muted": f.colors.muted,
     "--am-line": f.colors.divider, "--am-border": f.colors.controlBorder, "--am-soft": f.colors.softSurface,
     "--am-ring": f.colors.focusRing, "--am-primary": f.colors.primary, "--am-hover": f.colors.primaryHover,
     "--am-error": f.colors.danger, "--am-link": f.colors.link, "--am-canvas": f.colors.canvas,
@@ -30,8 +31,8 @@ export function AdminManagementSection({ title, description, actions, children }
     {children}
   </section>;
 }
-export function AdminManagementButton({ primary, pending, pendingLabel, className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; pending?: boolean; pendingLabel?: string }) {
-  return <AsyncActionButton type="button" className={`${styles.button} ${primary ? styles.primary : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} {...props} />;
+export function AdminManagementButton({ primary, pending, pendingLabel, className = "", style, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean; pending?: boolean; pendingLabel?: string }) {
+  return <AsyncActionButton type="button" className={`${styles.button} ${primary ? ADMIN_PRIMARY_ACTION : ""} ${className}`} pending={pending} pendingLabel={pendingLabel} style={{ ...(primary ? ADMIN_PRIMARY_ACTION_STYLE : {}), ...style }} {...props} />;
 }
 export function AdminManagementField({ label, error, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; error?: string }) {
   const id = useId();

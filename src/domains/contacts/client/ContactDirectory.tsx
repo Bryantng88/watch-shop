@@ -84,7 +84,7 @@ export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind:
     } catch (reason) { setSaveError(uiFeedbackMessage(reason, "Không lưu được liên hệ. Vui lòng thử lại.")); }
     finally { savingRef.current = false; setSaving(false); }
   }
-  return <AdminManagementSection title={title} description="Thông tin liên hệ dùng chung trong giao dịch và vận hành." actions={canCreate && <Button primary disabled={saving} onClick={() => void open()}><Plus aria-hidden="true" />Thêm {kind === "customers" ? "khách hàng" : "nhà cung cấp"}</Button>}>
+  return <AdminManagementSection title={title} actions={canCreate && <Button primary disabled={saving} onClick={() => void open()}><Plus aria-hidden="true" />Thêm {kind === "customers" ? "khách hàng" : "nhà cung cấp"}</Button>}>
     <form data-admin-form className={`${s.toolbar} ${s.plainToolbar}`} role="search" onSubmit={event => { event.preventDefault(); setData(null); setPage(1); setQuery(search.trim()); setReload(v => v + 1); }}>
       <label className={s.searchField}><span className="sr-only">Tìm tên, điện thoại hoặc email</span><input className={s.input} type="search" value={search} maxLength={200} placeholder="Tìm tên, điện thoại hoặc email…" onChange={event => setSearch(event.target.value)} /></label>
       <Button type="submit"><Search aria-hidden="true" />Tìm</Button>
