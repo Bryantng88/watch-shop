@@ -1104,7 +1104,9 @@ portal menus use `AdminButton`, `AdminLinkAction` (Next navigation),
 `AdminAnchorAction` (native anchors) or an adapter backed by them.
 `AsyncActionButton` retains pending, disabled, spinner and pending label behavior;
 form `Button` and `AdminManagementButton` map their existing semantic variants.
-Import primitives from `@/domains/shared/ui/admin-design-contract`.
+Import native primitives from `@/domains/shared/ui/admin-design-contract`; import
+`AdminLinkAction` from `@/domains/shared/ui/admin-design-contract/AdminLinkAction`.
+The separate Next.js entry keeps router code out of native button consumers.
 
 `AdminButtonProvider` wraps the admin providers, so the same appearance follows
 React portals. Shared controls outside that provider retain their public UI.

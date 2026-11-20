@@ -1,6 +1,7 @@
 "use client";
 
-import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 

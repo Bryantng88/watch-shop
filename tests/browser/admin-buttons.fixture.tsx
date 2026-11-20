@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
-import { AdminButton, AdminButtonProvider, AdminAnchorAction, AdminLinkAction, AdminDisclosureSummary } from "../../src/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton, AdminButtonProvider, AdminAnchorAction, AdminDisclosureSummary } from "../../src/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "../../src/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { AsyncActionButton } from "../../src/domains/shared/ui/mutation/AsyncActionButton";
 import { AdminRowActionMenu } from "../../src/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
 function App() {

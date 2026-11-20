@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const http = require('node:http');
-const esbuild = require('esbuild');
+const esbuild = require('./lib/admin-fixture-esbuild.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 
 async function main() {
@@ -104,3 +104,4 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
   } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
+

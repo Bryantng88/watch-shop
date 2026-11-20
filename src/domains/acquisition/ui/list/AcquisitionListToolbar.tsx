@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import * as React from "react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";

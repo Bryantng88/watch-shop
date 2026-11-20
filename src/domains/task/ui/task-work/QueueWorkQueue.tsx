@@ -1,5 +1,6 @@
 "use client";
-import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 
 import { useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition, type ReactNode, type Ref } from "react";

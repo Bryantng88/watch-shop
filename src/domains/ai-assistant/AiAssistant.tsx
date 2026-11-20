@@ -1,5 +1,6 @@
 "use client";
-import { AdminButton, AdminDisclosureSummary, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { boundedAssistantRequest } from "./live-request";
 import styles from "./BenChat.module.css";
 import BenConversationMessage,{type BenUserProfile} from "./BenConversationMessage";

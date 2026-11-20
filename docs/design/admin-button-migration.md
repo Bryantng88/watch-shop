@@ -6,7 +6,7 @@ The admin layout provides the scope, including dialog/toast portals. Public
 storefront consumers keep their previous classes and inline presentation.
 
 The migration traverses every file under `src/app/(admin)` and all local imports,
-re-exports and literal dynamic imports. At this revision the graph has 1,189 files
+re-exports and literal dynamic imports. At this revision the graph has 1,190 files
 and 1,037 button/action-link references, including wrapper implementations. All
 native button and summary nodes in that graph live in the primitive. Generated
 code, external packages and public-only components are outside the admin graph.

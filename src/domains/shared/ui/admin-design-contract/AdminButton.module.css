@@ -49,7 +49,7 @@
 }
 .control.control.control[data-admin-button]:focus-visible { outline: 2px solid var(--admin-button-focus); outline-offset: 2px; }
 .control.control.control[data-admin-button]:not([data-admin-button="contextual"]):is(:disabled,[aria-disabled="true"]) {
-  opacity: var(--admin-button-disabled-opacity); cursor: default; background-image: none; box-shadow: none; transform: none;
+  opacity: var(--admin-button-disabled-opacity); cursor: default; transition: none; background-image: none; box-shadow: none; transform: none;
 }
 .control.control.control[data-admin-button]:not([data-admin-button="contextual"]) > svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
 @media (pointer: coarse) {

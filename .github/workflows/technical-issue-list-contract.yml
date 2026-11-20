@@ -2,6 +2,7 @@ name: Technical issue list contract
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/coordination/shared/technical-issue-list*'
       - 'src/domains/coordination/ui/TechnicalIssueListView*'
       - 'src/domains/coordination/ui/OperationCoordinationWorkspace.tsx'
@@ -33,3 +34,4 @@ jobs:
           src/domains/shared/ui/space/SpaceFilterBar.tsx
           tests/browser/technical-issue-list.fixture.tsx
       - run: npx tsc --noEmit
+

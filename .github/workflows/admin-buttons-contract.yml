@@ -2,6 +2,7 @@ name: Shared admin buttons
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/app/(admin)/**'
       - 'src/domains/**'
       - 'src/components/**'
@@ -14,7 +15,7 @@ permissions:
   contents: read
 jobs:
   contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

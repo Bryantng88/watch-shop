@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),fs=require('node:fs/promises'),http=require('node:http'),path=require('node:path'),esbuild=require('esbuild');
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),http=require('node:http'),path=require('node:path'),esbuild=require('../../scripts/lib/admin-fixture-esbuild.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
  const root=process.cwd();
@@ -25,3 +25,4 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
  console.log('PASS real Ben media UI: search beyond first page, stage/empty states, pagination, exact binding/return URL, scroll restoration, read-only navigation, broken image fallback, 320/390/768/1280 no overflow. Synthetic query and Next navigation ports.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});
+

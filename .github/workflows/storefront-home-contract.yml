@@ -2,6 +2,7 @@ name: Storefront home contract
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/storefront/content/**'
       - 'src/app/(admin)/admin/storefront/home/**'
       - 'src/app/api/admin/storefront/content/**'
@@ -72,3 +73,4 @@ jobs:
           name: storefront-home-layout
           path: ${{ runner.temp }}/storefront-home-layout
           if-no-files-found: ignore
+

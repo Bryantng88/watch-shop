@@ -6,7 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import esbuild from 'esbuild';
+import esbuild from './lib/admin-fixture-esbuild.cjs';
 import tailwind from 'tailwindcss';
 import postcss from 'postcss';
 const require = createRequire(import.meta.url);
@@ -34,11 +34,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
       build.onResolve({ filter: /AppDialogProvider$/ }, () => ({ path: 'dialog', namespace: 'fixture' }));
       build.onLoad({ filter: /.*/, namespace: 'fixture' }, ({ path: name }) => ({ loader: 'tsx', resolveDir: root, contents: name === 'image'
         ? `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`
-        : name === 'toast' ? `const notify={success(){},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
+        : name === 'toast' ? `const notify={success(message){window.__successes=(window.__successes||[]).concat(message)},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
         : `export const useAppDialog=()=>({confirm:async()=>true});` }));
       build.onResolve({ filter: /^@\// }, ({ path: source }) => ({ path: source === '@/domains/shared/ui/admin-design-contract'
         ? path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx')
-        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') || source.endsWith('AdminSplitWorkspace') ? '.ts' : '.tsx') }));
+        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') || source.endsWith('AdminSplitWorkspace') || source.endsWith('read-ui-response') ? '.ts' : '.tsx') }));
     } }],
   });
   const tailwindCss = await postcss([tailwind({ content: [path.join(root, 'src/domains/storefront/content/StorefrontManager.tsx'), path.join(root, 'src/domains/shared/ui/admin-design-contract/*.{ts,tsx}')], corePlugins: { preflight: true } })]).process('@tailwind base;@tailwind utilities;', { from: undefined });
@@ -76,9 +76,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const nav = page.getByRole('region', { name: 'Các khối trang chủ' });
     const bar = page.locator('.sfc-document-actions');
     await bar.waitFor();
+    assert.equal(await bar.evaluate(el => el.tagName), 'FOOTER');
+    assert.equal(await bar.evaluate(el => Boolean(el.previousElementSibling?.matches('fieldset'))), true);
     assert.equal(await page.getByText(/lưu ý về cách hiển thị ảnh/).count(), 0);
     assert.equal(await bar.getByText('Trang chủ', { exact: true }).count(), 0);
-    assert.deepEqual(await bar.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.borderTopWidth, s.borderRadius, s.position]; }), ['rgb(255, 255, 255)', '0px', '0px', 'static']);
+    assert.deepEqual(await bar.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.borderTopWidth, s.borderRadius, s.position]; }), ['rgb(255, 255, 255)', '1px', '0px', 'static']);
     assert.equal(await page.locator('.sfc-section-editor:visible').count(), 1);
     await page.getByLabel('Tông màu khối mở đầu').selectOption('charcoal');
     await nav.getByRole('button', { name: /^Về Vintic/ }).click();
@@ -95,16 +97,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     await nav.getByRole('button', { name: /^Ảnh mở đầu/ }).click();
     assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(), 'charcoal');
     failSave = true; await page.getByRole('button', { name: 'Lưu nháp', exact: true }).click();
-    await page.waitForFunction(() => window.__errors?.includes('Lưu thất bại, giữ bản đang sửa.'));
+    await page.getByRole('alert').filter({hasText:'Lưu thất bại, giữ bản đang sửa.'}).waitFor();
     assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(), 'charcoal');
     await page.getByRole('button', { name: 'Lưu nháp', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Đã lưu nháp' }).waitFor();
+    await page.waitForFunction(() => window.__successes?.includes('Đã lưu nháp.'));
     assert.equal(published, null);
     await page.getByRole('button', { name: 'Xem trước', exact: true }).click();
     const preview = page.getByRole('dialog', { name: 'Xem trước Storefront' }); await preview.waitFor();
     await page.getByRole('button', { name: 'Đóng xem trước' }).click(); assert.equal(published, null);
     await page.getByRole('button', { name: 'Xuất bản', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Đã xuất bản phiên bản mới.' }).waitFor();
+    await page.waitForFunction(() => window.__successes?.includes('Đã xuất bản phiên bản mới.'));
     assert.equal(published.about.title, 'Giới thiệu vẫn giữ khi đổi khối'); assert.equal(published.about.image.key, '');
     assert.equal(published.hero.theme, 'charcoal'); assert.deepEqual(mutations, ['save', 'save', 'publish']);
     for (const width of [320, 390, 768, 1280, 1440]) {

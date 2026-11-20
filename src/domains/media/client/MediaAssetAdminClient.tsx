@@ -1,6 +1,7 @@
 "use client";
 
-import { AdminButton, AdminDisclosureSummary, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 // src/domains/media/client/MediaAssetAdminClient.tsx
 
 

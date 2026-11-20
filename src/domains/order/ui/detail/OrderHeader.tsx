@@ -1,6 +1,6 @@
 "use client";
 
-import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import Link from "next/link";
 import { CalendarClock, ChevronRight, CreditCard, PackageCheck, Pencil, UserRound } from "lucide-react";
 import OrderStatusBadge from "@/domains/order/ui/OrderStatusBadge";

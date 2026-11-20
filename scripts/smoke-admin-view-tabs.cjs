@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const http=require('node:http');
-const esbuild=require('esbuild');
+const esbuild=require('./lib/admin-fixture-esbuild.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 async function main(){
  const root=path.resolve(__dirname,'..');const dir='/tmp/admin-view-tabs';await fs.mkdir(dir,{recursive:true});
@@ -16,7 +16,7 @@ function Demo(){const [view,setView]=useState('TODAY');const [state,setState]=us
  const server=http.createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html');res.end(req.url==='/app.js'?js:`<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}button,select{font-family:inherit}${css}</style><div id="root"></div><script src="/app.js"></script></html>`)});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{})});
  try{
- const page=await browser.newPage({viewport:{width:1000,height:900}});const errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto('http://127.0.0.1:'+server.address().port);
+ const page=await browser.newPage({viewport:{width:1000,height:900}});const errors=[];page.on('pageerror',error=>{errors.push(error.message);console.error(error.message)});await page.goto('http://127.0.0.1:'+server.address().port);
  const work=page.getByRole('group',{name:'Hiển thị công việc',exact:true});const chart=page.getByRole('group',{name:'Trạng thái biểu đồ',exact:true});
  await work.getByRole('button',{name:'Hôm nay',exact:true}).waitFor();await work.getByRole('button',{name:'Sự kiện',exact:true}).click();assert.equal(await page.locator('[data-work]').textContent(),'EVENTS');
  await work.getByRole('button',{name:'Sự kiện',exact:true}).focus();await page.keyboard.press('End');assert.equal(await page.locator('[data-work]').textContent(),'DONE');await page.keyboard.press('Home');assert.equal(await page.locator('[data-work]').textContent(),'TODAY');
@@ -30,3 +30,4 @@ function Demo(){const [view,setView]=useState('TODAY');const [state,setState]=us
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error(error);process.exitCode=1});
+

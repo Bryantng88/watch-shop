@@ -1,6 +1,5 @@
 "use client";
 
-import Link, { type LinkProps } from "next/link";
 import { createContext, forwardRef, useContext, type AnchorHTMLAttributes, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { ADMIN_BUTTON_SURFACE_STYLE } from "./AdminButtonSurface";
 import styles from "./AdminButton.module.css";
@@ -14,8 +13,8 @@ export function AdminButtonProvider({ children }: { children: ReactNode }) {
   return <AdminButtonContext.Provider value={true}>{children}</AdminButtonContext.Provider>;
 }
 
-type Appearance = { variant?: AdminButtonVariant; density?: AdminButtonDensity; iconOnly?: boolean };
-function useAppearance({ variant = "secondary", density = "default", iconOnly = false, className, style }: Appearance & { className?: string; style?: React.CSSProperties }) {
+export type AdminButtonAppearance = { variant?: AdminButtonVariant; density?: AdminButtonDensity; iconOnly?: boolean };
+export function useAdminButtonAppearance({ variant = "secondary", density = "default", iconOnly = false, className, style }: AdminButtonAppearance & { className?: string; style?: React.CSSProperties }) {
   const admin = useContext(AdminButtonContext);
   // Existing inline colors cannot bypass the action system. Retain geometry and domain CSS variables.
   const safeStyle = admin && variant !== "contextual" && style
@@ -31,31 +30,24 @@ function useAppearance({ variant = "secondary", density = "default", iconOnly = 
 }
 
 /** Preserve native type, formAction, refs, events, disabled and ARIA semantics. */
-export const AdminButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & Appearance>(
+export const AdminButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & AdminButtonAppearance>(
   function AdminButton({ variant, density, iconOnly, className, style, ...props }, ref) {
-    const appearance = useAppearance({ variant, density, iconOnly, className, style });
+    const appearance = useAdminButtonAppearance({ variant, density, iconOnly, className, style });
     return <button {...props} {...appearance} ref={ref} />;
   },
 );
 
-export const AdminAnchorAction = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement> & Appearance>(
+export const AdminAnchorAction = forwardRef<HTMLAnchorElement, AnchorHTMLAttributes<HTMLAnchorElement> & AdminButtonAppearance>(
   function AdminAnchorAction({ variant, density, iconOnly, className, style, ...props }, ref) {
-    const appearance = useAppearance({ variant, density, iconOnly, className, style });
+    const appearance = useAdminButtonAppearance({ variant, density, iconOnly, className, style });
     return <a {...props} {...appearance} ref={ref} />;
-  },
-);
-
-export const AdminLinkAction = forwardRef<HTMLAnchorElement, Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps> & LinkProps & Appearance>(
-  function AdminLinkAction({ variant, density, iconOnly, className, style, ...props }, ref) {
-    const appearance = useAppearance({ variant, density, iconOnly, className, style });
-    return <Link {...props} {...appearance} ref={ref} />;
   },
 );
 
 /** Keep native details/summary semantics and disclosure styling. */
 export const AdminDisclosureSummary = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>(
   function AdminDisclosureSummary({ className, style, ...props }, ref) {
-    const appearance = useAppearance({ variant: "contextual", className, style });
+    const appearance = useAdminButtonAppearance({ variant: "contextual", className, style });
     return <summary {...props} {...appearance} ref={ref} />;
   },
 );

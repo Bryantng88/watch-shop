@@ -413,7 +413,7 @@ function IssueDetail({
               </>
             )}
             <div className="sticky bottom-0 bg-white py-3">
-              <AdminButton variant="secondary"
+              <AdminButton variant="primary"
                 disabled={busy}
                 type="submit"
                 className={

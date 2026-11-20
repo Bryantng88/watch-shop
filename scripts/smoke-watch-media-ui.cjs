@@ -1,5 +1,5 @@
 // Real media form and daily-work dialog. Only section internals, auth/actions and providers are fixture ports.
-const assert=require('node:assert/strict'),fs=require('node:fs/promises'),http=require('node:http'),path=require('node:path'),esbuild=require('esbuild');
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),http=require('node:http'),path=require('node:path'),esbuild=require('./lib/admin-fixture-esbuild.cjs');
 const vm=require('node:vm');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
@@ -83,3 +83,4 @@ function App(){const [state,setState]=useState(null);useEffect(()=>{fetch('/fixt
  assert.deepEqual(errors,[]);console.log('PASS media UI: canonical numeric formatting, single-flight completion, partial/lost responses and retry, durable re-open, unchanged Cover; saved draft reloads incomplete; explicit finish only; edits clear done; delayed save preserves later typing; cover selection stays incomplete; watch/part/assignee daily-work context; modal Escape focus; real header/tabs/flat section frame at 320/390/768/1280 without overflow. Synthetic section interiors/server actions only.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(error=>{console.error(error);process.exitCode=1});
+

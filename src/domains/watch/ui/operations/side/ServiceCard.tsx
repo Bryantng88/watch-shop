@@ -370,7 +370,7 @@ export default function ServiceCard({
                             >
                                 Hủy
                             </AdminButton>
-                            <AdminButton variant="secondary"
+                            <AdminButton variant="primary"
                                 type="button"
                                 onClick={submitServiceIntake}
                                 disabled={submitting || !suspicion.trim()}

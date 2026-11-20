@@ -1,4 +1,4 @@
-import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requirePermission } from "@/server/auth/requirePermission";

@@ -1010,7 +1010,7 @@ export default function StorefrontManager({
                 <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
                 Xem trước
               </AsyncActionButton>
-              <AsyncActionButton variant="secondary"
+              <AsyncActionButton variant="primary"
                 type="button"
                 className="primary"
                 pending={busy&&pendingAction==="publish"}

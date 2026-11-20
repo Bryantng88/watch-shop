@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const http=require('node:http');
 const path=require('node:path');
-const esbuild=require('esbuild');
+const esbuild=require('./lib/admin-fixture-esbuild.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
  const root=path.resolve(__dirname,'..');
@@ -26,7 +26,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
     if(name==='unsupported')delete window.PushManager;
     if(name==='ios')Object.defineProperty(navigator,'userAgent',{configurable:true,get:()=> 'iPhone Safari'});
    },{name});
-   const page=await context.newPage();
+   const page=await context.newPage();page.on('pageerror',error=>console.error(error.message));
    await page.route('**/api/admin/customer-assistant*',async route=>{
     if(route.request().method()==='GET'){
      const mode=await page.evaluate(()=>window.__mode);
@@ -59,3 +59,4 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
   console.log('PASS: visible bell for all states; missing configuration, denied permission, unsupported browser, iOS install, worker readiness and retry; explicit permission gesture; enable/test/disable; Escape focus; mobile no overflow.');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});
+

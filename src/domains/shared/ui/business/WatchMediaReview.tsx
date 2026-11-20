@@ -1,6 +1,7 @@
 "use client";
 
-import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Camera, ChevronDown, ImageIcon } from "lucide-react";
@@ -45,7 +46,7 @@ export function WatchMediaReview({ watchId, title, media, onSelect, onProcessMed
   return <section aria-label="Đánh giá ảnh và lên lịch chụp" className="space-y-2.5">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div role="tablist" aria-label="Nguồn ảnh" className="inline-flex gap-1 rounded-lg bg-slate-100 p-1">{([['POOL', 'Pool', media.pool.length], ['SELECTED', 'Đã chọn', media.selected.length]] as const).map(([key, label, count]) => <AdminButton variant="contextual" density="compact" key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)} className={`rounded-md px-2.5 py-1 text-xs ${tab === key ? "bg-white font-semibold text-slate-900 shadow-sm" : "text-slate-500"}`}>{label} <span className="ml-1 text-slate-400">{count}</span></AdminButton>)}</div>
-      {media.canSelect && (onProcessMedia ? <AdminButton variant="secondary" type="button" onClick={onProcessMedia} className={`inline-flex items-center gap-1.5 ${ADMIN_UI.compactAction} ${ADMIN_UI.primaryAction}`}><ImageIcon className="h-3.5 w-3.5" />Xử lý media</AdminButton> : <AdminLinkAction variant="primary" href={media.selectionHref} onNavigate={onSelect} className={`inline-flex items-center gap-1.5 ${ADMIN_UI.compactAction} ${ADMIN_UI.primaryAction}`}><ImageIcon className="h-3.5 w-3.5" />Xử lý media</AdminLinkAction>)}
+      {media.canSelect && (onProcessMedia ? <AdminButton variant="primary" type="button" onClick={onProcessMedia} className={`inline-flex items-center gap-1.5 ${ADMIN_UI.compactAction} ${ADMIN_UI.primaryAction}`}><ImageIcon className="h-3.5 w-3.5" />Xử lý media</AdminButton> : <AdminLinkAction variant="primary" href={media.selectionHref} onNavigate={onSelect} className={`inline-flex items-center gap-1.5 ${ADMIN_UI.compactAction} ${ADMIN_UI.primaryAction}`}><ImageIcon className="h-3.5 w-3.5" />Xử lý media</AdminLinkAction>)}
     </div>
     <p className="text-xs text-slate-500">{tab === "POOL" ? `${media.unselectedCount} ảnh chưa chọn · Dấu ✓ là ảnh đã vào gallery` : "Ảnh gallery và cover đang được chọn"}</p>
     <WatchPreviewGallery key={`${tab}:${images.map(image => image.id).join("|")}`} images={images} title={title} label={tab === "POOL" ? "Ảnh trong pool" : "Ảnh đã chọn"} showHeader={false} />
@@ -60,7 +61,7 @@ export function WatchMediaReview({ watchId, title, media, onSelect, onProcessMed
         });
       }}>
         <div className="flex flex-wrap items-center gap-2"><label className="flex items-center gap-2 text-xs text-slate-600">Ngày chụp<input required type="date" value={date} disabled={saving} onChange={e => setDate(e.target.value)} className={inputClass} /></label>
-          <AsyncActionButton variant="secondary" type="submit" pending={saving} pendingLabel="Đang lưu…" disabled={loading || !date || (plans.length > 1 && !selectedPlan)} className={`${ADMIN_UI.compactAction} ${ADMIN_UI.primaryAction}`}>{plans.length ? "Thêm vào việc chụp" : "Tạo việc chụp"}</AsyncActionButton>
+          <AsyncActionButton variant="primary" type="submit" pending={saving} pendingLabel="Đang lưu…" disabled={loading || !date || (plans.length > 1 && !selectedPlan)} className={`${ADMIN_UI.compactAction} ${ADMIN_UI.primaryAction}`}>{plans.length ? "Thêm vào việc chụp" : "Tạo việc chụp"}</AsyncActionButton>
         </div>
         {loading ? <p className="text-xs text-slate-400">Đang tìm việc chụp trong ngày…</p> : plans.length > 1 ? <select required aria-label="Việc chụp trong ngày" value={selectedPlan} disabled={saving} onChange={e => setSelectedPlan(e.target.value)} className={`${inputClass} w-full`}><option value="">Chọn việc chụp trong ngày</option>{plans.map(plan => <option key={plan.id} value={plan.id}>{plan.title}{plan.scheduledEndAt ? ` · ${scheduleTime(plan.dueAt)}` : ""} · {plan.watchCount} watch</option>)}</select> : <p className="text-xs text-slate-500">{plans.length === 1 ? `Sẽ thêm vào “${plans[0].title}” · ${plans[0].watchCount} watch` : "Chưa có việc chụp trong ngày; sẽ tạo trong Quản lý công việc."}</p>}
         <textarea aria-label="Yêu cầu chụp" rows={2} maxLength={2000} value={note} disabled={saving} onChange={e => setNote(e.target.value)} placeholder="Yêu cầu chụp: thiếu góc mặt sau, ảnh bị phản sáng…" className={`${ADMIN_UI.input} w-full resize-none p-2 text-xs`} />

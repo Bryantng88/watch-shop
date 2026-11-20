@@ -2,6 +2,7 @@ name: Operations compact UI
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/admin-home/**'
       - 'src/domains/coordination/ui/Operation*'
       - 'src/domains/coordination/ui/TechnicalIssueListView*'

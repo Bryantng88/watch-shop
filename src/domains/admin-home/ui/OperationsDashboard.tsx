@@ -1,4 +1,4 @@
-import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { quickAttention } from "../application/attention-selection";
 import { OperationsAttentionList } from "./OperationsAttentionList";
 import Link from "next/link";

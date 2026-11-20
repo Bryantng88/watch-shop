@@ -1,4 +1,4 @@
-import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 
 import type { ReactNode } from "react";
 import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";

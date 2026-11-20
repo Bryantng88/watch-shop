@@ -1,6 +1,7 @@
 "use client";
 
-import { AdminButton, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import StatusBadge from "@/components/badges/StatusBadge";

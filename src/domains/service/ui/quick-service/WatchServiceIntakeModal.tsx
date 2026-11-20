@@ -171,7 +171,7 @@ export default function WatchServiceIntakeModal({
 
         <div className="mt-5 flex justify-end gap-2">
           <AdminButton variant="secondary" type="button" onClick={close} disabled={submitting} className={secondaryButton}>Hủy</AdminButton>
-          <AdminButton variant="secondary" type="button" onClick={() => void submit()} disabled={submitting || !suspicion.trim()} className={primaryButton}>
+          <AdminButton variant="primary" type="button" onClick={() => void submit()} disabled={submitting || !suspicion.trim()} className={primaryButton}>
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {submitting ? "Đang tạo..." : "Tạo service"}
           </AdminButton>

@@ -1,5 +1,6 @@
 "use client";
-import { AdminDisclosureSummary, AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { useState } from "react";
 
 import { ArrowUpRight, ChevronDown } from "lucide-react";

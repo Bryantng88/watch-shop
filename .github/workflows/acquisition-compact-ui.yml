@@ -2,6 +2,7 @@ name: Acquisition and media UI
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/acquisition/**'
       - 'src/domains/watch/**'
       - 'src/domains/personal-work/**'
@@ -31,3 +32,4 @@ jobs:
       - run: /tmp/acquisition-browser/node_modules/.bin/playwright install --with-deps chromium
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/acquisition-browser/node_modules/playwright ACQUISITION_PREVIEW_CSS=/tmp/acquisition-ui.css node scripts/smoke-acquisition-compact-ui.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/acquisition-browser/node_modules/playwright ACQUISITION_PREVIEW_CSS=/tmp/acquisition-ui.css node scripts/smoke-watch-media-ui.cjs
+
