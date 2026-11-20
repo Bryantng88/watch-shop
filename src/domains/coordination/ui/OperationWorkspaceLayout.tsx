@@ -1,8 +1,9 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { operationalDomainPresentation } from "@/domains/shared/ui/signals/operational-domain-presentation";
 import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
+import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "@/domains/shared/ui/admin-design-contract/AdminSplitResize";
 import styles from "./OperationWorkspaceLayout.module.css";
 
 export type OperationNavigationGroup = {
@@ -37,10 +38,12 @@ export function OperationWorkspaceLayout({
   enabled = true, groups, activeGroup, onGroupChange, stages, activeStage, onStageChange, children,
 }: Props) {
   const layoutRef = useAdminSplitWorkspace<HTMLDivElement>(enabled);
+  const pane = useAdminSplitResize(layoutRef, "admin:operations:menu-width:v1", enabled);
+  const navigationId = useId();
   if (!enabled) return <>{children}</>;
   const selected = groups.find((group) => group.key === activeGroup);
-  return <div ref={layoutRef} className={`${styles.layout} ${split.layout}`} style={ADMIN_SPLIT_WORKSPACE_STYLE}>
-      <aside data-admin-pane="sidebar" className={styles.desktop} aria-label="Điều hướng vận hành">
+  return <div ref={layoutRef} className={`${styles.layout} ${split.layout} ${resize.layout}`} data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={{ ...ADMIN_SPLIT_WORKSPACE_STYLE, ...pane.style }}>
+      <aside id={navigationId} data-admin-pane="sidebar" className={styles.desktop} aria-label="Điều hướng vận hành">
         <h2 className={styles.navigationTitle}>Khu vực vận hành</h2>
         <nav aria-label="Khu vực vận hành">
           {groups.map((group) => {
@@ -79,6 +82,7 @@ export function OperationWorkspaceLayout({
           </select>
         </label>}
       </div>
+      <div {...pane.separatorProps} aria-controls={navigationId} className={resize.separator} />
       <div data-admin-pane="content" className={styles.content}>{children}</div>
   </div>;
 }
