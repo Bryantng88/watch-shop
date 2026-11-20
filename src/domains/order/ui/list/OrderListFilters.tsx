@@ -27,22 +27,6 @@ export default function OrderListFilters({
   onApply: () => void;
   onClear: () => void;
 }) {
-  const viewField: FilterBarField = {
-    key: "view",
-    label: "Trạng thái",
-    type: "select",
-    defaultValue: "all",
-    options: [
-      { value: "all", label: `Tất cả · ${counts.all ?? 0}` },
-      { value: "pending", label: `Chờ xác minh · ${counts.pending ?? 0}` },
-      { value: "need_action", label: `Cần xử lý · ${counts.need_action ?? 0}` },
-      { value: "processing", label: `Đang xử lý · ${counts.processing ?? 0}` },
-      { value: "returning", label: `Đang hoàn · ${counts.returning ?? 0}` },
-      { value: "completed", label: `Hoàn tất · ${counts.completed ?? 0}` },
-      { value: "returned", label: `Đã hoàn · ${counts.returned ?? 0}` },
-      { value: "cancelled", label: `Đã hủy · ${counts.cancelled ?? 0}` },
-    ],
-  };
   const subFilterField: FilterBarField = {
     key: "subFilter",
     label: "Tiến độ xử lý",
@@ -96,7 +80,7 @@ export default function OrderListFilters({
       total={total}
       visibleCount={visibleCount}
       search={{ key: "q", placeholder: "Tìm mã đơn, khách hàng, số điện thoại..." }}
-      primaryFields={[viewField, paymentTypeField]}
+      primaryFields={[paymentTypeField]}
       advancedFields={advancedFields}
       sortField={sortField}
       onChange={(patch) => {

@@ -1174,3 +1174,24 @@ Warning counts are plain emphasized text without a second badge inside the link.
 The completion trend is a flat section; the chart remains the focus surface.
 The shared dimensional button treatment applies to actual action controls, not
 to every clickable number or metadata item on the dashboard.
+
+### Mua bán — shared split workspace
+
+Menu chính Mua bán thay hai mục Phiếu nhập và Đơn hàng. Route
+`/admin/trading` mở nhóm đầu tiên mà người dùng có quyền; các URL hiện có
+`/admin/acquisitions` và `/admin/orders`, màn hình chi tiết và thao tác nghiệp vụ
+được giữ nguyên. Menu hiện active cho cả các route con.
+
+Trang danh sách dùng AdminManagementPage, AdminWorkspaceNavigation,
+AdminSplitWorkspace và AdminSplitResize: một h1 Mua bán, nhóm bên trái và
+nội dung bên phải; độ rộng lưu riêng tại `admin:trading:menu-width:v1`.
+Nhóm Trạng thái bên trái dùng chính query status/view hiện có, không lặp
+select trạng thái ở toolbar phải. Đổi trạng thái giữ tìm kiếm, vendor và
+sắp xếp, bỏ phân trang/focus và bộ lọc tiến độ phụ thuộc trạng thái đơn hàng.
+Màn hình hẹp dùng native select theo shared contract. Không thêm nút thu gọn
+hoặc đường ngang giữa page title và nội dung. Heading nhóm phải và tạo mới
+dùng AdminWorkspaceHeadingRow và shared primary action; không bọc card.
+Navigation entries dùng đúng các quyền đọc Phiếu nhập/Đơn hàng hiện có,
+không thay quyền API, quy tắc duyệt, thanh toán, giao nhận hoặc lưu dữ liệu.
+Vận chuyển dùng Truck trong operationalDomainPresentation để mọi consumer
+nhận cùng icon, không dùng Workflow của Vận hành.

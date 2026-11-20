@@ -5,10 +5,9 @@ import { useCallback, useEffect, useMemo, useState, type ComponentType } from "r
 import {
     LayoutDashboard,
     Package,
-    Tags,
     Menu,
     ChevronDown,
-    ClipboardList,
+    ArrowLeftRight,
     LogOut,
     Workflow,
     BellRing,
@@ -23,6 +22,8 @@ import {
     ContactRound,
     Images,
 } from "lucide-react";
+
+import { TRADING_READ_PERMISSIONS, TRADING_ROUTES } from "@/domains/trading/shared/trading-navigation";
 
 import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
@@ -81,20 +82,7 @@ const NAV: NavEntry[] = [
                 { type: "item", href: "/admin/watches", label: "Đồng hồ", icon: Package, permission: PERMISSIONS.PRODUCT_VIEW },
                 { type: "item", href: "/admin/straps", label: "Phụ kiện", icon: Link2, permission: PERMISSIONS.ACCESSORY_VIEW },
             ] },
-            {
-                type: "item",
-                href: "/admin/acquisitions",
-                label: "Phiếu nhập",
-                icon: Tags,
-                permissionsAny: [PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACCESSORY_ACQUISITION_VIEW],
-            },
-            {
-                type: "item",
-                href: "/admin/orders",
-                label: "Đơn hàng",
-                icon: ClipboardList,
-                permission: PERMISSIONS.ORDER_VIEW,
-            },
+            { type: "item", href: "/admin/trading", label: "Mua bán", icon: ArrowLeftRight, permissionsAny: [...TRADING_READ_PERMISSIONS], activePaths: TRADING_ROUTES },
             {
                 type: "item",
                 href: "/admin/coordination/operation",

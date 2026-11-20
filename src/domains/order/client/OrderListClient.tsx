@@ -1,10 +1,14 @@
 "use client";
 
+import TradingWorkspace from "@/domains/trading/client/TradingWorkspace";
+import type { TradingEntry } from "@/domains/trading/shared/trading-navigation";
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
 import { useAppProgress } from "@/domains/shared/feedback/AppProgressProvider";
@@ -21,7 +25,6 @@ import {
   OrderListTable,
 } from "../ui/list";
 import {
-  BusinessListPageHeader,
   BusinessListShell,
 } from "@/domains/shared/ui/business-list";
 import type {
@@ -40,7 +43,7 @@ import {
   normalizeOrderView,
 } from "../ui/list/helpers";
 
-type Props = OrderListPageProps;
+type Props = OrderListPageProps & { tradingEntries: TradingEntry[] };
 
 function firstRaw(value: string | string[] | undefined, fallback = ""): string {
   if (Array.isArray(value)) return String(value[0] ?? fallback);
@@ -87,6 +90,7 @@ export default function OrderListClient({
   page,
   pageSize,
   totalPages,
+  tradingEntries,
   rawSearchParams,
   counts,
 }: Props) {
@@ -99,6 +103,10 @@ export default function OrderListClient({
   const progress = useAppProgress();
   const currentView = normalizeOrderView(sp.get("view"));
   const [filters, setFilters] = useState<OrderListFiltersValue>(() => buildInitialFilters({ rawSearchParams, pageSize }));
+  useEffect(() => {
+    setFilters(buildInitialFilters({ rawSearchParams, pageSize }));
+    setSelectedIds([]);
+  }, [rawSearchParams, pageSize]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [paymentManageOrder, setPaymentManageOrder] = useState<OrderListItem | null>(null);
   const [shipmentManageOrder, setShipmentManageOrder] = useState<OrderListItem | null>(null);
@@ -480,13 +488,10 @@ export default function OrderListClient({
     setWorkCaseSource(buildOrderWorkCaseSource(row));
   }
   return (
-    <BusinessListShell
+    <TradingWorkspace entries={tradingEntries} selected="/admin/orders">
+    <BusinessListShell className="!px-0 !pt-0 !pb-0"
       header={
-        <BusinessListPageHeader
-          title="Đơn hàng"
-          icon={<ShoppingCart className="h-5 w-5" />}
-          meta={<span>Quản lý bán hàng · Thanh toán · Giao nhận</span>}
-          actions={
+        <AdminWorkspaceHeadingRow><AdminWorkspaceHeading>Đơn hàng</AdminWorkspaceHeading>
             <div className="flex items-center gap-2">
               <AdminLinkAction variant="primary" density="compact"
                 href="/admin/orders/new"
@@ -496,8 +501,7 @@ export default function OrderListClient({
                 Tạo đơn hàng
               </AdminLinkAction>
             </div>
-          }
-        />
+        </AdminWorkspaceHeadingRow>
       }
       filters={
         <OrderListFilters
@@ -569,5 +573,6 @@ export default function OrderListClient({
         }}
       />
     </BusinessListShell>
+    </TradingWorkspace>
   );
 }
