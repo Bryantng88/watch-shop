@@ -65,8 +65,6 @@ export function SpaceViewPage({
           className={
             compactHeader
               ? "relative flex flex-col gap-4 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-white via-violet-50/20 to-violet-100/65 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:flex-row lg:items-center lg:justify-between"
-              : workspaceHeader
-              ? "flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between"
               : "flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between"
           }
         >
