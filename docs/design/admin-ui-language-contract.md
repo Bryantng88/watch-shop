@@ -1156,3 +1156,14 @@ cấp quyền hoặc quyền mặc định mới.
 Ưu tiên TI: tia sét 14px, màu critical khi gấp; bỏ chữ và nền badge. Tên accessible,
 pressed/busy/disabled và tooltip giải thích giữ nguyên. Hit area desktop 24px và
 coarse 44px; icon gấp luôn hiện, thường hiện qua hover/focus/touch như trước.
+
+### Operations home: navigation summaries stay flat
+
+Reminder links, queue-stage counts and queue-warning links use the shared
+`AdminLinkAction` contextual variant with text-link presentation, never the
+secondary button surface. These are navigation summaries, so they retain their
+existing href, accessible labels, focus treatment and 44px coarse-pointer target.
+Warning counts are plain emphasized text without a second badge inside the link.
+The completion trend is a flat section; the chart remains the focus surface.
+The shared dimensional button treatment applies to actual action controls, not
+to every clickable number or metadata item on the dashboard.
