@@ -86,6 +86,7 @@ import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
 import { ADMIN_OPERATION_LIST as operationListStyles, ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
+import { ADMIN_PRIMARY_ACTION, ADMIN_PRIMARY_ACTION_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminPrimaryAction";
 import { OperationWorkspaceLayout } from "./OperationWorkspaceLayout";
 import FlowItemListView from "./FlowItemListView";
 import TechnicalIssueListView from "./TechnicalIssueListView";
@@ -1995,7 +1996,7 @@ export default function OperationCoordinationWorkspace({
                       <button
                         type="button"
                         onClick={adHocWorkCreate.open}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo việc</span>
@@ -2010,13 +2011,13 @@ export default function OperationCoordinationWorkspace({
                     />
                     )}
                     {isUnifiedOperation && isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense && (
-                      <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"><Plus className="h-4 w-4" aria-hidden="true" />Thêm khoản thu / chi</button>
+                      <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}><Plus className="h-4 w-4" aria-hidden="true" />Thêm khoản thu / chi</button>
                     )}
                     {isTechnicalIssueFlowMode ? (
                       <button
                         type="button"
                         onClick={() => setIsTechnicalIntakeOpen(true)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tiếp nhận kỹ thuật</span>
@@ -2026,7 +2027,7 @@ export default function OperationCoordinationWorkspace({
                       <button
                         type="button"
                         onClick={() => setIsMediaPostCreateOpen((value) => !value)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo Media Post</span>

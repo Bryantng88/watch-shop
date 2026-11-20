@@ -917,6 +917,21 @@ Escape hoặc pointer-cancel trả lại độ rộng trước drag. Mobile/cont
 960px vẫn dùng selector native; không thêm rail thu gọn trên mobile. Resize chỉ
 đổi grid width, không unmount nội dung hoặc dùng containment giữ sai fixed editor.
 
+Theo yêu cầu mới, SpaceViewPage variant workspace không có đường line ngang
+giữa title/description và vùng làm việc. Dùng khoảng cách của flow để phân cấp;
+đường phân cách dọc kéo menu vẫn được giữ. Default/compact không đổi.
+
+
+### Blue primary action variant
+
+ADMIN_PRIMARY_ACTION / ADMIN_PRIMARY_ACTION_STYLE dùng foundation.primaryAction:
+xanh 2563eb, hover 1d4ed8, pressed 1e40af, chữ trắng. Đây là variant opt-in đã
+được chọn cho Danh bạ và CTA vùng Vận hành; không đổi ngầm mọi button legacy.
+Giữ geometry contract: cao 40px / coarse 44px, radius 8px, chữ 14/20 semibold,
+icon 16px, gap 8px, focus-visible và pending/disabled. Không sao chép kích thước
+nhỏ của nút Configure tham chiếu. Nút phụ trung tính, destructive giữ semantic
+riêng; không tô xanh tất cả thao tác trong một vùng.
+
 SpaceViewPage variant workspace có divider 1px slate-100 dưới title/description,
 padding-bottom 16px; flow bên ngoài sở hữu khoảng cách 16px tới vùng làm việc.
 Đây là phân tách page identity với menu/list, không thêm card, shadow hoặc gradient.
