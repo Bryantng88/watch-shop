@@ -1161,7 +1161,7 @@ export default function FlowItemListView({
                     />
                   </td>
                   <td className="px-2 py-3">
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="contextual"
                       type="button"
                       onClick={() => openItemPreview(item)}
                       className={cn("flex min-w-0 items-center gap-3 text-left", isMedia && styles.identity)}

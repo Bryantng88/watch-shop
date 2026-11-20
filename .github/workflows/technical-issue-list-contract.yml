@@ -34,4 +34,3 @@ jobs:
           src/domains/shared/ui/space/SpaceFilterBar.tsx
           tests/browser/technical-issue-list.fixture.tsx
       - run: npx tsc --noEmit
-

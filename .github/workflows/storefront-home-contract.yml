@@ -73,4 +73,3 @@ jobs:
           name: storefront-home-layout
           path: ${{ runner.temp }}/storefront-home-layout
           if-no-files-found: ignore
-

@@ -41,4 +41,3 @@ jobs:
         with:
           name: shared-admin-tabs-preview
           path: /tmp/admin-view-tabs/*.png
-

@@ -51,4 +51,3 @@ jobs:
           WATCHSHOP_DOCKER_BIN: ${{ vars.WATCHSHOP_DOCKER_BIN }}
           WATCHSHOP_KEEP_RELEASES: ${{ vars.WATCHSHOP_KEEP_RELEASES }}
         run: bash ops/deployment/deploy-production-runner.sh
-

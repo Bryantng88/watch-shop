@@ -2,7 +2,6 @@ name: Production worker attachment
 on:
   pull_request:
     paths:
-      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - "ops/deployment/**"
       - ".github/workflows/production-worker-check.yml"
 permissions:
@@ -17,4 +16,3 @@ jobs:
           node-version: 22
       - run: bash -n ops/deployment/deploy-production-runner.sh
       - run: node --test ops/deployment/reattach-ben-worker.test.cjs
-
