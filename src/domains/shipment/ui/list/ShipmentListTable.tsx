@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 
-import { cn } from "@/lib/utils";
 import ShipmentListRow from "./ShipmentListRow";
 import { buildHref } from "./helpers";
 import type { ShipmentListItem } from "./types";
@@ -83,29 +82,9 @@ export default function ShipmentListTable({
         </table>
       </div>
 
-      <div className="relative z-0 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4 text-sm text-slate-500">
-        <div>
-          Tổng: <b className="text-slate-900">{total}</b> shipment · Trang {page}/{totalPages}
-        </div>
-
-        <div className="flex gap-2">
-          <Link
-            aria-disabled={page <= 1}
-            href={buildHref(pathname, searchParams, { page: String(Math.max(1, page - 1)) })}
-            className={cn("rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50", page <= 1 && "pointer-events-none opacity-40")}
-          >
-            Trước
-          </Link>
-
-          <Link
-            aria-disabled={page >= totalPages}
-            href={buildHref(pathname, searchParams, { page: String(Math.min(totalPages, page + 1)) })}
-            className={cn("rounded-xl border border-slate-200 px-3 py-2 transition hover:bg-slate-50", page >= totalPages && "pointer-events-none opacity-40")}
-          >
-            Sau
-          </Link>
-        </div>
-      </div>
+      <AdminListFooter total={total} unit="vận đơn" page={page} totalPages={totalPages}
+        previousHref={buildHref(pathname, searchParams, { page: String(Math.max(1, page - 1)) })}
+        nextHref={buildHref(pathname, searchParams, { page: String(Math.min(totalPages, page + 1)) })} />
     </div>
   );
 }

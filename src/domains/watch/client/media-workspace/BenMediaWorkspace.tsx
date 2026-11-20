@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, ChevronRight, Images, Loader2, X } from "lucide-react";
-import { AdminPageCanvas, AdminPageHeader, AdminFlatToolbar, ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
+import { AdminPageCanvas, AdminPageHeader, AdminFlatToolbar, AdminListFooter, ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 import { mediaStages, mediaStageLabels, mediaListHref, mediaRowHref, type MediaListData, type MediaStage } from "../../shared/ben-media-workspace";
 
@@ -73,6 +73,7 @@ export default function BenMediaWorkspace({data}: {data: MediaListData}) {
         })}
       </ul>
     </div>
-    {data.totalPages > 1 && <nav aria-label="Phân trang media" className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4"><AdminButton variant="secondary" density="compact" type="button" disabled={pending || data.page <= 1} onClick={() => navigate(data.stage, data.q, data.page - 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs disabled:opacity-40">Trước</AdminButton><span className="text-xs tabular-nums text-slate-500">{data.page}/{data.totalPages}</span><AdminButton variant="secondary" density="compact" type="button" disabled={pending || data.page >= data.totalPages} onClick={() => navigate(data.stage, data.q, data.page + 1)} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs disabled:opacity-40">Tiếp</AdminButton></nav>}
+    <AdminListFooter total={data.total} unit="mục" page={data.page} totalPages={data.totalPages} pending={pending}
+      onPrevious={() => navigate(data.stage, data.q, data.page - 1)} onNext={() => navigate(data.stage, data.q, data.page + 1)} />
   </AdminPageCanvas>;
 }

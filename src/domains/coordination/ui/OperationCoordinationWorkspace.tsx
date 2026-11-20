@@ -44,6 +44,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import { operationalStageIcon, operationalStagePresentation } from "@/domains/shared/ui/signals";
@@ -2769,23 +2770,9 @@ export default function OperationCoordinationWorkspace({
             ) : null}
           </div>
           {!isOperationalBoardView && filteredWorkTickets.length > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
-              <div className="text-xs font-medium text-slate-500">
-                Hiển thị {workspacePageStart + 1}-{Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} trong {filteredWorkTickets.length} Workspace
-              </div>
-              <div className="flex items-center gap-1">
-                <AdminButton variant="secondary" density="compact" type="button" onClick={() => setWorkspacePage((page) => Math.max(1, page - 1))} disabled={safeWorkspacePage <= 1} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Trước</AdminButton>
-                {Array.from({ length: workspacePageCount }, (_, index) => index + 1)
-                  .filter((page) => page === 1 || page === workspacePageCount || Math.abs(page - safeWorkspacePage) <= 1)
-                  .map((page, index, pages) => (
-                    <span key={page} className="contents">
-                      {index > 0 && page - pages[index - 1] > 1 ? <span className="px-1 text-xs text-slate-400">...</span> : null}
-                      <AdminButton variant="secondary" density="compact" type="button" onClick={() => setWorkspacePage(page)} className={cn("h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold", page === safeWorkspacePage ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50")}>{page}</AdminButton>
-                    </span>
-                  ))}
-                <AdminButton variant="secondary" density="compact" type="button" onClick={() => setWorkspacePage((page) => Math.min(workspacePageCount, page + 1))} disabled={safeWorkspacePage >= workspacePageCount} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Sau</AdminButton>
-              </div>
-            </div>
+            <AdminListFooter total={filteredWorkTickets.length} unit="Workspace" page={safeWorkspacePage} totalPages={workspacePageCount}
+              onPrevious={() => setWorkspacePage(page => Math.max(1, page - 1))}
+              onNext={() => setWorkspacePage(page => Math.min(workspacePageCount, page + 1))} />
           ) : null}
           </div>
             </>

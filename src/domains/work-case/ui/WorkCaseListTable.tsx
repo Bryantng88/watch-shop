@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Fragment, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
@@ -290,6 +291,7 @@ function WorkCaseTaskPanel({
 }
 export default function WorkCaseListTable({
   items,
+  total,
   page,
   totalPages,
   users,
@@ -301,6 +303,7 @@ export default function WorkCaseListTable({
   onTaskCreated,
 }: {
   items: WorkCaseWithRelations[];
+  total: number;
   page: number;
   totalPages: number;
   users: WorkCaseTaskUserOption[];
@@ -471,32 +474,8 @@ export default function WorkCaseListTable({
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm text-slate-600">
-        <div>
-          Trang <span className="font-semibold text-slate-900">{page}</span>/
-          <span className="font-semibold text-slate-900">{totalPages}</span>
-        </div>
-
-        <div className="flex gap-2">
-          <AdminButton variant="secondary"
-            type="button"
-            disabled={page <= 1}
-            onClick={() => onPage(page - 1)}
-            className="rounded-xl border border-slate-200 px-3 py-2 disabled:opacity-50"
-          >
-            Trước
-          </AdminButton>
-
-          <AdminButton variant="secondary"
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => onPage(page + 1)}
-            className="rounded-xl border border-slate-200 px-3 py-2 disabled:opacity-50"
-          >
-            Sau
-          </AdminButton>
-        </div>
-      </div>
+      <AdminListFooter total={total} unit="phiếu xử lý" page={page} totalPages={totalPages}
+        onPrevious={() => onPage(page - 1)} onNext={() => onPage(page + 1)} />
 
       <BusinessEntityPreviewModal
         open={previewState.open}

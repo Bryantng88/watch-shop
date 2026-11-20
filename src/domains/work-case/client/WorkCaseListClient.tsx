@@ -151,9 +151,6 @@ export default function WorkCaseListClient(props: Props) {
             Tạo phiếu
           </AdminButton>
 
-          <div className="rounded-2xl bg-slate-50 px-4 py-2 text-sm text-slate-600">
-            Tổng: <span className="font-semibold text-slate-950">{props.total}</span>
-          </div>
         </div>
       </div>
 
@@ -237,6 +234,7 @@ export default function WorkCaseListClient(props: Props) {
 
       <WorkCaseListTable
         items={props.items}
+        total={props.total}
         page={props.page}
         totalPages={props.totalPages}
         users={users}
