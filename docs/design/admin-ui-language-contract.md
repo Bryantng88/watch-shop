@@ -931,3 +931,19 @@ Giữ geometry contract: cao 40px / coarse 44px, radius 8px, chữ 14/20 semibol
 icon 16px, gap 8px, focus-visible và pending/disabled. Không sao chép kích thước
 nhỏ của nút Configure tham chiếu. Nút phụ trung tính, destructive giữ semantic
 riêng; không tô xanh tất cả thao tác trong một vùng.
+
+
+### Raised button finish — explicit design variant
+
+Theo yêu cầu trực tiếp, nút xử lý trong hàng Media/TI dùng lớp nổi nhẹ kiểu
+Cloudflare: gradient trắng/xám rất nhẹ, viền rõ, highlight inset và bóng ngoài
+1–2px; active đổi gradient và dùng bóng inset để tạo cảm giác nhấn xuống.
+Nút primary xanh giữ palette đã chọn và dùng cùng finish. Giá trị nằm một nguồn
+ở foundation.buttonSurface và AdminButtonSurface; không copy palette/shadow
+vào từng page. Đây là ngoại lệ opt-in cho quy tắc không gradient mặc định,
+không áp cho card/row, popover content hoặc mọi control legacy.
+
+Không hover-lift/translate/scale nên hit area và hàng dữ liệu không dịch chuyển.
+Focus ring, pending, disabled và target coarse giữ contract hiện hữu. Disabled
+bỏ gradient/shadow; trạng thái không có lệnh được phép vẫn là text/badge phẳng,
+không render như nút. Không đổi nhãn, quyền, callback mở editor hoặc command.

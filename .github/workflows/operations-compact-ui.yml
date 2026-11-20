@@ -74,6 +74,7 @@ jobs:
           src/domains/shared/ui/admin-design-contract/AdminTechnicalList.ts
           src/domains/shared/ui/admin-design-contract/AdminSplitResize.tsx
           src/domains/shared/ui/admin-design-contract/AdminPrimaryAction.ts
+          src/domains/shared/ui/admin-design-contract/AdminButtonSurface.ts
           src/domains/shared/ui/space/SpaceViewShell.tsx
           src/domains/coordination/ui/OperationWorkspaceLayout.tsx
           scripts/check-operation-resize.mjs
