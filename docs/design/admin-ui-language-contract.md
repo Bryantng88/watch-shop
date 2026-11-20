@@ -1219,3 +1219,18 @@ URL danh sách, filter, detail/create và các quyền route/API cũ giữ nguy�
 Các component báo cáo giữ chế độ standalone mặc định cho UI-test/consumer
 khác; chỉ route báo cáo chính bật embedded. Không viết lại công thức,
 projection, nội dung thống kê hoặc nghiệp vụ khi đổi navigation shell.
+
+### System — flat main navigation
+
+System là một link trên thanh chính, không còn group accordion Channels/Activity.
+Landing /admin/system mở mục đầu tiên có quyền. Channels và Activity giữ URL
+cũ, SYSTEM_JOB_VIEW và ACTIVITY_READ tương ứng, không suy ra quyền ghi từ
+quyền điều hướng. Các guard route, server action, filter và query cũ giữ nguyên.
+Users tiếp tục ở Danh bạ, không lặp trong System.
+
+Hai màn hình dùng AdminRouteWorkspace với menu trái Khu vực hệ thống, độ rộng
+lưu riêng admin:system:menu-width:v1, native select ở màn hình hẹp và cùng
+cơ chế kéo vách ngăn. Một h1 System; heading nội dung dùng shared section
+heading, bỏ padding trang lồng. Activity có embedded mode, standalone vẫn giữ
+hành vi cũ. Không thay cấu hình kênh, dispatch, refresh token hay dữ liệu log
+khi thay navigation. Resize không remount nội dung form Channels.

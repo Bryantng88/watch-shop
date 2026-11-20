@@ -10,8 +10,7 @@ import {
     ArrowLeftRight,
     LogOut,
     Workflow,
-    BellRing,
-    Activity,
+    Settings,
     PanelLeftClose,
     PanelLeftOpen,
     BarChart3,
@@ -23,7 +22,7 @@ import {
 
 import { TRADING_READ_PERMISSIONS, TRADING_ROUTES } from "@/domains/trading/shared/trading-navigation";
 
-import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries } from "@/domains/shared/ui/navigation/section-navigation";
+import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries, SYSTEM_READ_PERMISSIONS, SYSTEM_ROUTES } from "@/domains/shared/ui/navigation/section-navigation";
 
 import ReportMenu from "./ReportMenu";
 import ActiveLink from "./AdminActiveLink";
@@ -107,27 +106,7 @@ const NAV: NavEntry[] = [
             { type: "item", href: "/admin/storefront/media", label: "Thư viện ảnh website", icon: Images, permission: PERMISSIONS.PRODUCT_UPDATE },
         ],
     },
-    {
-        type: "group",
-        label: "System",
-        defaultOpen: true,
-        children: [
-            {
-                type: "item",
-                href: "/admin/system/channels",
-                label: "Channels",
-                icon: BellRing,
-                permission: PERMISSIONS.SYSTEM_JOB_VIEW,
-            },
-            {
-                type: "item",
-                href: "/admin/activity",
-                label: "Activity",
-                icon: Activity,
-                permission: PERMISSIONS.ACTIVITY_READ,
-            },
-        ],
-    },
+    { type: "item", href: "/admin/system", label: "System", icon: Settings, permissionsAny: [...SYSTEM_READ_PERMISSIONS], activePaths: SYSTEM_ROUTES },
 ];
 
 function canAccess(user: Props["user"], item: NavItem): boolean {

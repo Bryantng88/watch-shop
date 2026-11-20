@@ -1,14 +1,14 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
-import { Package, Link2, BarChart3, ChartNoAxesCombined, Tags, ShoppingBag } from "lucide-react";
+import { Package, Link2, BarChart3, ChartNoAxesCombined, Tags, ShoppingBag, BellRing, Activity } from "lucide-react";
 import { AdminManagementPage } from "./AdminManagement";
 import { AdminWorkspaceNavigation } from "./AdminWorkspaceNavigation";
 import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "./AdminSplitWorkspace";
 import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "./AdminSplitResize";
 
 export type AdminRouteEntry = { href: string; label: string };
-const icons = { "/admin/watches": Package, "/admin/straps": Link2, "/admin/reports/overview": BarChart3, "/admin/reports/finance": BarChart3, "/admin/reports/sales": ChartNoAxesCombined, "/admin/acquisitions": Tags, "/admin/orders": ShoppingBag };
+const icons = { "/admin/system/channels": BellRing, "/admin/activity": Activity, "/admin/watches": Package, "/admin/straps": Link2, "/admin/reports/overview": BarChart3, "/admin/reports/finance": BarChart3, "/admin/reports/sales": ChartNoAxesCombined, "/admin/acquisitions": Tags, "/admin/orders": ShoppingBag };
 
 /** Presentation only: callers retain permission policy, URLs and domain state. */
 export function AdminRouteWorkspace({ title, description, navigationLabel, storageKey, entries, selected, extraNavigation, children }: {
