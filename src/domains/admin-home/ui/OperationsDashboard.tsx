@@ -30,7 +30,7 @@ function QueueRow({ queue }: { queue: OperationsDashboardQueue }) {
       </div>
       <QueueStageSummary stages={queue.stages} />
     </div>
-    <div className={styles.queueWarning} data-queue-warning>{insight && <AdminLinkAction variant="secondary" density="compact" href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+    <div className={styles.queueWarning} data-queue-warning>{insight && <AdminLinkAction variant="contextual" density="compact" href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
           <span><strong className={styles.attentionBadge}>{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</span>
         </AdminLinkAction>}</div>
     <Link href={queue.href} className={cn(styles.queueCount, "flex min-h-10 items-center justify-end gap-1 rounded text-sm font-semibold tabular-nums text-blue-700 hover:text-blue-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400")} aria-label={`Mở ${visual.label}: ${number(queue.activeCount)} việc đang mở`}>
@@ -47,7 +47,7 @@ export default function OperationsDashboard({ data }: { data: OperationsDashboar
     } />
     {priorities.length > 0 && <nav className={styles.quickAttention} aria-label="Cần chú ý trước">
       <span className="text-xs text-slate-500">Cần chú ý trước</span>
-      {priorities.map(({ queue, insight }) => <AdminLinkAction variant="secondary" density="compact" key={queue.key} href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"><span className={cn("h-1 w-1 shrink-0 rounded-full", insight.severity === "risk" ? "bg-rose-500" : "bg-amber-500")} aria-hidden="true" />{operationalDomainPresentation(queue.key).label} <strong className="font-semibold tabular-nums">{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</AdminLinkAction>)}
+      {priorities.map(({ queue, insight }) => <AdminLinkAction variant="contextual" density="compact" key={queue.key} href={insight.href} className="inline-flex min-h-8 items-center gap-1.5 rounded text-xs text-slate-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"><span className={cn("h-1 w-1 shrink-0 rounded-full", insight.severity === "risk" ? "bg-rose-500" : "bg-amber-500")} aria-hidden="true" />{operationalDomainPresentation(queue.key).label} <strong className="font-semibold tabular-nums">{number(insight.count)}</strong> {insight.label.toLocaleLowerCase("vi-VN")}</AdminLinkAction>)}
     </nav>}
     <div className={styles.mainLayout}>
       <div className={styles.workColumn}>
