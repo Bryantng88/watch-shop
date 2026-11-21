@@ -1536,3 +1536,11 @@ Trang chủ website đặt trạng thái và các lệnh Lưu nháp / Xem trư�
 cùng hàng tiêu đề khối đang sửa; không thêm hàng toolbar hoặc footer riêng.
 Các trạng thái tải dùng `AdminLoadingStatus`: icon nhỏ, chữ dịu và tôn trọng
 reduced motion. Danh sách chỉ hiển thị một trạng thái tải hoặc rỗng.
+
+### Card TI trên bảng vận hành
+
+Giữ thứ bậc quen thuộc: header nhận diện đồng hồ/lỗi, nhãn khu vực và nơi xử lý,
+chi tiết xử lý khi có, rồi người cập nhật – thời gian – hạn/chi phí. Bản gọn giảm
+padding và nhãn, không bỏ dữ liệu nghiệp vụ; ảnh inline vẫn 48px. Không có bóng
+nâng card. Lớp kéo-thả có paint containment phải dùng cùng độ bo 6px với khung
+card để không cắt mất viền bốn góc; overlay mở preview trong suốt và bo kế thừa.
