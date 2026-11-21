@@ -1128,6 +1128,11 @@ export default function FlowItemListView({
                     },
                   }
                 : null;
+              // The editor launcher is a local action, not a workflow transition.
+              // Keep it alongside approval/return actions in the compact menu.
+              const rowActions = mediaOpenTransition && enabledActions.length
+                ? [mediaOpenTransition, ...enabledActions.filter(action => action.actionKey !== mediaOpenTransition.actionKey)]
+                : enabledActions;
               const primaryAction = (isMedia && !enabledActions.length ? null : mediaOpenTransition) ?? enabledActions[0] ?? null;
               const processingStatus = <WorkflowStatusSignal compact marker status={item.currentWorkflowState || item.status} label={item.currentWorkflowStateLabel || item.preview.status} completedIcon={completedIcon} />;
               const canOpenReconciliation = Boolean(
@@ -1283,8 +1288,8 @@ export default function FlowItemListView({
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                   >
-                    {isCompact && item.targetType !== "PURCHASE_REQUEST" && enabledActions.length > 1 ? (
-                      <MediaRowActions item={item} actions={enabledActions} status={processingStatus} disabled={isActionPending}
+                    {isCompact && item.targetType !== "PURCHASE_REQUEST" && rowActions.length > 1 ? (
+                      <MediaRowActions item={item} actions={rowActions} status={processingStatus} disabled={isActionPending}
                         onActivate={previewState.closePreview} onReloadRequested={onReloadRequested}
                         onTransitionApplied={outcome => reconcileModalTransition(item, outcome)}
                         onAction={transition => {
