@@ -1,15 +1,16 @@
 "use client";
 
-import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ADMIN_SPLIT_WORKSPACE as split, ADMIN_SPLIT_WORKSPACE_STYLE, useAdminSplitWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminSplitWorkspace";
+import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "@/domains/shared/ui/admin-design-contract/AdminSplitResize";
 import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeedback";
 import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
 import { WebsiteImagePicker } from "../media/WebsiteImagePicker";
 import { WEBSITE_IMAGE_FOLDERS, websiteImageUrl, type WebsiteFolder } from "../media/website-media";
 import { ADMIN_UI_FOUNDATION as foundation } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useId, useRef, useState } from "react";
 import {AdminPageCanvas,AdminPageHeader,AdminDocumentFooter} from "@/domains/shared/ui/admin-design-contract";
 import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
 import {AsyncActionButton} from "@/domains/shared/ui/mutation/AsyncActionButton";
@@ -40,8 +41,8 @@ const names = {
   closing: "Lời mời khám phá",
 };
 type HomeSectionId = HomeContent["sections"][number]["id"];
-function HomeSection({id,title,homeOnly,active,children}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode}){
- return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><AdminDisclosureSummary>{title}</AdminDisclosureSummary>{children}</details>;
+function HomeSection({id,title,homeOnly,active,children,actions}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode;actions?:React.ReactNode}){
+ return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><AdminWorkspaceHeadingRow><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{actions&&<div className="sfc-heading-links">{actions}</div>}</AdminWorkspaceHeadingRow>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><AdminDisclosureSummary>{title}</AdminDisclosureSummary>{children}</details>;
 }
 async function jsonRequest<T = { record: ContentRecord; articles: ArticleItem[]; items: LibraryImage[]; item: LibraryImage; truncated?: boolean }>(url: string, init?: RequestInit): Promise<T> {
   const fallback = "Không thể tải hoặc lưu dữ liệu website. Vui lòng thử lại.";
@@ -317,6 +318,7 @@ export default function StorefrontManager({
   const [needsReload,setNeedsReload]=useState(false);
   const [activeSection,setActiveSection]=useState<HomeSectionId>("hero");
   const splitRef = useAdminSplitWorkspace<HTMLFieldSetElement>(homeOnly && Boolean(record));
+  const pane = useAdminSplitResize(splitRef, "admin:website-home:menu-width:v1", homeOnly && Boolean(record));
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [libraryNotice, setLibraryNotice] = useState("");
@@ -434,9 +436,10 @@ export default function StorefrontManager({
     sections.splice(to, 0, item);
     edit({ ...home, sections });
   }
+  const websiteLinks = <><a href="/admin/storefront/media" target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Thư viện ảnh website ↗</a><a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a></>;
   return (
     <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
-      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={<><a href="/admin/storefront/media" target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Thư viện ảnh website ↗</a><a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a></>}/>
+      <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={homeOnly ? undefined : websiteLinks}/>
       {!homeOnly && (
         <div className="sfc-tabs">
           <AdminButton variant="contextual"
@@ -506,7 +509,7 @@ export default function StorefrontManager({
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
 
-          <fieldset ref={splitRef} style={home&&homeOnly?ADMIN_SPLIT_WORKSPACE_STYLE:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout}`:""}`}>
+          <fieldset ref={splitRef} data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={home&&homeOnly?{...ADMIN_SPLIT_WORKSPACE_STYLE,...pane.style,"--sfc-editor-max":`${foundation.page.formMaxWidth}px`} as CSSProperties:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout} ${resize.layout}`:""}`}>
             {home ? (
               <>
                 <section data-admin-pane="sidebar" className="sfc-section-nav" aria-label="Các khối trang chủ">
@@ -570,7 +573,8 @@ export default function StorefrontManager({
                   ))}
                   </div>
                 </section>
-                <HomeSection id="hero" title="Ảnh mở đầu — Hero" homeOnly={homeOnly} active={activeSection}>
+                {homeOnly&&<div {...pane.separatorProps} aria-label="Điều chỉnh độ rộng menu trang chủ website" className={resize.separator} />}
+                <HomeSection id="hero" title="Ảnh mở đầu — Hero" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
                   <label className="sfc-field">
                     <span>Tông màu khối mở đầu</span>
                     <select
@@ -648,7 +652,7 @@ export default function StorefrontManager({
                     />
                   </div>
                 </HomeSection>
-                <HomeSection id="featured" title="Đồng hồ nổi bật" homeOnly={homeOnly} active={activeSection}>
+                <HomeSection id="featured" title="Đồng hồ nổi bật" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
                   <Field
                     label="Tiêu đề khối"
                     value={home.featured.title}
@@ -673,7 +677,7 @@ export default function StorefrontManager({
                     }
                   />
                 </HomeSection>
-                <HomeSection id="about" title="Về Vintic" homeOnly={homeOnly} active={activeSection}>
+                <HomeSection id="about" title="Về Vintic" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
                   <Field
                     label="Tiêu đề"
                     value={home.about.title}
@@ -694,7 +698,7 @@ export default function StorefrontManager({
                     onChange={(image) => edit({ ...home, about: { ...home.about, image } })}
                   />
                 </HomeSection>
-                <HomeSection id="collections" title="Bộ sưu tập theo phong cách" homeOnly={homeOnly} active={activeSection}>
+                <HomeSection id="collections" title="Bộ sưu tập theo phong cách" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
                   {home.collections.map((collection, i) => (
                     <section className="sfc-collection" key={collection.id}>
                       <div className="sfc-row">
@@ -771,7 +775,7 @@ export default function StorefrontManager({
                     + Thêm nhóm
                   </AdminButton>
                 </HomeSection>
-                <HomeSection id="journal" title="Chuyện đồng hồ trên Home" homeOnly={homeOnly} active={activeSection}>
+                <HomeSection id="journal" title="Chuyện đồng hồ trên Home" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
                   <Field
                     label="Tên khối"
                     value={home.journal.title}
@@ -805,7 +809,7 @@ export default function StorefrontManager({
                     dung công khai.
                   </p>
                 </HomeSection>
-                <HomeSection id="closing" title="Lời mời khám phá" homeOnly={homeOnly} active={activeSection}>
+                <HomeSection id="closing" title="Lời mời khám phá" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
                   {(
                     [
                       ["title", "Tiêu đề"],

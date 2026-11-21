@@ -1,7 +1,7 @@
 "use client";
 import { AdminShellHeadingProvider } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
 import { adminRouteTitle } from "@/domains/shared/ui/admin-design-contract/admin-route-title";
-import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
+import { ADMIN_WORKSPACE_FRAME, ADMIN_WORKSPACE_FRAME_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFrame";
 import type {BenEnvironment} from "@/domains/ai-assistant/environment";
 
 import { usePathname, useSearchParams } from "next/navigation";
@@ -59,7 +59,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 />
                 </div>
 
-                <main className="mx-auto w-full min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50" style={isTechnicianWorkspace ? undefined : { maxWidth: ADMIN_UI_FOUNDATION.page.workspaceMaxWidth }}>
+                <main className={`min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50 ${isTechnicianWorkspace ? "w-full" : ADMIN_WORKSPACE_FRAME}`} style={isTechnicianWorkspace ? undefined : ADMIN_WORKSPACE_FRAME_STYLE}>
                     {children}
                 </main>
             </div></AdminShellHeadingProvider>

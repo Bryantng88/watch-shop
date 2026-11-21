@@ -1522,3 +1522,12 @@ Trang Hồ sơ dùng các vùng phẳng: thông tin cá nhân, giao diện, bả
 Danh sách dùng ảnh inline 48px theo foundation, kể cả fallback, căn giữa hàng.
 Header bảng nền softSurface, hover/focus-within nền rowHover xanh nhạt, bao gồm ô sticky.
 Trang Đồng hồ bỏ mô tả phụ dưới tiêu đề. Avatar người dùng giữ kích thước riêng.
+
+### Khoảng thở ở mép workspace và trình sửa trang chủ website
+
+`AdminWorkspaceFrame` dùng cùng giới hạn 2240px cho top menu và nội dung,
+chừa thêm 24px mỗi mép khi viewport từ 1280px. Trang vẫn giữ padding nội bộ;
+không áp khoảng đệm này cho workspace kỹ thuật viên chuyên biệt.
+Trình sửa trang chủ website dùng shared split workspace và resize grip như các
+khu vực khác. Liên kết thư viện/mở website nằm cùng hàng tiêu đề khối đang sửa;
+form giới hạn theo `page.formMaxWidth`, giữ nguyên draft khi đổi khối/thu menu.

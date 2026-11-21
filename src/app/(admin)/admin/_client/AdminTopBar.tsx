@@ -10,6 +10,7 @@ import type { AdminNotificationItem } from "../__hooks/useNotifications";
 import { useAdminNavigationHistory } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
+import { ADMIN_WORKSPACE_FRAME, ADMIN_WORKSPACE_FRAME_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFrame";
 
 import styles from "./AdminTopBar.module.css";
 
@@ -105,7 +106,7 @@ export default function AdminTopbar({
 
     return (
         <header className={`sticky top-0 z-40 shrink-0 ${styles.header}`} style={navStyle}>
-            <div className="mx-auto flex items-center gap-3 px-4 py-3" style={{ maxWidth: ADMIN_UI_FOUNDATION.page.workspaceMaxWidth }}>
+            <div className={`flex items-center gap-3 px-4 py-3 ${ADMIN_WORKSPACE_FRAME}`} style={ADMIN_WORKSPACE_FRAME_STYLE}>
                 {canGoBack ? (
                     <AdminButton variant="contextual" density="compact"
                         type="button"
