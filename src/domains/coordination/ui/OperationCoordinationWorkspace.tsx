@@ -4380,7 +4380,7 @@ function TechnicalIssueBoardCard({
         dragging && "shadow-xl ring-2 ring-violet-200",
       )}
     >
-      <AdminButton variant="secondary"
+      <AdminButton variant="contextual"
         type="button"
         onClick={() => onPreview?.(item)}
         className="absolute inset-0 z-10 rounded-xl"
