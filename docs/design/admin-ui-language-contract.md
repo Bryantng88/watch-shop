@@ -1500,7 +1500,7 @@ như đánh dấu thiết bị nội bộ trong kiểm tra giao diện.
 
 ### Giới hạn không gian làm việc trên màn hình rộng
 
-Shell admin và phần trong top bar dùng chung `page.workspaceMaxWidth = 1680px`,
+Shell admin và phần trong top bar dùng chung `page.workspaceMaxWidth = 2240px`,
 căn giữa, rộng 100% khi viewport nhỏ hơn. Giới hạn bao gồm menu khu vực và nội dung;
 không kéo giãn cột tên để lấp màn hình ultrawide. Không thêm viền/card quanh trang.
 Workspace kỹ thuật chuyên dụng và các chế độ embedded/Ben giữ bố cục riêng.
