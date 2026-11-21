@@ -1511,7 +1511,10 @@ Top menu dùng navigationSurface nền #11191f như sidebar cũ, chữ sáng, ac
 ### Profile màu top menu theo người dùng
 
 Top menu có hai profile: Simple (mặc định, nền #f8fafc) và Dark (nền #11191f).
-Chọn qua select gọn trong cụm tài khoản, có nhãn truy cập; chỉ đổi màu header,
+Chọn qua radio Simple/Dark trong trang Hồ sơ, có nhãn truy cập; chỉ đổi màu header,
 không đổi nền trang hay nghiệp vụ. Palette dùng navigationProfiles trong foundation.
 Lưu localStorage theo user ID trên trình duyệt; giá trị lạ quay về Simple, lỗi storage
 không chặn đổi profile trong phiên. Native select và popup giữ độ tương phản phù hợp.
+
+
+Trang Hồ sơ dùng các vùng phẳng: thông tin cá nhân, giao diện, bảo mật và quyền truy cập. Một ảnh đại diện chỉnh sửa được; URL ảnh nâng cao thu gọn. Quyền đọc theo danh sách quyền hiện tại, có tên mô tả và tìm kiếm, không có chức năng tự cấp quyền. Lưu hồ sơ/đổi mật khẩu kiểm tra API thành công, có pending và chống gửi trùng, lỗi giữ bản nhập. Xác nhận mật khẩu mới trước khi gửi; không đổi chính sách mật khẩu hoặc xác thực backend.

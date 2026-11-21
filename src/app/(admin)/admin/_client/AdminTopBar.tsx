@@ -2,7 +2,7 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ArrowLeft, Bell, Search, LogOut } from "lucide-react";
-import { useMemo, useRef, useState, useLayoutEffect, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
@@ -13,7 +13,7 @@ import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/a
 
 import styles from "./AdminTopBar.module.css";
 
-type NavigationProfile = "simple" | "dark";
+import { useAdminNavigationProfile } from "@/domains/shared/ui/admin-design-contract/AdminNavigationProfile";
 
 type AdminTopbarProps = {
     navigation?: ReactNode;
@@ -71,19 +71,7 @@ export default function AdminTopbar({
     navigation,
     user,
 }: AdminTopbarProps) {
-    const preferenceKey = `admin:navigation-profile:v1:${user?.id ?? "anonymous"}`;
-    const [preference, setPreference] = useState<{ key: string; value: NavigationProfile }>({ key: preferenceKey, value: "simple" });
-    const profile = preference.key === preferenceKey ? preference.value : "simple";
-    useLayoutEffect(() => {
-        let value: NavigationProfile = "simple";
-        try { if (localStorage.getItem(preferenceKey) === "dark") value = "dark"; } catch { /* Appearance remains usable when storage is unavailable. */ }
-        setPreference({ key: preferenceKey, value });
-    }, [preferenceKey]);
-    const changeProfile = (value: string) => {
-        const next: NavigationProfile = value === "dark" ? "dark" : "simple";
-        setPreference({ key: preferenceKey, value: next });
-        try { localStorage.setItem(preferenceKey, next); } catch { /* Keep the choice for this session. */ }
-    };
+    const { profile } = useAdminNavigationProfile(user?.id);
     const navTheme = ADMIN_UI_FOUNDATION.navigationProfiles[profile];
     const navStyle = { "--nav-bg": navTheme.background, "--nav-text": navTheme.text, "--nav-muted": navTheme.muted, "--nav-active": navTheme.active, "--nav-hover": navTheme.hover, "--nav-border": navTheme.border, "--nav-scheme": navTheme.scheme } as CSSProperties;
     const [loading, setLoading] = useState(false);
@@ -246,10 +234,6 @@ export default function AdminTopbar({
                     </div>
 
                     <div className={`flex items-center gap-2 rounded-full border px-3 py-1 ${styles.account}`}>
-                        <select aria-label="Giao diện top menu" title="Giao diện top menu" className={styles.profile} value={profile} onChange={event => changeProfile(event.target.value)}>
-                            <option value="simple">Simple</option>
-                            <option value="dark">Dark</option>
-                        </select>
                         <Link
                             href="/admin/profile"
                             aria-label="Thông tin tài khoản"
