@@ -1,5 +1,7 @@
 "use client";
 
+import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
+
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ReactNode, useState } from "react";
 import Link from "next/link";
@@ -114,8 +116,8 @@ function Thumb({ src, alt, onClick }: { src?: string | null; alt: string; onClic
         // eslint-disable-next-line @next/next/no-img-element
         ? <img ref={image => { if (image?.complete && !image.naturalWidth) setFailed(true); }} src={src} alt={alt} loading="lazy" onError={() => setFailed(true)} className="h-full w-full object-cover" />
         : <ImageIcon aria-hidden="true" className="h-4 w-4 text-slate-400" />;
-    const className = "flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100";
-    return onClick ? <AdminButton variant="contextual" type="button" onClick={onClick} aria-label={`Chọn lại ảnh ${alt}`} title="Chọn lại ảnh" className={className}>{content}</AdminButton> : <span className={className} title={alt}>{content}</span>;
+    const className = "flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100";
+    return onClick ? <AdminButton variant="contextual" type="button" onClick={onClick} aria-label={`Chọn lại ảnh ${alt}`} title="Chọn lại ảnh" style={{ width: F.thumbnail.row, height: F.thumbnail.row }} className={className}>{content}</AdminButton> : <span style={{ width: F.thumbnail.row, height: F.thumbnail.row }} className={className} title={alt}>{content}</span>;
 }
 
 function upper(value: unknown) {

@@ -1,4 +1,6 @@
 "use client";
+
+import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
@@ -93,7 +95,7 @@ function RowActions({
 
 function TechnicalThumbnail({ src }: { src: string | null }) {
   const [failed, setFailed] = useState(false);
-  return <span className={styles.thumbnail}>{src && !failed ? <Image src={src} alt="" width={36} height={36} unoptimized onError={() => setFailed(true)} /> : <Clock3 size={16} aria-hidden="true" />}</span>;
+  return <span className={styles.thumbnail}>{src && !failed ? <Image src={src} alt="" width={F.thumbnail.row} height={F.thumbnail.row} unoptimized onError={() => setFailed(true)} /> : <Clock3 size={16} aria-hidden="true" />}</span>;
 }
 
 export default function TechnicalIssueListView({

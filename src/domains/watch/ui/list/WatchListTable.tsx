@@ -5,6 +5,8 @@ import type { WatchRow } from "./types";
 import WatchListRow from "./WatchListRow";
 import type { BusinessEntityPreview } from "@/domains/shared/business/business-entity.types";
 
+import { ADMIN_OPERATION_LIST as surface, ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
+
 type Props = {
     items?: WatchRow[];
     total?: number;
@@ -72,7 +74,7 @@ export default function WatchListTable({
     return (
         <div className="relative min-w-0 max-w-full bg-white border-t border-slate-100">
             <div className="relative overflow-x-auto overscroll-x-contain">
-                <table className="w-full min-w-[1040px] table-fixed text-sm">
+                <table className={`w-full min-w-[1040px] table-fixed text-sm ${surface.tableSurface}`} style={ADMIN_OPERATION_LIST_STYLE}>
                     <colgroup>
                         <col className="w-10" /><col /><col className="w-[230px]" /><col className="w-[120px]" /><col className="w-[160px]" /><col className="w-[180px]" /><col className="w-11" />
                     </colgroup>

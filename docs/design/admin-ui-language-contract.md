@@ -356,7 +356,7 @@ dùng khi người xem phải biết ai chịu trách nhiệm/được chia sẻ
 Initial chữ 8px chỉ trong avatar xs đã có accessible name, không áp cho text.
 
 Thumbnail đối tượng dùng `WorkObjectThumbnail` nếu phù hợp: ảnh thật gắn đúng
-record, fallback icon domain. Chuẩn đích row 36px, detail 64px, radius 8px;
+record, fallback icon domain. Chuẩn đích row 48px, detail 64px, radius 8px;
 photo gallery riêng theo tỷ lệ ảnh. Không kéo méo ảnh. Thumbnail không thay title.
 Ảnh lỗi có fallback; xem ảnh lớn là action có tên và focus riêng.
 
@@ -881,7 +881,7 @@ editor. Giữ nguyên action keys, binding, quyền, confirmation và dirty guar
 
 ### Compact technical issue list
 
-Header Lỗi / Đồng hồ căn theo tên lỗi, sau thumbnail 36px và gap 12px. Các ô
+Header Lỗi / Đồng hồ căn theo tên lỗi, sau thumbnail 48px và gap 12px. Các ô
 căn đầu hàng; cột nội dung chia theo tỷ lệ 2.4 / 1.05 / .9 / .8, với độ rộng
 tối thiểu cho Xử lý / Thời hạn / Chi phí là 144 / 136 / 120px. Cột thao tác
 rộng 164px khi đủ chỗ. Ưu tiên nằm cạnh
@@ -891,7 +891,7 @@ hit area phủ identity, còn nút ưu tiên độc lập để không lồng bu
 
 Danh sách TI dùng adapter AdminTechnicalList: hàng phẳng, 5 cột Lỗi / Đồng hồ,
 Xử lý, Thời hạn, Chi phí, Thao tác. Identity là lỗi 14/20 semibold, đồng hồ và
-mã SR / khu vực / tín hiệu comment ở metadata 12/16. Thumbnail 36px có fallback
+mã SR / khu vực / tín hiệu comment ở metadata 12/16. Thumbnail 48px có fallback
 khi ảnh thiếu/lỗi. Không lặp nội dung xử lý thành dòng thứ tư hoặc avatar người
 cập nhật trong mỗi row; các field dữ liệu vẫn giữ nguyên, xem qua preview và
 metadata accessible. Stage và đơn vị nội bộ/vendor chung một cột. Không thêm
@@ -969,7 +969,7 @@ lặp stage thành một heading riêng trên bảng; board không ghép stage k
 có stage selection. Page identity Vận hành và CTA theo khu vực giữ vị trí cũ.
 
 Flow lists trong hub OPERATION dùng chung AdminOperationList: hàng phẳng,
-thumbnail 36px, title 14/20 semibold, metadata 12/16, avatar sm, timestamp và
+thumbnail 48px, title 14/20 semibold, metadata 12/16, avatar sm, timestamp và
 liên kết hoạt động cùng cột, selection/focus và nút phụ trung tính. Thanh toán
 giữ các cột đối tượng, loại khoản và số tiền; phương thức dùng label domain,
 không đổi tiền tệ, dấu thu/chi, quyền hoặc callback đối soát. Bảng rộng cuộn
@@ -1231,7 +1231,7 @@ nhận toàn bộ chiều rộng; nút mở lại luôn có nhãn và focus. Mob
 Danh sách Đồng hồ dùng một cột Tình trạng gồm ba dòng Bán / Media / Kỹ thuật,
 icon 14px và nhãn ngắn; Media/Kỹ thuật giữ callback xem nhanh hiện hữu. Chi tiết
 phụ nằm trong title accessible, hiển thị storefront cạnh identity. Không ẩn trạng
-thái dựa vào viewport. Ảnh 36px có fallback, tên 14/20, metadata 12/16, tiền có ₫.
+thái dựa vào viewport. Ảnh 48px có fallback, tên 14/20, metadata 12/16, tiền có ₫.
 Ngày tạo/cập nhật chung một cột; hoạt động và menu dòng giữ nguyên. Header sentence
 case, hàng phẳng, không card/gradient/shadow; bảng rộng chỉ cuộn trong pane.
 
@@ -1338,7 +1338,7 @@ Không card bao bảng, shadow, icon tile hoặc đồ họa hành trình trong 
 Bộ lọc dùng BusinessListFilterBar flat; thanh chọn nhiều dòng phẳng, giữ hành động
 nghiệp vụ hiện có. Phân trang và menu dòng dùng icon có tên accessible.
 
-Ảnh đầu dòng 36px dùng AdminListThumbnail, có fallback khi thiếu/lỗi ảnh; số sản
+Ảnh đầu dòng 48px dùng AdminListThumbnail, có fallback khi thiếu/lỗi ảnh; số sản
 phẩm và xem nhanh đầy đủ vẫn giữ. Ngày dùng AdminListDateTime hai dòng, full year
 và timezone Asia/Ho_Chi_Minh. Tiền giữ formatter vi-VN, đơn vị ₫ cho VND.
 Payment/Acquisition/Shipment signals có variant inline opt-in, giữ cách tính và
@@ -1518,3 +1518,7 @@ không chặn đổi profile trong phiên. Native select và popup giữ độ t
 
 
 Trang Hồ sơ dùng các vùng phẳng: thông tin cá nhân, giao diện, bảo mật và quyền truy cập. Một ảnh đại diện chỉnh sửa được; URL ảnh nâng cao thu gọn. Quyền đọc theo danh sách quyền hiện tại, có tên mô tả và tìm kiếm, không có chức năng tự cấp quyền. Lưu hồ sơ/đổi mật khẩu kiểm tra API thành công, có pending và chống gửi trùng, lỗi giữ bản nhập. Xác nhận mật khẩu mới trước khi gửi; không đổi chính sách mật khẩu hoặc xác thực backend.
+
+Danh sách dùng ảnh inline 48px theo foundation, kể cả fallback, căn giữa hàng.
+Header bảng nền softSurface, hover/focus-within nền rowHover xanh nhạt, bao gồm ô sticky.
+Trang Đồng hồ bỏ mô tả phụ dưới tiêu đề. Avatar người dùng giữ kích thước riêng.
