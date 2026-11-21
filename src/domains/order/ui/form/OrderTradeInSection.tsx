@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, Pencil, Plus, X } from "lucide-react";
 
@@ -104,10 +105,10 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
           </div>
         </div>
 
-        <button ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className="inline-flex h-8 shrink-0 items-center rounded-md px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+        <AdminButton variant="secondary" density="compact" ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} className="inline-flex h-8 shrink-0 items-center rounded-md px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">
           {value ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
           {value ? "Chỉnh sửa" : "Thêm trade-in"}
-        </button>
+        </AdminButton>
       </div>
 
       {value ? (
@@ -124,9 +125,9 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
             <div className="mt-1 text-base font-semibold text-violet-700">{money(value.amount)} VND</div>
           </div>
           {!disabled ? (
-            <button type="button" onClick={() => onChange(null)} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Bỏ trade-in">
+            <AdminButton variant="secondary" type="button" onClick={() => onChange(null)} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Bỏ trade-in">
               <X className="h-4 w-4" />
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       ) : (
@@ -141,7 +142,7 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
                 <div id="order-trade-in-title" className="text-lg font-semibold text-slate-950">Phiếu nhập trade-in</div>
                 <div className="mt-1 text-sm text-slate-500">Khách hàng lấy từ Order; ảnh và thông tin chi tiết sẽ bổ sung tại phiếu nhập nháp.</div>
               </div>
-              <button type="button" aria-label="Đóng phiếu trade-in" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+              <AdminButton variant="secondary" type="button" aria-label="Đóng phiếu trade-in" onClick={() => setOpen(false)} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></AdminButton>
             </div>
 
             <div className="space-y-5 px-6 py-5">
@@ -154,16 +155,16 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
               <div>
                 <div className="mb-2 text-xs font-medium text-slate-600">Đồng hồ khách từng mua</div>
                 <div className="rounded-2xl border border-slate-200 p-2">
-                  <button
+                  <AdminButton variant="contextual"
                     type="button"
                     onClick={() => setDraft((prev) => ({ ...prev, productId: null, sku: null }))}
                     className={`w-full rounded-xl px-3 py-2 text-left text-sm ${!draft.productId ? "bg-violet-50 text-violet-700" : "text-slate-600 hover:bg-slate-50"}`}
                   >
                     Đồng hồ ngoài hệ thống — tạo Watch mới khi duyệt phiếu
-                  </button>
+                  </AdminButton>
                   {loadingSoldWatches ? <div className="px-3 py-2 text-xs text-slate-400">Đang tìm lịch sử mua...</div> : null}
                   {soldWatches.map((watch) => (
-                    <button
+                    <AdminButton variant="contextual"
                       key={watch.productId}
                       type="button"
                       onClick={() => setDraft((prev) => ({
@@ -176,7 +177,7 @@ export default function OrderTradeInSection({ value, customerId, customerName, c
                     >
                       <div className="text-sm font-semibold text-slate-900">{watch.title}</div>
                       <div className="mt-0.5 text-xs text-slate-500">{watch.sku || "Chưa có SKU"} · Đã bán từ {watch.soldOrderRefNo || "đơn cũ"}</div>
-                    </button>
+                    </AdminButton>
                   ))}
                 </div>
                 {draft.productId ? <div className="mt-2 text-xs text-emerald-700">Khi duyệt phiếu, hệ thống tái nhập đúng Watch này và ghi event buy-back.</div> : null}

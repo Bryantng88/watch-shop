@@ -7,7 +7,7 @@
  */
 export const ADMIN_UI_FOUNDATION = {
   version: 2,
-  fontFamily: 'var(--font-geist-sans), Arial, Helvetica, sans-serif',
+  fontFamily: 'var(--font-geist-sans, Arial), Arial, Helvetica, sans-serif',
   spacing: { micro: 2, tight: 4, inline: 6, control: 8, related: 12, block: 16, panel: 20, section: 24, pane: 28, major: 32 },
   typography: {
     pageTitle: { size: 24, lineHeight: 32, weight: 700 },
@@ -17,6 +17,7 @@ export const ADMIN_UI_FOUNDATION = {
     sectionTitle: { size: 14, lineHeight: 20, weight: 700 },
     rowTitle: { size: 14, lineHeight: 20, weight: 600 },
     body: { size: 14, lineHeight: 20, weight: 400 },
+    navigation: { size: 13, lineHeight: 20, weight: 400 },
     metadata: { size: 12, lineHeight: 16, weight: 400 },
     label: { size: 12, lineHeight: 16, weight: 500 },
     eyebrow: { size: 12, lineHeight: 16, weight: 600, trackingEm: 0.08 },
@@ -42,6 +43,10 @@ export const ADMIN_UI_FOUNDATION = {
     regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
   },
+  splitWorkspace: {
+    sidebarWidth: 220, sidebarInset: 16, collapseWidth: 960,
+    resize: { minSidebarWidth: 200, maxSidebarWidth: 240, minContentWidth: 600, collapseAt: 120, step: 16, hitArea: 12, touchHitArea: 24 },
+  },
   focusPanel: {
     padding: 20, mobilePadding: 16, titleGap: 4, chipsGap: 6,
     metadataGap: 8, actionsGap: 8, actionsMarginTop: 16, chartGap: 16,
@@ -53,6 +58,20 @@ export const ADMIN_UI_FOUNDATION = {
     dotSize: 6, dotGap: 6, iconSize: 16, iconGap: 8, countGap: 6,
     underlineHeight: 2, selectThreshold: 520, selectWhenOptionsExceed: 4,
   },
+  buttonSurface: {
+    dangerHover: "#9f1239",
+    neutral: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
+    neutralHover: 'linear-gradient(180deg, #ffffff 0%, #e2e8f0 100%)',
+    neutralPressed: 'linear-gradient(180deg, #e2e8f0 0%, #f8fafc 100%)',
+    neutralBorder: '#cbd5e1', neutralHoverBorder: '#94a3b8',
+    neutralShadow: 'inset 0 1px 0 rgb(255 255 255 / 90%), 0 1px 2px rgb(2 6 23 / 10%)',
+    neutralInset: 'inset 0 1px 2px rgb(2 6 23 / 14%)',
+    primary: 'linear-gradient(180deg, rgb(255 255 255 / 6%) 0%, transparent 45%, rgb(2 6 23 / 8%) 100%)',
+    primaryPressed: 'linear-gradient(180deg, rgb(2 6 23 / 10%) 0%, transparent 100%)',
+    primaryShadow: 'inset 0 1px 0 rgb(255 255 255 / 18%), 0 1px 2px rgb(2 6 23 / 18%)',
+    primaryInset: 'inset 0 1px 3px rgb(2 6 23 / 25%)',
+  },
+  primaryAction: { background: "#2563eb", hover: "#1d4ed8", pressed: "#1e40af", border: "#1d4ed8", foreground: "#ffffff" },
   controls: {
     height: 40, compactHeight: 32, touchMinHeight: 44, inputPaddingX: 12,
     buttonPaddingX: 16, compactPaddingX: 12, iconGap: 8,
@@ -72,6 +91,7 @@ export const ADMIN_UI_FOUNDATION = {
     drawerWidth: 480, drawerWideWidth: 640, overlayOpacity: 0.25,
     overlayBlur: 1, maxHeightViewportGutter: 32,
   },
+  progress: { quietTrackHeight: 4, quietGap: 6, fill: "#2563eb", successFill: "#10b981" },
   motion: { fastMs: 150, panelMs: 200 },
   layers: { base: 0, sticky: 10, navigation: 20, popover: 30, overlay: 40, dialog: 50, dialogPopover: 60, toast: 70, tooltip: 80 },
   breakpoints: { mobileMax: 639, tabletMin: 640, desktopMin: 1024, wideMin: 1280 },

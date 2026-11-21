@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpen, Check, ImageIcon, LoaderCircle, Save, Sparkles } from "lucide-react";
@@ -166,10 +167,10 @@ export default function MediaPostEditor({
             <span className="rounded-full bg-violet-50 px-2.5 py-1 text-violet-700">{[workProgress.content, workProgress.image].filter(Boolean).length}/2</span>
           </div>
         </div>
-        <button type="button" onClick={() => void completeCurrentStage()} disabled={!(publishBindingId ?? bindingId) || approving || approved || (!publishBindingId && (!workProgress.content || !workProgress.image))} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45">
+        <AdminButton variant="primary" type="button" onClick={() => void completeCurrentStage()} disabled={!(publishBindingId ?? bindingId) || approving || approved || (!publishBindingId && (!workProgress.content || !workProgress.image))} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45">
           {approving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : approved ? <Check className="h-4 w-4" /> : null}
           {approving ? "Đang xử lý" : approved ? "Đã hoàn tất" : publishBindingId ? "Xác nhận đã đăng" : "Duyệt xong"}
-        </button>
+        </AdminButton>
       </div>
       {message ? (
         <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">{message}</div>
@@ -179,7 +180,7 @@ export default function MediaPostEditor({
         title="Content"
         subtitle="Soạn nội dung dùng chung trước khi phân phối sang từng kênh."
         right={
-          <button
+          <AdminButton variant="primary" density="compact"
             type="button"
             onClick={() => void saveContent()}
             disabled={contentSaving || !content.title.trim()}
@@ -187,7 +188,7 @@ export default function MediaPostEditor({
           >
             {contentSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : contentSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
             {contentSaving ? "Đang lưu" : contentSaved ? "Đã lưu" : "Lưu content"}
-          </button>
+          </AdminButton>
         }
       >
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-violet-100 bg-violet-50/60 p-4">
@@ -218,7 +219,7 @@ export default function MediaPostEditor({
       <SectionCard
         title="Hình ảnh"
         subtitle="Chọn ảnh từ NAS và quản lý bộ media dành riêng cho bài post."
-        right={<div className="flex items-center gap-3"><div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><ImageIcon className="h-4 w-4 text-violet-600" />{selected.length} ảnh đã chọn</div><button type="button" onClick={() => void saveMedia()} disabled={mediaSaving || !mediaDirty} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">{mediaSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : mediaSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{mediaSaving ? "Đang lưu" : mediaSaved ? "Đã lưu" : "Lưu hình ảnh"}</button></div>}
+        right={<div className="flex items-center gap-3"><div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><ImageIcon className="h-4 w-4 text-violet-600" />{selected.length} ảnh đã chọn</div><AdminButton variant="primary" density="compact" type="button" onClick={() => void saveMedia()} disabled={mediaSaving || !mediaDirty} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">{mediaSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : mediaSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{mediaSaving ? "Đang lưu" : mediaSaved ? "Đã lưu" : "Lưu hình ảnh"}</AdminButton></div>}
         contentClassName="p-5"
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3">
@@ -226,7 +227,7 @@ export default function MediaPostEditor({
             <div className="text-sm font-semibold text-slate-900">Sharp cho media bài post</div>
             <p className="mt-0.5 text-xs text-slate-500">Crop, zoom và cân chỉnh ảnh đã chọn trước khi lưu vào bộ media của bài post.</p>
           </div>
-          <button
+          <AdminButton variant="primary" density="compact"
             type="button"
             onClick={() => setSharpOpen(true)}
             disabled={chosen.length === 0 || mediaSaving}
@@ -234,7 +235,7 @@ export default function MediaPostEditor({
           >
             <Sparkles className="h-4 w-4" />
             Xử lý ảnh bằng Sharp
-          </button>
+          </AdminButton>
         </div>
         <MediaPickerMulti
           chosenValue={chosen}

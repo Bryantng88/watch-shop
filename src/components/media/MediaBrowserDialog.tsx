@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { mediaSourceRoot } from "@/domains/media/core/media-source-path";
 import {
@@ -515,7 +516,7 @@ export default function MediaBrowserDialog({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={() => {
                                 setItems([]);
@@ -526,15 +527,15 @@ export default function MediaBrowserDialog({
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             Tải lại
-                        </button>
+                        </AdminButton>
 
-                        {presentation !== "page" ? <button
+                        {presentation !== "page" ? <AdminButton variant="secondary"
                             type="button"
                             onClick={onClose}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             Đóng
-                        </button> : null}
+                        </AdminButton> : null}
                     </div>
                 </div>
 
@@ -561,7 +562,7 @@ export default function MediaBrowserDialog({
 
                 <div className="border-b border-slate-100 px-5 py-3">
                     <div className="flex flex-wrap items-center gap-2">
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={handleGoUp}
                             disabled={!canGoUp}
@@ -569,19 +570,19 @@ export default function MediaBrowserDialog({
                         >
                             <ChevronLeft className="mr-1 h-4 w-4" />
                             Lên thư mục cha
-                        </button>
+                        </AdminButton>
 
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={handleGoRoot}
                             className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                         >
                             <RefreshCw className="mr-1 h-4 w-4" />
                             Về root
-                        </button>
+                        </AdminButton>
                         {enableRecycle ? (
                             <>
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() => {
                                         setInternalSelectedKeys([]);
@@ -597,9 +598,9 @@ export default function MediaBrowserDialog({
                                         <Trash2 className="mr-1 h-4 w-4" />
                                     )}
                                     {browsingRecycle ? "Về thư viện" : "Xem Recycle"}
-                                </button>
+                                </AdminButton>
                                 {presentation === "page" ? (
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={() => handleRecycleAction(browsingRecycle ? "RESTORE" : "RECYCLE")}
                                         disabled={internalSelectedKeys.length === 0 || recyclePending}
@@ -618,7 +619,7 @@ export default function MediaBrowserDialog({
                                             <Trash2 className="mr-1 h-4 w-4" />
                                         )}
                                         {browsingRecycle ? "Khôi phục ảnh đã chọn" : "Đưa vào Recycle"}
-                                    </button>
+                                    </AdminButton>
                                 ) : null}
                             </>
                         ) : null}
@@ -645,7 +646,7 @@ export default function MediaBrowserDialog({
 
                                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                         {folders.map((folder) => (
-                                            <button
+                                            <AdminButton variant="contextual"
                                                 key={folder.prefix}
                                                 type="button"
                                                 onClick={() =>
@@ -667,7 +668,7 @@ export default function MediaBrowserDialog({
                                                         {folder.prefix}
                                                     </div>
                                                 </div>
-                                            </button>
+                                            </AdminButton>
                                         ))}
                                     </div>
                                 </div>
@@ -703,7 +704,7 @@ export default function MediaBrowserDialog({
                                                     : -1;
 
                                             return (
-                                                <button
+                                                <AdminButton variant="contextual"
                                                     key={item.key}
                                                     type="button"
                                                     disabled={disabled}
@@ -774,14 +775,14 @@ export default function MediaBrowserDialog({
                                                             {item.key}
                                                         </div>
                                                     </div>
-                                                </button>
+                                                </AdminButton>
                                             );
                                         })}
                                     </div>
 
                                     {hasMore ? (
                                         <div ref={loadMoreSentinelRef} className="flex justify-center pt-4">
-                                            <button
+                                            <AdminButton variant="secondary"
                                                 type="button"
                                                 onClick={() =>
                                                     loadItems(
@@ -800,7 +801,7 @@ export default function MediaBrowserDialog({
                                                 ) : (
                                                     "Tải thêm ảnh"
                                                 )}
-                                            </button>
+                                            </AdminButton>
                                         </div>
                                     ) : null}
                                 </div>
@@ -822,7 +823,7 @@ export default function MediaBrowserDialog({
 
                         <div className="flex items-center gap-2">
                             {enableRecycle ? (
-                                <button
+                                <AdminButton variant="secondary"
                                     type="button"
                                     onClick={() =>
                                         handleRecycleAction(
@@ -850,10 +851,10 @@ export default function MediaBrowserDialog({
                                     {browsingRecycle
                                         ? "Khôi phục ảnh đã chọn"
                                         : "Đưa vào Recycle"}
-                                </button>
+                                </AdminButton>
                             ) : null}
                             {!browsingRecycle ? (
-                                <button
+                                <AdminButton variant="primary"
                                     type="button"
                                     onClick={handleSubmit}
                                     disabled={
@@ -863,7 +864,7 @@ export default function MediaBrowserDialog({
                                     className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {submitLabel}
-                                </button>
+                                </AdminButton>
                             ) : null}
                         </div>
                     </div>

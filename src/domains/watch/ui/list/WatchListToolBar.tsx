@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { ArchiveRestore, Camera, ChevronDown, Images, Watch as WatchIcon } from "lucide-react";
 import {
@@ -7,6 +8,7 @@ import {
 } from "@/domains/shared/ui/business-list";
 
 type Props = {
+    embedded?: boolean;
     audienceSegment?: "MEN" | "WOMEN";
     onAudienceSegmentChange?: (segment: "MEN" | "WOMEN") => void;
     selectedCount: number;
@@ -22,6 +24,7 @@ type Props = {
 };
 
 export default function WatchListToolbar({
+    embedded = false,
     audienceSegment = "MEN",
     onAudienceSegmentChange,
     selectedCount,
@@ -51,10 +54,10 @@ export default function WatchListToolbar({
     }
 
     return (
-        <BusinessListPageHeader
+        <BusinessListPageHeader embedded={embedded}
             title={
                 <span className="flex flex-wrap items-center gap-3">
-                    Watch
+                    {embedded ? "Đồng hồ" : "Watch"}
                     {duplicateView ? (
                         <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                             Đang xem hàng chờ trùng
@@ -67,35 +70,35 @@ export default function WatchListToolbar({
             actions={
                 <>
                 <div
-                    className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold"
+                    className="inline-flex items-center gap-1 text-sm"
                     aria-label="Chọn danh sách Watch"
                 >
                     {(["MEN", "WOMEN"] as const).map((segment) => (
-                        <button
+                        <AdminButton variant="contextual" density="compact"
                             key={segment}
                             type="button"
                             onClick={() => onAudienceSegmentChange?.(segment)}
                             aria-pressed={audienceSegment === segment}
                             className={`h-8 rounded-lg px-3 transition ${
                                 audienceSegment === segment
-                                    ? "bg-white text-violet-700 shadow-sm ring-1 ring-slate-200/70"
+                                    ? "bg-blue-50 text-blue-700"
                                     : "text-slate-500 hover:text-slate-800"
                             }`}
                         >
                             {segment === "MEN" ? "Nam" : "Nữ"}
-                        </button>
+                        </AdminButton>
                     ))}
                 </div>
-                <button
+                <AdminButton variant="quiet" density="compact"
                     type="button"
                     onClick={onToggleDuplicateView}
                     className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                     <ArchiveRestore className="h-4 w-4" />
                     {duplicateView ? "Về danh sách Watch" : "Watch trùng"}
-                </button>
+                </AdminButton>
                 {showSelectionActions && selectedCount > 0 ? <div className="relative">
-                    <button
+                    <AdminButton variant="primary"
                         type="button"
                         onClick={() => setIsActionMenuOpen((value) => !value)}
                         disabled={selectedCount <= 0 || submitting}
@@ -103,11 +106,11 @@ export default function WatchListToolbar({
                     >
                         {submitting ? "Đang gửi..." : "Thao tác"}
                         <ChevronDown className="h-4 w-4" />
-                    </button>
+                    </AdminButton>
 
                     {isActionMenuOpen ? (
                         <div className="absolute right-0 z-30 mt-2 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-sm shadow-xl">
-                            <button
+                            <AdminButton variant="contextual"
                                 type="button"
                                 onClick={runPhotoshootRequest}
                                 disabled={!canRequestPhotoshoot || submitting}
@@ -127,8 +130,8 @@ export default function WatchListToolbar({
                                         {photoshootEligibleCount} watch chưa có ảnh trong {selectedCount} watch đã chọn
                                     </span>
                                 </span>
-                            </button>
-                            <button
+                            </AdminButton>
+                            <AdminButton variant="contextual"
                                 type="button"
                                 onClick={runMediaReviewRequest}
                                 disabled={!canRequestMediaReview || submitting}
@@ -148,7 +151,7 @@ export default function WatchListToolbar({
                                         {mediaReviewEligibleCount} watch đã có ảnh trong {selectedCount} watch đã chọn
                                     </span>
                                 </span>
-                            </button>
+                            </AdminButton>
                         </div>
                     ) : null}
                 </div> : null}

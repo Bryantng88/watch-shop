@@ -14,5 +14,5 @@ export default async function SalesReportPage() {
     canViewProductCost: isAdmin || permissions.has(PERMISSIONS.PRODUCT_COST_VIEW),
     canViewPayments: isAdmin || permissions.has(PERMISSIONS.PAYMENT_VIEW_ALL),
   }), cookies()]);
-  return <SalesReportClient data={data} internalDevice={cookieStore.get(STOREFRONT_INTERNAL_COOKIE)?.value === "1"} />;
+  return <SalesReportClient embedded data={data} internalDevice={cookieStore.get(STOREFRONT_INTERNAL_COOKIE)?.value === "1"} />;
 }

@@ -2,7 +2,11 @@ name: Storefront home contract
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/storefront/content/**'
+      - 'src/domains/storefront/server/public-image-response.ts'
+      - 'src/app/api/public/catalog/watches/**/images/**'
+      - 'scripts/check-public-image-response.cjs'
       - 'src/app/(admin)/admin/storefront/home/**'
       - 'src/app/api/admin/storefront/content/**'
       - 'src/app/(public)/storefront.css'
@@ -36,6 +40,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/check-storefront-proxy.cjs
+      - run: node scripts/check-public-image-response.cjs
       - run: npm run storefront:smoke-content
       - run: >-
           npx eslint src/domains/storefront/content
@@ -49,6 +54,9 @@ jobs:
           src/domains/storefront/ui/PublicFooter.tsx
           src/domains/shared/ui/admin-design-contract/AdminPage.tsx
           scripts/smoke-storefront-home-layout.mjs
+          scripts/check-public-image-response.cjs
+          src/domains/storefront/server/public-image-response.ts
+          'src/app/api/public/catalog/watches/[productId]/images/[imageId]/route.ts'
       - run: npx tsc --noEmit
 
   editor-layout:

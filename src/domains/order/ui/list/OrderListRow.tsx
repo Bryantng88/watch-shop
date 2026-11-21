@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminListDateTime } from "@/domains/shared/ui/admin-design-contract/AdminListDateTime";
 import Link from "next/link";
 import { Eye, Pencil, Send, Truck, WalletCards, XCircle, ClipboardPlus } from "lucide-react";
 
@@ -7,13 +8,12 @@ import RowActions from "@/domains/shared/ui/list/RowActions";
 import { useAdHocWorkRowAction } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 import { PaymentAmountSummary, PaymentStatusSignal } from "@/domains/payment/ui/signals";
 import { ShipmentLiveRouteSignal } from "@/domains/shipment/ui/progress";
-import { resolveMediaPreviewSrc } from "@/lib/media-profile";
+import { AdminListThumbnail } from "@/domains/shared/ui/admin-design-contract/AdminListThumbnail";
 
 import type { OrderListItem } from "./types";
 import {
   canCancelOrder,
   canPostOrder,
-  formatDateTime,
   formatOrderSource,
 } from "./helpers";
 
@@ -58,31 +58,9 @@ function canCreateShipment(item: OrderListItem) {
 }
 
 function OrderPreview({ item }: { item: OrderListItem }) {
-  const images = item.previewImageUrls?.length
-    ? item.previewImageUrls
-    : item.previewImageUrl
-      ? [item.previewImageUrl]
-      : [];
-  return (
-    <div className="relative h-16 w-[76px] shrink-0">
-      {(images.length ? images.slice(0, 3) : [null]).map((url, index) => {
-        const src = url ? resolveMediaPreviewSrc(url) ?? url : null;
-        return (
-          <div
-            key={`${url ?? "empty"}:${index}`}
-            className="absolute top-0 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200"
-            style={{ left: index * 6, zIndex: 3 - index }}
-          >
-            {src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt="" className="h-full w-full object-cover" />
-            ) : "O"}
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <AdminListThumbnail src={item.previewImageUrl || item.previewImageUrls?.[0]} label={item.refNo || item.id} />;
 }
+
 export default function OrderListRow({
   item,
   checked,
@@ -112,7 +90,7 @@ export default function OrderListRow({
     <tr className="border-t border-slate-100 align-middle hover:bg-slate-50/40">
       <td className="px-4 py-3">
         <input
-          type="checkbox"
+          type="checkbox" aria-label={`Chọn ${item.refNo || item.id}`}
           checked={checked}
           onChange={(event) => onCheckedChange(event.target.checked)}
           className="h-4 w-4 rounded border-slate-300"
@@ -120,12 +98,12 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="flex min-w-[340px] items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <OrderPreview item={item} />
           <div className="min-w-0">
           <Link
             href={`/admin/orders/${item.id}`}
-            className="line-clamp-2 text-[15px] font-semibold text-slate-900 hover:text-blue-700"
+            className="line-clamp-2 text-sm font-semibold text-slate-900 hover:text-blue-700"
           >
             {item.refNo || item.id}
           </Link>
@@ -145,7 +123,7 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="min-w-[150px]">
+        <div className="min-w-0">
           <div className="font-semibold text-slate-900">
             {item.customerName || "-"}
           </div>
@@ -156,8 +134,8 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="flex min-w-[145px] items-center">
-          <PaymentStatusSignal
+        <div className="flex min-w-0 items-center">
+          <PaymentStatusSignal variant="inline"
             status={cancelled ? "CANCELED" : item.paymentStatus}
             totalAmount={item.totalAmount}
             remainingAmount={cancelled ? 0 : item.remainingAmount}
@@ -167,8 +145,8 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="min-w-[160px]">
-          <ShipmentLiveRouteSignal
+        <div className="min-w-0">
+          <ShipmentLiveRouteSignal variant="progress"
             noShipment={!item.hasShipment}
             status={resolveShipmentProgressStatus(item)}
           />
@@ -177,7 +155,7 @@ export default function OrderListRow({
 
       <td className="px-4 py-3">
         <div
-          className="line-clamp-2 min-w-[180px] whitespace-pre-line text-sm leading-5 text-slate-600"
+          className="line-clamp-2 min-w-0 whitespace-pre-line text-sm leading-5 text-slate-600"
           title={item.notes?.trim() || undefined}
         >
           {item.notes?.trim() || "-"}
@@ -185,8 +163,8 @@ export default function OrderListRow({
       </td>
 
       <td className="px-5 py-3 text-right">
-        <PaymentAmountSummary
-          className="min-w-[140px]"
+        <PaymentAmountSummary variant="inline" kind="receivable"
+          className="min-w-0"
           totalAmount={item.totalAmount}
           remainingAmount={remainingAmount}
           cancelled={cancelled}
@@ -194,9 +172,7 @@ export default function OrderListRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="min-w-[120px] text-sm text-slate-600">
-          {formatDateTime(item.updatedAt)}
-        </div>
+        <AdminListDateTime value={item.updatedAt} />
       </td>
 
       <td className="sticky right-0 z-[1] bg-white px-3 py-3 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">

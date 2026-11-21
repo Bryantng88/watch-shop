@@ -1,6 +1,7 @@
 "use client";
 
-import { Button } from "@/domains/shared/ui/form/fields";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import styles from "@/domains/shared/ui/admin-design-contract/AdminBusinessTable.module.css";
 
 type Props = {
   selectedCount: number;
@@ -16,21 +17,21 @@ export default function OrderListBulkActions({
   if (!selectedCount) return null;
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="text-sm text-slate-600">
+    <div className={styles.bulk}>
+      <div className="text-xs text-slate-500">
         Đang chọn{" "}
         <span className="font-semibold text-slate-950">{selectedCount}</span>{" "}
         đơn nháp có thể post.
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="button" onClick={onBulkPost}>
+        <AdminButton variant="primary" density="compact" type="button" onClick={onBulkPost}>
           Post các đơn đã chọn
-        </Button>
+        </AdminButton>
 
-        <Button type="button" variant="outline" onClick={onClearSelection}>
+        <AdminButton type="button" variant="quiet" density="compact" onClick={onClearSelection}>
           Bỏ chọn
-        </Button>
+        </AdminButton>
       </div>
     </div>
   );

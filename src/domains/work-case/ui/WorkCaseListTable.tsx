@@ -1,5 +1,7 @@
 "use client";
 
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Fragment, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import {
@@ -226,14 +228,14 @@ function WorkCaseTaskPanel({
             ))}
           </select>
 
-          <button
+          <AdminButton variant="primary"
             type="button"
             onClick={submit}
             disabled={pending}
             className="h-10 shrink-0 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-60"
           >
             {pending ? "..." : "Tạo"}
-          </button>
+          </AdminButton>
         </div>
 
         {error ? (
@@ -289,6 +291,7 @@ function WorkCaseTaskPanel({
 }
 export default function WorkCaseListTable({
   items,
+  total,
   page,
   totalPages,
   users,
@@ -300,6 +303,7 @@ export default function WorkCaseListTable({
   onTaskCreated,
 }: {
   items: WorkCaseWithRelations[];
+  total: number;
   page: number;
   totalPages: number;
   users: WorkCaseTaskUserOption[];
@@ -341,7 +345,7 @@ export default function WorkCaseListTable({
                   >
                     <td className="px-4 py-4 align-top">
                       <div className="flex min-w-[300px] max-w-[420px] items-start gap-2">
-                        <button
+                        <AdminButton variant="secondary"
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
@@ -359,7 +363,7 @@ export default function WorkCaseListTable({
                           ) : (
                             <ChevronRight className="h-4 w-4" />
                           )}
-                        </button>
+                        </AdminButton>
 
                         <div className="min-w-0">
                           <div className="line-clamp-1 text-xs font-semibold text-slate-400">
@@ -470,32 +474,8 @@ export default function WorkCaseListTable({
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-sm text-slate-600">
-        <div>
-          Trang <span className="font-semibold text-slate-900">{page}</span>/
-          <span className="font-semibold text-slate-900">{totalPages}</span>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => onPage(page - 1)}
-            className="rounded-xl border border-slate-200 px-3 py-2 disabled:opacity-50"
-          >
-            Trước
-          </button>
-
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => onPage(page + 1)}
-            className="rounded-xl border border-slate-200 px-3 py-2 disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
-      </div>
+      <AdminListFooter total={total} unit="phiếu xử lý" page={page} totalPages={totalPages}
+        onPrevious={() => onPage(page - 1)} onNext={() => onPage(page + 1)} />
 
       <BusinessEntityPreviewModal
         open={previewState.open}

@@ -1,0 +1,15 @@
+/* Domain image selection uses the shared admin foundation through its enclosing editor. */
+.browser { min-width: 0; padding: 12px 0; border-top: 1px solid var(--website-line); }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.toolbar select { min-width: 0; flex: 1; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(min(120px,100%),1fr)); gap: 12px; max-height: 340px; overflow-y: auto; padding: 2px; }
+.image { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; color: var(--website-body); font: inherit; cursor: pointer; }
+.image:disabled { opacity: .5; cursor: default; }
+.image:focus-visible { outline: 2px solid var(--website-ring); outline-offset: 2px; }
+.thumbnail { width: 100%; aspect-ratio: 3/2; display: grid; place-items: center; position: relative; overflow: hidden; background: var(--website-soft); border-radius: 6px; }
+.thumbnail img { width: 100%; height: 100%; object-fit: contain; }
+.image[aria-pressed="true"] .thumbnail { outline: 2px solid var(--website-ring); outline-offset: -2px; }
+.check { position: absolute; bottom: 6px; right: 6px; color: var(--website-link); background: var(--website-canvas); border-radius: 50%; }
+.name { font-size: 12px; line-height: 16px; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
+.meta { color: var(--website-muted); font-size: 12px; line-height: 16px; }
+.error { color: var(--website-error); font-size: 12px; line-height: 16px; }

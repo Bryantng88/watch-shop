@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import type { IssueItem } from "./types";
 import { actionModeLabel, areaLabel, fmtDT, fmtMoney, statusLabel } from "./helpers";
@@ -77,13 +78,13 @@ export function IssueDrawer({
               </div>
             </div>
 
-            <button
+            <AdminButton variant="secondary"
               type="button"
               className="rounded-xl border border-stone-200 px-3 py-2 text-sm hover:bg-stone-50"
               onClick={onClose}
             >
               Đóng
-            </button>
+            </AdminButton>
           </div>
         </div>
 
@@ -147,56 +148,56 @@ export function IssueDrawer({
           <div className="rounded-2xl border border-stone-200 bg-white p-4">
             <div className="flex flex-wrap gap-3">
               {issue.boardColumn === "PENDING_CONFIRM" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={busyId === issue.id}
                   onClick={() => onAction(issue.id, "confirm")}
                   className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50"
                 >
                   Xác nhận
-                </button>
+                </AdminButton>
               )}
 
               {issue.boardColumn === "READY" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={busyId === issue.id}
                   onClick={() => onAction(issue.id, "start")}
                   className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-medium text-sky-700 hover:bg-sky-100 disabled:opacity-50"
                 >
                   Bắt đầu
-                </button>
+                </AdminButton>
               )}
 
               {issue.boardColumn === "IN_PROGRESS" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={busyId === issue.id}
                   onClick={() => onAction(issue.id, "complete")}
                   className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
                 >
                   Hoàn tất
-                </button>
+                </AdminButton>
               )}
 
               {issue.boardColumn !== "DONE" && (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => onCancelIssue(issue.id)}
                   disabled={cancelingIssueId === issue.id}
                   className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                 >
                   {cancelingIssueId === issue.id ? "Đang hủy..." : "Hủy issue"}
-                </button>
+                </AdminButton>
               )}
 
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm hover:bg-stone-50"
                 onClick={onOpenServiceRequest}
               >
                 Mở Service Request
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>

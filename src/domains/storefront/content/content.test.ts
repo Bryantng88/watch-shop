@@ -55,6 +55,10 @@ test("content rejects unsafe links, private media paths and duplicate sections",
     "storefront/hero/a.svg",
   ])
     assert.equal(editorialKey.safeParse(path).success, false);
+  for (const folder of ["editorial", "about", "collections", "journal", "branding"]) {
+    assert.equal(editorialKey.safeParse(`storefront/${folder}/image-123.webp`).success, true);
+    assert.equal(editorialKey.safeParse(`storefront/${folder}/../private.webp`).success, false);
+  }
   const home = defaultHome();
   home.sections[1] = home.sections[0];
   assert.equal(homeSchema.safeParse(home).success, false);

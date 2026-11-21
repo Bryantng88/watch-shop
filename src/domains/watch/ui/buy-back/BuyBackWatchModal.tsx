@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { X } from "lucide-react";
 
@@ -69,7 +70,7 @@ export default function BuyBackWatchModal({
             </div>
           </div>
 
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={onClose}
             disabled={submitting}
@@ -77,7 +78,7 @@ export default function BuyBackWatchModal({
             aria-label="Đóng"
           >
             <X className="h-5 w-5" />
-          </button>
+          </AdminButton>
         </div>
 
         <div className="space-y-5 px-5 py-5">
@@ -122,16 +123,16 @@ export default function BuyBackWatchModal({
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/70 px-5 py-4">
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={onClose}
             disabled={submitting}
             className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
             Hủy
-          </button>
+          </AdminButton>
 
-          <button
+          <AdminButton variant="primary"
             type="button"
             disabled={!canSubmit}
             onClick={() => {
@@ -145,7 +146,7 @@ export default function BuyBackWatchModal({
             className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "Đang tạo..." : "Tạo phiếu mua lại"}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

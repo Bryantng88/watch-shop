@@ -1,0 +1,30 @@
+.navigation {
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.navigation:hover,
+.navigation:focus-within {
+  scrollbar-color: rgb(255 255 255 / 28%) transparent;
+}
+
+.navigation::-webkit-scrollbar { width: 4px; height: 0; }
+.navigation::-webkit-scrollbar-track { background: transparent; }
+.navigation::-webkit-scrollbar-thumb { border-radius: 4px; background: transparent; }
+.navigation:hover::-webkit-scrollbar-thumb,
+.navigation:focus-within::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 28%); }
+.navigation::-webkit-scrollbar-button { display: none; }
+
+/* The icon rail stays full-width; native scrolling and focus scrolling remain. */
+.navigation[data-collapsed="true"] { scrollbar-width: none; }
+.navigation[data-collapsed="true"]::-webkit-scrollbar { width: 0; height: 0; }
+
+/* Preserve a visible scroll affordance in user-selected high-contrast modes. */
+@media (forced-colors: active) {
+  .navigation,
+  .navigation[data-collapsed="true"] { scrollbar-width: thin; scrollbar-color: auto; }
+}

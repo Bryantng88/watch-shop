@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 type JobControl = {
     key: string;
     label: string;
@@ -111,7 +112,7 @@ export default function JobProcessorCard({
                     />
 
                     <div className="flex flex-wrap gap-2 pt-1">
-                        <button
+                        <AdminButton variant="secondary"
                             onClick={onToggle}
                             disabled={busy}
                             className={cx(
@@ -122,16 +123,16 @@ export default function JobProcessorCard({
                             )}
                         >
                             {control.enabled ? "Pause" : "Resume"}
-                        </button>
+                        </AdminButton>
 
                         {onRunOnce ? (
-                            <button
+                            <AdminButton variant="secondary"
                                 onClick={onRunOnce}
                                 disabled={busy || !control.enabled}
                                 className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
                             >
                                 Run Once
-                            </button>
+                            </AdminButton>
                         ) : null}
                     </div>
                 </div>

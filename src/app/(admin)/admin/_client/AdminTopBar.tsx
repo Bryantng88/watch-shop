@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ArrowLeft, Bell, Search, LogOut } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -95,7 +96,7 @@ export default function AdminTopbar({
         <header className="sticky top-0 z-40 shrink-0 border-b bg-white">
             <div className="mx-auto flex items-center gap-3 px-4 py-3">
                 {canGoBack ? (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         type="button"
                         onClick={goBack}
                         className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
@@ -103,7 +104,7 @@ export default function AdminTopbar({
                     >
                         <ArrowLeft size={16} />
                         <span className="hidden sm:inline">Quay lại</span>
-                    </button>
+                    </AdminButton>
                 ) : null}
                 <h1 className="text-lg font-semibold">{title}</h1>
 
@@ -120,7 +121,7 @@ export default function AdminTopbar({
                     </div>
 
                     <div className="relative" ref={boxRef}>
-                        <button
+                        <AdminButton iconOnly variant="secondary" density="compact"
                             type="button"
                             onClick={() => {
                                 setOpenNotify((value) => {
@@ -137,7 +138,7 @@ export default function AdminTopbar({
                                     {unreadCount > 99 ? "99+" : unreadCount}
                                 </span>
                             ) : null}
-                        </button>
+                        </AdminButton>
 
                         {openNotify ? (
                             <div className="absolute right-0 top-11 z-50 w-[380px] overflow-hidden rounded-2xl border bg-white shadow-xl">
@@ -149,13 +150,13 @@ export default function AdminTopbar({
                                         </div>
                                     </div>
 
-                                    <button
+                                    <AdminButton variant="secondary" density="compact"
                                         type="button"
                                         onClick={markAllAsRead}
                                         className="text-xs font-medium text-gray-600 hover:text-black"
                                     >
                                         Đánh dấu đã đọc hết
-                                    </button>
+                                    </AdminButton>
                                 </div>
 
                                 <div className="max-h-[420px] overflow-y-auto">
@@ -165,7 +166,7 @@ export default function AdminTopbar({
                                         </div>
                                     ) : (
                                         notifyItems.map((item) => (
-                                            <button
+                                            <AdminButton variant="contextual"
                                                 key={item.id}
                                                 type="button"
                                                 onClick={async () => {
@@ -202,7 +203,7 @@ export default function AdminTopbar({
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </button>
+                                            </AdminButton>
                                         ))
                                     )}
                                 </div>
@@ -238,12 +239,12 @@ export default function AdminTopbar({
                             </div>
                         </Link>
 
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             onClick={handleLogout}
                             className="ml-2 inline-flex items-center gap-1 text-xs text-gray-600 hover:text-black"
                         >
                             <LogOut size={14} /> Logout
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </div>

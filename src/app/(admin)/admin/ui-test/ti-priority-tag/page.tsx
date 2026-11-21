@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AlertTriangle, GripVertical, Zap } from "lucide-react";
 
 const sampleCards = [
@@ -136,7 +137,7 @@ function TechnicalIssueCard({
           <div className="mt-0.5 text-xs font-semibold">Chưa có chi phí</div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button
+          <AdminButton iconOnly variant="secondary" density="compact"
             type="button"
             className={[
               "grid h-7 w-7 place-items-center rounded-md border bg-white transition",
@@ -147,14 +148,14 @@ function TechnicalIssueCard({
             aria-label="Đánh dấu gấp"
           >
             <Zap className="h-3.5 w-3.5" />
-          </button>
-          <button
+          </AdminButton>
+          <AdminButton iconOnly variant="secondary" density="compact"
             type="button"
             className="grid h-7 w-7 place-items-center rounded-md border border-slate-200 bg-white text-slate-400"
             aria-label="Kéo TI"
           >
             <GripVertical className="h-4 w-4" />
-          </button>
+          </AdminButton>
         </div>
       </div>
     </article>

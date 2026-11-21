@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React from "react";
 import Link from "next/link";
 import type { OrderServicesDraft } from "./service-order-contract";
@@ -49,7 +50,7 @@ export default function OrderServicesDraftReview({
         mới; đơn nháp chờ post. Chưa ghi nhận thu tiền. Chỉnh chiếc đồng hồ,
         dịch vụ hoặc giá bằng tin nhắn trước khi duyệt.
       </p>
-      <button
+      <AdminButton variant="primary"
         data-ben-approve
         type="button"
         disabled={busy}
@@ -57,7 +58,7 @@ export default function OrderServicesDraftReview({
         className="mt-3 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
       >
         {busy ? "Đang cập nhật…" : `Thêm ${draft.rows.length} dịch vụ`}
-      </button>
+      </AdminButton>
     </section>
   );
 }

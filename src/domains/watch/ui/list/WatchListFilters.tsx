@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminWorkspaceFilter } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters";
 import { BusinessListFilterBar } from "@/domains/shared/ui/business-list";
 import type { FilterBarField } from "@/domains/shared/ui/filter-bar";
 
@@ -90,18 +91,6 @@ const advancedFields: FilterBarField[] = [
         ],
     },
     {
-        key: "saleStatus",
-        label: "Bán hàng",
-        type: "select",
-        options: [
-            { label: "Tất cả", value: "" },
-            { label: "Sẵn sàng", value: "READY" },
-            { label: "Giữ hàng", value: "HOLD" },
-            { label: "Đã bán", value: "SOLD" },
-            { label: "Consigned", value: "CONSIGNED" },
-        ],
-    },
-    {
         key: "priceStatus",
         label: "Trạng thái giá",
         type: "select",
@@ -148,6 +137,8 @@ export default function WatchListFilters({
     vendorOptions,
     onChange,
     onApply,
+    onStatusChange,
+    pending = false,
     onClear,
     onClearField,
     onSaveView,
@@ -159,6 +150,8 @@ export default function WatchListFilters({
     vendorOptions: Option[];
     onChange: (patch: Partial<Filters>) => void;
     onApply: () => void;
+    onStatusChange: (value: string) => void;
+    pending?: boolean;
     onClear: () => void;
     onClearField: (key: string) => void;
     onSaveView?: () => void;
@@ -179,11 +172,14 @@ export default function WatchListFilters({
     ];
 
     return (
-        <BusinessListFilterBar
+        <>
+        <AdminWorkspaceFilter label="Tình trạng bán đồng hồ" value={filters.saleStatus} disabled={pending} onChange={onStatusChange}
+            options={[{ value: "", label: "Tất cả" }, { value: "READY", label: "Chưa bán" }, { value: "HOLD", label: "Giữ hàng" }, { value: "SOLD", label: "Đã bán" }, { value: "CONSIGNED", label: "Đang ký gửi" }]} />
+        <BusinessListFilterBar variant="flat"
             values={filters}
             total={total}
             visibleCount={visibleCount}
-            search={{ key: "q", placeholder: "Tìm theo title / brand / model / ref..." }}
+            search={{ key: "q", placeholder: "Tìm đồng hồ, thương hiệu, model, mã tham chiếu…" }}
             primaryFields={primaryFields}
             advancedFields={advancedFields}
             sortField={sortField}
@@ -193,5 +189,6 @@ export default function WatchListFilters({
             onClearAll={onClear}
             onSaveView={onSaveView}
         />
+        </>
     );
 }

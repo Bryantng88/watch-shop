@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -141,18 +142,15 @@ export default function WorkCaseListClient(props: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
+          <AdminButton variant="primary"
             type="button"
             onClick={() => setCreateOpen(true)}
             className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
           >
             <Plus className="h-4 w-4" />
             Tạo phiếu
-          </button>
+          </AdminButton>
 
-          <div className="rounded-2xl bg-slate-50 px-4 py-2 text-sm text-slate-600">
-            Tổng: <span className="font-semibold text-slate-950">{props.total}</span>
-          </div>
         </div>
       </div>
 
@@ -162,7 +160,7 @@ export default function WorkCaseListClient(props: Props) {
             const active = view === item.key || (!sp.get("view") && item.key === "mine");
 
             return (
-              <button
+              <AdminButton variant="contextual"
                 key={item.key}
                 type="button"
                 onClick={() => navigate({ view: item.key === "mine" ? null : item.key, page: "1" })}
@@ -170,7 +168,7 @@ export default function WorkCaseListClient(props: Props) {
                   }`}
               >
                 {item.label} <span className="ml-1 opacity-70">{props.counts[item.key] ?? 0}</span>
-              </button>
+              </AdminButton>
             );
           })}
         </div>
@@ -236,6 +234,7 @@ export default function WorkCaseListClient(props: Props) {
 
       <WorkCaseListTable
         items={props.items}
+        total={props.total}
         page={props.page}
         totalPages={props.totalPages}
         users={users}

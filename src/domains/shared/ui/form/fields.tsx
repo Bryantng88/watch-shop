@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 export function cx(...parts: Array<string | false | null | undefined>) {
     return parts.filter(Boolean).join(" ");
 }
@@ -72,7 +73,7 @@ export function Button({
     variant?: "default" | "outline" | "ghost";
 }) {
     return (
-        <button
+        <AdminButton variant={variant === "default" ? "primary" : variant === "ghost" ? "contextual" : "secondary"}
             {...props}
             className={cx(
                 "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",
@@ -98,8 +99,9 @@ export function Toggle({
     label: string;
 }) {
     return (
-        <button
+        <AdminButton variant="contextual"
             type="button"
+            aria-pressed={checked}
             onClick={() => onChange(!checked)}
             className={cx(
                 "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition",
@@ -115,7 +117,7 @@ export function Toggle({
                 )}
             />
             {label}
-        </button>
+        </AdminButton>
     );
 }
 

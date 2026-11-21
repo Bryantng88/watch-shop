@@ -1,10 +1,10 @@
 // Actual login component; synthetic credentials and local HTTP boundary only.
 const assert=require('node:assert/strict');
 const http=require('node:http');
-const esbuild=require('esbuild');
+const esbuild=require('../../scripts/lib/admin-fixture-esbuild.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
- const built=await esbuild.build({stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import LoginForm from './src/app/(admin)/login/_client/LoginForm';createRoot(document.getElementById('root')).render(<LoginForm destination="/admin/personal-work?view=list&item=fixture"/>);`,loader:'tsx',resolveDir:process.cwd()},bundle:true,platform:'browser',jsx:'automatic',write:false,define:{'process.env.NODE_ENV':'"production"'}});
+ const built=await esbuild.build({adminScope:false,stdin:{contents:`import React from 'react';import{createRoot}from'react-dom/client';import LoginForm from './src/app/(admin)/login/_client/LoginForm';createRoot(document.getElementById('root')).render(<LoginForm destination="/admin/personal-work?view=list&item=fixture"/>);`,loader:'tsx',resolveDir:process.cwd()},bundle:true,platform:'browser',jsx:'automatic',write:false,define:{'process.env.NODE_ENV':'"production"'}});
  const sent=[];let fail=false;
  const server=http.createServer(async(req,res)=>{
   if(req.url==='/api/auth/login'){let body='';for await(const part of req)body+=part;sent.push(JSON.parse(body));res.writeHead(fail?401:200,{'content-type':'application/json'});res.end(JSON.stringify(fail?{error:'Thử sai mật khẩu'}:{user:{id:'fixture'}}));}
@@ -26,3 +26,4 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
   console.log('PASS: unchecked 12-hour login, remembered login, original deep-link destination, failure retry.');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);process.exitCode=1});
+

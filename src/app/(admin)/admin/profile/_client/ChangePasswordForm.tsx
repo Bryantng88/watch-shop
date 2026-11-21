@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 
 export default function ChangePasswordForm() {
@@ -41,9 +42,9 @@ export default function ChangePasswordForm() {
             </div>
 
             <div className="mt-6 flex justify-end">
-                <button className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800">
+                <AdminButton variant="primary" className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800">
                     Đổi mật khẩu
-                </button>
+                </AdminButton>
             </div>
         </div>
 

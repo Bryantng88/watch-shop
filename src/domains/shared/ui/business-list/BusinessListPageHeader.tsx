@@ -1,6 +1,8 @@
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "../admin-design-contract/AdminWorkspaceHeading";
 import type { ReactNode } from "react";
 
 type BusinessListPageHeaderProps = {
+    embedded?: boolean;
     title: ReactNode;
     icon: ReactNode;
     meta?: ReactNode;
@@ -9,10 +11,12 @@ type BusinessListPageHeaderProps = {
 
 export default function BusinessListPageHeader({
     title,
+    embedded = false,
     icon,
     meta,
     actions,
 }: BusinessListPageHeaderProps) {
+    if (embedded) return <AdminWorkspaceHeadingRow><div><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{meta && <div className="mt-1 text-xs text-slate-500">{meta}</div>}</div>{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}</AdminWorkspaceHeadingRow>;
     return (
         <header className="relative flex flex-col gap-4 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-white via-violet-50/20 to-violet-100/65 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:flex-row md:items-center md:justify-between">
             <span className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-violet-500 to-indigo-500" />

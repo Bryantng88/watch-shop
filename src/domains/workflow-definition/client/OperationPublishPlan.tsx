@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { OperationalBlueprintContract } from "@/domains/blueprint/shared/operational-blueprint";
 import type {
   BlueprintPublishedVersion,
@@ -89,14 +90,14 @@ export function OperationPublishPlan({
           >
             {publishPlan.ok ? "Sẵn sàng publish" : "Đang bị chặn"}
           </span>
-          <button
+          <AdminButton variant="primary" density="compact"
             type="button"
             onClick={onPublish}
             disabled={publishDisabled}
             className="bg-slate-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPublishing ? "Đang lưu version..." : "Lưu version"}
-          </button>
+          </AdminButton>
         </div>
       </div>
 
@@ -155,7 +156,7 @@ export function OperationPublishPlan({
                 <div className="text-slate-500">
                   {new Date(version.publishedAt).toLocaleString()}
                 </div>
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   onClick={() => onCreateSpace?.(version.id)}
                   disabled={!onCreateSpace || creatingSpaceVersionId === version.id}
@@ -164,7 +165,7 @@ export function OperationPublishPlan({
                   {creatingSpaceVersionId === version.id
                     ? "Đang tạo..."
                     : "Tạo Space runtime"}
-                </button>
+                </AdminButton>
               </div>
             ))}
           </div>

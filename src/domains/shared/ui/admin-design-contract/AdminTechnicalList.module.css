@@ -1,0 +1,82 @@
+.list { min-width: 0; container: ti-list / inline-size; color: var(--admin-list-body); font: 400 var(--ti-body-size)/var(--ti-body-line) var(--admin-list-font); }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.tabs, .filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.tabs > button { display: flex; align-items: center; gap: 6px; min-height: var(--ti-control-height); padding: 8px 0; margin-right: 12px; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); border-bottom: 2px solid transparent; }
+.tabs > button[aria-pressed="true"] { color: var(--admin-list-text); border-bottom-color: currentColor; font-weight: 600; }
+.tabs > button > span { font-variant-numeric: tabular-nums; }
+.filters select { max-width: 100%; min-width: 0; min-height: var(--ti-control-height); padding: 8px 12px; border: 1px solid var(--admin-list-controlBorder); border-radius: var(--ti-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font: inherit; font-size: var(--admin-list-meta-size); }
+.table { min-width: 0; }
+.header, .row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(144px, 1.05fr) minmax(136px, .9fr) minmax(120px, .8fr) 64px; gap: var(--ti-row-gap); align-items: center; }
+.header { min-height: 36px; border-bottom: 1px solid var(--admin-list-divider); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-weight: 500; }
+.header > :first-child { padding-left: calc(var(--admin-list-thumbnail) + 12px); }
+.header > :nth-last-child(2) { text-align: right; }
+.header > :last-child { padding-left: 12px; }
+.row { grid-template-areas: "issue owner due cost action"; align-items: center; min-height: 72px; padding: var(--ti-row-padding) 0; border-bottom: 1px solid var(--admin-list-divider); }
+.row:hover, .row:focus-within { background: var(--admin-list-softSurface); }
+.focused, .row.focused:hover { background: var(--admin-list-focusSurface); }
+.row > div { min-width: 0; }
+.identity { grid-area: issue; position: relative; display: grid; grid-template-columns: var(--admin-list-thumbnail) minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; }
+/* One preview hit area preserves image/text clicks; priority remains a separate control. */
+.open { position: absolute; inset: 0; z-index: 1; width: 100%; min-width: 0; border-radius: var(--ti-radius); text-align: left; }
+.identity > .thumbnail, .identityText { pointer-events: none; }
+.titleLine { display: flex; align-items: start; gap: 8px; min-height: 24px; min-width: 0; }
+.thumbnail { width: var(--admin-list-thumbnail); height: var(--admin-list-thumbnail); flex: none; display: grid; place-items: center; border-radius: var(--ti-radius); overflow: hidden; background: var(--admin-list-softSurface); color: var(--admin-list-muted); }
+.thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.identityText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.title { min-width: 0; padding: 2px 0; color: var(--admin-list-text); font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); font-weight: var(--admin-list-title-weight); overflow-wrap: anywhere; }
+.open:hover ~ .identityText .title { min-width: 0; padding: 2px 0; color: var(--admin-list-link); }
+.product { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); overflow-wrap: anywhere; }
+.meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
+.meta > span { display: inline-flex; align-items: center; gap: 4px; overflow-wrap: anywhere; min-width: 0; }
+.meta > span + span::before { content: "·"; margin-right: 2px; color: var(--admin-list-muted); }
+.order { color: var(--admin-list-unknown); }
+.unread { color: var(--admin-list-link); }
+.priority { position: relative; z-index: 2; pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 24px; min-width: 24px; border-radius: var(--ti-radius); color: var(--admin-list-muted); flex: none; opacity: 0; }
+.row:hover .priority, .row:focus-within .priority { opacity: 1; }
+.priority.urgent { opacity: 1; color: var(--admin-list-danger); }
+.priority:hover { color: var(--admin-list-danger); background: var(--admin-list-dangerSurface); }
+.owner { grid-area: owner; display: flex; align-items: start; flex-direction: column; gap: 6px; }
+.stage { display: inline-flex; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 500; color: var(--admin-list-body); }
+.stage[data-stage="PROCESSING"] { color: var(--admin-list-link); }
+.stage[data-stage="DONE"] { color: var(--admin-list-success); }
+.ownerName { font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); overflow-wrap: anywhere; }
+.due { grid-area: due; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+.due small { display: flex; align-items: center; gap: 4px; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
+.due .late { color: var(--admin-list-attention); }
+.cost { grid-area: cost; display: flex; flex-direction: column; align-items: end; gap: 4px; font-variant-numeric: tabular-nums; }
+.cost small { color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
+.actionCell { grid-area: action; display: flex; justify-content: end; }
+.actionCell > button { flex: none; }
+.move, .pager > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--ti-control-height); padding: 8px 12px; border: 1px solid var(--admin-list-controlBorder); border-radius: var(--ti-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font: 600 var(--admin-list-meta-size)/var(--admin-list-meta-line) var(--admin-list-font); }
+.move svg, .actionCell > button > svg { flex-shrink: 0; }
+.move:hover, .pager > button:hover { background: var(--admin-list-softSurface); }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 0 0; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
+.footer p { margin: 0; font-variant-numeric: tabular-nums; }
+.footer small { display: block; margin-top: 4px; font: inherit; }
+.pager { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.pager > button { min-width: 40px; }
+.load { max-width: 100%; }
+.pager > span { min-width: 36px; text-align: center; }
+.empty { display: flex; flex-direction: column; align-items: start; gap: 8px; padding: 24px 0; color: var(--admin-list-muted); }
+.empty strong { color: var(--admin-list-body); font-size: var(--ti-body-size); }
+.empty p { margin: 0; font-size: var(--admin-list-meta-size); }
+.empty button { color: var(--admin-list-link); min-height: 40px; }
+.mobileLabel { display: none; }
+.loading { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); }
+.list button:focus-visible, .list select:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
+.list button:disabled { opacity: .5; cursor: default; }
+@container ti-list (max-width: 919px) {
+  .headerGroup { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "issue issue action" "owner due cost"; gap: 12px 16px; }
+  .actionCell { align-self: center; }
+  .mobileLabel { display: block; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
+}
+@container ti-list (max-width: 519px) {
+  .actionCell { width: auto; }
+  .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "issue issue" "owner action" "due cost"; }
+  .filters { width: 100%; }
+  .filters select { flex: 1 1 120px; }
+  .priority { opacity: 1; }
+  .pager { width: 100%; }
+}
+@media(pointer: coarse) { .list button, .filters select { min-height: var(--admin-list-touch); } .priority { opacity: 1; min-width: var(--admin-list-touch); } .title { padding-top: calc((var(--admin-list-touch) - var(--admin-list-title-line)) / 2); } .filters select { font-size: 16px; } }

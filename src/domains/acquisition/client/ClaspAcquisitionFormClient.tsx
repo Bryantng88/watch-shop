@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../ui/shared/AcquisitionMoneyInput";
 
 import { useState, useTransition } from "react";
@@ -195,13 +196,13 @@ export default function ClaspAcquisitionFormClient({
           <div>
             <div className="mb-2 flex justify-between">
               <label className="text-sm font-medium">Nhà cung cấp</label>
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={() => setAdding(true)}
                 className="text-xs font-semibold text-violet-700"
               >
                 + Thêm nhà cung cấp
-              </button>
+              </AdminButton>
             </div>
             <select
               className={inputClass}
@@ -229,17 +230,17 @@ export default function ClaspAcquisitionFormClient({
                   onChange={(e) => setVendorPhone(e.target.value)}
                   placeholder="Điện thoại"
                 />
-                <button
+                <AdminButton variant="primary"
                   type="button"
                   disabled={pending}
                   onClick={addVendor}
                   className="rounded-md bg-slate-950 px-4 text-white"
                 >
                   Thêm
-                </button>
-                <button type="button" onClick={() => setAdding(false)}>
+                </AdminButton>
+                <AdminButton variant="secondary" type="button" onClick={() => setAdding(false)}>
                   <X className="h-4 w-4" />
-                </button>
+                </AdminButton>
               </div>
             ) : null}
           </div>
@@ -261,13 +262,13 @@ export default function ClaspAcquisitionFormClient({
               Mỗi dòng là một SKU khóa độc lập.
             </p>
           </div>
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={() => setLines((rows) => [...rows, fresh()])}
             className="inline-flex items-center gap-2 rounded-md border px-3 text-sm"
           >
             <Plus className="h-4 w-4" /> Thêm dòng
-          </button>
+          </AdminButton>
         </div>
         <div className="space-y-4 p-5">
           {lines.map((line, index) => (
@@ -282,7 +283,7 @@ export default function ClaspAcquisitionFormClient({
                   </div>
                   <div className="mt-1 font-semibold">{titleOf(line)}</div>
                 </div>
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   disabled={lines.length === 1}
                   onClick={() =>
@@ -291,7 +292,7 @@ export default function ClaspAcquisitionFormClient({
                   className="text-rose-500 disabled:opacity-30"
                 >
                   <Trash2 className="h-4 w-4" />
-                </button>
+                </AdminButton>
               </div>
               <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-4">
                 <label className="text-xs font-medium text-slate-600">
@@ -398,13 +399,13 @@ export default function ClaspAcquisitionFormClient({
             <div className="text-xs text-slate-500">Tổng giá trị</div>
             <b>{new Intl.NumberFormat("vi-VN").format(total)} VND</b>
           </div>
-          <button
+          <AdminButton variant="primary"
             disabled={saving}
             className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
           >
             <Save className="h-4 w-4" />
             {saving ? "Đang lưu..." : "Lưu phiếu nháp"}
-          </button>
+          </AdminButton>
         </div>
       </footer>
     </form>

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import ProductListRow from "./ProductListRow";
 import type { Counts, ProductRow } from "./types";
 
@@ -50,7 +51,7 @@ function HeaderStatButton({
           : "text-slate-500";
 
   return (
-    <button
+    <AdminButton variant="contextual" density="compact"
       type="button"
       onClick={onClick}
       className={[
@@ -62,7 +63,7 @@ function HeaderStatButton({
       <span className={active ? "text-slate-600" : "text-slate-400"}>
         {label}
       </span>
-    </button>
+    </AdminButton>
   );
 }
 

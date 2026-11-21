@@ -6,7 +6,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import esbuild from 'esbuild';
+import esbuild from './lib/admin-fixture-esbuild.cjs';
 import tailwind from 'tailwindcss';
 import postcss from 'postcss';
 const require = createRequire(import.meta.url);
@@ -26,7 +26,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const notifications = [];
   const bundle = await esbuild.build({
     stdin: { contents: `import React from 'react';import{createRoot}from'react-dom/client';import Manager from './src/domains/storefront/content/StorefrontManager';createRoot(document.getElementById('root')).render(<Manager homeOnly storefrontUrl="/public-fixture"/>);`, resolveDir: root, loader: 'tsx' },
-    bundle: true, platform: 'browser', jsx: 'automatic', write: false, loader: { '.css': 'empty' },
+    bundle: true, platform: 'browser', jsx: 'automatic', write: false, outfile: '/tmp/storefront-home-layout/app.js', loader: { '.css': 'empty', '.module.css': 'local-css' },
     define: { 'process.env.NODE_ENV': '"production"' },
     plugins: [{ name: 'synthetic-ports', setup(build) {
       build.onResolve({ filter: /^next\/image$/ }, () => ({ path: 'image', namespace: 'fixture' }));
@@ -34,17 +34,21 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
       build.onResolve({ filter: /AppDialogProvider$/ }, () => ({ path: 'dialog', namespace: 'fixture' }));
       build.onLoad({ filter: /.*/, namespace: 'fixture' }, ({ path: name }) => ({ loader: 'tsx', resolveDir: root, contents: name === 'image'
         ? `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`
-        : name === 'toast' ? `const notify={success(){},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
+        : name === 'toast' ? `const notify={success(message){window.__successes=(window.__successes||[]).concat(message)},error(message){window.__errors=(window.__errors||[]).concat(message)}};export const useNotify=()=>notify;`
         : `export const useAppDialog=()=>({confirm:async()=>true});` }));
-      build.onResolve({ filter: /^@\// }, ({ path: source }) => ({ path: source === '@/domains/shared/ui/admin-design-contract'
-        ? path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx')
-        : path.join(root, source.replace(/^@\//, 'src/')) + (source.endsWith('use-ui-mutation') ? '.ts' : '.tsx') }));
+      build.onResolve({ filter: /^@\// }, async ({ path: source }) => {
+        if (source === '@/domains/shared/ui/admin-design-contract') return { path: path.join(root, 'src/domains/shared/ui/admin-design-contract/AdminPage.tsx') };
+        const base = path.join(root, source.replace(/^@\//, 'src/'));
+        for (const suffix of ['.ts', '.tsx', '/index.ts']) { try { await fs.access(base + suffix); return { path: base + suffix }; } catch {} }
+        return null;
+      });
     } }],
   });
   const tailwindCss = await postcss([tailwind({ content: [path.join(root, 'src/domains/storefront/content/StorefrontManager.tsx'), path.join(root, 'src/domains/shared/ui/admin-design-contract/*.{ts,tsx}')], corePlugins: { preflight: true } })]).process('@tailwind base;@tailwind utilities;', { from: undefined });
-  const css = tailwindCss.css + '\n' + await fs.readFile(path.join(root, 'src/domains/storefront/content/manager.css'), 'utf8');
+  const css = tailwindCss.css + '\n' + bundle.outputFiles.filter(file => file.path.endsWith('.css')).map(file => file.text).join('\n') + '\n' + await fs.readFile(path.join(root, 'src/domains/storefront/content/manager.css'), 'utf8');
   const server = http.createServer((req, res) => {
     if (req.url.startsWith('/api/admin/storefront/content')) return reply({ record, articles: [] });
+    if (req.url.startsWith('/api/admin/storefront/media/library')) return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], nextCursor: null, truncated: false });
     if (req.url === '/api/admin/storefront/media') return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], truncated: false });
     if (req.url.startsWith('/api/admin/storefront/products')) return reply({ items: [] });
     if (req.url.startsWith('/storefront-preview')) { res.setHeader('Content-Type', 'text/html'); return res.end('<p>Bản xem trước nháp</p>'); }
@@ -76,18 +80,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     const nav = page.getByRole('region', { name: 'Các khối trang chủ' });
     const bar = page.locator('.sfc-document-actions');
     await bar.waitFor();
+    assert.equal(await bar.evaluate(el => el.tagName), 'FOOTER');
+    assert.equal(await bar.evaluate(el => Boolean(el.previousElementSibling?.matches('fieldset'))), true);
     assert.equal(await page.getByText(/lưu ý về cách hiển thị ảnh/).count(), 0);
     assert.equal(await bar.getByText('Trang chủ', { exact: true }).count(), 0);
-    assert.deepEqual(await bar.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.borderTopWidth, s.borderRadius, s.position]; }), ['rgb(255, 255, 255)', '0px', '0px', 'static']);
+    assert.deepEqual(await bar.evaluate(el => { const s = getComputedStyle(el); return [s.backgroundColor, s.borderTopWidth, s.borderRadius, s.position]; }), ['rgb(255, 255, 255)', '1px', '0px', 'static']);
     assert.equal(await page.locator('.sfc-section-editor:visible').count(), 1);
     await page.getByLabel('Tông màu khối mở đầu').selectOption('charcoal');
     await nav.getByRole('button', { name: /^Về Vintic/ }).click();
     const about = page.locator('#home-editor-about');
     const hint = about.getByText('Ảnh không bắt buộc. Chưa chọn ảnh: phần giới thiệu hiển thị dạng văn bản gọn.', { exact: true });
     await hint.waitFor();
-    const aboutImage = about.getByRole('combobox', { name: 'Chọn Ảnh giới thiệu', exact: true });
+    const aboutImage = about.getByRole('button', { name: 'Chọn Ảnh giới thiệu', exact: true });
     assert.equal(await aboutImage.getAttribute('aria-describedby'), await hint.getAttribute('id'));
-    await aboutImage.selectOption(key); assert.equal(await hint.count(), 0);
+    await aboutImage.click();const picker = about.getByRole('region', { name: 'Thư viện Ảnh giới thiệu', exact: true });assert.equal(await picker.getByRole('combobox').inputValue(), 'about');await picker.getByRole('button', { name: 'Chọn ảnh Ảnh mẫu', exact: true }).click();assert.equal(await hint.count(), 0);
     await about.getByRole('button', { name: 'Bỏ ảnh', exact: true }).click(); await hint.waitFor();
     await about.getByLabel('Tiêu đề', { exact: true }).fill('Giới thiệu vẫn giữ khi đổi khối');
     await nav.getByRole('button', { name: /^Bộ sưu tập/ }).click();
@@ -95,20 +101,29 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     await nav.getByRole('button', { name: /^Ảnh mở đầu/ }).click();
     assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(), 'charcoal');
     failSave = true; await page.getByRole('button', { name: 'Lưu nháp', exact: true }).click();
-    await page.waitForFunction(() => window.__errors?.includes('Lưu thất bại, giữ bản đang sửa.'));
+    await page.getByRole('alert').filter({hasText:'Lưu thất bại, giữ bản đang sửa.'}).waitFor();
     assert.equal(await page.getByLabel('Tông màu khối mở đầu').inputValue(), 'charcoal');
     await page.getByRole('button', { name: 'Lưu nháp', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Đã lưu nháp' }).waitFor();
+    await page.waitForFunction(() => window.__successes?.includes('Đã lưu nháp.'));
     assert.equal(published, null);
     await page.getByRole('button', { name: 'Xem trước', exact: true }).click();
     const preview = page.getByRole('dialog', { name: 'Xem trước Storefront' }); await preview.waitFor();
     await page.getByRole('button', { name: 'Đóng xem trước' }).click(); assert.equal(published, null);
     await page.getByRole('button', { name: 'Xuất bản', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Đã xuất bản phiên bản mới.' }).waitFor();
+    await page.waitForFunction(() => window.__successes?.includes('Đã xuất bản phiên bản mới.'));
     assert.equal(published.about.title, 'Giới thiệu vẫn giữ khi đổi khối'); assert.equal(published.about.image.key, '');
     assert.equal(published.hero.theme, 'charcoal'); assert.deepEqual(mutations, ['save', 'save', 'publish']);
     for (const width of [320, 390, 768, 1280, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
+      await page.waitForFunction(() => {
+        const layout = document.querySelector('.sfc-home-layout');
+        return layout && layout.dataset.wide === String(layout.clientWidth >= 960);
+      });
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) {
+        console.log(await page.evaluate(() => [...document.querySelectorAll('body *')]
+          .filter(el => el.getBoundingClientRect().right > innerWidth + 1)
+          .slice(0, 8).map(el => ({ tag: el.tagName, className: el.className, right: el.getBoundingClientRect().right }))));
+      }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'overflow at ' + width);
       const bounds = await bar.boundingBox(); assert.ok(bounds.height < (width < 640 ? 180 : 120), 'action bar stays compact');
       if (width <= 768) await page.getByRole('combobox', { name: 'Khối đang sửa' }).selectOption('about');

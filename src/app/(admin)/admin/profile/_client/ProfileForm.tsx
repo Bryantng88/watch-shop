@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
@@ -100,14 +101,14 @@ export default function ProfileForm({ user }: { user: ProfileUser }) {
             </div>
 
             <div className="mt-6 flex justify-end">
-                <button
+                <AdminButton variant="primary"
                     type="button"
                     onClick={() => void submit()}
                     disabled={loading}
                     className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {loading ? "Dang luu..." : "Luu thay doi"}
-                </button>
+                </AdminButton>
             </div>
         </div>
     );

@@ -5,7 +5,7 @@ const path = require("node:path");
 const http = require("node:http");
 const assert = require("node:assert/strict");
 const ts = require("typescript");
-const esbuild = require("esbuild");
+const esbuild = require("./lib/admin-fixture-esbuild.cjs");
 const { chromium } = require(
   process.env.PLAYWRIGHT_MODULE_PATH || "playwright",
 );
@@ -30,7 +30,9 @@ const { chromium } = require(
     if (
       name === "react" ||
       name === "lucide-react" ||
-      name.includes("/transitions/")
+      name.includes("/transitions/") ||
+      name.includes("admin-design-contract/AdminButton") ||
+      name.includes("admin-design-contract/AdminLinkAction")
     )
       continue;
     const names =
@@ -224,3 +226,4 @@ const { chromium } = require(
   console.error(e);
   process.exitCode = 1;
 });
+

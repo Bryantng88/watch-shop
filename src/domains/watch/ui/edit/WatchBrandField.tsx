@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Check, Loader2, Plus, Search, X } from "lucide-react";
 import {
@@ -148,7 +149,7 @@ export default function WatchBrandField({
                 <FieldLabel>Brand</FieldLabel>
 
                 {!creating ? (
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         type="button"
                         onClick={() => {
                             setCreating(true);
@@ -158,11 +159,11 @@ export default function WatchBrandField({
                     >
                         <Plus className="h-3.5 w-3.5" />
                         Brand mới
-                    </button>
+                    </AdminButton>
                 ) : null}
             </div>
 
-            <button
+            <AdminButton variant="secondary"
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
                 className="flex h-10 w-full items-center justify-between gap-2 border-0 border-b border-slate-200 bg-transparent px-0 text-left text-sm text-slate-900 outline-none transition hover:border-slate-400"
@@ -171,7 +172,7 @@ export default function WatchBrandField({
                     {selectedBrand?.name ?? "Chọn brand"}
                 </span>
                 <Search className="h-4 w-4 shrink-0 text-slate-400" />
-            </button>
+            </AdminButton>
 
             {!value && suggestedName.trim() ? (
                 <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
@@ -219,7 +220,7 @@ export default function WatchBrandField({
                                 const selected = brand.id === value;
 
                                 return (
-                                    <button
+                                    <AdminButton variant="contextual"
                                         key={brand.id}
                                         type="button"
                                         onClick={() => handleSelect(brand)}
@@ -229,7 +230,7 @@ export default function WatchBrandField({
                                         {selected ? (
                                             <Check className="h-4 w-4 shrink-0 text-emerald-600" />
                                         ) : null}
-                                    </button>
+                                    </AdminButton>
                                 );
                             })
                         ) : (
@@ -261,7 +262,7 @@ export default function WatchBrandField({
                             {createPending ? "Đang thêm" : "Thêm"}
                         </Button>
 
-                        <button
+                        <AdminButton iconOnly variant="secondary"
                             type="button"
                             onClick={() => {
                                 setName("");
@@ -270,7 +271,7 @@ export default function WatchBrandField({
                             className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
                         >
                             <X className="h-4 w-4" />
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}

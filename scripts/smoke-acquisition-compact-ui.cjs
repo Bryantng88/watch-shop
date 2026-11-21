@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
-const esbuild = require('esbuild');
+const esbuild = require('./lib/admin-fixture-esbuild.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 (async () => {
   const root = path.resolve(__dirname, '..');
@@ -50,7 +50,7 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     page.setDefaultTimeout(10000);
     const errors = [];
-    page.on('pageerror', e => errors.push(e.message));
+    page.on('pageerror', e => {errors.push(e.message);console.error(e.message)});
     let created, edited;
     await page.route('**/api/admin/acquisitions/inline-submit', async route => { created = route.request().postDataJSON(); await route.fulfill({ json: { id: 'fixture' } }); });
     const detail = { id: 'fixture', refNo: 'PN-MẪU', status: 'DRAFT', audienceSegment: 'MEN', vendorName: 'Vendor mẫu', currency: 'VND', notes: '', totalAmount: 2500000, paidAmount: 0, unpaidAmount: 2500000,
@@ -141,3 +141,4 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     console.log('PASS: real create/edit payloads in VND; prefilled edit unchanged; decimal, blank, invalid, overflow and USD; compact immediate sharing with default VIEWER, role change, failed revoke rollback, successful revoke and Escape focus; mobile/tablet no overflow.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
+

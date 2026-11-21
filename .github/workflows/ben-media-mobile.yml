@@ -2,6 +2,7 @@ name: Ben media mobile workspace
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/app/(admin)/admin/ben/media/**'
       - 'src/app/(admin)/admin/_client/AdminShell.tsx'
       - 'src/domains/ai-assistant/AiAssistant.tsx'

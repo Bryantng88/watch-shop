@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ImageIcon, Trash2 } from "lucide-react";
 import { Input, Textarea } from "@/domains/shared/ui/form/fields";
 import { ADMIN_DOMAIN_TONE } from "@/domains/shared/ui/admin-design-contract";
@@ -31,7 +32,7 @@ export default function OrderItemCard({ item, disabled, onChange, onRemove }: Pr
           <Input aria-label={`Tên dòng ${item.title}`} className="font-semibold" value={item.title} onChange={event => onChange({ title: event.target.value })} disabled={disabled || !service} />
         </div>
       </div>
-      <button type="button" aria-label={`Bỏ dòng ${item.title}`} disabled={disabled} onClick={onRemove} className="col-start-2 row-start-1 grid h-8 w-8 place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40 lg:col-start-5"><Trash2 className="h-4 w-4" /></button>
+      <AdminButton iconOnly variant="secondary" density="compact" type="button" aria-label={`Bỏ dòng ${item.title}`} disabled={disabled} onClick={onRemove} className="col-start-2 row-start-1 grid h-8 w-8 place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40 lg:col-start-5"><Trash2 className="h-4 w-4" /></AdminButton>
       <div className="col-span-2 grid min-w-0 grid-cols-[64px_minmax(0,1fr)_minmax(0,1fr)] gap-3 lg:contents">
         <OrderFormField label="Số lượng"><Input aria-label={`Số lượng ${item.title}`} inputMode="numeric" value={watch || service ? "1" : String(item.quantity)} onChange={event => onChange({ quantity: numberValue(event.target.value) || 1 })} disabled={disabled || watch || service} className="text-right tabular-nums" /></OrderFormField>
         <OrderFormField label="Niêm yết · ₫"><Input aria-label={`Giá niêm yết ${item.title}`} inputMode="numeric" value={String(item.listPrice)} onChange={event => onChange({ listPrice: numberValue(event.target.value) })} disabled={disabled} className="text-right tabular-nums" title={fmtMoney(item.listPrice)} /></OrderFormField>

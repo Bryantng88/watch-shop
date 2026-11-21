@@ -1,6 +1,9 @@
+import { AdminButtonProvider } from "../../src/domains/shared/ui/admin-design-contract/AdminButton";
 import { useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Grid2X2, List, Search } from "lucide-react";
+import { AdminIconSelect } from "../../src/domains/shared/ui/admin-design-contract/AdminToolbarControls";
+import { ArrowDownWideNarrow, Grid2X2, List, Search } from "lucide-react";
+import { OperationWorkspaceLayout } from "../../src/domains/coordination/ui/OperationWorkspaceLayout";
 import TechnicalIssueListView from "../../src/domains/coordination/ui/TechnicalIssueListView";
 import { SpaceViewSwitch } from "../../src/domains/shared/ui/space/SpaceFilterBar";
 import {
@@ -11,6 +14,7 @@ import {
   DEFAULT_TI_LIST_STATE,
   TECHNICAL_LIST_STAGES,
   technicalIssueMatches,
+  technicalIssueListNavigation,
   technicalIssueLayoutUrl,
   type TechnicalIssueListState,
 } from "../../src/domains/coordination/shared/technical-issue-list";
@@ -38,7 +42,7 @@ function fixture(stage: Item["stage"], i: number): Item {
   return {
     id: `${stage.toLowerCase()}-${i}`,
     serviceRequestId: `sr-${stage}-${i}`,
-    summary: titles[i % titles.length],
+    summary: i === 8 ? "Kiểm tra bộ máy, căn chỉnh sai số và xử lý núm chỉnh bị kẹt sau khi vệ sinh đồng hồ" : titles[i % titles.length],
     note: null,
     area: i % 3 === 0 ? "CASE" : "MOVEMENT",
     actionMode: i % 3 === 0 ? "VENDOR" : "INTERNAL",
@@ -147,6 +151,7 @@ function App() {
         description="Theo dõi công việc, thời hạn và tiến độ xử lý."
         meta={<span className="fixture-label">Dữ liệu minh họa</span>}
       />
+      <OperationWorkspaceLayout enabled={new URLSearchParams(location.search).has("navigation")} groups={[{key:"technical",label:"Kỹ thuật"},{key:"media",label:"Media"}]} activeGroup="technical" onGroupChange={()=>{}} stages={layout === "list" ? technicalIssueListNavigation(visible, pagination, state, !!query) : []} activeStage={state.scope} onStageChange={key=>{setFocus(null);setState(current=>({...current,scope:key as TechnicalIssueListState["scope"],page:1}))}}>
       <div className="fixture-controls">
         <div className="fixture-search">
           <Search size={16} />
@@ -157,6 +162,7 @@ function App() {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+        {layout === "list" && new URLSearchParams(location.search).has("navigation") && <AdminIconSelect label="Sắp xếp TI" value={state.sort} icon={<ArrowDownWideNarrow size={16} />} options={[{value:"PRIORITY",label:"Ưu tiên trước"},{value:"DUE",label:"Hạn gần nhất"},{value:"UPDATED",label:"Mới cập nhật"}]} onChange={value=>setState(current=>({...current,sort:value as TechnicalIssueListState["sort"],page:1}))} />}
         <SpaceViewSwitch
           activeView={layout}
           options={[
@@ -176,6 +182,7 @@ function App() {
       {layout === "list" ? (
         <TechnicalIssueListView
           items={visible}
+          stageNavigation={new URLSearchParams(location.search).has("navigation") ? "external" : "inline"}
           state={state}
           onStateChange={setState}
           focusMemory={memory}
@@ -270,6 +277,7 @@ function App() {
           ))}
         </div>
       )}
+      </OperationWorkspaceLayout>
       {preview && (
         <div className="fixture-overlay">
           <section role="dialog" aria-label="Xem nhanh TI">
@@ -308,4 +316,4 @@ function App() {
     </AdminPageCanvas>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<AdminButtonProvider><App /></AdminButtonProvider>);

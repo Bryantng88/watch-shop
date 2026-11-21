@@ -1,5 +1,6 @@
 'use client';
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from 'react';
 
 export default function ProductionMainRelease() {
@@ -38,9 +39,9 @@ export default function ProductionMainRelease() {
 
   return (
     <section className="mt-4 rounded-xl border border-red-200 p-4 text-sm">
-      <button type="button" disabled={busy} onClick={() => void submit(false)}>
+      <AdminButton variant="secondary" type="button" disabled={busy} onClick={() => void submit(false)}>
         Xem commit production trên main
-      </button>
+      </AdminButton>
       {sha && (
         <>
           <p className="my-2 break-all">
@@ -50,14 +51,14 @@ export default function ProductionMainRelease() {
             Sau khi xác nhận, GitHub Actions sẽ yêu cầu bạn duyệt môi trường
             production.
           </p>
-          <button
+          <AdminButton variant="secondary"
             className="rounded border border-red-300 px-3 py-2"
             type="button"
             disabled={busy || !!workflowUrl}
             onClick={() => void submit(true)}
           >
             Deploy production
-          </button>
+          </AdminButton>
         </>
       )}
       {error && <p role="alert">{error}</p>}

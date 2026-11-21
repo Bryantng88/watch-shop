@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -34,17 +35,17 @@ export function IssueCard({
 
       <div className={`border-b px-4 py-3 ${accent.headerBg} ${accent.headerBorder}`}>
         <div className="flex items-start justify-between gap-3">
-          <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
+          <AdminButton variant="contextual" type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
             <div className="line-clamp-1 text-sm font-semibold text-stone-900">
               {item.id}
             </div>
             <div className="mt-1 line-clamp-2 text-xs text-stone-600">
               {item.technicalDetailCatalog?.name || item.summary || item.note || "Chưa xác định chi tiết kỹ thuật."}
             </div>
-          </button>
+          </AdminButton>
 
           <div className="flex items-center gap-2">
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
@@ -53,9 +54,9 @@ export function IssueCard({
               className="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
             >
               Mở phiếu
-            </button>
+            </AdminButton>
 
-            <button
+            <AdminButton variant="contextual" density="compact"
               type="button"
               {...dragHandleProps}
               onClick={(e) => e.stopPropagation()}
@@ -64,12 +65,12 @@ export function IssueCard({
               title="Kéo thả issue"
             >
               <GripVertical className="h-4 w-4" />
-            </button>
+            </AdminButton>
           </div>
         </div>
       </div>
 
-      <button type="button" onClick={onOpen} className="block w-full text-left">
+      <AdminButton variant="contextual" type="button" onClick={onOpen} className="block w-full text-left">
         <div className="space-y-3 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${accent.chip}`}>
@@ -131,7 +132,7 @@ export function IssueCard({
             </div>
           </div>
         </div>
-      </button>
+      </AdminButton>
     </div>
   );
 }

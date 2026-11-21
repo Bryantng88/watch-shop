@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
@@ -369,38 +370,38 @@ export default function ActionMenuPopover({
             <div className="py-1 text-sm">
                 {/* POST */}
                 {canPost && actions.postUrl && (
-                    <button
+                    <AdminButton variant="contextual"
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
                         onClick={doPost}
                         type="button"
                         disabled={saving}
                     >
                         Duyệt
-                    </button>
+                    </AdminButton>
                 )}
 
                 {/* Shipment: READY -> SHIPPED */}
                 {canMarkShipped && (
-                    <button
+                    <AdminButton variant="contextual"
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
                         onClick={openShipModal}
                         type="button"
                         disabled={saving}
                     >
                         Chuyển sang SHIPPED…
-                    </button>
+                    </AdminButton>
                 )}
 
                 {/* Shipment: SHIPPED -> DELIVERED */}
                 {canMarkDelivered && (
-                    <button
+                    <AdminButton variant="contextual"
                         className="w-full text-left px-3 py-2 hover:bg-gray-50 disabled:opacity-60"
                         onClick={openDeliverModal}
                         type="button"
                         disabled={saving}
                     >
                         Xác nhận DELIVERED
-                    </button>
+                    </AdminButton>
                 )}
 
                 {/* EDIT */}
@@ -417,14 +418,14 @@ export default function ActionMenuPopover({
 
                 {/* CANCEL */}
                 {canCancel && actions.cancelUrl && (
-                    <button
+                    <AdminButton variant="contextual"
                         className="w-full text-left px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-60"
                         onClick={doCancel}
                         type="button"
                         disabled={saving}
                     >
                         Hủy
-                    </button>
+                    </AdminButton>
                 )}
             </div>
         </div>
@@ -432,7 +433,7 @@ export default function ActionMenuPopover({
 
     return (
         <>
-            <button
+            <AdminButton variant="secondary" density="compact"
                 ref={btnRef}
                 onClick={() => setOpen((v) => !v)}
                 className={cls(
@@ -444,7 +445,7 @@ export default function ActionMenuPopover({
                 type="button"
             >
                 ⋮
-            </button>
+            </AdminButton>
 
             {open && rect && createPortal(menu, document.body)}
 
@@ -473,23 +474,23 @@ export default function ActionMenuPopover({
                             {err ? <div className="text-sm text-red-600">{err}</div> : null}
 
                             <div className="flex justify-end gap-2 pt-2">
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     className="px-3 py-1 border rounded"
                                     onClick={() => setShipModalOpen(false)}
                                     type="button"
                                     disabled={saving}
                                 >
                                     Huỷ
-                                </button>
+                                </AdminButton>
 
-                                <button
+                                <AdminButton variant="primary" density="compact"
                                     className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-60"
                                     onClick={submitShip}
                                     type="button"
                                     disabled={saving}
                                 >
                                     {saving ? "Đang lưu..." : "Xác nhận"}
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
                     </div>,
@@ -515,23 +516,23 @@ export default function ActionMenuPopover({
                             {err ? <div className="text-sm text-red-600">{err}</div> : null}
 
                             <div className="flex justify-end gap-2 pt-2">
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     className="px-3 py-1 border rounded"
                                     onClick={() => setDeliverModalOpen(false)}
                                     type="button"
                                     disabled={saving}
                                 >
                                     Huỷ
-                                </button>
+                                </AdminButton>
 
-                                <button
+                                <AdminButton variant="primary" density="compact"
                                     className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-60"
                                     onClick={submitDeliver}
                                     type="button"
                                     disabled={saving}
                                 >
                                     {saving ? "Đang xử lý..." : "Xác nhận giao thành công"}
-                                </button>
+                                </AdminButton>
                             </div>
                         </div>
                     </div>,

@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 export default async function FinanceReportPage() {
   await requireFinanceReportAccess();
   const data = await getFinanceReportApplication();
-  return <FinanceReportClient initialProjection={data} />;
+  return <FinanceReportClient embedded initialProjection={data} />;
 }

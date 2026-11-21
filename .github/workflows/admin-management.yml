@@ -1,0 +1,197 @@
+name: Admin directory and website library
+on:
+  pull_request:
+    paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
+      - 'src/domains/trading/**'
+      - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading*'
+      - 'src/domains/watch/ui/list/WatchListFilters.tsx'
+      - 'src/domains/watch/client/WatchListClient.tsx'
+      - 'scripts/check-workspace-sidebar-filters.cjs'
+      - 'src/domains/strap/client/StrapInventoryTable*'
+      - 'src/app/(admin)/admin/straps/page.tsx'
+      - 'scripts/check-strap-list-ui.cjs'
+      - 'src/domains/system/**'
+      - 'src/app/(admin)/admin/system/**'
+      - 'src/app/(admin)/admin/activity/page.tsx'
+      - 'scripts/check-system-workspace.cjs'
+      - 'src/domains/activity/ui/GlobalActivityPage.tsx'
+      - 'src/app/(admin)/admin/system/**'
+      - 'src/app/(admin)/admin/activity/page.tsx'
+      - 'scripts/check-system-workspace.cjs'
+      - 'src/domains/shared/ui/admin-design-contract/AdminRouteWorkspace*'
+      - 'src/domains/shared/ui/navigation/section-navigation.ts'
+      - 'src/domains/report/**'
+      - 'src/domains/watch/ui/list/WatchListToolBar.tsx'
+      - 'src/app/(admin)/admin/products/page.tsx'
+      - 'src/app/(admin)/admin/reports/**'
+      - 'scripts/check-section-workspaces.cjs'
+      - 'src/app/(admin)/admin/trading/**'
+      - 'scripts/check-trading-workspace.cjs'
+      - 'scripts/check-trading-lists.cjs'
+      - 'scripts/check-acquisition-status-counts.cjs'
+      - 'scripts/check-payment-direction-counts.cjs'
+      - 'src/domains/projection/server/payment-list.projection.ts'
+      - 'src/domains/projection/server/acquisition-list/**'
+      - 'src/domains/acquisition/server/list/**'
+      - 'src/domains/acquisition/ui/list/**'
+      - 'src/domains/order/ui/list/**'
+      - 'src/domains/shared/ui/admin-design-contract/AdminBusinessTable*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminList*'
+      - 'src/domains/payment/ui/signals/**'
+      - 'src/domains/acquisition/ui/signals/**'
+      - 'src/domains/shipment/ui/progress/ShipmentLiveRouteSignal.tsx'
+      - 'scripts/check-split-workspace-first-paint.cjs'
+      - 'src/domains/contacts/**'
+      - 'src/domains/storefront/media/**'
+      - 'src/domains/storefront/content/StorefrontManager.tsx'
+      - 'src/domains/shared/ui/admin-design-contract/AdminManagement*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminSplitWorkspace*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminPrimaryAction*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminButtonSurface*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminSplitResize*'
+      - 'src/app/(admin)/admin/_client/ReportMenu.tsx'
+      - 'src/app/(admin)/admin/users/**'
+      - 'src/app/(admin)/admin/directory/**'
+      - 'src/app/(admin)/admin/_client/AdminActiveLink.tsx'
+      - 'src/app/(admin)/admin/customers/**'
+      - 'src/app/(admin)/admin/vendors/**'
+      - 'src/app/(admin)/admin/storefront/media/**'
+      - 'src/app/(admin)/admin/_client/AdmidSideBar.tsx'
+      - 'src/app/api/admin/contacts/**'
+      - 'src/app/api/admin/storefront/media/**'
+      - 'src/server/auth/admin-api-policy.ts'
+      - 'scripts/check-admin-management-*.mjs'
+      - 'scripts/check-contact-directory-db.mjs'
+      - 'scripts/check-role-permission-ui.cjs'
+      - '.github/workflows/admin-management.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: admin_management_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d admin_management_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/admin_management_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: >-
+          npx eslint src/domains/contacts src/domains/storefront/media
+          src/domains/shared/ui/admin-design-contract/AdminManagement.tsx
+          src/domains/shared/ui/admin-design-contract/AdminSplitWorkspace.ts
+          src/domains/shared/ui/admin-design-contract/AdminWorkspaceNavigation.tsx
+          src/domains/shared/ui/admin-design-contract/AdminPrimaryAction.ts
+          src/domains/shared/ui/admin-design-contract/AdminButtonSurface.ts
+          src/domains/shared/ui/admin-design-contract/AdminSplitResize.tsx
+          'src/app/(admin)/admin/_client/ReportMenu.tsx'
+          src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts
+          src/domains/shared/ui/admin-design-contract/index.ts
+          'src/app/(admin)/admin/users/page.tsx'
+          'src/app/(admin)/admin/users/_client/ListUser.tsx'
+          'src/app/(admin)/admin/directory/page.tsx'
+          'src/app/(admin)/admin/_client/AdminActiveLink.tsx'
+          'src/app/(admin)/admin/customers/page.tsx'
+          'src/app/(admin)/admin/vendors/page.tsx'
+          'src/app/(admin)/admin/storefront/media/page.tsx'
+          'src/app/(admin)/admin/_client/AdmidSideBar.tsx'
+          src/app/api/admin/contacts/route.ts
+          src/app/api/admin/storefront/media/route.ts
+          src/app/api/admin/storefront/media/library/route.ts
+          src/domains/storefront/content/StorefrontManager.tsx
+          src/server/auth/admin-api-policy.ts
+          scripts/check-admin-management-api.mjs scripts/check-admin-management-ui.mjs
+          scripts/check-contact-directory-db.mjs
+          'src/app/(admin)/admin/users/_client/RolePermissionManager.tsx'
+          scripts/check-role-permission-ui.cjs
+          src/domains/trading/client/TradingWorkspace.tsx
+          src/domains/trading/shared/trading-navigation.ts
+          'src/app/(admin)/admin/trading/page.tsx'
+          scripts/check-trading-workspace.cjs
+          scripts/check-split-workspace-first-paint.cjs
+          scripts/check-section-workspaces.cjs
+          scripts/check-workspace-sidebar-filters.cjs
+          src/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters.tsx
+          src/domains/watch/ui/list/WatchListFilters.tsx
+          src/domains/watch/client/WatchListClient.tsx
+          scripts/check-strap-list-ui.cjs
+          src/domains/strap/client/StrapInventoryTable.tsx
+          'src/app/(admin)/admin/straps/page.tsx'
+          scripts/check-system-workspace.cjs
+          src/domains/system/client/SystemWorkspace.tsx
+          src/domains/activity/ui/GlobalActivityPage.tsx
+          'src/app/(admin)/admin/system/page.tsx'
+          'src/app/(admin)/admin/system/channels/page.tsx'
+          'src/app/(admin)/admin/activity/page.tsx'
+          scripts/check-system-workspace.cjs
+          src/domains/system/client/SystemWorkspace.tsx
+          'src/app/(admin)/admin/system/page.tsx'
+          src/domains/shared/ui/admin-design-contract/AdminRouteWorkspace.tsx
+          src/domains/shared/ui/navigation/section-navigation.ts
+          src/domains/report/ReportWorkspace.tsx
+          'src/app/(admin)/admin/reports/layout.tsx'
+          'src/app/(admin)/admin/reports/page.tsx'
+          'src/app/(admin)/admin/products/page.tsx'
+      - run: npx tsc --noEmit
+      - run: node scripts/check-admin-management-api.mjs
+      - run: node scripts/check-contact-directory-db.mjs
+      - run: npm install --prefix /tmp/management-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/management-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-admin-management-ui.mjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright/index.mjs
+          MANAGEMENT_SCREENSHOT_DIR: ${{ runner.temp }}/admin-management
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/admin-buttons-global.css --minify
+      - run: node scripts/check-role-permission-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          ROLE_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/roles.png
+      - run: node scripts/check-split-workspace-first-paint.cjs
+      - run: node scripts/check-trading-workspace.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          TRADING_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/trading.png
+      - run: node scripts/check-payment-direction-counts.cjs
+      - run: node scripts/check-acquisition-status-counts.cjs
+      - run: node scripts/check-trading-lists.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          TRADING_UI_CSS: /tmp/admin-buttons-global.css
+          TRADING_LIST_SCREENSHOT_DIR: ${{ runner.temp }}/admin-management/trading-lists
+      - run: node scripts/check-section-workspaces.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+      - run: node scripts/check-system-workspace.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+      - run: node scripts/check-strap-list-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+          STRAP_UI_SCREENSHOT: ${{ runner.temp }}/admin-management/watch-straps.png
+      - run: node scripts/check-workspace-sidebar-filters.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/management-browser/node_modules/playwright
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-management-preview
+          path: ${{ runner.temp }}/admin-management
+          if-no-files-found: ignore

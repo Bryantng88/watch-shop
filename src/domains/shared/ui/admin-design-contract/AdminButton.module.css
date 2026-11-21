@@ -1,0 +1,76 @@
+.control.control.control[data-admin-button]:not([data-admin-button="contextual"]) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--admin-button-gap);
+  min-height: var(--admin-button-height);
+  padding: 8px var(--admin-button-padding-x);
+  border: 1px solid var(--admin-button-neutral-border, #cbd5e1);
+  border-radius: var(--admin-button-radius);
+  background-color: var(--admin-button-canvas);
+  background-image: var(--admin-button-neutral-gradient);
+  color: var(--admin-button-text);
+  font-family: var(--admin-button-font);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--admin-button-neutral-shadow);
+  cursor: pointer;
+  vertical-align: middle;
+  transform: none;
+  transition: background-color 120ms, border-color 120ms, box-shadow 120ms;
+}
+.control.control.control[data-admin-density="compact"]:not([data-admin-button="contextual"]) {
+  min-height: var(--admin-button-compact-height); padding: 6px var(--admin-button-compact-padding-x); font-size: 12px; line-height: 16px;
+}
+.control.control.control[data-admin-button="primary"]:not([data-admin-button="contextual"]) {
+  border-color: var(--admin-button-primary-border); background-color: var(--admin-button-primary-bg); background-image: var(--admin-button-primary-gradient); color: var(--admin-button-primary-text); box-shadow: var(--admin-button-primary-shadow);
+}
+.control.control.control[data-admin-button="danger"]:not([data-admin-button="contextual"]) {
+  border-color: var(--admin-button-danger-bg); background-color: var(--admin-button-danger-bg); background-image: var(--admin-button-primary-gradient); color: var(--admin-button-primary-text); box-shadow: var(--admin-button-primary-shadow);
+}
+.control.control.control[data-admin-button]:not([data-admin-button="contextual"]):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-image: var(--admin-button-neutral-hover); border-color: var(--admin-button-neutral-hover-border); color: var(--admin-button-text-hover);
+}
+.control.control.control[data-admin-button="primary"]:not([data-admin-button="contextual"]):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--admin-button-primary-hover-bg); background-image: var(--admin-button-primary-gradient); border-color: var(--admin-button-primary-border); color: var(--admin-button-primary-text);
+}
+.control.control.control[data-admin-button="danger"]:not([data-admin-button="contextual"]):hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--admin-button-danger-hover-bg); background-image: var(--admin-button-primary-gradient); border-color: var(--admin-button-danger-hover-bg); color: var(--admin-button-primary-text);
+}
+.control.control.control[data-admin-button]:not([data-admin-button="contextual"]):active:not(:disabled):not([aria-disabled="true"]) {
+  background-image: var(--admin-button-neutral-pressed); box-shadow: var(--admin-button-neutral-inset); transform: none;
+}
+.control.control.control[data-admin-button="primary"]:not([data-admin-button="contextual"]):active:not(:disabled):not([aria-disabled="true"]),
+.control.control.control[data-admin-button="danger"]:not([data-admin-button="contextual"]):active:not(:disabled):not([aria-disabled="true"]) {
+  background-image: var(--admin-button-primary-pressed); box-shadow: var(--admin-button-primary-inset);
+}
+.control.control.control[data-admin-button]:focus-visible { outline: 2px solid var(--admin-button-focus); outline-offset: 2px; }
+.control.control.control[data-admin-button]:not([data-admin-button="contextual"]):is(:disabled,[aria-disabled="true"]) {
+  opacity: var(--admin-button-disabled-opacity); cursor: default; transition: none; background-image: none; box-shadow: none; transform: none;
+}
+.control.control.control[data-admin-button]:not([data-admin-button="contextual"]) > svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
+@media (pointer: coarse) {
+  .control.control.control[data-admin-button]:not([data-admin-button="contextual"]) { min-height: var(--admin-button-touch-height); }
+}
+@media (prefers-reduced-motion: reduce) { .control.control.control[data-admin-button] { transition: none; } }
+
+.control.control.control[data-admin-icon="true"]:not([data-admin-button="contextual"]) { width: var(--admin-button-height); min-width: var(--admin-button-height); padding: 8px; }
+.control.control.control[data-admin-icon="true"][data-admin-density="compact"]:not([data-admin-button="contextual"]) { width: var(--admin-button-compact-height); min-width: var(--admin-button-compact-height); padding: 6px; }
+@media (pointer: coarse) { .control.control.control[data-admin-icon="true"][data-admin-density]:not([data-admin-button="contextual"]) { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
+
+.control.control.control[data-admin-button="primary"]:not([data-admin-button="contextual"]):active:not(:disabled):not([aria-disabled="true"]) { background-color: var(--admin-button-primary-pressed-bg); }
+.control.control.control[data-admin-button][hidden] { display: none; }
+
+/* Supporting actions are flat; repeated row/tools actions use the quiet variant. */
+.control.control.control.control[data-admin-button="secondary"] { background-image: none; box-shadow: none; }
+.control.control.control.control[data-admin-button="secondary"]:is(:hover,:active):not(:disabled):not([aria-disabled="true"]) { background-image: none; background-color: #f8fafc; box-shadow: none; }
+.control.control.control.control[data-admin-button="quiet"] { min-height: var(--admin-button-compact-height); padding: 5px 8px; border-color: transparent; background: transparent; box-shadow: none; font-weight: 500; }
+.control.control.control.control[data-admin-button="quiet"]:is(:hover,:active):not(:disabled):not([aria-disabled="true"]) { border-color: transparent; background: #f1f5f9; box-shadow: none; }
+.control.control.control.control[data-admin-button="quiet"][data-admin-icon="true"] { width: var(--admin-button-compact-height); min-width: var(--admin-button-compact-height); padding: 6px; }
+@media(pointer:coarse) { .control.control.control.control[data-admin-button="quiet"] { min-height: var(--admin-button-touch-height); } .control.control.control.control[data-admin-button="quiet"][data-admin-icon="true"] { width: var(--admin-button-touch-height); min-width: var(--admin-button-touch-height); } }
+
+.control.control.control.control[data-admin-button="quiet"][aria-pressed="true"] { background: #eff6ff; color: #1d4ed8; }
+.control.control.control.control[data-admin-button="quiet"][aria-pressed="true"]:hover { background: #dbeafe; color: #1d4ed8; }

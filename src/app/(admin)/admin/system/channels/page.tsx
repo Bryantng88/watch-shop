@@ -1,3 +1,7 @@
+import SystemWorkspace from "@/domains/system/client/SystemWorkspace";
+import { systemEntries } from "@/domains/shared/ui/navigation/section-navigation";
+import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { Radio, Users2 } from "lucide-react";
 
 import {
@@ -115,17 +119,17 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
 
 function SubmitButton({ children }: { children: React.ReactNode }) {
     return (
-        <button
+        <AdminButton variant="primary"
             type="submit"
             className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
 export default async function SystemChannelsPage() {
-    await requirePermission("SYSTEM_JOB_VIEW");
+    const user = await requirePermission("SYSTEM_JOB_VIEW");
     const data = await getNotificationChannelSettingsData();
     const failedCount = data.recentDispatches.filter((item) => item.status === "FAILED").length;
     const rulesByEvent = groupRulesByEvent(data.rules);
@@ -136,20 +140,14 @@ export default async function SystemChannelsPage() {
     const disabledEventCount = data.events.length - enabledEventCount;
 
     return (
-        <main className="space-y-5 p-6">
+        <SystemWorkspace entries={systemEntries(user)} selected="/admin/system/channels">
+        <main className="min-w-0 space-y-5">
             <header className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                        <span>System</span>
-                        <span>/</span>
-                        <span>Channels</span>
-                    </div>
-                    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">
-                        Channel configuration
-                    </h1>
+                    <AdminWorkspaceHeading>Channels</AdminWorkspaceHeading>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
                         <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                             Zalo rules
@@ -199,17 +197,17 @@ export default async function SystemChannelsPage() {
                         </div>
                     </div>
                     <form action={refreshZaloTokenAction}>
-                        <button
+                        <AdminButton variant="secondary" density="compact"
                             type="submit"
                             className="inline-flex h-9 items-center justify-center rounded-lg bg-white px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100"
                         >
                             Try refresh
-                        </button>
+                        </AdminButton>
                     </form>
                 </div>
             ) : null}
 
-            <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <section className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_420px]">
                 <div className="space-y-5">
                     <div className="rounded-xl border border-slate-200 bg-white">
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
@@ -296,7 +294,7 @@ export default async function SystemChannelsPage() {
                                                         name="enabled"
                                                         value={isEnabled ? "false" : "true"}
                                                     />
-                                                    <button
+                                                    <AdminButton variant={isEnabled ? "secondary" : "primary"} density="compact"
                                                         type="submit"
                                                         className={[
                                                             "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold transition",
@@ -307,7 +305,7 @@ export default async function SystemChannelsPage() {
                                                         disabled={!defaultRecipientGroupKey && !isEnabled}
                                                     >
                                                         {isEnabled ? "Disable" : "Enable"}
-                                                    </button>
+                                                    </AdminButton>
                                                 </form>
                                             </td>
                                             </tr>
@@ -344,7 +342,7 @@ export default async function SystemChannelsPage() {
                                 <form
                                     key={rule.id}
                                     action={saveZaloNotificationRuleAction}
-                                    className="grid gap-3 px-5 py-4 lg:grid-cols-[1.1fr_1fr_180px]"
+                                    className="grid gap-3 px-5 py-4 2xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_180px]"
                                 >
                                     <input type="hidden" name="id" value={rule.id} />
                                     <div className="space-y-1.5">
@@ -387,15 +385,15 @@ export default async function SystemChannelsPage() {
                                         <input name="enabled" type="checkbox" defaultChecked={rule.enabled} className="h-4 w-4 rounded border-slate-300" />
                                         Enabled
                                     </label>
-                                    <div className="space-y-1.5 lg:col-span-3">
+                                    <div className="space-y-1.5 2xl:col-span-3">
                                         <FieldLabel>Message</FieldLabel>
                                         <TextArea name="messageTemplate" defaultValue={rule.messageTemplate} />
                                     </div>
-                                    <div className="space-y-1.5 lg:col-span-3">
+                                    <div className="space-y-1.5 2xl:col-span-3">
                                         <FieldLabel>Condition JSON</FieldLabel>
                                         <TextArea name="conditionJson" defaultValue={asJsonText(rule.conditionJson)} />
                                     </div>
-                                    <div className="lg:col-span-3">
+                                    <div className="2xl:col-span-3">
                                         <SubmitButton>Save rule</SubmitButton>
                                     </div>
                                 </form>
@@ -524,5 +522,6 @@ export default async function SystemChannelsPage() {
                 </aside>
             </section>
         </main>
+        </SystemWorkspace>
     );
 }

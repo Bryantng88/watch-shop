@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronDown, CreditCard, ShieldAlert, X } from "lucide-react";
 
@@ -190,13 +191,13 @@ export default function PaymentWorkspace({
                         </div>
                     </div>
 
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={onClose}
                         className="rounded-full p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
                     >
                         <X className="h-5 w-5" />
-                    </button>
+                    </AdminButton>
                 </div>
 
                 <div className="grid min-h-0 flex-1 grid-cols-[1fr_360px] overflow-hidden">
@@ -243,7 +244,7 @@ export default function PaymentWorkspace({
 
                             {canFinalizeByPaidAmount ? (
                                 <div className="rounded-3xl border border-amber-200 bg-amber-50/50">
-                                    <button
+                                    <AdminButton variant="contextual"
                                         type="button"
                                         onClick={() => setShowFinalizePanel((value) => !value)}
                                         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -266,7 +267,7 @@ export default function PaymentWorkspace({
                                             className={`h-4 w-4 text-amber-700 transition ${showFinalizePanel ? "rotate-180" : ""
                                                 }`}
                                         />
-                                    </button>
+                                    </AdminButton>
 
                                     {showFinalizePanel ? (
                                         <div className="border-t border-amber-200/70 px-4 py-4">
@@ -285,7 +286,7 @@ export default function PaymentWorkspace({
                                                 </div>
                                             </div>
 
-                                            <button
+                                            <AdminButton variant="danger"
                                                 type="button"
                                                 disabled={submitting}
                                                 onClick={() => {
@@ -304,7 +305,7 @@ export default function PaymentWorkspace({
                                             >
                                                 <CheckCircle2 className="h-4 w-4" />
                                                 Tôi hiểu rủi ro, chốt theo tiền đã nhận
-                                            </button>
+                                            </AdminButton>
                                         </div>
                                     ) : null}
                                 </div>

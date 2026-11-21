@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import JobSummaryCard from "@/domains/system/ui/jobs/JobSummaryCard";
 
@@ -254,7 +255,7 @@ function RecentRunsMonitorTable({
                                         <div className="max-w-[280px] truncate">{log.note || "-"}</div>
                                     </td>
                                     <td className="border-b border-slate-100 px-4 py-3 text-center align-top">
-                                        <button
+                                        <AdminButton variant="contextual" density="compact"
                                             type="button"
                                             onClick={() => onSelect(log.id)}
                                             className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${selected
@@ -263,7 +264,7 @@ function RecentRunsMonitorTable({
                                                 }`}
                                         >
                                             {selected ? "Đang xem" : "Xem log"}
-                                        </button>
+                                        </AdminButton>
                                     </td>
                                 </tr>
                             );
@@ -462,23 +463,23 @@ export default function SystemJobPageClient({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <button
+                        <AdminButton variant="primary"
                             type="button"
                             onClick={() => runAcquisitionSpec(false)}
                             disabled={busyKey === "run_acq_spec"}
                             className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {busyKey === "run_acq_spec" ? "Đang chạy..." : "Run Acquisition Spec"}
-                        </button>
+                        </AdminButton>
 
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={() => runAcquisitionSpec(true)}
                             disabled={busyKey === "retry_failed_spec"}
                             className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {busyKey === "retry_failed_spec" ? "Đang retry..." : "Retry Failed Spec"}
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             </div>
@@ -538,14 +539,14 @@ export default function SystemJobPageClient({
                                     <span className="rounded-full bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
                                         Batch {acquisitionControl.batchSize}
                                     </span>
-                                    <button
+                                    <AdminButton variant="secondary"
                                         type="button"
                                         onClick={() => toggleProcessor(acquisitionControl)}
                                         disabled={busyKey === `toggle_${acquisitionControl.processorKey}`}
                                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
                                     >
                                         {acquisitionControl.isEnabled ? "Pause" : "Resume"}
-                                    </button>
+                                    </AdminButton>
                                 </div>
                             </div>
 

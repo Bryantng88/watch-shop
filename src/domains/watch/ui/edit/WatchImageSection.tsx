@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { notifyParentOfWorkspaceRefresh } from "@/domains/shared/ui/transitions/workspace-transition-outcome";
 
 import { useEffect, useState, useTransition } from "react";
@@ -702,13 +703,13 @@ export default function WatchImageSection({
                             }
                             action={
                                 currentReviewStatus === "APPROVED" && canReviewContent ? (
-                                    <button
+                                    <AdminButton variant="primary" density="compact"
                                         type="button"
                                         onClick={ensureEditable}
                                         className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
                                     >
                                         Mở chỉnh sửa
-                                    </button>
+                                    </AdminButton>
                                 ) : null
                             }
                         />
@@ -723,7 +724,7 @@ export default function WatchImageSection({
                             <div className="text-sm text-slate-500">Chọn đúng một ảnh từ kho Cover của phân khúc Watch.</div>
                         </div>
                         <div className="grid gap-4 md:grid-cols-[168px_minmax(0,1fr)] md:items-stretch">
-                            <button
+                            <AdminButton variant="contextual"
                                 type="button"
                                 onClick={() => coverPreviewSrc
                                     ? setCoverPreviewOpen(true)
@@ -742,7 +743,7 @@ export default function WatchImageSection({
                                 ) : (
                                     <span className="text-xs text-slate-500">Chọn ảnh</span>
                                 )}
-                            </button>
+                            </AdminButton>
                             <div className="flex min-w-0 flex-wrap content-start items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                                 <div className="mb-1 basis-full">
                                     <div className="text-sm font-semibold text-slate-900">
@@ -752,19 +753,19 @@ export default function WatchImageSection({
                                         {pendingCoverKey ? "Kiểm tra preview trước khi xác nhận đưa lên storefront." : "Bạn có thể đổi ảnh hoặc tiếp tục xử lý trước khi xác nhận bản mới."}
                                     </div>
                                 </div>
-                                <button
+                                <AdminButton variant="secondary" density="compact"
                                     type="button"
                                     onClick={() => setCoverPickerOpen(true)}
                                     disabled={coverPending || photoRoomPending || sharpPending}
                                     className="order-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     {currentCoverKey ? "Đổi ảnh Cover" : "Chọn ảnh Cover"}
-                                </button>
+                                </AdminButton>
                                 {pendingCoverKey ? (
                                     <span className="text-xs font-medium text-emerald-700">Ảnh mới đang chờ xác nhận</span>
                                 ) : null}
                                 {(pendingCoverKey || currentCoverKey) ? (
-                                    <button
+                                    <AdminButton variant="primary" density="compact"
                                         type="button"
                                         onClick={() => {
                                             setAdjustmentDialogMode("photoroom");
@@ -775,10 +776,10 @@ export default function WatchImageSection({
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
                                         {photoRoomPending ? "PhotoRoom đang xử lý..." : "Xử lý PhotoRoom"}
-                                    </button>
+                                    </AdminButton>
                                 ) : null}
                                 {(pendingCoverKey || currentCoverKey) ? (
-                                    <button
+                                    <AdminButton variant="secondary" density="compact"
                                         type="button"
                                         onClick={() => {
                                             setAdjustmentDialogMode("sharp");
@@ -794,10 +795,10 @@ export default function WatchImageSection({
                                     >
                                         <Sparkles className="h-3.5 w-3.5" />
                                         {sharpPending ? "Sharp đang xử lý..." : "Căn chỉnh bằng Sharp"}
-                                    </button>
+                                    </AdminButton>
                                 ) : null}
                                 {pendingCoverKey ? (
-                                    <button
+                                    <AdminButton variant="primary" density="compact"
                                         type="button"
                                         onClick={() => void handleCoverConfirm()}
                                         disabled={coverPending || photoRoomPending || sharpPending}
@@ -805,7 +806,7 @@ export default function WatchImageSection({
                                     >
                                         <Check className="h-3.5 w-3.5" />
                                         {coverPending ? "Đang xử lý..." : "Xác nhận Cover"}
-                                    </button>
+                                    </AdminButton>
                                 ) : null}
                             </div>
                         </div>
@@ -829,7 +830,7 @@ export default function WatchImageSection({
                             ))}
                         </div>
                         <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-amber-200/70 pt-3">
-                            <button
+                            <AdminButton variant="contextual" density="compact"
                                 type="button"
                                 role="switch"
                                 aria-checked={effectiveShowPrice}
@@ -842,8 +843,8 @@ export default function WatchImageSection({
                                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${effectiveShowPrice ? "left-[18px]" : "left-0.5"}`} />
                                 </span>
                                 {priceMayBeShown ? (effectiveShowPrice ? "Hiển thị giá bán" : "Không hiển thị giá") : "HOLD/SOLD: Liên hệ"}
-                            </button>
-                            <button
+                            </AdminButton>
+                            <AdminButton variant="contextual" density="compact"
                                 type="button"
                                 role="switch"
                                 aria-checked={quickPublished}
@@ -855,7 +856,7 @@ export default function WatchImageSection({
                                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${quickPublished ? "left-[18px]" : "left-0.5"}`} />
                                 </span>
                                 {publishPending ? "Đang cập nhật..." : quickPublished ? "Đang hiển thị storefront" : "Đang ẩn storefront"}
-                            </button>
+                            </AdminButton>
                             <span className="text-xs text-slate-600">
                                 {isFormDirty ? "Có thay đổi chưa lưu; khi bấm switch bạn vẫn có thể tiếp tục bằng dữ liệu đã lưu gần nhất." : "Không yêu cầu content hoặc đủ gallery; cần title, spec và Cover."}
                             </span>
@@ -873,7 +874,7 @@ export default function WatchImageSection({
                                 <div className="text-sm font-semibold text-slate-900">Sharp cho Gallery</div>
                                 <div className="mt-0.5 text-xs text-slate-500">Chọn nhiều ảnh, chỉnh sáng, màu, tương phản và độ nét rồi xem preview trước khi áp dụng. Ảnh gốc vẫn được giữ trong Media Core.</div>
                             </div>
-                            <button
+                            <AdminButton variant="primary" density="compact"
                                 type="button"
                                 onClick={() => setGalleryPhotoRoomOpen(true)}
                                 disabled={locked || galleryImages.length === 0}
@@ -881,7 +882,7 @@ export default function WatchImageSection({
                             >
                                 <Sparkles className="h-4 w-4" />
                                 Xử lý Gallery bằng Sharp
-                            </button>
+                            </AdminButton>
                         </div>
                         <MediaPickerMulti
                             chosenCollapsed={chosenCollapsed}
@@ -935,7 +936,7 @@ export default function WatchImageSection({
                 enableRecycle={false}
                 footerHint="Chọn một ảnh Cover để đưa về màn hình Media trước khi xác nhận."
                 footerLeadingAction={currentCoverKey ? (
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         onClick={() => void handleCoverReturn()}
                         disabled={coverPending}
@@ -943,7 +944,7 @@ export default function WatchImageSection({
                     >
                         <Undo2 className="h-4 w-4" />
                         {coverPending ? "Đang trả ảnh..." : "Trả ảnh hiện tại về kho Cover"}
-                    </button>
+                    </AdminButton>
                 ) : null}
                 onSubmit={(keys) => {
                     if (!keys[0]) return;
@@ -1036,14 +1037,14 @@ export default function WatchImageSection({
                         <div className="rounded-full bg-black/55 px-3 py-1.5 text-xs font-medium text-white">
                             Preview storefront · khung 3:4 · object-cover
                         </div>
-                        <button
+                        <AdminButton iconOnly variant="primary"
                             type="button"
                             onClick={() => setCoverPreviewOpen(false)}
                             className="absolute -right-2 -top-2 grid h-10 w-10 place-items-center rounded-full border border-white/25 bg-slate-950/80 text-white shadow-lg hover:bg-slate-900"
                             aria-label="Đóng preview Cover"
                         >
                             <X className="h-5 w-5" />
-                        </button>
+                        </AdminButton>
                     </div>
                 </div>
             ) : null}

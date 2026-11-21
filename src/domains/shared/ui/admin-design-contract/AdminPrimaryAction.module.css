@@ -1,0 +1,7 @@
+.primary.primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--admin-action-height); padding: 8px 16px; border: 1px solid var(--admin-action-border); border-radius: var(--admin-action-radius); background-color: var(--admin-action-bg); background-image: var(--admin-button-primary-gradient); color: var(--admin-action-text); font-family: var(--admin-action-font); font-size: 14px; line-height: 20px; font-weight: 600; box-shadow: var(--admin-button-primary-shadow); }
+.primary.primary:hover:not(:disabled) { background-color: var(--admin-action-hover); color: var(--admin-action-text); }
+.primary.primary:active:not(:disabled) { background-color: var(--admin-action-pressed); background-image: var(--admin-button-primary-pressed); box-shadow: var(--admin-button-primary-inset); }
+.primary.primary:focus-visible { outline: 2px solid var(--admin-action-focus); outline-offset: 2px; }
+.primary.primary:disabled { opacity: .5; cursor: default; background-image: none; box-shadow: none; }
+.primary.primary svg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
+@media(pointer:coarse) { .primary.primary { min-height: var(--admin-action-touch); } }

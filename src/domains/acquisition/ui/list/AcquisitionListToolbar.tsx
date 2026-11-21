@@ -1,25 +1,12 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
 
 import { BusinessListFilterBar } from "@/domains/shared/ui/business-list";
 import type { FilterBarField, FilterBarValues } from "@/domains/shared/ui/filter-bar";
 import type { AcquisitionVendorOption } from "./types";
-
-const statusField: FilterBarField = {
-    key: "status",
-    label: "Trạng thái",
-    type: "select",
-    options: [
-        { value: "", label: "Trạng thái: tất cả" },
-        { value: "DRAFT", label: "Nháp" },
-        { value: "POSTED", label: "Đã nhập kho" },
-        { value: "CANCELLED", label: "Đã hủy" },
-    ],
-};
 
 const typeField: FilterBarField = {
     key: "type",
@@ -54,7 +41,6 @@ export default function AcquisitionListToolbar({
     total,
     visibleCount,
     selectedCount,
-    strapOnly = false,
 }: {
     vendors: AcquisitionVendorOption[];
     total: number;
@@ -90,7 +76,6 @@ export default function AcquisitionListToolbar({
                 ...vendors.map((vendor) => ({ value: vendor.id, label: vendor.name })),
             ],
         },
-        statusField,
     ];
 
     function apply(nextValues = values) {
@@ -123,7 +108,7 @@ export default function AcquisitionListToolbar({
     }
 
     return (
-        <BusinessListFilterBar
+        <BusinessListFilterBar variant="flat"
             values={values}
             total={total}
             visibleCount={visibleCount}
@@ -142,13 +127,7 @@ export default function AcquisitionListToolbar({
                             Đã chọn {selectedCount}
                         </span>
                     ) : null}
-                    <Link
-                        href={strapOnly ? "/admin/acquisitions/accessories/new" : "/admin/acquisitions/new"}
-                        className="inline-flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-                    >
-                        <Plus className="h-4 w-4" />
-                        {strapOnly ? "Tạo phiếu phụ kiện" : "Tạo phiếu nhập"}
-                    </Link>
+
                 </>
             }
         />

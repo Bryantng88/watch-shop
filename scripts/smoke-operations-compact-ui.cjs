@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS browser smoke runner. */
 // Render the production dashboard with synthetic queues; no API or database access.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const http = require('node:http');
-const esbuild = require('esbuild');
+const esbuild = require('./lib/admin-fixture-esbuild.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 
 async function main() {
@@ -24,7 +25,7 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
   const css=await fs.readFile(process.env.OPERATIONS_PREVIEW_CSS || '/tmp/operations-ui.css','utf8');
   const js=await fs.readFile(path.join(output,'app.js'),'utf8');
   const moduleCss=await fs.readFile(path.join(output,'app.css'),'utf8');
-  const server=http.createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html');res.end(req.url==='/app.js'?js:`<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}\n${moduleCss}\nbody{margin:0;font-family:Arial,sans-serif}</style><div id="root"></div><script src="/app.js"></script></html>`);});
+  const server=http.createServer((req,res)=>{res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html');res.end(req.url==='/app.js'?js:`<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}\n${moduleCss}\nbody{margin:0;font-family:Arial,sans-serif}</style><div id="root" class="admin-ui"></div><script src="/app.js"></script></html>`);});
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_EXECUTABLE?{executablePath:process.env.CHROMIUM_EXECUTABLE}:{}),args:['--no-sandbox']});
   try {
@@ -49,6 +50,12 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
       assert.equal(await page.locator('#intervention-title').evaluate(el=>getComputedStyle(el).fontSize),await page.locator('#operation-queues-title').evaluate(el=>getComputedStyle(el).fontSize));
       assert.equal(await page.getByRole('navigation',{name:'Cần chú ý trước'}).getByRole('link').count(),3);
       assert.equal(await page.locator('[data-attention-item]').count(),6);
+      const summaryLinks=page.locator('nav[aria-label="Cần chú ý trước"] a, section[aria-labelledby="operation-queues-title"] a[data-admin-button]');
+      assert.equal(await summaryLinks.count(),21);
+      for(const link of await summaryLinks.all()){
+        const surface=await link.evaluate(el=>{const s=getComputedStyle(el);return {border:s.borderTopWidth,shadow:s.boxShadow,image:s.backgroundImage,variant:el.dataset.adminButton};});
+        assert.deepEqual(surface,{border:'0px',shadow:'none',image:'none',variant:'contextual'},'summary navigation must not become raised action buttons');
+      }
       const intervention=page.locator('[data-attention-item="attention-0"]');
       await intervention.locator('summary').focus();await page.keyboard.press('Enter');
       assert.equal(await intervention.getByRole('link',{name:'Mở mục'}).getAttribute('href'),'/admin/services/service-fixture-0');
@@ -94,6 +101,7 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
         assert.ok(Math.abs(canvas.left - container.left) <= 1, `dashboard must align with its container at ${width}`);
       }
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`expanded overflow at ${width}`);
+      await page.evaluate(()=>document.activeElement?.blur());
       await page.screenshot({path:path.join(output,`dashboard-${width}.png`),fullPage:true});
     }
     await page.goto('http://127.0.0.1:'+server.address().port+'/?empty');
@@ -104,3 +112,4 @@ window.renderFixture=(empty=false)=>createRoot(document.getElementById('root')).
   } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
+

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -447,13 +448,13 @@ export default function TechnicalIssueBoardClient({
           </div>
 
           {onClose ? (
-            <button
+            <AdminButton variant="secondary"
               type="button"
               onClick={onClose}
               className="rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
             >
               Đóng
-            </button>
+            </AdminButton>
           ) : null}
 
           <div className={compact ? "grid grid-cols-2 gap-3 lg:grid-cols-5" : "grid w-full grid-cols-2 gap-3 md:grid-cols-3 2xl:max-w-4xl 2xl:grid-cols-5"}>
@@ -491,13 +492,13 @@ export default function TechnicalIssueBoardClient({
                 className="h-11 w-full rounded-xl border border-stone-200 bg-stone-50 pl-10 pr-10 text-sm outline-none focus:border-stone-400"
               />
               {query ? (
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => setQuery("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
                 >
                   <X className="h-4 w-4" />
-                </button>
+                </AdminButton>
               ) : null}
             </div>
 
@@ -538,13 +539,13 @@ export default function TechnicalIssueBoardClient({
             </FilterChip>
 
             {(query || areaFilter !== "ALL" || actionModeFilter !== "ALL") && (
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 onClick={clearFilters}
                 className="ml-2 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-600 hover:bg-stone-100"
               >
                 Xóa filter
-              </button>
+              </AdminButton>
             )}
           </div>
         </div>

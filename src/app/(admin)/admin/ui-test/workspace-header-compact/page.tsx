@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {
   CalendarClock,
   CheckSquare2,
@@ -93,10 +94,10 @@ export default function WorkspaceHeaderCompactTestPage() {
               <MetaItem icon={<Users className="h-3.5 w-3.5" />} label="Shared" value="2 người" />
             </div>
 
-            <button type="button" className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            <AdminButton variant="secondary" density="compact" type="button" className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
               <Copy className="h-3.5 w-3.5" />
               Copy ref
-            </button>
+            </AdminButton>
           </div>
 
           <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/70 px-4 py-2.5 lg:flex-row lg:items-center">
@@ -136,7 +137,7 @@ export default function WorkspaceHeaderCompactTestPage() {
                   <div className="mt-0.5 text-[11px] text-slate-500">{ref}</div>
                 </div>
                 <span className={status === "Hoàn tất" ? "text-xs font-semibold text-emerald-700" : "text-xs font-semibold text-blue-700"}>{status}</span>
-                <button type="button" className="h-8 rounded-lg border border-slate-200 text-xs font-semibold">Đã đăng bài</button>
+                <AdminButton variant="secondary" density="compact" type="button" className="h-8 rounded-lg border border-slate-200 text-xs font-semibold">Đã đăng bài</AdminButton>
               </div>
             ))}
           </div>

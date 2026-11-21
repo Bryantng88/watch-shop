@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),fs=require('node:fs/promises'),http=require('node:http'),path=require('node:path'),esbuild=require('esbuild');
+const assert=require('node:assert/strict'),fs=require('node:fs/promises'),http=require('node:http'),path=require('node:path'),esbuild=require('../../scripts/lib/admin-fixture-esbuild.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
  const root=process.cwd();
@@ -14,7 +14,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
  try{const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(origin+'/admin/ben/media');await page.getByRole('heading',{name:'Media',exact:true}).waitFor();
  assert.equal(await page.locator('[data-media-row]').count(),25);await page.locator('[data-media-row="watch-0"] svg').first().waitFor();
- await page.getByRole('button',{name:'Tiếp',exact:true}).click();await page.waitForFunction(()=>location.search.includes('page=2'));await page.locator('[data-media-row="watch-26"]').waitFor();
+ await page.getByRole('button',{name:'Trang sau',exact:true}).click();await page.waitForFunction(()=>location.search.includes('page=2'));await page.locator('[data-media-row="watch-26"]').waitFor();
  await page.getByRole('textbox',{name:'Tìm theo đồng hồ, SKU hoặc mã bài'}).fill('Rare 26');await page.getByRole('button',{name:'Tìm media',exact:true}).click();await page.waitForFunction(()=>new URL(location.href).searchParams.get('q')==='Rare 26'&&document.querySelectorAll('[data-media-row]').length===1);assert.equal(await page.locator('[data-media-row]').count(),1);assert.ok(new URL(page.url()).searchParams.get('q')==='Rare 26');
  const target=page.getByRole('link',{name:'Mở Seiko Rare 26'});const href=new URL(await target.getAttribute('href'),origin);assert.equal(href.searchParams.get('workspaceBindingId'),'binding-26');assert.equal(href.searchParams.get('source'),'ben-media');await target.click();await page.getByText('Màn xử lý media',{exact:true}).waitFor();await page.getByRole('button',{name:'Quay lại media'}).click();await page.locator('[data-media-row="watch-26"]').waitFor();assert.equal(await page.getByRole('textbox').inputValue(),'Rare 26');
  await page.getByRole('button',{name:'Xóa tìm kiếm'}).click();await page.locator('[data-media-row="watch-24"]').waitFor();await page.locator('[data-media-row="watch-20"]').scrollIntoViewIfNeeded();const top=await page.evaluate(()=>scrollY);await page.locator('[data-media-row="watch-20"] a').click();await page.getByRole('button',{name:'Quay lại media'}).click();await page.locator('[data-media-row="watch-20"]').waitFor();await page.waitForFunction(top=>Math.abs(scrollY-top)<5,top);
@@ -25,3 +25,4 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
  console.log('PASS real Ben media UI: search beyond first page, stage/empty states, pagination, exact binding/return URL, scroll restoration, read-only navigation, broken image fallback, 320/390/768/1280 no overflow. Synthetic query and Next navigation ports.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});
+

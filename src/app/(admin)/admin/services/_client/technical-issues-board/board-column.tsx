@@ -1,3 +1,4 @@
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useDroppable } from "@dnd-kit/core";
 import type { BoardColumnKey, IssueItem } from "./types";
@@ -58,14 +59,14 @@ export function BoardColumn({
           <>
             {children}
             {canLoadMore ? (
-              <button
+              <AdminButton variant="secondary"
                 type="button"
                 onClick={onLoadMore}
                 disabled={loadingMore}
                 className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 hover:bg-stone-50 disabled:opacity-50"
               >
                 {loadingMore ? "Đang tải..." : "Tải thêm"}
-              </button>
+              </AdminButton>
             ) : null}
           </>
         )}

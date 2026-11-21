@@ -4,6 +4,9 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { getAdminUserList, getAllRoles } from "./_server/user.service";
 import UserListPageClient from "./_client/ListUser";
 
+import DirectoryWorkspace from "@/domains/contacts/client/DirectoryWorkspace";
+import { directoryEntries } from "@/domains/contacts/shared/directory-navigation";
+
 export default async function UsersPage({
     searchParams,
 }: {
@@ -22,7 +25,7 @@ export default async function UsersPage({
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return (
-        <UserListPageClient
+        <DirectoryWorkspace entries={directoryEntries(user)} selected="/admin/users"><UserListPageClient
             items={items}
             total={total}
             page={page}
@@ -33,7 +36,7 @@ export default async function UsersPage({
             canCreate={isAdmin || permissionSet.has(PERMISSIONS.USER_CREATE) || permissionSet.has(PERMISSIONS.USER_MANAGE)}
             canUpdate={isAdmin || permissionSet.has(PERMISSIONS.USER_UPDATE) || permissionSet.has(PERMISSIONS.USER_MANAGE)}
             canManageRoles={isAdmin || permissionSet.has(PERMISSIONS.USER_MANAGE)}
-        />
+        /></DirectoryWorkspace>
     );
 
 

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
-const esbuild = require('esbuild');
+const esbuild = require('./lib/admin-fixture-esbuild.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 async function prepare() {
   const root = path.resolve(__dirname, '..');
@@ -139,3 +139,4 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     console.log('PASS: actual order create/edit forms; one save bar; draft/post confirmation and VND payloads; service identification and notes preserved; shipment fields; locked-order guard; draft-only modal; no overflow at 390/768/1280.');
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
+

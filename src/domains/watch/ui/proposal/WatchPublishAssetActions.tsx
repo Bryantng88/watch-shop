@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useMemo, useState } from "react";
 import { Check, Copy, Download, Loader2 } from "lucide-react";
 
@@ -94,12 +95,12 @@ export default function WatchPublishAssetActions({ detail }: { detail: Detail })
   const buttonClass = "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-45";
   return (
     <>
-      <button type="button" onClick={copyContent} disabled={!canCopy || !postText.trim() || copying} title={canCopy ? "Copy nội dung và phát event sử dụng asset" : `Content cần APPROVED (hiện tại: ${contentStatus})`} className={`${buttonClass} border-slate-200 text-slate-700`}>
+      <AdminButton variant="secondary" type="button" onClick={copyContent} disabled={!canCopy || !postText.trim() || copying} title={canCopy ? "Copy nội dung và phát event sử dụng asset" : `Content cần APPROVED (hiện tại: ${contentStatus})`} className={`${buttonClass} border-slate-200 text-slate-700`}>
         {copying ? <Loader2 className="h-4 w-4 animate-spin" /> : copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} {copied ? "Đã copy" : "Copy nội dung"}
-      </button>
-      <button type="button" onClick={downloadGallery} disabled={!canDownload || downloading} title={canDownload ? "Tải ZIP gallery và phát event sau khi thành công" : `Gallery cần APPROVED (hiện tại: ${imageStatus})`} className={`${buttonClass} border-slate-200 text-slate-700`}>
+      </AdminButton>
+      <AdminButton variant="secondary" type="button" onClick={downloadGallery} disabled={!canDownload || downloading} title={canDownload ? "Tải ZIP gallery và phát event sau khi thành công" : `Gallery cần APPROVED (hiện tại: ${imageStatus})`} className={`${buttonClass} border-slate-200 text-slate-700`}>
         {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} {downloading ? "Đang tải..." : "Tải hình"}
-      </button>
+      </AdminButton>
     </>
   );
 }

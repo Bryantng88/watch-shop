@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminListDateTime } from "@/domains/shared/ui/admin-design-contract/AdminListDateTime";
 import { useRouter } from "next/navigation";
 import { PaymentAmountSummary, PaymentStatusSignal } from "@/domains/payment/ui/signals";
 import { AcquisitionStatusSignal } from "@/domains/acquisition/ui/signals";
@@ -15,7 +16,6 @@ import { postAcquisitions } from "@/domains/acquisition/client/list/post-acquisi
 
 import AcquisitionItemsPreview from "./AcquisitionItemsPreview";
 import type { AcquisitionListItem } from "./types";
-import { fmtDateCompact } from "./helpers";
 import { useAdHocWorkRowAction } from "@/domains/task/ui/ad-hoc-work/AdHocWorkRowAction";
 
 type Props = {
@@ -166,14 +166,13 @@ export default function AcquisitionListRow({
         }
     }
 
-    const updated = fmtDateCompact(item.updatedAt);
 
     return (
         <>
         <tr className="align-middle hover:bg-slate-50/40">
             <td className="px-4 py-4">
                 <input
-                    type="checkbox"
+                    type="checkbox" aria-label={`Chọn ${item.refNo || item.id}`}
                     checked={checked}
                     disabled={!selectable || !canManage}
                     onChange={(event) => onCheckedChange(event.target.checked)}
@@ -186,15 +185,15 @@ export default function AcquisitionListRow({
 
             <td className="px-4 py-4">
                 <div className="min-w-0">
-                    <div className="truncate font-bold text-slate-950">{item.refNo}</div>
+                    <div className="truncate font-semibold text-slate-950">{item.refNo}</div>
                 </div>
             </td>
             <td className="px-4 py-4">
-                <AcquisitionStatusSignal status={item.approvalStatus} />
+                <AcquisitionStatusSignal variant="inline" status={item.approvalStatus} />
             </td>
             <td className={canViewFinancials ? "px-4 py-4" : "hidden"}>
                 <div className="flex items-center">
-                    <PaymentStatusSignal
+                    <PaymentStatusSignal variant="inline"
                         status={!posted && !draft ? "CANCELLED" : item.paymentStatus ?? "UNPAID"}
                         totalAmount={item.totalAmount}
                         remainingAmount={item.paymentRemainingAmount ?? item.totalAmount}
@@ -207,11 +206,11 @@ export default function AcquisitionListRow({
                 <div className="truncate font-semibold text-slate-950">
                     {item.vendorName || "-"}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">{item.acquisitionType || "-"}</div>
+                <div className="mt-1 text-xs text-slate-400">{item.acquisitionType === "PURCHASE" ? "Mua vào" : item.acquisitionType === "TRADE_IN" ? "Thu đổi" : item.acquisitionType || "-"}</div>
             </td>
 
             <td className={canViewFinancials ? "px-4 py-4 text-right whitespace-nowrap" : "hidden"}>
-                <PaymentAmountSummary
+                <PaymentAmountSummary variant="inline" kind="payable"
                     totalAmount={item.totalAmount}
                     remainingAmount={item.paymentRemainingAmount}
                     currency={item.currency}
@@ -220,12 +219,11 @@ export default function AcquisitionListRow({
             </td>
 
             <td className="px-4 py-4 whitespace-nowrap">
-                <div className="text-sm font-medium text-slate-700">{updated.time}</div>
-                <div className="text-xs text-slate-400">{updated.date}</div>
+                <AdminListDateTime value={item.updatedAt} />
             </td>
 
             <td className="sticky right-0 z-[1] bg-white px-3 py-4 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
-                <RowActionMenu
+                <RowActionMenu quiet
                     actions={[
                         {
                             key: "view",

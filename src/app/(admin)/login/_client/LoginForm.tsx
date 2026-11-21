@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 
 export default function LoginForm({ localAutoLogin = false, destination = "/admin/dashboard" }: { localAutoLogin?: boolean; destination?: string }) {
@@ -88,9 +89,9 @@ export default function LoginForm({ localAutoLogin = false, destination = "/admi
                 Ghi nhớ thiết bị này trong 30 ngày
             </label>
 
-            <button disabled={autoLoggingIn||submitting} className="w-full bg-black text-white py-2 rounded disabled:opacity-50">
+            <AdminButton variant="primary" disabled={autoLoggingIn||submitting} className="w-full bg-black text-white py-2 rounded disabled:opacity-50">
                 Đăng nhập
-            </button>
+            </AdminButton>
         </form>
     );
 }

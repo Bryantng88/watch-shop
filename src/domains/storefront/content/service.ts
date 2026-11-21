@@ -1,3 +1,4 @@
+import { websiteImageUrl } from "../media/website-media";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
@@ -234,7 +235,7 @@ export async function resolveImages(id: string, kind: string, content: unknown, 
           ...img,
           url: img.key
             ? preview
-              ? await mediaStorage.sign(img.key, 600)
+              ? websiteImageUrl(img.key)
               : `/api/public/storefront/media/${encodeURIComponent(id)}/${slot}`
             : "",
         },

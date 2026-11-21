@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ImageIcon, Search } from "lucide-react";
 
 import { Button, Input } from "@/domains/shared/ui/form/fields";
@@ -56,7 +57,7 @@ export default function OrderProductSearchPanel({
             {results.length ? (
                 <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
                     {results.map((product) => (
-                        <button
+                        <AdminButton variant="contextual"
                             key={product.id}
                             type="button"
                             onClick={() => onAddProduct(product)}
@@ -85,7 +86,7 @@ export default function OrderProductSearchPanel({
                                     SKU: {product.sku || "-"} · {fmtMoney(product.price)}
                                 </div>
                             </div>
-                        </button>
+                        </AdminButton>
                     ))}
                 </div>
             ) : null}

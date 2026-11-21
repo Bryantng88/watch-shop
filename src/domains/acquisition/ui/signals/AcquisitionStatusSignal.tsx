@@ -1,15 +1,22 @@
+import { VisualStatusSignal } from "@/domains/shared/ui/signals/VisualStatusSignal";
 import { Ban, Check, FilePenLine } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 type Props = {
+  variant?: "default" | "inline";
   status?: string | null;
   className?: string;
 };
 
-export default function AcquisitionStatusSignal({ status, className }: Props) {
+export default function AcquisitionStatusSignal({ status, className, variant }: Props) {
   const key = String(status ?? "").toUpperCase();
 
+  if (variant === "inline") {
+    const posted = key === "POSTED" || key === "APPROVED";
+    const cancelled = key === "CANCELLED" || key === "CANCELED";
+    return <VisualStatusSignal variant="inline" className={className} label={posted ? "Đã nhập kho" : cancelled ? "Đã hủy" : "Bản nháp"} tone={posted ? "emerald" : cancelled ? "rose" : "slate"} icon={posted ? "success" : cancelled ? "warning" : "neutral"} />;
+  }
   if (key === "POSTED" || key === "APPROVED") {
     return (
       <span className={cn("inline-flex items-center gap-2", className)}>

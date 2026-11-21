@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
@@ -114,14 +115,14 @@ export default function RowActions<T>({
 
     return (
         <div ref={rootRef} className="relative flex justify-end">
-            <button
+            <AdminButton variant="quiet" iconOnly aria-label="Thao tác khác" aria-expanded={open} aria-haspopup="menu"
                 ref={buttonRef}
                 type="button"
                 onClick={() => setOpen((value) => !value)}
                 className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
             >
                 <MoreHorizontal className="h-5 w-5" />
-            </button>
+            </AdminButton>
 
             {open && menuPosition ? createPortal(
                 <div
@@ -137,7 +138,7 @@ export default function RowActions<T>({
                                 <div className="my-1 border-t border-slate-100" />
                             ) : null}
 
-                            <button
+                            <AdminButton variant="contextual"
                                 type="button"
                                 disabled={action.disabled}
                                 onClick={() => {
@@ -157,7 +158,7 @@ export default function RowActions<T>({
                                 ) : null}
 
                                 <span>{action.label}</span>
-                            </button>
+                            </AdminButton>
                         </div>
                     ))}
                 </div>

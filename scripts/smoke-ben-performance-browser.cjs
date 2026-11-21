@@ -5,7 +5,7 @@ const {createRequire}=require('node:module');
 const path=require('node:path');
 const root=process.cwd();
 const requireApp=createRequire(path.join(root,'package.json'));
-const {build}=requireApp('esbuild');
+const {build}=require('./lib/admin-fixture-esbuild.cjs');
 const {chromium}=requireApp(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
 const http=require('node:http');
 const assert=require('node:assert/strict');
@@ -53,3 +53,4 @@ try{
  console.log('Actual Ben client transport: idle/hidden/offline suppression, single-flight resume, response delivery, new chat/history fencing, cancellation, 401 cleanup and zero write replay passed. Next routing and text rendering are fixture adapters; no server/business data is used.');
 }finally{if(browser)await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1});
+

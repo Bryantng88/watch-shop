@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
@@ -211,22 +212,22 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                    <button
+                    <AdminButton variant="secondary"
                         type="button"
                         className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                         onClick={() => router.push("/admin/services")}
                     >
                         ← Quay lại
-                    </button>
+                    </AdminButton>
 
                     {!isCompleted ? (
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
                             onClick={() => router.push(`/admin/services/issues-board?serviceRequestId=${sr.id}`)}
                         >
                             Đi tới Issue Board
-                        </button>
+                        </AdminButton>
                     ) : null}
                 </div>
             </div>
@@ -290,14 +291,14 @@ export default function ServiceRequestDetailClient({ detail }: { detail: any }) 
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-3">
-                            <button
+                            <AdminButton variant="secondary"
                                 type="button"
                                 className="rounded-xl border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
                                 onClick={handleCloseServiceRequest}
                                 disabled={submitting}
                             >
                                 Đóng service request
-                            </button>
+                            </AdminButton>
                         </div>
                     </div>
                 ) : null}

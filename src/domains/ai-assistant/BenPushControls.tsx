@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Bell, BellRing, Loader2, X } from "lucide-react";
 
@@ -95,18 +96,18 @@ export default function BenPushControls() {
     finally{setBusy(false);}
   }
   return <div ref={root} className="relative self-center">
-    <button ref={trigger} type="button" aria-label="Thông báo Ben" title="Thông báo Ben" aria-expanded={open} aria-controls={id} onClick={()=>setOpen(v=>!v)} className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100">
+    <AdminButton iconOnly variant="secondary" ref={trigger} type="button" aria-label="Thông báo Ben" title="Thông báo Ben" aria-expanded={open} aria-controls={id} onClick={()=>setOpen(v=>!v)} className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100">
       {state==="on"?<BellRing size={19}/>:<Bell size={19}/>}
       <span aria-hidden="true" className={`absolute right-2 top-2 h-1.5 w-1.5 rounded-full ${state==="on"?"bg-emerald-500":state==="off"?"bg-slate-300":"bg-amber-500"}`}/>
-    </button>
+    </AdminButton>
     {open&&<div ref={panel} tabIndex={-1} id={id} role="dialog" aria-label="Cài đặt thông báo Ben" onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();close();}}} className="absolute right-0 top-full z-50 mt-1 w-64 max-w-[calc(100vw-24px)] rounded-xl border border-slate-200 bg-white p-3 text-left shadow-lg outline-none">
-      <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-900">Thông báo</h3><button type="button" aria-label="Đóng cài đặt thông báo" onClick={close} className="rounded p-1 text-slate-400 hover:bg-slate-50"><X size={15}/></button></div>
+      <div className="flex items-center justify-between"><h3 className="text-sm font-semibold text-slate-900">Thông báo</h3><AdminButton variant="secondary" type="button" aria-label="Đóng cài đặt thông báo" onClick={close} className="rounded p-1 text-slate-400 hover:bg-slate-50"><X size={15}/></AdminButton></div>
       <p role="status" className="mt-2 text-xs font-medium text-slate-700">{labels[state]}</p>
       {descriptions[state]&&<p className="mt-1 text-xs leading-5 text-slate-500">{descriptions[state]}</p>}
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        {(state==="off"||state==="on")&&<button type="button" disabled={busy} onClick={()=>void toggle()} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-50">{busy&&<Loader2 size={12} className="animate-spin"/>}{subscription?"Tắt thông báo":"Bật thông báo"}</button>}
-        {state==="on"&&<button type="button" disabled={busy} onClick={async()=>{setBusy(true);setNotice("");try{await updateSubscription({action:"test-push"});setNotice("Đã gửi yêu cầu thử. Kiểm tra thông báo trên thiết bị nhé.");}catch{setNotice("Chưa gửi được thông báo thử.");}finally{setBusy(false);}}} className="min-h-9 rounded-lg px-2 text-xs text-blue-700 disabled:opacity-50">Gửi thử</button>}
-        {!["checking","unsupported","install"].includes(state)&&<button type="button" disabled={busy} onClick={()=>void check()} className="min-h-9 text-xs text-slate-500 disabled:opacity-50">Kiểm tra lại</button>}
+        {(state==="off"||state==="on")&&<AdminButton variant="primary" density="compact" type="button" disabled={busy} onClick={()=>void toggle()} className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:opacity-50">{busy&&<Loader2 size={12} className="animate-spin"/>}{subscription?"Tắt thông báo":"Bật thông báo"}</AdminButton>}
+        {state==="on"&&<AdminButton variant="secondary" density="compact" type="button" disabled={busy} onClick={async()=>{setBusy(true);setNotice("");try{await updateSubscription({action:"test-push"});setNotice("Đã gửi yêu cầu thử. Kiểm tra thông báo trên thiết bị nhé.");}catch{setNotice("Chưa gửi được thông báo thử.");}finally{setBusy(false);}}} className="min-h-9 rounded-lg px-2 text-xs text-blue-700 disabled:opacity-50">Gửi thử</AdminButton>}
+        {!["checking","unsupported","install"].includes(state)&&<AdminButton variant="secondary" density="compact" type="button" disabled={busy} onClick={()=>void check()} className="min-h-9 text-xs text-slate-500 disabled:opacity-50">Kiểm tra lại</AdminButton>}
       </div>
       {notice&&<p role="status" className="mt-1 text-xs leading-5 text-slate-600">{notice}</p>}
     </div>}

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { TaskKind } from "@prisma/client";
 import Link from "next/link";
@@ -172,7 +173,7 @@ export default function TaskQuickCreateModal({
               <div className="font-semibold">Task đã tồn tại</div>
               <div className="mt-1">{existingTask.title}</div>
 
-              <button
+              <AdminButton variant="primary" density="compact"
                 type="button"
                 onClick={() => {
                   window.location.href = "/admin/coordination/operation";
@@ -180,7 +181,7 @@ export default function TaskQuickCreateModal({
                 className="mt-3 rounded-xl bg-amber-600 px-3 py-2 text-xs font-semibold text-white"
               >
                 Mở task để tạo Task Item
-              </button>
+              </AdminButton>
             </div>
           ) : null}
 
@@ -242,23 +243,23 @@ export default function TaskQuickCreateModal({
         </div>
 
         <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={onClose}
             disabled={pending}
             className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
           >
             Hủy
-          </button>
+          </AdminButton>
 
-          <button
+          <AdminButton variant="primary"
             type="button"
             onClick={submit}
             disabled={pending}
             className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {pending ? "Đang lưu..." : "Lưu task"}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs/promises");
 const http = require("node:http");
 const path = require("node:path");
-const esbuild = require("esbuild");
+const esbuild = require("../../scripts/lib/admin-fixture-esbuild.cjs");
 const { chromium } = require(
   process.env.PLAYWRIGHT_MODULE_PATH || "playwright",
 );
@@ -264,3 +264,4 @@ window.__navigate=href=>{window.__route=href;const p=new URL(href,'https://previ
   console.error(error);
   process.exitCode = 1;
 });
+

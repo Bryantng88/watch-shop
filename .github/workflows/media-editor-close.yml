@@ -2,6 +2,7 @@ name: Media editor close
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/task/ui/task-work/QueueWorkQueue.tsx'
       - 'src/domains/watch/client/WatchFormClient.tsx'
       - 'src/domains/watch/client/WatchListClient.tsx'

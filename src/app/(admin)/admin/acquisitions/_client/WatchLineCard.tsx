@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useMemo, useState } from "react";
 import { Expand, Loader2, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
@@ -111,14 +112,14 @@ export default function WatchLineCard({
                     </div>
 
                     {canRemove ? (
-                        <button
+                        <AdminButton variant="danger"
                             type="button"
                             onClick={onRemove}
                             className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700"
                         >
                             <Trash2 className="h-4 w-4" />
                             Xóa
-                        </button>
+                        </AdminButton>
                     ) : null}
                 </div>
 
@@ -140,7 +141,7 @@ export default function WatchLineCard({
                             />
 
                             {previewSrc ? (
-                                <button
+                                <AdminButton variant="primary"
                                     type="button"
                                     onClick={() => setPreviewOpen(true)}
                                     className="absolute inset-0 flex items-end justify-center rounded-xl bg-black/0 transition hover:bg-black/10"
@@ -149,7 +150,7 @@ export default function WatchLineCard({
                                     <span className="mb-1 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">
                                         Xem lớn
                                     </span>
-                                </button>
+                                </AdminButton>
                             ) : null}
                         </div>
                     </div>
@@ -241,13 +242,13 @@ export default function WatchLineCard({
                         className="relative max-h-[90vh] max-w-[90vw] overflow-hidden rounded-3xl bg-white p-3 shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <button
+                        <AdminButton iconOnly variant="secondary"
                             type="button"
                             onClick={() => setPreviewOpen(false)}
                             className="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
                         >
                             <X className="h-5 w-5" />
-                        </button>
+                        </AdminButton>
 
                         <div className="mb-3 flex items-center gap-2 px-2 pt-1 text-sm font-medium text-slate-700">
                             <Expand className="h-4 w-4" />

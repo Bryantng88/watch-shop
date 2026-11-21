@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { CheckCircle2, ClipboardCheck, Eye, Loader2, Undo2 } from "lucide-react";
 
@@ -57,19 +58,19 @@ export default function AcquisitionCreatedDialog({
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <button type="button" disabled={disabled} onClick={() => void run("stay", onStay)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+          <AdminButton variant="contextual" type="button" disabled={disabled} onClick={() => void run("stay", onStay)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
             {pending === "stay" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Undo2 className="h-4 w-4" />}
             {stayLabel}
-          </button>
-          <button type="button" disabled={disabled} onClick={() => void run("open", onOpen)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
+          </AdminButton>
+          <AdminButton variant="contextual" type="button" disabled={disabled} onClick={() => void run("open", onOpen)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60">
             {pending === "open" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
             Mở phiếu nhập
-          </button>
+          </AdminButton>
           {canApprove ? (
-            <button type="button" disabled={disabled} onClick={() => void run("approve", onApprove)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
+            <AdminButton variant="contextual" type="button" disabled={disabled} onClick={() => void run("approve", onApprove)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
               {pending === "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardCheck className="h-4 w-4" />}
               Duyệt ngay
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       </section>

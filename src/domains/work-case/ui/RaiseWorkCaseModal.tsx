@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { AlertCircle, ChevronDown, ImageIcon } from "lucide-react";
 import {
@@ -321,7 +322,7 @@ export default function RaiseWorkCaseModal({
             </span>
 
             <div className="relative mt-1">
-              <button
+              <AdminButton variant="contextual"
                 type="button"
                 onClick={() => setPriorityOpen((v) => !v)}
                 className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 text-sm"
@@ -340,12 +341,12 @@ export default function RaiseWorkCaseModal({
                   className={`h-4 w-4 text-slate-400 transition ${priorityOpen ? "rotate-180" : ""
                     }`}
                 />
-              </button>
+              </AdminButton>
 
               {priorityOpen ? (
                 <div className="absolute left-0 right-0 z-20 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
                   {Object.values(TaskPriority).map((item) => (
-                    <button
+                    <AdminButton variant="contextual"
                       key={item}
                       type="button"
                       onClick={() => {
@@ -361,7 +362,7 @@ export default function RaiseWorkCaseModal({
                       <span>
                         {WORK_CASE_PRIORITY_LABEL[item]}
                       </span>
-                    </button>
+                    </AdminButton>
                   ))}
                 </div>
               ) : null}
@@ -369,7 +370,7 @@ export default function RaiseWorkCaseModal({
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-slate-50/70">
-            <button
+            <AdminButton variant="contextual"
               type="button"
               onClick={() => setLinkOpen((value) => !value)}
               className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
@@ -387,7 +388,7 @@ export default function RaiseWorkCaseModal({
                 className={`h-4 w-4 shrink-0 text-slate-400 transition ${linkOpen ? "rotate-180" : ""
                   }`}
               />
-            </button>
+            </AdminButton>
 
             {linkOpen ? (
               <div className="space-y-2 border-t border-slate-200 p-3">
@@ -431,23 +432,23 @@ export default function RaiseWorkCaseModal({
         </div>
 
         <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
-          <button
+          <AdminButton variant="secondary"
             type="button"
             onClick={onClose}
             disabled={pending}
             className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600"
           >
             Hủy
-          </button>
+          </AdminButton>
 
-          <button
+          <AdminButton variant="primary"
             type="button"
             onClick={submit}
             disabled={pending}
             className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {pending ? "Đang tạo..." : "Tạo phiếu"}
-          </button>
+          </AdminButton>
         </div>
       </div>
     </div>

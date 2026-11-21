@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -147,7 +148,7 @@ function Button({
     };
 
     return (
-        <button
+        <AdminButton variant={variant === "primary" ? "primary" : variant === "ghost" ? "contextual" : "secondary"}
             {...props}
             className={cx(
                 "inline-flex h-10 items-center justify-center rounded-xl border px-4 text-sm font-medium transition disabled:opacity-50",
@@ -156,7 +157,7 @@ function Button({
             )}
         >
             {children}
-        </button>
+        </AdminButton>
     );
 }
 
@@ -179,7 +180,7 @@ function CollapsibleSectionCard({
 
     return (
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
                 className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 text-left hover:bg-slate-50"
@@ -205,7 +206,7 @@ function CollapsibleSectionCard({
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                     )}
                 </div>
-            </button>
+            </AdminButton>
 
             {open ? <div className="space-y-5 p-5">{children}</div> : null}
         </section>
@@ -233,7 +234,7 @@ function CollapsibleEditorCard({
 
     return (
         <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-            <button
+            <AdminButton variant="contextual"
                 type="button"
                 onClick={() => setOpen((prev) => !prev)}
                 className="flex w-full items-center justify-between gap-3 text-left"
@@ -253,7 +254,7 @@ function CollapsibleEditorCard({
                         <ChevronRight className="h-4 w-4 text-slate-400" />
                     )}
                 </div>
-            </button>
+            </AdminButton>
 
             {open ? <div className="mt-4">{children}</div> : null}
         </div>

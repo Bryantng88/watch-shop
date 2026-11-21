@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { ChevronDown, Filter } from "lucide-react";
 
@@ -145,7 +146,7 @@ export default function ProductListFilters({
           />
         </div>
 
-        <button
+        <AdminButton variant="secondary"
           type="button"
           onClick={() => setAdvancedOpen((prev) => !prev)}
           className="inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-slate-900"
@@ -163,23 +164,23 @@ export default function ProductListFilters({
               advancedOpen ? "rotate-180" : "",
             ].join(" ")}
           />
-        </button>
+        </AdminButton>
 
-        <button
+        <AdminButton variant="primary"
           type="button"
           onClick={onApply}
           className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white transition hover:bg-slate-800"
         >
           Lọc
-        </button>
+        </AdminButton>
 
-        <button
+        <AdminButton variant="secondary"
           type="button"
           onClick={onClear}
           className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl px-2 text-sm font-medium text-slate-500 transition hover:text-slate-900"
         >
           Xóa lọc
-        </button>
+        </AdminButton>
       </div>
 
       {advancedOpen ? (

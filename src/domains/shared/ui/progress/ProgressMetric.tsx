@@ -1,3 +1,6 @@
+import type { CSSProperties } from "react";
+import { ADMIN_UI_FOUNDATION as F } from "../admin-design-contract/admin-ui.foundation";
+import styles from "./ProgressMetric.module.css";
 import { cn } from "@/lib/utils";
 
 type ProgressMetricProps = {
@@ -8,6 +11,7 @@ type ProgressMetricProps = {
   label?: string;
   semantic?: "completion" | "ratio";
   size?: "sm" | "md";
+  appearance?: "default" | "quiet";
   layout?: "stacked" | "inline" | "compact";
   className?: string;
 };
@@ -21,6 +25,7 @@ export function ProgressMetric({
   semantic = "completion",
   size = "sm",
   layout = "stacked",
+  appearance = "default",
   className,
 }: ProgressMetricProps) {
   const normalized = Number.isFinite(value) ? Math.min(100, Math.max(0, Math.round(value))) : 0;
@@ -28,6 +33,34 @@ export function ProgressMetric({
   const isComplete = normalized === 100;
   const fractionLabel = semantic === "ratio" ? "đang ở đây" : "đầu việc";
   const accessibleLabel = label ?? (hasFraction ? `${numerator}/${denominator} · ${normalized}%` : `${normalized}%`);
+
+  if (appearance === "quiet") {
+    const quietStyle = {
+      "--progress-gap": `${F.progress.quietGap}px`,
+      "--progress-font-size": `${F.typography.metadata.size}px`,
+      "--progress-line": `${F.typography.metadata.lineHeight}px`,
+      "--progress-muted": F.colors.muted,
+      "--progress-body": F.colors.body,
+      "--progress-radius": `${F.radius.pill}px`,
+      "--progress-track": F.colors.divider,
+      "--progress-height": `${F.progress.quietTrackHeight}px`,
+      "--progress-fill": F.progress.fill,
+      "--progress-success": F.progress.successFill,
+      "--progress-success-text": F.colors.success,
+    } as CSSProperties;
+    return (
+      <span role="progressbar" aria-label={accessibleLabel} aria-valuemin={0}
+        aria-valuemax={100} aria-valuenow={normalized}
+        aria-valuetext={hasFraction ? `${numerator}/${denominator} · ${normalized}%` : `${normalized}%`}
+        className={cn(styles.quiet, isComplete && styles.complete, className)} style={quietStyle}>
+        <span className={styles.values} aria-hidden="true">
+          <span className={styles.caption}>{caption || (hasFraction ? `${numerator}/${denominator}` : "Tiến độ")}</span>
+          <span className={styles.percentage}>{normalized}%</span>
+        </span>
+        <span className={styles.track} aria-hidden="true"><span className={styles.fill} style={{ width: `${normalized}%` }} /></span>
+      </span>
+    );
+  }
 
   return (
     <span

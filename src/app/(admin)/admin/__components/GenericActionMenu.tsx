@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { MoreVertical } from "lucide-react";
@@ -90,14 +91,14 @@ export default function GenericActionMenu({
 
     return (
         <>
-            <button
+            <AdminButton variant="secondary"
                 ref={btnRef}
                 className="p-2 rounded hover:bg-gray-100"
                 onClick={() => setOpen((v) => !v)}
                 type="button"
             >
                 <MoreVertical size={16} />
-            </button>
+            </AdminButton>
 
             {open && rect &&
                 createPortal(
@@ -113,7 +114,7 @@ export default function GenericActionMenu({
                         className="rounded-lg border bg-white shadow-xl py-1"
                     >
                         {mergedActions.map((a, i) => (
-                            <button
+                            <AdminButton variant="contextual"
                                 key={i}
                                 onClick={async () => {
                                     await a.onClick();
@@ -124,7 +125,7 @@ export default function GenericActionMenu({
                                 type="button"
                             >
                                 {a.label}
-                            </button>
+                            </AdminButton>
                         ))}
                     </div>,
                     document.body

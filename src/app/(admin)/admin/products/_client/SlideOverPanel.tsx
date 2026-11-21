@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { ReactNode } from "react";
 
 export default function SlideOverPanel({
@@ -28,13 +29,13 @@ export default function SlideOverPanel({
                         <div className="text-lg font-semibold text-gray-900">{title}</div>
                         {subtitle ? <div className="mt-1 text-sm text-gray-500">{subtitle}</div> : null}
                     </div>
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                         type="button"
                         onClick={onClose}
                         className="rounded border px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
                         Đóng
-                    </button>
+                    </AdminButton>
                 </div>
                 <div className="h-[calc(100%-77px)] overflow-auto p-5">{children}</div>
             </div>

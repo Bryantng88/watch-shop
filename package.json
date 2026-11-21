@@ -78,7 +78,8 @@
     "storefront:smoke-content": "node --import tsx --test src/domains/storefront/content/*.test.ts",
     "customer-assistant:check": "node --import tsx scripts/check-customer-assistant-configuration.ts",
     "customer-assistant:smoke": "node --import tsx scripts/smoke-customer-assistant.ts",
-    "customer-assistant:smoke-http": "node --import tsx scripts/smoke-customer-assistant-http.ts"
+    "customer-assistant:smoke-http": "node --import tsx scripts/smoke-customer-assistant-http.ts",
+    "check:admin-buttons": "node scripts/check-admin-buttons.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

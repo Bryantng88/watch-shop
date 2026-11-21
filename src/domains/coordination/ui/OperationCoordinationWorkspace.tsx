@@ -1,9 +1,12 @@
 "use client";
+import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
+import { AdminIconSelect } from "@/domains/shared/ui/admin-design-contract/AdminToolbarControls";
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { isUnknownOperationalAction } from "@/domains/task/shared/operational-action-response";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { type FormEvent, type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -18,6 +21,7 @@ import {
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowDownWideNarrow,
   Camera,
   CalendarClock,
   CheckCircle2,
@@ -40,6 +44,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
+import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 import AdminBreadcrumbs from "@/domains/shared/ui/breadcrumbs/AdminBreadcrumbs";
 import { operationalStageIcon, operationalStagePresentation } from "@/domains/shared/ui/signals";
@@ -85,6 +90,9 @@ import {
 import type { CoordinationDashboardDTO } from "../server/coordination-dashboard.types";
 import { isCoreWorkspaceBlueprint } from "@/domains/task/shared/workspace-flow-policy";
 import WatchSearchPicker, { type WatchSearchResult } from "@/domains/watch/ui/search/WatchSearchPicker";
+import { ADMIN_OPERATION_LIST as operationListStyles, ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
+import { ADMIN_PRIMARY_ACTION, ADMIN_PRIMARY_ACTION_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminPrimaryAction";
+import { OperationWorkspaceLayout } from "./OperationWorkspaceLayout";
 import FlowItemListView from "./FlowItemListView";
 import TechnicalIssueListView from "./TechnicalIssueListView";
 import {
@@ -92,6 +100,7 @@ import {
   technicalIssueLayoutUrl,
   technicalIssueMatches,
   technicalIssueViewSelection,
+  technicalIssueListNavigation,
   type TechnicalIssueListState,
 } from "../shared/technical-issue-list";
 import { useUiMutation } from "@/domains/shared/ui/mutation/use-ui-mutation";
@@ -235,7 +244,8 @@ function modeLabel(mode: CoordinationDashboardDTO["viewConfig"]["modes"][number]
   if (mode.key === "media-production-flow") return "Luồng sản xuất Media";
   if (mode.key === "sr-cases") return "Hồ sơ yêu cầu dịch vụ";
   if (mode.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
-  if (mode.key === "workspace-index") return "Danh sách Workspace";
+  if (mode.key === "workspace-index") return "Tất cả công việc";
+  if (mode.key === "payment-collection-flow") return "Thanh toán";
   return displayText(mode.label);
 }
 
@@ -244,6 +254,7 @@ type SpaceCoreFlow = NonNullable<CoordinationDashboardDTO["viewConfig"]["coreFlo
 function coreFlowLabel(flow: SpaceCoreFlow) {
   if (flow.key === "media-production-flow") return "Sản xuất Media";
   if (flow.key === "technical-issue-flow") return "Xử lý lỗi kỹ thuật";
+  if (flow.key === "payment-collection-flow") return "Thanh toán";
   return displayText(flow.label);
 }
 
@@ -263,6 +274,8 @@ function stageLabel(value: string) {
     Photography: "Chụp ảnh",
     "Media Processing": "Xử lý Media",
     Publish: "Đăng bài",
+    Settled: "Đã đối soát",
+    Done: "Hoàn tất",
     Inspect: "Kiểm tra",
     Processing: "Xử lý",
     "Done / Follow-up": "Hoàn tất / Theo dõi",
@@ -624,7 +637,7 @@ function SpaceSharingEditor({
 
   return (
     <div className="relative">
-      <button
+      <AdminButton variant="secondary" density="compact"
         type="button"
         onClick={() => {
           const nextOpen = !isOpen;
@@ -653,7 +666,7 @@ function SpaceSharingEditor({
           ) : null}
         </span>
         Chia sẻ
-      </button>
+      </AdminButton>
 
       {isOpen ? (
         <div className="absolute right-0 z-40 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700 shadow-xl">
@@ -671,7 +684,7 @@ function SpaceSharingEditor({
               <div key={user.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5">
                 <SpaceShareAvatar user={user} />
                 <span className="min-w-0 flex-1 truncate font-medium">{shareUserLabel(user)}</span>
-                <button
+                <AdminButton variant="secondary"
                   type="button"
                   onClick={() => updateSharedUsers(activeSharedIds.filter((id) => id !== user.id))}
                   disabled={isPending}
@@ -679,7 +692,7 @@ function SpaceSharingEditor({
                   aria-label={`Xóa quyền chia sẻ của ${shareUserLabel(user)}`}
                 >
                   <XCircle className="h-4 w-4" />
-                </button>
+                </AdminButton>
               </div>
             )) : <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-500">Chưa chia sẻ với ai.</div>}
           </div>
@@ -709,7 +722,7 @@ function SpaceSharingEditor({
                 <option value="">Thêm thành viên</option>
                 {availableUsers.map((user) => <option key={user.id} value={user.id}>{shareUserLabel(user)}</option>)}
               </select>
-              <button
+              <AdminButton variant="primary" density="compact"
                 type="button"
                 onClick={() => {
                   if (!selectedUserId) return;
@@ -720,7 +733,7 @@ function SpaceSharingEditor({
                 className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-3 font-semibold text-white disabled:bg-slate-300"
               >
                 Thêm
-              </button>
+              </AdminButton>
             </div>
           </div>
         </div>
@@ -751,6 +764,7 @@ export default function OperationCoordinationWorkspace({
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [technicalFilterResetKey, setTechnicalFilterResetKey] = useState(0);
+  const [technicalListState, setTechnicalListState] = useState<TechnicalIssueListState>(DEFAULT_TI_LIST_STATE);
   const [technicalLayout, setTechnicalLayout] = useState<"board" | "list">(
     () => searchParams.get("tiLayout") === "list" ? "list" : "board",
   );
@@ -1136,9 +1150,6 @@ export default function OperationCoordinationWorkspace({
     flowItemsModeKey,
     flowItemsStageKey,
   ]);
-  const flowListVisibleCount = activeFlowListStage
-    ? flowListStageCounts.get(activeFlowListStage) ?? 0
-    : asyncFlowItems.length;
   const isPaymentCollectionFlow =
     activeCoreFlow?.key === "payment-collection-core-flow";
   const flowEndpoint = useMemo(() => {
@@ -1182,6 +1193,9 @@ export default function OperationCoordinationWorkspace({
     }).mediaBoard;
     if (mediaBoard) setAsyncMediaBoard(mediaBoard);
   }, []);
+  const isPaymentReview = data.context === "OPERATION" && isPaymentCollectionFlow && activeFlowListStage !== "payment-settled";
+  const effectivePaymentDirection = isPaymentReview ? filterPaymentDirection === "OUT" ? "OUT" : "IN" : filterPaymentDirection;
+  const paymentMenuStage = isPaymentReview ? effectivePaymentDirection === "OUT" ? "payment-review-out" : "payment-review-in" : activeFlowListStage;
   const loadFlowItems = useCallback(async (
     requestedStageKey?: string,
     requestedPage = 1,
@@ -1197,7 +1211,7 @@ export default function OperationCoordinationWorkspace({
       flowStatus: filterWorkStatus,
       flowPaymentStatus: filterPayment,
       flowPaymentType: filterPaymentType,
-      flowPaymentDirection: filterPaymentDirection,
+      flowPaymentDirection: effectivePaymentDirection,
       flowSort: "UPDATED_DESC",
       doneRange,
     });
@@ -1255,7 +1269,7 @@ export default function OperationCoordinationWorkspace({
     flowEndpoint,
     filterPayment,
     filterPaymentType,
-    filterPaymentDirection,
+    effectivePaymentDirection,
     filterQuery,
     filterWorkStatus,
     doneRange,
@@ -1770,6 +1784,20 @@ export default function OperationCoordinationWorkspace({
   const canShowMediaBoard = isMediaFlowMode && Boolean(asyncMediaBoard);
   const isMediaBoardView = workTicketView === "MEDIA_BOARD" && canShowMediaBoard;
   const isOperationalBoardView = isTechnicalIssueBoardView || isMediaBoardView;
+  const isUnifiedOperation = data.context === "OPERATION";
+  const flowNavigationStages = isOperationalBoardView ? [] : isTaskItemListMode
+    ? (activeViewMode.taskItemStages ?? []).map((stage) => ({ key: stage.key, label: stage.label, count: taskItemStageCounts[stage.key] }))
+    : isPaymentCollectionFlow ? [
+      { key: "payment-review-in", label: "Cần thu", count: asyncFlowStageCounts["payment-review-in"] ?? "—" },
+      { key: "payment-review-out", label: "Cần chi", count: asyncFlowStageCounts["payment-review-out"] ?? "—" },
+      { key: "payment-settled", label: "Đã đối soát", count: asyncFlowStageCounts["payment-settled"] ?? "—" },
+    ] : orderedFlowStages.map((stage) => ({
+        key: stage.key,
+        label: activeCoreFlow?.key === "media-production-flow" && stage.key === "done" ? "Hoàn tất" : stageLabel(stage.label),
+        count: flowListStageCounts.get(stage.key) ??
+          (stage.key === activeFlowListStage && isFlowItemsLoading ? "…" : "—"),
+      }));
+
   const technicalIssueBoardItems = useMemo(
     () => asyncTechnicalIssueBoard?.items ?? [],
     [asyncTechnicalIssueBoard?.items],
@@ -1799,23 +1827,27 @@ export default function OperationCoordinationWorkspace({
           : mediaBoardItems;
     return [...filtered].sort((left, right) => Number(right.unreadMentionCount > 0) - Number(left.unreadMentionCount > 0));
   }, [mediaBoardItems, technicalIssueCommentFilter]);
-  const visibleTechnicalIssueBoardSummary = useMemo(() => {
+  const visibleTechnicalIssueItems = useMemo(() => {
     const visibleItems =
       technicalIssuePriorityFilter === "ALL"
         ? technicalIssueBoardItems
         : technicalIssueBoardItems.filter(
           (item) => technicalIssuePriorityValue(item.priority) === technicalIssuePriorityFilter,
         );
-    return technicalBoardSummary(
-      (technicalIssueCommentFilter === "COMMENTED"
+    return (technicalIssueCommentFilter === "COMMENTED"
         ? visibleItems.filter((item) => item.commentCount > 0)
         : technicalIssueCommentFilter === "MENTIONED_ME"
           ? visibleItems.filter((item) => item.mentionedMeCount > 0)
           : technicalIssueCommentFilter === "UNREAD_MENTION"
             ? visibleItems.filter((item) => item.unreadMentionCount > 0)
-          : visibleItems).filter(item=>technicalIssueMatches(item,filterQuery)),
-    );
+          : visibleItems).filter(item=>technicalIssueMatches(item,filterQuery));
   }, [technicalIssueBoardItems, technicalIssueCommentFilter, technicalIssuePriorityFilter,filterQuery]);
+  const visibleTechnicalIssueBoardSummary = useMemo(() => technicalBoardSummary(visibleTechnicalIssueItems), [visibleTechnicalIssueItems]);
+  const technicalStagesInMenu = isUnifiedOperation && isTechnicalIssueBoardView && technicalLayout === "list";
+  const navigationStages = technicalStagesInMenu
+    ? technicalIssueListNavigation(visibleTechnicalIssueItems, asyncTechnicalIssueBoard?.columnPagination ?? {}, technicalListState, !!filterQuery || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL")
+    : flowNavigationStages;
+
   useEffect(() => {
     if (activeViewMode?.key !== "technical-issue-flow" && workTicketView === "TI_BOARD") {
       setWorkTicketView("LIST");
@@ -1886,7 +1918,7 @@ export default function OperationCoordinationWorkspace({
 
   return (
     <SpaceViewPage
-      breadcrumbs={
+      breadcrumbs={isUnifiedOperation ? undefined :
         <AdminBreadcrumbs
           items={[
             { label: "Quản lý Space" },
@@ -1895,7 +1927,7 @@ export default function OperationCoordinationWorkspace({
         />
       }
       title={
-        activeCoreFlow
+        isUnifiedOperation ? "Vận hành" : activeCoreFlow
           ? coreFlowLabel(activeCoreFlow)
           : activeViewMode
             ? modeLabel(activeViewMode)
@@ -1903,14 +1935,14 @@ export default function OperationCoordinationWorkspace({
       }
       headerVariant="workspace"
       meta={
-        <span>{activeCoreFlow ? coreFlowDescription(activeCoreFlow) : activeViewMode ? displayText(activeViewMode.description) : "Theo dõi và xử lý công việc vận hành."}</span>
+        <span>{isUnifiedOperation ? "Chọn khu vực và giai đoạn để xử lý công việc." : activeCoreFlow ? coreFlowDescription(activeCoreFlow) : activeViewMode ? displayText(activeViewMode.description) : "Theo dõi và xử lý công việc vận hành."}</span>
       }
-      actions={
+      actions={isUnifiedOperation ? undefined :
         <div className="flex items-center gap-2">
-          {isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense ? (
-            <button type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white hover:bg-slate-800">
+          {!isUnifiedOperation && isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense ? (
+            <AdminButton variant="primary" type="button" onClick={() => setIsExpensePaymentOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white hover:bg-slate-800">
               <Plus className="h-4 w-4" /> Thêm khoản thu / chi
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       }
@@ -1924,14 +1956,48 @@ export default function OperationCoordinationWorkspace({
           }}
         />
         {adHocWorkCreate.modal}
+        <OperationWorkspaceLayout
+          enabled={isUnifiedOperation}
+          groups={data.viewConfig.modes.filter((mode) => !["sr-cases", "ad-hoc-work", "workspaces"].includes(mode.key)).map((mode) => ({ key: mode.key, label: mode.key === "technical-issue-flow" ? "Kỹ thuật" : mode.key === "media-production-flow" ? "Media" : modeLabel(mode), domainKey: mode.coreFlowKey ?? mode.key }))}
+          activeGroup={activeViewMode?.key ?? activeViewModeKey}
+          onGroupChange={changeActiveViewMode}
+          stages={navigationStages}
+          activeStage={technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : isPaymentCollectionFlow ? paymentMenuStage : activeFlowListStage}
+          onStageChange={(key) => {
+            if (isPaymentCollectionFlow && ["payment-review-in", "payment-review-out", "payment-settled"].includes(key)) {
+              if (key === paymentMenuStage) return;
+              const direction = key === "payment-review-out" ? "OUT" : key === "payment-review-in" ? "IN" : "ALL";
+              const stage = key === "payment-settled" ? key : "payment-review";
+              flowItemsAbortController.current?.abort();
+              setIsFlowItemsLoading(true);
+              setFilterPaymentDirection(direction);
+              setFlowListStageFilter(stage);
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("flowStage", stage); params.set("flowPaymentDirection", direction); params.set("flowPage", "1");
+              window.history.pushState(null, "", `/admin/coordination/${contextPath(data.context)}?${params.toString()}`);
+            } else if (technicalStagesInMenu) {
+              const stage = navigationStages.find(candidate => candidate.key === key);
+              if (stage) { setFocusedTechnicalIssueId(null); setTechnicalListState(current => ({ ...current, scope: stage.key as TechnicalIssueListState["scope"], page: 1 })); }
+            } else if (isTaskItemListMode) {
+              const stage = activeViewMode.taskItemStages?.find((candidate) => candidate.key === key);
+              if (stage) changeTaskItemStage(stage.key);
+            } else if (orderedFlowStages.some((stage) => stage.key === key)) {
+              changeFlowListStage(key);
+            }
+          }}
+        >
         <section className="min-w-0 max-w-full bg-white">
           <div className="border-b border-slate-100 pb-4">
             {activeViewMode ? (
               <div className="text-xs text-slate-700">
-                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
+                <AdminWorkspaceHeadingRow>
+                  {isUnifiedOperation && <AdminWorkspaceHeading>{[
+                    isMediaFlowMode ? "Sản xuất Media" : modeLabel(activeViewMode),
+                    navigationStages.find(stage => stage.key === (technicalStagesInMenu ? technicalListState.scope : isTaskItemListMode ? activeTaskItemStage : isPaymentCollectionFlow ? paymentMenuStage : activeFlowListStage))?.label,
+                  ].filter((label, index, labels) => label && labels.indexOf(label) === index).join(" – ")}</AdminWorkspaceHeading>}
+                  <div className={isUnifiedOperation ? "hidden" : "min-w-0"}>
                     <div className="flex flex-wrap items-center gap-2">
-                      {data.viewConfig.modes.length > 1 ? (
+                      {!isUnifiedOperation && data.viewConfig.modes.length > 1 ? (
                         <label className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                           Chế độ xem
                           <select
@@ -1950,42 +2016,48 @@ export default function OperationCoordinationWorkspace({
 
                   <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                     {isTaskItemListMode ? (
-                      <button
+                      <AdminButton variant="primary"
                         type="button"
                         onClick={adHocWorkCreate.open}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo việc</span>
-                      </button>
+                      </AdminButton>
                     ) : null}
+                    {!isUnifiedOperation && (
                     <SpaceSharingEditor
                       taskId={data.cycle.id}
                       context={data.context}
                       activeCoreFlow={activeCoreFlow}
                       sharing={data.spaceSharing}
                     />
+                    )}
+                    {isUnifiedOperation && isPaymentCollectionFlow && data.paymentCapabilities.canCreateStandaloneExpense && (
+                      <AdminButton variant="primary" type="button" onClick={() => setIsExpensePaymentOpen(true)} className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}><Plus className="h-4 w-4" aria-hidden="true" />Thêm khoản thu / chi</AdminButton>
+                    )}
                     {isTechnicalIssueFlowMode ? (
-                      <button
+                      <AdminButton variant="primary"
                         type="button"
                         onClick={() => setIsTechnicalIntakeOpen(true)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50"
+                        className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tiếp nhận kỹ thuật</span>
-                      </button>
+                      </AdminButton>
                     ) : null}
                     {isMediaFlowMode ? (
-                      <button
+                      <AdminButton variant="primary"
                         type="button"
                         onClick={() => setIsMediaPostCreateOpen((value) => !value)}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+                        className={ADMIN_PRIMARY_ACTION} style={ADMIN_PRIMARY_ACTION_STYLE}
                       >
                         <Plus className="h-4 w-4" />
                         <span>Tạo Media Post</span>
-                      </button>
+                      </AdminButton>
                     ) : null}
-                    <button
+                    {!isUnifiedOperation && (
+                    <AdminButton variant="secondary"
                         type="button"
                         disabled={!data.blueprints.length || !data.viewConfig.createWorkspace.enabled}
                         onClick={() => {
@@ -1998,12 +2070,13 @@ export default function OperationCoordinationWorkspace({
                       >
                         <Plus className="h-4 w-4" />
                         <span>Workspace</span>
-                      </button>
+                      </AdminButton>
+                    )}
                   </div>
-                </div>
+                </AdminWorkspaceHeadingRow>
 
                 <form
-                  className={`${isCreateFormOpen ? "flex" : "hidden"} mt-4 min-w-0 flex-col gap-2 border-t border-sky-100 pt-4 sm:flex-row sm:items-center`}
+                  className={`${isCreateFormOpen && !isUnifiedOperation ? "flex" : "hidden"} mt-4 min-w-0 flex-col gap-2 border-t border-sky-100 pt-4 sm:flex-row sm:items-center`}
                   onSubmit={createWorkTicket}
                 >
                   <select
@@ -2030,15 +2103,15 @@ export default function OperationCoordinationWorkspace({
                     placeholder="Workspace"
                     className="h-9 min-w-0 rounded-md border border-sky-100 bg-white px-3 text-sm text-slate-800 shadow-sm outline-none focus:border-violet-300 sm:w-64"
                   />
-                  <button
+                  <AdminButton variant="primary" density="compact"
                     type="submit"
                     disabled={isPending || !title.trim()}
                     className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-slate-900 px-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                   >
                     <Plus className="h-4 w-4" />
                     Xác nhận tạo
-                  </button>
-                  <button
+                  </AdminButton>
+                  <AdminButton variant="secondary" density="compact"
                     type="button"
                     onClick={() => {
                       setError(null);
@@ -2047,7 +2120,7 @@ export default function OperationCoordinationWorkspace({
                     className="inline-flex h-9 items-center justify-center rounded-md border border-sky-100 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
                   >
                     Hủy
-                  </button>
+                  </AdminButton>
                 </form>
                 {isMediaFlowMode && isMediaPostCreateOpen ? (
                   <MediaPostCreateForm
@@ -2082,11 +2155,20 @@ export default function OperationCoordinationWorkspace({
                 onViewChange={changeWorkTicketView}
                 viewOptions={[
                   ...(isMediaFlowMode
-                    ? [{ value: "MEDIA_BOARD", label: "Board Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
-                    : [{ value: "TI_BOARD", label: "Board", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
-                  { value: "LIST", label: "List", icon: <List className="h-4 w-4" /> },
+                    ? [{ value: "MEDIA_BOARD", label: "Bảng Media", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowMediaBoard }]
+                    : [{ value: "TI_BOARD", label: "Bảng", icon: <Grid2X2 className="h-4 w-4" />, disabled: !canShowTechnicalIssueBoard }]),
+                  { value: "LIST", label: "Danh sách", icon: <List className="h-4 w-4" /> },
                 ]}
                 selectFilters={[
+                  ...(isTechnicalIssueFlowMode && technicalLayout === "list" && technicalStagesInMenu ? [{
+                    key: "technical-attention", label: "Mức chú ý", value: technicalListState.attention,
+                    options: [{ value: "ALL", label: "Tất cả mức chú ý" }, { value: "OVERDUE", label: "Quá hạn" }, { value: "URGENT", label: "Ưu tiên gấp" }, { value: "MENTIONED", label: "Nhắc tôi chưa đọc" }],
+                    onChange: (value: string) => setTechnicalListState(current => ({ ...current, attention: value as TechnicalIssueListState["attention"], page: 1 })),
+                  }, ...(technicalListState.scope === "DONE" ? [{
+                    key: "technical-done-range", label: "Lịch sử TI đã xong", value: doneRange,
+                    options: [{ value: "14D", label: "14 ngày gần đây" }, { value: "30D", label: "30 ngày gần đây" }, { value: "ALL", label: "Toàn bộ lịch sử" }],
+                    onChange: (value: string) => { setTechnicalListState(current => ({ ...current, page: 1 })); void changeDoneRange(value as "14D" | "30D" | "ALL"); },
+                  }] : [])] : []),
                   ...(isTaskItemListMode || isTechnicalIssueFlowMode ? [] : [{
                     key: "work-status",
                     label: "Trạng thái công việc",
@@ -2173,7 +2255,7 @@ export default function OperationCoordinationWorkspace({
                       { label: "Khác", value: "OTHER" },
                     ],
                     onChange: setFilterPaymentType,
-                  }, {
+                  }, ...(!isPaymentReview ? [{
                     key: "payment-direction",
                     label: "Loại phiếu",
                     value: filterPaymentDirection,
@@ -2183,7 +2265,7 @@ export default function OperationCoordinationWorkspace({
                       { label: "Phiếu chi", value: "OUT" },
                     ],
                     onChange: setFilterPaymentDirection,
-                  }] : [])] : []),
+                  }] : [])] : [])] : []),
                   ...(!isOperationalBoardView ? [{
                     key: "page-size",
                     label: "Số dòng hiển thị",
@@ -2206,30 +2288,23 @@ export default function OperationCoordinationWorkspace({
               >
                 {isTechnicalIssueBoardView ? (
                   <TechnicalIssueBoardControlStrip
+                    compact={technicalLayout === "list"}
                     summary={technicalIssueBoardSummary}
                     visibleSummary={visibleTechnicalIssueBoardSummary}
                   />
-                ) : isMediaBoardView ? (
-                  <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-600">
-                    {asyncMediaBoard?.items.length ?? 0} Watch
-                  </span>
-                ) : (
-                  <>
-                    <span className="inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-xl bg-slate-50 px-3 text-xs font-semibold text-slate-500">
-                      {isViewPending || isFlowItemsLoading
-                        ? "Đang tải..."
-                        : `${activeCoreFlow ? flowListVisibleCount : filteredWorkTickets.length} item`}
-                    </span>
-                  </>
-                )}
-                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || filterPaymentDirection !== "ALL" || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <button type="button" onClick={() => { setTechnicalFilterResetKey(value => value + 1); setFilterQuery(""); if (isTechnicalIssueFlowMode) { const url = new URL(window.location.href); url.searchParams.delete("flowQuery"); window.history.replaceState(null, "", url.toString()); } setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</button> : null}
+                ) : null}
+                {filterQuery || filterCreator !== "ALL" || filterWorkStatus !== "ALL" || filterPayment !== "ALL" || filterPaymentType !== "ALL" || (!isPaymentReview && filterPaymentDirection !== "ALL") || technicalIssuePriorityFilter !== "ALL" || technicalIssueCommentFilter !== "ALL" ? <AdminButton variant="secondary" type="button" onClick={() => { setTechnicalFilterResetKey(value => value + 1); setFilterQuery(""); if (isTechnicalIssueFlowMode) { const url = new URL(window.location.href); url.searchParams.delete("flowQuery"); window.history.replaceState(null, "", url.toString()); } setFilterCreator("ALL"); setFilterWorkStatus("ALL"); setFilterPayment("ALL"); setFilterPaymentType("ALL"); if (!isPaymentReview) setFilterPaymentDirection("ALL"); setTechnicalIssuePriorityFilter("ALL"); setTechnicalIssueCommentFilter("ALL"); }} className="inline-flex h-11 shrink-0 items-center rounded-xl px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">Xóa lọc</AdminButton> : null}
+                {isTechnicalIssueFlowMode && technicalLayout === "list" && technicalStagesInMenu && <AdminIconSelect label="Sắp xếp TI" value={technicalListState.sort}
+                  icon={<ArrowDownWideNarrow className="h-4 w-4" />}
+                  options={[{ value: "PRIORITY", label: "Ưu tiên trước" }, { value: "DUE", label: "Hạn gần nhất" }, { value: "UPDATED", label: "Mới cập nhật" }]}
+                  onChange={value => setTechnicalListState(current => ({ ...current, sort: value as TechnicalIssueListState["sort"], page: 1 }))} />}
                 <SpaceDataRefreshButton
                   loading={isBoardRefreshing || isFlowItemsLoading}
                   refreshedAt={boardRefreshedAt}
                   onRefresh={() => void refreshActiveData()}
                 />
               </SpaceFilterBar>
-              {!isOperationalBoardView && isTaskItemListMode ? (
+              {!isUnifiedOperation && !isOperationalBoardView && isTaskItemListMode ? (
                 <AdminViewTabs
                   className="mt-3"
                   density="comfortable"
@@ -2243,7 +2318,7 @@ export default function OperationCoordinationWorkspace({
                   }))}
                 />
               ) : null}
-              {!isOperationalBoardView && orderedFlowStages.length ? (
+              {!isUnifiedOperation && !isOperationalBoardView && orderedFlowStages.length ? (
                 <AdminViewTabs
                   className="mt-3"
                   density="comfortable"
@@ -2259,7 +2334,7 @@ export default function OperationCoordinationWorkspace({
                 />
               ) : null}
             </div>
-            {isCreateFormOpen && selectedBlueprint ? (
+            {!isUnifiedOperation && isCreateFormOpen && selectedBlueprint ? (
               <div className="mt-3 grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-3 xl:grid-cols-6">
                 <div>
                   <div className="font-medium text-slate-500">Nguồn Blueprint</div>
@@ -2446,6 +2521,9 @@ export default function OperationCoordinationWorkspace({
           {isTechnicalIssueBoardView ? (
             <TechnicalIssueBoardView
               layout={technicalLayout}
+              listState={technicalListState}
+              setListState={setTechnicalListState}
+              stageNavigation={technicalStagesInMenu ? "external" : "inline"}
               filterResetKey={technicalFilterResetKey}
               loading={isBoardRefreshing}
               query={filterQuery}
@@ -2500,6 +2578,7 @@ export default function OperationCoordinationWorkspace({
           {activeCoreFlow ? <FlowItemListView
             key={activeCoreFlow?.key ?? activeViewModeKey}
             items={asyncFlowItems}
+            presentation={isUnifiedOperation ? activeCoreFlow.key === "media-production-flow" ? "media" : isPaymentCollectionFlow ? "payment" : "operation" : "default"}
             stages={orderedFlowStages}
             query=""
             statusFilter="ALL"
@@ -2532,7 +2611,7 @@ export default function OperationCoordinationWorkspace({
               )
             }
           /> : null}
-          <div className={cn(activeCoreFlow && "hidden")}>
+          <div className={cn(activeCoreFlow && "hidden", isUnifiedOperation && operationListStyles.workspaceList)} style={isUnifiedOperation ? ADMIN_OPERATION_LIST_STYLE : undefined}>
           <div className={cn("hidden border-y border-slate-100 bg-[#fbfcfe] px-5 py-3 text-xs font-bold uppercase tracking-[0.05em] text-slate-500 lg:grid", workTicketGridClass)}>
             {isTaskItemListMode ? (
               <>
@@ -2658,7 +2737,7 @@ export default function OperationCoordinationWorkspace({
                 </div>
                 {isTaskItemListMode ? (
                   <div className="flex items-center justify-end lg:order-8">
-                    <button
+                    <AdminButton variant="secondary" density="compact"
                       type="button"
                       disabled={updatingAdHocItemId === ticket.id}
                       onClick={(event) => {
@@ -2672,7 +2751,7 @@ export default function OperationCoordinationWorkspace({
                     >
                       {updatingAdHocItemId === ticket.id ? <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
                       {activeTaskItemStageContract?.transition.actionLabel ?? "Cập nhật"}
-                    </button>
+                    </AdminButton>
                   </div>
                 ) : null}
               </div>
@@ -2691,43 +2770,30 @@ export default function OperationCoordinationWorkspace({
             ) : null}
           </div>
           {!isOperationalBoardView && filteredWorkTickets.length > 0 ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
-              <div className="text-xs font-medium text-slate-500">
-                Hiển thị {workspacePageStart + 1}-{Math.min(workspacePageStart + workspacePageSize, filteredWorkTickets.length)} trong {filteredWorkTickets.length} Workspace
-              </div>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => setWorkspacePage((page) => Math.max(1, page - 1))} disabled={safeWorkspacePage <= 1} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Trước</button>
-                {Array.from({ length: workspacePageCount }, (_, index) => index + 1)
-                  .filter((page) => page === 1 || page === workspacePageCount || Math.abs(page - safeWorkspacePage) <= 1)
-                  .map((page, index, pages) => (
-                    <span key={page} className="contents">
-                      {index > 0 && page - pages[index - 1] > 1 ? <span className="px-1 text-xs text-slate-400">...</span> : null}
-                      <button type="button" onClick={() => setWorkspacePage(page)} className={cn("h-9 min-w-9 rounded-lg border px-2 text-xs font-semibold", page === safeWorkspacePage ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-200 text-slate-600 hover:bg-slate-50")}>{page}</button>
-                    </span>
-                  ))}
-                <button type="button" onClick={() => setWorkspacePage((page) => Math.min(workspacePageCount, page + 1))} disabled={safeWorkspacePage >= workspacePageCount} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-40">Sau</button>
-              </div>
-            </div>
+            <AdminListFooter total={filteredWorkTickets.length} unit="Workspace" page={safeWorkspacePage} totalPages={workspacePageCount}
+              onPrevious={() => setWorkspacePage(page => Math.max(1, page - 1))}
+              onNext={() => setWorkspacePage(page => Math.min(workspacePageCount, page + 1))} />
           ) : null}
           </div>
             </>
           )}
 
-          <SpaceViewFooterTip
+          {!isUnifiedOperation && <SpaceViewFooterTip
             icon={<Info className="h-4 w-4" />}
             action={
-              <button
+              <AdminButton variant="secondary" density="compact"
                 type="button"
                 className="inline-flex h-9 items-center gap-2 rounded-md border border-violet-200 bg-white px-3 text-sm font-semibold text-violet-700"
               >
                 <BookOpen className="h-4 w-4" />
                 Xem hướng dẫn
-              </button>
+              </AdminButton>
             }
           >
             Chọn cách hiển thị hoặc giai đoạn để xem item. Mở Workspace để xem chi tiết và hoạt động.
-          </SpaceViewFooterTip>
+          </SpaceViewFooterTip>}
         </section>
+        </OperationWorkspaceLayout>
         {isTechnicalIntakeOpen ? (
           <TechnicalIntakeModal
             onClose={() => setIsTechnicalIntakeOpen(false)}
@@ -2822,9 +2888,9 @@ function TechnicalIntakeModal({
               </div>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Đóng">
+          <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50" aria-label="Đóng">
             <XCircle className="h-4 w-4" />
-          </button>
+          </AdminButton>
         </div>
 
         <div className="border-b border-slate-100 bg-slate-50/70 px-6 py-4">
@@ -2903,15 +2969,15 @@ function TechnicalIntakeModal({
 
         {error ? <div className="border-t border-rose-100 bg-rose-50 px-6 py-2.5 text-sm font-medium text-rose-700">{error}</div> : null}
         <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-4">
-          <button type="button" onClick={() => step === 1 ? onClose() : setStep((current) => current - 1)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+          <AdminButton variant="secondary" type="button" onClick={() => step === 1 ? onClose() : setStep((current) => current - 1)} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">
             {step === 1 ? "Hủy" : "Quay lại"}
-          </button>
+          </AdminButton>
           {step < 4 ? (
-            <button type="button" disabled={loading || submitting || (step === 1 && !selectedWatch) || (step === 3 && !summary.trim())} onClick={() => step === 3 ? void submitIntake() : setStep((current) => current + 1)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+            <AdminButton variant="primary" type="button" disabled={loading || submitting || (step === 1 && !selectedWatch) || (step === 3 && !summary.trim())} onClick={() => step === 3 ? void submitIntake() : setStep((current) => current + 1)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300">
               {submitting ? "Đang tạo..." : step === 3 ? activeServiceRequest ? "Thêm TI vào SR" : "Tạo SR + TI" : "Tiếp tục"}<ChevronRight className="h-4 w-4" />
-            </button>
+            </AdminButton>
           ) : (
-            <button type="button" onClick={onClose} className="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Đóng</button>
+            <AdminButton variant="primary" type="button" onClick={onClose} className="h-10 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white hover:bg-slate-800">Đóng</AdminButton>
           )}
         </div>
       </div>
@@ -2993,7 +3059,7 @@ export function PaymentCollectionBoard({ items }: { items: PaymentBoardItem[] })
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">{item.owner.imageUrl ? <Image src={resolveMediaPreviewSrc(item.owner.imageUrl) ?? item.owner.imageUrl} alt="" fill sizes="48px" unoptimized className="object-cover" /> : <CreditCard className="m-3 h-6 w-6 text-slate-400" />}</div>
                   <div className="min-w-0 flex-1"><div className="truncate text-sm font-bold text-slate-900">{item.owner.label}</div><div className="truncate text-xs text-slate-500">{item.owner.sublabel ?? item.refNo ?? item.id}</div></div>
                 </div>
-                <div className="mt-3 flex items-end justify-between gap-3 border-t border-slate-100 pt-3"><div><div className="text-base font-black text-slate-950">{new Intl.NumberFormat("vi-VN").format(item.amount)} {item.currency === "VND" ? "đ" : item.currency}</div><div className="mt-0.5 text-[11px] text-slate-500">{item.method ?? "Chưa có phương thức"}</div></div>{item.stage !== "SETTLED" ? <button type="button" disabled={pendingId === item.id} onClick={() => void runAction(item)} className="h-9 rounded-lg bg-slate-950 px-3 text-xs font-bold text-white hover:bg-slate-800 disabled:bg-slate-300">{pendingId === item.id ? "Đang xử lý" : item.stage === "INBOX" ? "Đối soát" : "Xác nhận đã thu"}</button> : <span className={cn("rounded-full px-2 py-1 text-[11px] font-bold", item.status === "PAID" || item.status === "COLLECTED" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{item.status}</span>}</div>
+                <div className="mt-3 flex items-end justify-between gap-3 border-t border-slate-100 pt-3"><div><div className="text-base font-black text-slate-950">{new Intl.NumberFormat("vi-VN").format(item.amount)} {item.currency === "VND" ? "đ" : item.currency}</div><div className="mt-0.5 text-[11px] text-slate-500">{item.method ?? "Chưa có phương thức"}</div></div>{item.stage !== "SETTLED" ? <AdminButton variant="primary" density="compact" type="button" disabled={pendingId === item.id} onClick={() => void runAction(item)} className="h-9 rounded-lg bg-slate-950 px-3 text-xs font-bold text-white hover:bg-slate-800 disabled:bg-slate-300">{pendingId === item.id ? "Đang xử lý" : item.stage === "INBOX" ? "Đối soát" : "Xác nhận đã thu"}</AdminButton> : <span className={cn("rounded-full px-2 py-1 text-[11px] font-bold", item.status === "PAID" || item.status === "COLLECTED" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>{item.status}</span>}</div>
               </article>)}
               {!columnItems.length ? <div className="rounded-xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-400">Chưa có payment</div> : null}
               {columnItems.length > 30 ? <div className="text-center text-xs font-medium text-slate-500">Đang hiển thị 30/{columnItems.length} payment</div> : null}
@@ -3121,13 +3187,13 @@ function MediaProductionBoardView({
           <div className="text-sm font-bold text-slate-900">Media Production</div>
           <div className="text-xs text-slate-500">Quản lý Watch và bài post độc lập trên cùng một luồng.</div>
         </div>
-        <button
+        <AdminButton variant="primary" density="compact"
           type="button"
           onClick={() => setCreateOpen((value) => !value)}
           className="inline-flex h-9 items-center gap-2 rounded-xl bg-violet-600 px-3 text-sm font-semibold text-white shadow-sm hover:bg-violet-700"
         >
           <Plus className="h-4 w-4" /> Tạo bài post
-        </button>
+        </AdminButton>
       </div>
       {createOpen ? (
         <form
@@ -3153,13 +3219,13 @@ function MediaProductionBoardView({
             placeholder="Brief / yêu cầu nội dung (không bắt buộc)"
             className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-violet-400"
           />
-          <button
+          <AdminButton variant="primary"
             type="submit"
             disabled={creatingPost}
             className="h-10 rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white disabled:opacity-50"
           >
             {creatingPost ? "Đang tạo..." : "Tạo ngay"}
-          </button>
+          </AdminButton>
         </form>
       ) : null}
       {error ? <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</div> : null}
@@ -3276,14 +3342,14 @@ function MediaBoardColumn({
       <div className="grid content-start gap-4 p-3.5">
         {items.map((item) => <DraggableMediaBoardCard key={item.id} item={item} pending={pendingId === item.id} onPreview={() => onPreview(item)} />)}
         {pagination?.hasMore && pagination.nextPage ? (
-          <button
+          <AdminButton variant="secondary"
             type="button"
             disabled={loading}
             onClick={() => onLoadMore(column.key, pagination.nextPage!)}
             className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600 transition hover:border-violet-300 hover:bg-violet-50 disabled:opacity-50"
           >
             {loading ? "Đang tải..." : `Tải thêm · Còn ${pagination.total - pagination.loaded}`}
-          </button>
+          </AdminButton>
         ) : null}
         {!items.length ? <div className={cn("grid min-h-32 place-items-center rounded-2xl border border-dashed text-xs", appearance.empty)}><div className="text-center"><StageIcon className="mx-auto mb-2 h-5 w-5 opacity-50" />Kéo Watch vào đây</div></div> : null}
       </div>
@@ -3342,7 +3408,7 @@ function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoard
               ) : null}
             </span>
           ) : null}
-          {onPreview ? <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onPreview} className="rounded-lg bg-white px-2 py-1 font-semibold text-violet-600 shadow-sm ring-1 ring-slate-200 transition hover:bg-violet-50">Xem</button> : null}
+          {onPreview ? <AdminButton variant="secondary" density="compact" type="button" onPointerDown={(event) => event.stopPropagation()} onClick={onPreview} className="rounded-lg bg-white px-2 py-1 font-semibold text-violet-600 shadow-sm ring-1 ring-slate-200 transition hover:bg-violet-50">Xem</AdminButton> : null}
         </div>
       </div>
     </article>
@@ -3351,6 +3417,9 @@ function MediaBoardCard({ item, pending = false, onPreview }: { item: MediaBoard
 
 function TechnicalIssueBoardView({
   layout,
+  listState,
+  setListState,
+  stageNavigation,
   query,
   loading,
   filterResetKey,
@@ -3370,6 +3439,9 @@ function TechnicalIssueBoardView({
   onDoneRangeChange,
 }: {
   layout: "board" | "list";
+  listState: TechnicalIssueListState;
+  setListState: Dispatch<SetStateAction<TechnicalIssueListState>>;
+  stageNavigation: "inline" | "external";
   query: string;
   loading: boolean;
   filterResetKey: number;
@@ -3394,11 +3466,10 @@ function TechnicalIssueBoardView({
 }) {
   const progress = useAppProgress();
   const previewState = useBusinessEntityPreview();
-  const [listState, setListState] = useState<TechnicalIssueListState>(DEFAULT_TI_LIST_STATE);
   useEffect(() => {
     setListState(current => current.attention === "ALL" && current.page === 1
       ? current : { ...current, attention: "ALL", page: 1 });
-  }, [filterResetKey]);
+  }, [filterResetKey, setListState]);
   const priorityMutation = useUiMutation();
   const listFocusMemory = useRef("");
   const [overStage, setOverStage] = useState<TechnicalIssueBoardStage | null>(null);
@@ -3724,6 +3795,7 @@ function TechnicalIssueBoardView({
   return (
     <div className={cn("min-w-0 max-w-full border-t border-slate-100 px-3 py-4 sm:px-4",layout==="list"?"bg-white":"bg-slate-50/80")}>
       {layout === "list" ? <TechnicalIssueListView
+        stageNavigation={stageNavigation}
         items={visibleItems}
         state={listState}
         focusMemory={listFocusMemory}
@@ -4070,12 +4142,15 @@ function fieldKindLabel(kind: OperationalBlueprintActionField["kind"]) {
 }
 
 function TechnicalIssueBoardControlStrip({
+  compact = false,
   summary,
   visibleSummary,
 }: {
+  compact?: boolean;
   summary: ReturnType<typeof technicalBoardSummary>;
   visibleSummary: ReturnType<typeof technicalBoardSummary>;
 }) {
+  if (compact) return <span className={operationListStyles.progressSummary} style={ADMIN_OPERATION_LIST_STYLE}><span>{visibleSummary.done.toLocaleString("vi-VN")} / {visibleSummary.total.toLocaleString("vi-VN")} đã xong</span>{summary.urgent > 0 && <span>· {summary.urgent.toLocaleString("vi-VN")} gấp</span>}</span>;
   const segments = [
     { key: "INSPECT", label: "Kiểm tra", value: visibleSummary.stageCounts.INSPECT, className: operationalStagePresentation("INSPECT").barClassName },
     { key: "READY", label: "Chờ xử lý", value: visibleSummary.stageCounts.READY, className: operationalStagePresentation("READY").barClassName },
@@ -4216,14 +4291,14 @@ function TechnicalIssueBoardColumn({
           </div>
         ) : null}
         {pagination?.hasMore && pagination.nextPage ? (
-          <button
+          <AdminButton variant="secondary"
             type="button"
             disabled={loading}
             onClick={() => onLoadMore(column.key, pagination.nextPage!)}
             className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
           >
             {loading ? "Đang tải..." : `Tải thêm · Còn ${pagination.total - pagination.loaded} TI`}
-          </button>
+          </AdminButton>
         ) : null}
       </div>
     </div>
@@ -4305,7 +4380,7 @@ function TechnicalIssueBoardCard({
         dragging && "shadow-xl ring-2 ring-violet-200",
       )}
     >
-      <button
+      <AdminButton variant="secondary"
         type="button"
         onClick={() => onPreview?.(item)}
         className="absolute inset-0 z-10 rounded-xl"
@@ -4357,7 +4432,7 @@ function TechnicalIssueBoardCard({
             </span>
           ) : null}
           {onTogglePriority ? (
-            <button
+            <AdminButton iconOnly variant="secondary" density="compact"
               type="button"
               disabled={priorityPending}
               onClick={() => onTogglePriority(item)}
@@ -4371,17 +4446,17 @@ function TechnicalIssueBoardCard({
               )}
             >
               <Zap className="h-3 w-3" aria-hidden="true" />
-            </button>
+            </AdminButton>
           ) : null}
           {dragHandleProps ? (
-            <button
+            <AdminButton iconOnly variant="contextual" density="compact"
               type="button"
               {...dragHandleProps}
               className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
               aria-label="Kéo TI"
             >
               <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
+            </AdminButton>
           ) : null}
         </div>
       </div>
@@ -4537,14 +4612,14 @@ function TechnicalIssueBoardMoveModal({
               {request.item.summary} · Sang {technicalBoardStageLabel(request.targetStage)}
             </div>
           </div>
-          <button
+          <AdminButton iconOnly variant="secondary" density="compact"
             type="button"
             onClick={onClose}
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
             aria-label="Đóng modal"
           >
             <XCircle className="h-4 w-4" aria-hidden="true" />
-          </button>
+          </AdminButton>
         </div>
         <form
           className="space-y-4 px-5 py-5"
@@ -4595,7 +4670,7 @@ function TechnicalIssueBoardMoveModal({
                     Mỗi TI mới phải có Nhóm kỹ thuật và được đưa thẳng vào Chờ xử lý.
                   </div>
                 </div>
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   disabled={pending}
                   onClick={() => onAdditionalIssuesChange([
@@ -4612,7 +4687,7 @@ function TechnicalIssueBoardMoveModal({
                 >
                   <Plus className="h-3.5 w-3.5" />
                   Thêm TI
-                </button>
+                </AdminButton>
               </div>
               {additionalIssues.length ? (
                 <div className="mt-3 space-y-3 border-t border-violet-100 pt-3">
@@ -4620,7 +4695,7 @@ function TechnicalIssueBoardMoveModal({
                     <div key={index} className="rounded-xl border border-violet-200 bg-white p-3">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-violet-700">TI bổ sung #{index + 1}</span>
-                        <button
+                        <AdminButton iconOnly variant="secondary" density="compact"
                           type="button"
                           disabled={pending}
                           onClick={() => onAdditionalIssuesChange(additionalIssues.filter((_, issueIndex) => issueIndex !== index))}
@@ -4628,7 +4703,7 @@ function TechnicalIssueBoardMoveModal({
                           aria-label={`Xóa TI bổ sung ${index + 1}`}
                         >
                           <XCircle className="h-4 w-4" />
-                        </button>
+                        </AdminButton>
                       </div>
                       <div className="grid gap-2">
                         <input
@@ -4673,36 +4748,36 @@ function TechnicalIssueBoardMoveModal({
           {error ? (
             <div role="alert" className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700">
               {error}
-              {uncertain && <button type="button" disabled={pending} onClick={onReconcile} className="mt-2 block min-h-11 rounded-lg border border-rose-200 bg-white px-3 font-semibold disabled:opacity-50">Tải lại danh sách để kiểm tra</button>}
+              {uncertain && <AdminButton variant="secondary" type="button" disabled={pending} onClick={onReconcile} className="mt-2 block min-h-11 rounded-lg border border-rose-200 bg-white px-3 font-semibold disabled:opacity-50">Tải lại danh sách để kiểm tra</AdminButton>}
             </div>
           ) : null}
           <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-            <button
+            <AdminButton variant="secondary" density="compact"
               type="button"
               onClick={onClose}
               disabled={pending}
               className="inline-flex h-9 items-center rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
             >
               Hủy
-                  </button>
+                  </AdminButton>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {action?.command === "service.completeTechnicalIssue" ? (
-                <button
+                <AdminButton variant="secondary" density="compact"
                   type="button"
                   disabled={pending || uncertain}
                   onClick={onRequestCostApproval}
                   className="inline-flex h-9 items-center rounded-lg border border-amber-300 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {costApprovalPending ? "Đang gửi duyệt..." : "Gửi duyệt chi phí"}
-                </button>
+                </AdminButton>
               ) : null}
-              <button
+              <AdminButton variant="primary" density="compact"
                 type="submit"
                 disabled={pending || uncertain || !action}
                 className="inline-flex h-9 items-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 {pending && !costApprovalPending ? "Đang xử lý" : action ? technicalBoardSubmitLabel(action) : "Không khả dụng"}
-              </button>
+              </AdminButton>
             </div>
           </div>
         </form>

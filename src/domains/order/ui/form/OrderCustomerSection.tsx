@@ -1,6 +1,9 @@
+"use client";
+
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 // order/ui/form/OrderCustomerSection.tsx
 
-"use client";
+
 
 import { CheckCircle2, Loader2, UserRound } from "lucide-react";
 
@@ -87,7 +90,7 @@ export default function OrderCustomerSection({
 
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                             {customers.map((customer) => (
-                                <button
+                                <AdminButton variant="contextual"
                                     key={customer.id}
                                     type="button"
                                     onClick={() => onPickCustomer?.(customer)}
@@ -101,7 +104,7 @@ export default function OrderCustomerSection({
                                         {customer.phone || "-"}
                                         {customer.address ? ` · ${customer.address}` : ""}
                                     </div>
-                                </button>
+                                </AdminButton>
                             ))}
                         </div>
                     </div>

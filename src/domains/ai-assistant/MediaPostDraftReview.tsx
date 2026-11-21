@@ -1,4 +1,5 @@
 "use client";
+import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { MediaPostDraft } from "./media-post-contract";
 import { mediaCaseShapeLabels } from "./media-case-shape";
 const price = (value: string) =>
@@ -39,9 +40,9 @@ export default function MediaPostDraftReview({
         </p>
       )}
       <details className="mt-3">
-        <summary className="cursor-pointer text-blue-700">
+        <AdminDisclosureSummary className="cursor-pointer text-blue-700">
           Xem {draft.watches.length} đồng hồ đã chọn
-        </summary>
+        </AdminDisclosureSummary>
         <ul className="mt-2 divide-y divide-slate-100">
           {draft.watches.map((w) => (
             <li key={w.watchId} className="flex justify-between gap-3 py-2">
@@ -59,7 +60,7 @@ export default function MediaPostDraftReview({
         Tạo một post nháp với các đồng hồ và mỗi chiếc một ảnh Gallery. Chỉnh
         nội dung hoặc lựa chọn bằng tin nhắn trước khi duyệt.
       </p>
-      <button
+      <AdminButton variant="primary"
         data-ben-approve
         type="button"
         disabled={busy}
@@ -67,7 +68,7 @@ export default function MediaPostDraftReview({
         className="mt-3 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
       >
         {busy ? "Đang tạo…" : "Tạo post nháp"}
-      </button>
+      </AdminButton>
     </section>
   );
 }

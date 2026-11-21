@@ -1,3 +1,4 @@
+import { tradingEntries } from "@/domains/trading/shared/trading-navigation";
 //import { getAdminAcquisitionList } from "./_server/core/acquisition.service";
 import { getAcquisitionListProjection } from "@/domains/acquisition/server";
 //import AcquisitionListClient from "./_client/ListAcq";
@@ -66,6 +67,7 @@ export default async function AcquisitionListPage({
 
     return (
         <AcquisitionListClient
+            tradingEntries={tradingEntries({ roles: user?.roles, permissions })}
             {...serialize(result)}
             vendors={serialize(vendorOptions)}
             strapOnly={listScope === "ACCESSORY_ONLY"}

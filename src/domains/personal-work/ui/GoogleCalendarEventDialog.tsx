@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, X } from "lucide-react";
 import { AsyncActionButton } from "@/domains/shared/ui/mutation";
@@ -56,7 +57,7 @@ export function GoogleCalendarEventDialog({ event, onClose, onSaved, saveEvent }
       } catch (failure) { setError(failure instanceof Error ? failure.message : "Không thể lưu sự kiện"); }
       finally { busy.current = false; setSaving(false); }
     }}>
-      <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-widest text-blue-600">Google Calendar</p><h2 id="google-event-title" className="mt-1 text-lg font-bold">{editable ? "Chỉnh sửa sự kiện" : event.title}</h2></div><button type="button" aria-label="Đóng" disabled={saving} onClick={onClose} className="p-1 text-slate-400"><X className="h-5 w-5" /></button></div>
+      <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-widest text-blue-600">Google Calendar</p><h2 id="google-event-title" className="mt-1 text-lg font-bold">{editable ? "Chỉnh sửa sự kiện" : event.title}</h2></div><AdminButton variant="contextual" type="button" aria-label="Đóng" disabled={saving} onClick={onClose} className="p-1 text-slate-400"><X className="h-5 w-5" /></AdminButton></div>
       {!editable && <p className="text-xs text-slate-500">Sự kiện này chỉ có quyền xem tại đây.</p>}
       {event.recurring && editable && <p className="text-xs text-slate-500">Thay đổi chỉ áp dụng cho lần diễn ra này.</p>}
       <fieldset disabled={!editable || saving} className="space-y-3">
@@ -72,7 +73,7 @@ export function GoogleCalendarEventDialog({ event, onClose, onSaved, saveEvent }
       {error && <p role="alert" className="text-xs text-rose-600">{error}</p>}
       <div className="flex items-center justify-between gap-3">
         {event.htmlLink ? <a href={event.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-slate-500">Mở Google<ExternalLink className="h-3 w-3" /></a> : <span />}
-        <div className="flex gap-2"><button type="button" disabled={saving} onClick={onClose} className="px-3 text-sm text-slate-600">{editable ? "Hủy" : "Đóng"}</button>{editable && <AsyncActionButton type="submit" pending={saving} pendingLabel="Đang lưu…" className="h-9 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white">Lưu thay đổi</AsyncActionButton>}</div>
+        <div className="flex gap-2"><AdminButton variant="contextual" type="button" disabled={saving} onClick={onClose} className="px-3 text-sm text-slate-600">{editable ? "Hủy" : "Đóng"}</AdminButton>{editable && <AsyncActionButton variant="primary" type="submit" pending={saving} pendingLabel="Đang lưu…" className="h-9 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white">Lưu thay đổi</AsyncActionButton>}</div>
       </div>
     </form>
   </div>;

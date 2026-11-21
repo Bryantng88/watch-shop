@@ -1,3 +1,5 @@
+import { AdminRouteWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminRouteWorkspace";
+import { productEntries } from "@/domains/shared/ui/navigation/section-navigation";
 import { getAdminWatchList } from "@/domains/watch/server";
 import WatchListClient from "@/domains/watch/client/WatchListClient";
 import { requirePermission } from "@/server/auth/requirePermission";
@@ -145,11 +147,13 @@ export default async function WatchesPage({
         : scrubWatchListSensitivePrices(watchListResult);
 
     return (
-        <WatchListClient
+        <AdminRouteWorkspace title="Sản phẩm" description="Quản lý đồng hồ và dây đồng hồ." filtersUnderSelected navigationLabel="Nhóm sản phẩm" storageKey="admin:products:menu-width:v1" entries={productEntries(user)} selected="/admin/watches">
+        <WatchListClient embedded
             initialResult={serialize(initialResult)}
             vendors={serialize(vendors)}
             canViewCost={canViewCost}
             canApproveAcquisition={canApproveAcquisition}
         />
+        </AdminRouteWorkspace>
     );
 }

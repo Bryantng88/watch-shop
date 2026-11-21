@@ -2,6 +2,7 @@ name: Work notifications and compact UI
 on:
   pull_request:
     paths:
+      - 'scripts/lib/admin-fixture-esbuild.cjs'
       - 'src/domains/notification/**'
       - 'src/domains/personal-work/**'
       - 'src/domains/ai-assistant/**'

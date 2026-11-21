@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ClipboardList, Copy, CreditCard, ExternalLink, FileText, ListChecks, PackageCheck, ShoppingBag, Wrench } from "lucide-react";
 
 import RowActions, { type RowAction } from "@/domains/shared/ui/list/RowActions";
@@ -263,13 +264,13 @@ function ServiceRequestRow({
                 <div className="flex items-start gap-3">
                     <ServiceSourceSignalIcon row={row} />
                     <div className="min-w-0">
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             className="max-w-[190px] truncate text-left font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
                             onClick={() => onOpenDetail(row)}
                         >
                             {row.refNo || "-"}
-                        </button>
+                        </AdminButton>
                         <div className="mt-1 max-w-[190px] truncate font-mono text-[11px] text-slate-400">
                             ID: {row.id}
                         </div>
@@ -282,13 +283,13 @@ function ServiceRequestRow({
                 <div className="flex min-w-0 items-center gap-3">
                     <InlineImage image={image} title={productTitle} size="md" />
                     <div className="min-w-0">
-                        <button
+                        <AdminButton variant="secondary"
                             type="button"
                             onClick={() => onOpenDetail(row)}
                             className="line-clamp-2 text-left text-sm font-semibold text-slate-950 hover:text-blue-700"
                         >
                             {productTitle}
-                        </button>
+                        </AdminButton>
                         <div className="mt-1 text-xs text-slate-500">SKU: {sku}</div>
                         <div className="mt-1 max-w-[320px] truncate font-mono text-[11px] text-slate-400">
                             PID: {row.productId || row.product?.id || "-"}
@@ -310,14 +311,14 @@ function ServiceRequestRow({
             </td>
 
             <td className="px-4 py-4">
-                <button
+                <AdminButton variant="secondary" density="compact"
                     type="button"
                     onClick={() => onOpenPayment(row)}
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${paymentTone}`}
                 >
                     <CreditCard className="h-3.5 w-3.5" />
                     {paymentText}
-                </button>
+                </AdminButton>
                 {payableTotal > 0 ? (
                     <div className="mt-1 text-xs text-slate-500">
                         Còn {Math.round(remainingAmount).toLocaleString("vi-VN")}đ
