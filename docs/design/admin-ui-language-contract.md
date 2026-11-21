@@ -1441,3 +1441,9 @@ Query, page reset, permission, loading/disabled và callback do consumer giữ.
 Không thêm phân trang giả vào danh sách đang lọc toàn bộ local. TI phải giữ số
 đã tải/tổng server và lưu ý bộ lọc chỉ áp dụng phần đã tải. Thư viện cursor ghi
 Đã tải và giữ Tải thêm, không trình bày số đã tải thành tổng toàn bộ thư viện.
+
+### TI — căn giữa dòng và thao tác gọn
+
+Danh sách TI căn giữa theo chiều dọc cho ảnh và các ô xử lý, thời hạn, chi phí,
+thao tác. Dùng icon quiet 32px (44px touch), không nhãn thường trực/viền/bóng;
+nhãn accessible và title giữ rõ thao tác. Menu giữ nguyên các lựa chọn và xác nhận.

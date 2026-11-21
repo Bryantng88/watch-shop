@@ -11,7 +11,7 @@ import styles from "./AdminOperationList.module.css";
 export type AdminRowMenuAction = { key: string; label: string; disabled?: boolean; onSelect: () => void };
 
 /** One status/action trigger; editors stay mounted in their domain outside this popup. */
-export function AdminRowActionMenu({ label, status, actions, disabled = false, triggerClassName }: { label: string; status: ReactNode; actions: AdminRowMenuAction[]; disabled?: boolean; triggerClassName?: string }) {
+export function AdminRowActionMenu({ label, status, actions, disabled = false, triggerClassName, iconOnly = false }: { label: string; status: ReactNode; actions: AdminRowMenuAction[]; disabled?: boolean; triggerClassName?: string; iconOnly?: boolean }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -47,9 +47,9 @@ export function AdminRowActionMenu({ label, status, actions, disabled = false, t
     };
   }, [open]);
   return <>
-    <AdminButton variant="secondary" density="compact" ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
+    <AdminButton variant={iconOnly ? "quiet" : "secondary"} iconOnly={iconOnly} density="compact" title={iconOnly ? label : undefined} ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); }
-    }}>{status}<ChevronDown size={F.icon.inline} aria-hidden="true" /></AdminButton>
+    }}>{!iconOnly && status}<ChevronDown size={F.icon.inline} aria-hidden="true" /></AdminButton>
     {open && createPortal(<div ref={menu} id={id} role="menu" aria-label={label} className={styles.actionMenu} style={{ ...ADMIN_OPERATION_LIST_STYLE, ...position, zIndex: F.layers.popover }} onKeyDown={event => {
       const items = focusItems();
       const index = items.indexOf(document.activeElement as HTMLButtonElement);

@@ -86,9 +86,9 @@ function RowActions({
 }) {
   const primary = technicalIssuePrimaryMove(item.stage, options);
   const label = primary?.label ?? "Xem nhanh";
-  if (options.length > 1) return <AdminRowActionMenu triggerClassName={styles.move} label={`Thao tác TI: ${item.summary}`} status={<span>{label}</span>} disabled={pending}
+  if (options.length > 1) return <AdminRowActionMenu iconOnly triggerClassName={styles.move} label={`Thao tác TI: ${item.summary} — ${label}`} status={<span>{label}</span>} disabled={pending}
     actions={[...options.map(option => ({ key: option.stage, label: option.label, onSelect: () => onMove(option.stage) })), { key: "preview", label: "Xem nhanh", onSelect: onPreview }]} />;
-  return <AdminButton variant="secondary" density="compact" type="button" className={styles.move} disabled={pending} aria-label={`${label}: ${item.summary}`} onClick={() => primary ? onMove(primary.stage) : onPreview()}>{label}<ChevronRight size={16} aria-hidden="true" /></AdminButton>;
+  return <AdminButton variant="quiet" iconOnly density="compact" title={label} type="button" className={styles.move} disabled={pending} aria-label={`${label}: ${item.summary}`} onClick={() => primary ? onMove(primary.stage) : onPreview()}><ChevronRight size={16} aria-hidden="true" /></AdminButton>;
 }
 
 function TechnicalThumbnail({ src }: { src: string | null }) {

@@ -114,7 +114,8 @@ const esbuild = require("esbuild"),
         headerX: range.getBoundingClientRect().left, titleX: titleRect.left,
         gap: priorityRect.left-titleRect.right,
         centerDelta: Math.abs((titleText.top+titleText.bottom)-(priorityRect.top+priorityRect.bottom))/2,
-        stageDelta: Math.abs((titleText.top+titleText.bottom)/2-(stage.top+stage.bottom)/2),
+        cellCenterDeltas: Array.from(cells).map(cell => { const r=cell.getBoundingClientRect(), base=cells[0].getBoundingClientRect(); return Math.abs((r.top+r.bottom-base.top-base.bottom)/2); }),
+        thumbnailCenterDelta: (() => {const r=cells[0].querySelector('button').nextElementSibling.getBoundingClientRect(), base=cells[0].getBoundingClientRect(); return Math.abs((r.top+r.bottom-base.top-base.bottom)/2);})(),
         actionWidth: cells[4].querySelector('button')?.getBoundingClientRect().width,
         expectedWidth: cells[4].getBoundingClientRect().width,
         nestedButtons: Boolean(preview.querySelector('button')),
@@ -127,8 +128,9 @@ const esbuild = require("esbuild"),
       assert.ok(Math.abs(row.productX-row.titleX)<1, 'watch and reference align '+row.id);
       assert.ok(row.gap>=7 && row.gap<=9, 'priority follows title '+row.id);
       assert.ok(row.centerDelta<=2, 'priority shares title axis '+row.id);
-      assert.ok(row.stageDelta<=3, 'processing starts on first line '+row.id);
-      assert.ok(Math.abs(row.actionWidth-row.expectedWidth)<1, 'uniform action width '+row.id);
+      assert.ok(row.cellCenterDeltas.every(delta=>delta<1), 'cells vertically centered '+row.id);
+      assert.ok(row.thumbnailCenterDelta<1, 'thumbnail vertically centered '+row.id);
+      assert.ok(row.actionWidth<=32, 'compact icon action '+row.id);
       assert.equal(row.nestedButtons,false);
       assert.equal(row.previewCoversIdentity,true);
     }

@@ -6,16 +6,16 @@
 .tabs > button > span { font-variant-numeric: tabular-nums; }
 .filters select { max-width: 100%; min-width: 0; min-height: var(--ti-control-height); padding: 8px 12px; border: 1px solid var(--admin-list-controlBorder); border-radius: var(--ti-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font: inherit; font-size: var(--admin-list-meta-size); }
 .table { min-width: 0; }
-.header, .row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(144px, 1.05fr) minmax(136px, .9fr) minmax(120px, .8fr) 164px; gap: var(--ti-row-gap); align-items: center; }
+.header, .row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(144px, 1.05fr) minmax(136px, .9fr) minmax(120px, .8fr) 64px; gap: var(--ti-row-gap); align-items: center; }
 .header { min-height: 36px; border-bottom: 1px solid var(--admin-list-divider); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-weight: 500; }
 .header > :first-child { padding-left: calc(var(--admin-list-thumbnail) + 12px); }
 .header > :nth-last-child(2) { text-align: right; }
 .header > :last-child { padding-left: 12px; }
-.row { grid-template-areas: "issue owner due cost action"; align-items: start; min-height: 72px; padding: var(--ti-row-padding) 0; border-bottom: 1px solid var(--admin-list-divider); }
+.row { grid-template-areas: "issue owner due cost action"; align-items: center; min-height: 72px; padding: var(--ti-row-padding) 0; border-bottom: 1px solid var(--admin-list-divider); }
 .row:hover, .row:focus-within { background: var(--admin-list-softSurface); }
 .focused, .row.focused:hover { background: var(--admin-list-focusSurface); }
 .row > div { min-width: 0; }
-.identity { grid-area: issue; position: relative; display: grid; grid-template-columns: var(--admin-list-thumbnail) minmax(0, 1fr); align-items: start; gap: 12px; min-width: 0; }
+.identity { grid-area: issue; position: relative; display: grid; grid-template-columns: var(--admin-list-thumbnail) minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; }
 /* One preview hit area preserves image/text clicks; priority remains a separate control. */
 .open { position: absolute; inset: 0; z-index: 1; width: 100%; min-width: 0; border-radius: var(--ti-radius); text-align: left; }
 .identity > .thumbnail, .identityText { pointer-events: none; }
@@ -35,18 +35,18 @@
 .row:hover .priority, .row:focus-within .priority { opacity: 1; }
 .priority.urgent { opacity: 1; color: var(--admin-list-danger); }
 .priority:hover { color: var(--admin-list-danger); background: var(--admin-list-dangerSurface); }
-.owner { padding-top: 4px; grid-area: owner; display: flex; align-items: start; flex-direction: column; gap: 6px; }
+.owner { grid-area: owner; display: flex; align-items: start; flex-direction: column; gap: 6px; }
 .stage { display: inline-flex; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 500; color: var(--admin-list-body); }
 .stage[data-stage="PROCESSING"] { color: var(--admin-list-link); }
 .stage[data-stage="DONE"] { color: var(--admin-list-success); }
 .ownerName { font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); overflow-wrap: anywhere; }
-.due { padding-top: 4px; grid-area: due; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+.due { grid-area: due; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
 .due small { display: flex; align-items: center; gap: 4px; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
 .due .late { color: var(--admin-list-attention); }
-.cost { padding-top: 4px; grid-area: cost; display: flex; flex-direction: column; align-items: end; gap: 4px; font-variant-numeric: tabular-nums; }
+.cost { grid-area: cost; display: flex; flex-direction: column; align-items: end; gap: 4px; font-variant-numeric: tabular-nums; }
 .cost small { color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
 .actionCell { grid-area: action; display: flex; justify-content: end; }
-.actionCell > button { width: 100%; white-space: normal; text-align: left; justify-content: space-between; }
+.actionCell > button { flex: none; }
 .move, .pager > button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--ti-control-height); padding: 8px 12px; border: 1px solid var(--admin-list-controlBorder); border-radius: var(--ti-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font: 600 var(--admin-list-meta-size)/var(--admin-list-meta-line) var(--admin-list-font); }
 .move svg, .actionCell > button > svg { flex-shrink: 0; }
 .move:hover, .pager > button:hover { background: var(--admin-list-softSurface); }
@@ -68,7 +68,7 @@
 @container ti-list (max-width: 919px) {
   .headerGroup { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: "issue issue action" "owner due cost"; gap: 12px 16px; }
-  .actionCell { align-self: start; width: 164px; }
+  .actionCell { align-self: center; }
   .mobileLabel { display: block; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); }
 }
 @container ti-list (max-width: 519px) {
@@ -80,9 +80,3 @@
   .pager { width: 100%; }
 }
 @media(pointer: coarse) { .list button, .filters select { min-height: var(--admin-list-touch); } .priority { opacity: 1; min-width: var(--admin-list-touch); } .title { padding-top: calc((var(--admin-list-touch) - var(--admin-list-title-line)) / 2); } .filters select { font-size: 16px; } }
-
-/* Same neutral raised finish as Media row actions, without changing row geometry. */
-.move { border-color: var(--admin-button-neutral-border); background-image: var(--admin-button-neutral-gradient); box-shadow: var(--admin-button-neutral-shadow); }
-.move:hover:not(:disabled) { background-image: var(--admin-button-neutral-hover); border-color: var(--admin-button-neutral-hover-border); }
-.move:active:not(:disabled) { background-image: var(--admin-button-neutral-pressed); box-shadow: var(--admin-button-neutral-inset); }
-.move:disabled { background-image: none; box-shadow: none; }
