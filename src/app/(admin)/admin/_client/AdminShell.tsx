@@ -51,6 +51,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                     title={adminRouteTitle(pathname)}
                     navigation={<AdminTopNavigation user={user} />}
                     user={{
+                        id: user.id,
                         name: user.name,
                         roles: user.roles,
                         avatarUrl: user.avatarUrl,

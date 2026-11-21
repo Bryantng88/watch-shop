@@ -1507,3 +1507,11 @@ Workspace kỹ thuật chuyên dụng và các chế độ embedded/Ben giữ b�
 
 
 Top menu dùng navigationSurface nền #11191f như sidebar cũ, chữ sáng, active/hover xanh nhạt. Công cụ header dùng contextual để giữ nền tối phẳng, không gradient/card; popup thông báo vẫn nền trắng và chữ tối. Native select dùng dark color scheme; spinner kế thừa màu active sáng.
+
+### Profile màu top menu theo người dùng
+
+Top menu có hai profile: Simple (mặc định, nền #f8fafc) và Dark (nền #11191f).
+Chọn qua select gọn trong cụm tài khoản, có nhãn truy cập; chỉ đổi màu header,
+không đổi nền trang hay nghiệp vụ. Palette dùng navigationProfiles trong foundation.
+Lưu localStorage theo user ID trên trình duyệt; giá trị lạ quay về Simple, lỗi storage
+không chặn đổi profile trong phiên. Native select và popup giữ độ tương phản phù hợp.

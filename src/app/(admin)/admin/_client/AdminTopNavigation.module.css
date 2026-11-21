@@ -4,7 +4,7 @@
 .links .link.link:hover { color: var(--nav-active, #93c5fd); background: var(--nav-hover, #1e3044); }
 .links .active.active { color: var(--nav-active, #93c5fd); background: transparent; font-weight: 600; }
 .links .link:focus-visible { outline: 2px solid var(--nav-active, #93c5fd); outline-offset: 2px; }
-.select { display: none; min-width: 0; max-width: 100%; min-height: 40px; padding: 6px 24px 6px 0; background: transparent; color: var(--nav-text, #e2e8f0); font-size: 14px; border: 0; color-scheme: dark; }
+.select { display: none; min-width: 0; max-width: 100%; min-height: 40px; padding: 6px 24px 6px 0; background: transparent; color: var(--nav-text, #e2e8f0); font-size: 14px; border: 0; color-scheme: var(--nav-scheme, light); }
 .select option { background: var(--nav-bg, #11191f); color: var(--nav-text, #e2e8f0); }
 .link [data-inline-navigation-pending] { color: var(--nav-active, #93c5fd); }
 @media(max-width: 1399px) { .links { display: none; } .select { display: block; } }
