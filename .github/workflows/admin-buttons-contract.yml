@@ -8,6 +8,7 @@ on:
       - 'src/components/**'
       - 'scripts/check-admin-buttons.mjs'
       - 'scripts/smoke-admin-buttons-browser.cjs'
+      - 'scripts/smoke-ti-board-preview-browser.cjs'
       - 'tests/browser/admin-buttons.fixture.tsx'
       - 'package*.json'
       - '.github/workflows/admin-buttons-contract.yml'
@@ -28,10 +29,11 @@ jobs:
       - run: >-
           npx eslint src/domains/shared/ui/admin-design-contract/AdminButton.tsx
           src/domains/shared/ui/admin-design-contract/AdminButtonSurface.ts
-          scripts/check-admin-buttons.mjs scripts/smoke-admin-buttons-browser.cjs
+          scripts/check-admin-buttons.mjs scripts/smoke-admin-buttons-browser.cjs scripts/smoke-ti-board-preview-browser.cjs
           tests/browser/admin-buttons.fixture.tsx
       - run: npx prisma generate --generator client
       - run: npx tsc --noEmit
       - run: npm install --no-save --package-lock=false playwright@1.56.1
       - run: npx playwright install --with-deps chromium
       - run: node scripts/smoke-admin-buttons-browser.cjs
+      - run: node scripts/smoke-ti-board-preview-browser.cjs
