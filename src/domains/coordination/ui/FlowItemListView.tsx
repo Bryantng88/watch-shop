@@ -1,4 +1,5 @@
 "use client";
+import { AdminLoadingStatus } from "@/domains/shared/ui/admin-design-contract/AdminLoadingStatus";
 import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminMoney } from "@/domains/shared/ui/admin-design-contract/AdminMoney";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -1092,7 +1093,7 @@ export default function FlowItemListView({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {isCompact && (pending || !visibleItems.length) && <tr><td colSpan={columnCount} className="py-6 text-center text-sm text-slate-500" role="status">{pending ? "Đang tải công việc…" : "Không có công việc phù hợp với bộ lọc hiện tại."}</td></tr>}
+            {isCompact && (pending || !visibleItems.length) && <tr><td colSpan={columnCount} className="py-6 text-center text-sm text-slate-500">{pending ? <AdminLoadingStatus>Đang tải danh sách…</AdminLoadingStatus> : "Không có mục phù hợp với bộ lọc hiện tại."}</td></tr>}
             {!pending && visibleItems.map((item) => {
               const stage = stageByKey.get(normalize(item.flowStageKey));
               const checked = selectedIds.includes(item.id);
@@ -1717,8 +1718,8 @@ export default function FlowItemListView({
           void onReloadRequested?.();
         }}
       />
-      {pending ? <div className="px-5 py-12 text-center text-sm text-slate-500">Đang tải danh sách item...</div> : null}
-      {!pending && !visibleItems.length ? (
+      {!isCompact && pending ? <div className="px-5 py-12 text-center text-sm text-slate-500"><AdminLoadingStatus>Đang tải danh sách…</AdminLoadingStatus></div> : null}
+      {!isCompact && !pending && !visibleItems.length ? (
         <div className="flex flex-col items-center px-5 py-14 text-center">
           <CheckCircle2 className="h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-semibold text-slate-700">Không có item phù hợp</p>

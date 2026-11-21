@@ -7,11 +7,12 @@ import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "@/domains/sha
 import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeedback";
 import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
+import { AdminLoadingStatus } from "@/domains/shared/ui/admin-design-contract/AdminLoadingStatus";
 import { WebsiteImagePicker } from "../media/WebsiteImagePicker";
 import { WEBSITE_IMAGE_FOLDERS, websiteImageUrl, type WebsiteFolder } from "../media/website-media";
 import { ADMIN_UI_FOUNDATION as foundation } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
-import { type CSSProperties, useCallback, useEffect, useId, useRef, useState } from "react";
-import {AdminPageCanvas,AdminPageHeader,AdminDocumentFooter} from "@/domains/shared/ui/admin-design-contract";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {AdminPageCanvas,AdminPageHeader,AdminFlatToolbar} from "@/domains/shared/ui/admin-design-contract";
 import {useUiMutation} from "@/domains/shared/ui/mutation/use-ui-mutation";
 import {AsyncActionButton} from "@/domains/shared/ui/mutation/AsyncActionButton";
 import {useAppDialog} from "@/domains/shared/feedback/AppDialogProvider";
@@ -42,7 +43,7 @@ const names = {
 };
 type HomeSectionId = HomeContent["sections"][number]["id"];
 function HomeSection({id,title,homeOnly,active,children,actions}:{id:HomeSectionId;title:string;homeOnly:boolean;active:HomeSectionId;children:React.ReactNode;actions?:React.ReactNode}){
- return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><AdminWorkspaceHeadingRow><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{actions&&<div className="sfc-heading-links">{actions}</div>}</AdminWorkspaceHeadingRow>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><AdminDisclosureSummary>{title}</AdminDisclosureSummary>{children}</details>;
+ return homeOnly?<section id={`home-editor-${id}`} hidden={active!==id} data-admin-pane="content" className="sfc-section-editor" aria-label={title}><AdminWorkspaceHeadingRow><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{actions&&active===id&&<div className="sfc-heading-links">{actions}</div>}</AdminWorkspaceHeadingRow>{children}</section>:<details id={`home-editor-${id}`} className="sfc-card" open={active===id}><AdminDisclosureSummary>{title}</AdminDisclosureSummary>{children}</details>;
 }
 async function jsonRequest<T = { record: ContentRecord; articles: ArticleItem[]; items: LibraryImage[]; item: LibraryImage; truncated?: boolean }>(url: string, init?: RequestInit): Promise<T> {
   const fallback = "Không thể tải hoặc lưu dữ liệu website. Vui lòng thử lại.";
@@ -437,6 +438,53 @@ export default function StorefrontManager({
     edit({ ...home, sections });
   }
   const websiteLinks = <><a href="/admin/storefront/media" target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Thư viện ảnh website ↗</a><a href={storefrontUrl} target="_blank" rel="noreferrer" className="text-xs text-slate-500 hover:text-slate-950">Mở website ↗</a></>;
+  const documentActions = record ? <div className="sfc-document-actions" role="group" aria-label="Thao tác tài liệu">
+            {!homeOnly && <h2 className="text-sm font-semibold">{record.kind === "HOME" ? "Trang chủ" : article?.title}</h2>}
+            {needsReload&&<AdminButton variant="quiet" type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</AdminButton>}
+            <div className="sfc-actions">
+              <PageEditingState dirty={dirty} saving={busy && pendingAction === "save"} uploading={uploading} />
+              <details className="text-xs text-slate-500">
+                <AdminDisclosureSummary className="cursor-pointer py-2">{record.publishedAt ? "Đã xuất bản" : "Chưa xuất bản"}</AdminDisclosureSummary>
+                <span className="block py-2 tabular-nums">Phiên bản {record.revision}{record.publishedAt ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}` : ""}</span>
+              </details>
+              <AsyncActionButton variant="quiet" type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
+                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
+                Lưu nháp
+              </AsyncActionButton>
+              <AsyncActionButton variant="quiet"
+                type="button"
+                pending={busy&&pendingAction==="preview"}
+                pendingLabel="Đang mở…"
+                disabled={busy || uploading}
+                onClick={() => void save("save", true)}
+              >
+                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
+                Xem trước
+              </AsyncActionButton>
+              <AsyncActionButton variant="primary"
+                type="button"
+                className="primary"
+                pending={busy&&pendingAction==="publish"}
+                pendingLabel="Đang xuất bản…"
+                disabled={busy || uploading}
+                onClick={() => void save("publish")}
+              >
+                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
+                Xuất bản
+              </AsyncActionButton>
+              {record.publishedAt && !homeOnly ? (
+                <AdminButton variant="quiet"
+                  type="button"
+                  disabled={busy || uploading}
+                  onClick={() => {
+                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
+                  }}
+                >
+                  Gỡ xuất bản
+                </AdminButton>
+              ) : null}
+            </div>
+          </div> : null;
   return (
     <AdminPageCanvas className={`sfc ${homeOnly?"sfc-home":""}`}>
       <AdminPageHeader variant={homeOnly ? "workspace" : "default"} eyebrow={homeOnly ? undefined : "Website"} title={homeOnly?"Trang chủ website":"Quản lý website"} description={homeOnly?"Chọn khối để chỉnh sửa nội dung trang chủ.":"Quản lý nội dung và hình ảnh website."} meta={homeOnly ? undefined : websiteLinks}/>
@@ -505,11 +553,12 @@ export default function StorefrontManager({
         </section>
       ) : null}
       {loading ? (
-        <p role="status">Đang tải nội dung…</p>
+        <div className="py-4"><AdminLoadingStatus>Đang tải nội dung website…</AdminLoadingStatus></div>
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
 
-          <fieldset ref={splitRef} data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={home&&homeOnly?{...ADMIN_SPLIT_WORKSPACE_STYLE,...pane.style,"--sfc-editor-max":`${foundation.page.formMaxWidth}px`} as CSSProperties:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout} ${resize.layout}`:""}`}>
+          {!homeOnly && <AdminFlatToolbar variant="actions" className="sfc-document-actions">{documentActions}</AdminFlatToolbar>}
+          <fieldset ref={splitRef} data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing} style={home&&homeOnly?{...ADMIN_SPLIT_WORKSPACE_STYLE,...pane.style}:undefined} disabled={busy || uploading} className={`sfc-editor ${home&&homeOnly?`sfc-home-layout ${split.layout} ${resize.layout}`:""}`}>
             {home ? (
               <>
                 <section data-admin-pane="sidebar" className="sfc-section-nav" aria-label="Các khối trang chủ">
@@ -574,7 +623,7 @@ export default function StorefrontManager({
                   </div>
                 </section>
                 {homeOnly&&<div {...pane.separatorProps} aria-label="Điều chỉnh độ rộng menu trang chủ website" className={resize.separator} />}
-                <HomeSection id="hero" title="Ảnh mở đầu — Hero" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
+                <HomeSection id="hero" title="Ảnh mở đầu — Hero" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   <label className="sfc-field">
                     <span>Tông màu khối mở đầu</span>
                     <select
@@ -652,7 +701,7 @@ export default function StorefrontManager({
                     />
                   </div>
                 </HomeSection>
-                <HomeSection id="featured" title="Đồng hồ nổi bật" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
+                <HomeSection id="featured" title="Đồng hồ nổi bật" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   <Field
                     label="Tiêu đề khối"
                     value={home.featured.title}
@@ -677,7 +726,7 @@ export default function StorefrontManager({
                     }
                   />
                 </HomeSection>
-                <HomeSection id="about" title="Về Vintic" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
+                <HomeSection id="about" title="Về Vintic" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   <Field
                     label="Tiêu đề"
                     value={home.about.title}
@@ -698,7 +747,7 @@ export default function StorefrontManager({
                     onChange={(image) => edit({ ...home, about: { ...home.about, image } })}
                   />
                 </HomeSection>
-                <HomeSection id="collections" title="Bộ sưu tập theo phong cách" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
+                <HomeSection id="collections" title="Bộ sưu tập theo phong cách" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   {home.collections.map((collection, i) => (
                     <section className="sfc-collection" key={collection.id}>
                       <div className="sfc-row">
@@ -775,7 +824,7 @@ export default function StorefrontManager({
                     + Thêm nhóm
                   </AdminButton>
                 </HomeSection>
-                <HomeSection id="journal" title="Chuyện đồng hồ trên Home" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
+                <HomeSection id="journal" title="Chuyện đồng hồ trên Home" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   <Field
                     label="Tên khối"
                     value={home.journal.title}
@@ -809,7 +858,7 @@ export default function StorefrontManager({
                     dung công khai.
                   </p>
                 </HomeSection>
-                <HomeSection id="closing" title="Lời mời khám phá" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? websiteLinks : undefined}>
+                <HomeSection id="closing" title="Lời mời khám phá" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   {(
                     [
                       ["title", "Tiêu đề"],
@@ -1005,53 +1054,7 @@ export default function StorefrontManager({
               </section>
             ) : null}
           </fieldset>
-          <AdminDocumentFooter className="sfc-document-actions">
-            {!homeOnly && <h2 className="text-sm font-semibold">{record.kind === "HOME" ? "Trang chủ" : article?.title}</h2>}
-            {needsReload&&<AdminButton variant="secondary" type="button" disabled={busy||uploading} onClick={()=>{void (async()=>{if(!dirty||await dialog.confirm({title:"Tải lại bản mới?",message:"Thay đổi chưa lưu sẽ bị bỏ. Chọn Ở lại để giữ nội dung và thử lưu lại.",confirmText:"Tải lại",cancelText:"Ở lại"}))void load(record.id);})();}}>Tải lại bản mới</AdminButton>}
-            <div className="sfc-actions">
-              <PageEditingState dirty={dirty} saving={busy && pendingAction === "save"} uploading={uploading} />
-              <details className="text-xs text-slate-500">
-                <AdminDisclosureSummary className="cursor-pointer py-2">{record.publishedAt ? "Đã xuất bản" : "Chưa xuất bản"}</AdminDisclosureSummary>
-                <span className="block py-2 tabular-nums">Phiên bản {record.revision}{record.publishedAt ? ` · Xuất bản ${new Date(record.publishedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}` : ""}</span>
-              </details>
-              <AsyncActionButton variant="secondary" type="button" pending={busy&&pendingAction==="save"} pendingLabel="Đang lưu…" disabled={busy || uploading} onClick={() => void save("save")}>
-                <Save size={16} strokeWidth={1.75} aria-hidden="true" />
-                Lưu nháp
-              </AsyncActionButton>
-              <AsyncActionButton variant="secondary"
-                type="button"
-                pending={busy&&pendingAction==="preview"}
-                pendingLabel="Đang mở…"
-                disabled={busy || uploading}
-                onClick={() => void save("save", true)}
-              >
-                <Eye size={16} strokeWidth={1.75} aria-hidden="true" />
-                Xem trước
-              </AsyncActionButton>
-              <AsyncActionButton variant="primary"
-                type="button"
-                className="primary"
-                pending={busy&&pendingAction==="publish"}
-                pendingLabel="Đang xuất bản…"
-                disabled={busy || uploading}
-                onClick={() => void save("publish")}
-              >
-                <Globe size={16} strokeWidth={1.75} aria-hidden="true" />
-                Xuất bản
-              </AsyncActionButton>
-              {record.publishedAt && !homeOnly ? (
-                <AdminButton variant="secondary"
-                  type="button"
-                  disabled={busy || uploading}
-                  onClick={() => {
-                    void (async()=>{if(await dialog.confirm({title:"Gỡ xuất bản?",message:"Nội dung đang công khai sẽ bị gỡ. Bản nháp được giữ.",confirmText:"Gỡ xuất bản",cancelText:"Hủy",tone:"danger"}))void save("unpublish");})();
-                  }}
-                >
-                  Gỡ xuất bản
-                </AdminButton>
-              ) : null}
-            </div>
-          </AdminDocumentFooter>
+
         </>
       ) : null}
       {preview ? (

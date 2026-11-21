@@ -1530,4 +1530,9 @@ chừa thêm 24px mỗi mép khi viewport từ 1280px. Trang vẫn giữ padding
 không áp khoảng đệm này cho workspace kỹ thuật viên chuyên biệt.
 Trình sửa trang chủ website dùng shared split workspace và resize grip như các
 khu vực khác. Liên kết thư viện/mở website nằm cùng hàng tiêu đề khối đang sửa;
-form giới hạn theo `page.formMaxWidth`, giữ nguyên draft khi đổi khối/thu menu.
+form giãn theo vùng nội dung trong workspace chung, giữ nguyên draft khi đổi khối/thu menu.
+
+Trang chủ website đặt trạng thái và các lệnh Lưu nháp / Xem trước / Xuất bản
+cùng hàng tiêu đề khối đang sửa; không thêm hàng toolbar hoặc footer riêng.
+Các trạng thái tải dùng `AdminLoadingStatus`: icon nhỏ, chữ dịu và tôn trọng
+reduced motion. Danh sách chỉ hiển thị một trạng thái tải hoặc rỗng.

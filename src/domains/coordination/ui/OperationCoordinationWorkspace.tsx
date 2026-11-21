@@ -4015,45 +4015,6 @@ function technicalIssuePriorityWeight(value?: string | null) {
   return technicalIssuePriorityValue(value) === "URGENT" ? 0 : 1;
 }
 
-function technicalBoardAreaAccent(area?: string | null) {
-  const normalized = String(area ?? "").toUpperCase();
-
-  if (normalized === "MOVEMENT") {
-    return {
-      bar: "bg-blue-500",
-      header: "border-blue-100 bg-gradient-to-r from-blue-50 via-blue-50/55 to-white",
-      chip: "border-blue-100 bg-blue-50 text-blue-700",
-    };
-  }
-  if (normalized === "CASE") {
-    return {
-      bar: "bg-amber-500",
-      header: "border-amber-100 bg-gradient-to-r from-amber-50 via-amber-50/55 to-white",
-      chip: "border-amber-200 bg-amber-50 text-amber-700",
-    };
-  }
-  if (normalized === "CRYSTAL") {
-    return {
-      bar: "bg-indigo-500",
-      header: "border-indigo-100 bg-gradient-to-r from-indigo-50 via-indigo-50/55 to-white",
-      chip: "border-indigo-100 bg-indigo-50 text-indigo-700",
-    };
-  }
-  if (normalized === "BRACELET" || normalized === "STRAP") {
-    return {
-      bar: "bg-teal-500",
-      header: "border-teal-100 bg-gradient-to-r from-teal-50 via-teal-50/55 to-white",
-      chip: "border-teal-100 bg-teal-50 text-teal-700",
-    };
-  }
-
-  return {
-    bar: "bg-slate-400",
-    header: "border-slate-100 bg-gradient-to-r from-slate-100/90 via-slate-50/60 to-white",
-    chip: "border-slate-200 bg-slate-50 text-slate-700",
-  };
-}
-
 function technicalBoardItemTimeValue(item: TechnicalIssueBoardItem) {
   const raw = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
   return Number.isFinite(raw) ? raw : 0;
@@ -4366,7 +4327,6 @@ function TechnicalIssueBoardCard({
   const imageSrc = resolveMediaPreviewSrc(item.serviceRequest.imageUrl);
   const isUrgent = technicalIssuePriorityValue(item.priority) === "URGENT";
   const isCustomerOrder = item.requestOrigin === "CUSTOMER_ORDER";
-  const accent = technicalBoardAreaAccent(item.area);
   const lastUpdatedBy = item.lastUpdatedBy;
   const lastUpdatedAvatarSrc = resolveMediaPreviewSrc(lastUpdatedBy.avatarUrl);
   const updatedToday = isTodayInVietnam(item.updatedAt);
@@ -4374,10 +4334,10 @@ function TechnicalIssueBoardCard({
   return (
     <div
       className={cn(
-        "relative w-full min-w-0 max-w-full overflow-hidden rounded-xl border shadow-[0_4px_10px_rgba(15,23,42,0.08)] transition hover:shadow-[0_7px_16px_rgba(15,23,42,0.12)]",
+        "relative w-full min-w-0 max-w-full overflow-hidden rounded-lg border transition-colors",
         isCustomerOrder
-          ? "border-amber-300 bg-amber-50/70 hover:border-amber-400"
-          : "border-slate-200 bg-white hover:border-violet-200",
+          ? "border-amber-300 bg-white hover:bg-blue-50/50"
+          : "border-slate-200 bg-white hover:bg-blue-50/50",
         isUrgent && "border-rose-200 ring-1 ring-rose-100",
         dragging && "shadow-xl ring-2 ring-violet-200",
       )}
@@ -4388,13 +4348,13 @@ function TechnicalIssueBoardCard({
         className="absolute inset-0 z-10 rounded-xl"
         aria-label={`Xem nhanh TI ${item.summary}`}
       />
-      <div className={cn("h-1", accent.bar)} />
+
       {isUrgent ? (
         <div className="pointer-events-none absolute -left-8 top-3 z-10 w-24 -rotate-45 bg-rose-500/70 py-0.5 text-center text-[9px] font-black uppercase tracking-wide text-white/85 shadow-sm">
           Gấp
         </div>
       ) : null}
-      <div className={cn("flex items-start gap-2 border-b px-2.5 py-2.5", accent.header)}>
+      <div className="flex items-center gap-2 px-2.5 pt-2.5">
         <div style={{ width: F.thumbnail.row, height: F.thumbnail.row }} className="grid shrink-0 place-items-center overflow-hidden rounded-md bg-slate-100">
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -4434,14 +4394,14 @@ function TechnicalIssueBoardCard({
             </span>
           ) : null}
           {onTogglePriority ? (
-            <AdminButton iconOnly variant="secondary" density="compact"
+            <AdminButton iconOnly variant="quiet" density="compact"
               type="button"
               disabled={priorityPending}
               onClick={() => onTogglePriority(item)}
               title={isUrgent ? "Bỏ gấp" : "Đánh dấu gấp"}
               aria-label={isUrgent ? "Bỏ gấp" : "Đánh dấu gấp"}
               className={cn(
-                "inline-flex h-6 w-6 items-center justify-center rounded-md border bg-white transition disabled:cursor-wait disabled:opacity-60",
+                "inline-flex h-6 w-6 items-center justify-center rounded transition disabled:cursor-wait disabled:opacity-60",
                 isUrgent
                   ? "border-rose-200 text-rose-600 hover:bg-rose-50"
                   : "border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-rose-600",
@@ -4454,7 +4414,7 @@ function TechnicalIssueBoardCard({
             <AdminButton iconOnly variant="contextual" density="compact"
               type="button"
               {...dragHandleProps}
-              className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700 active:cursor-grabbing"
+              className="inline-flex h-6 w-6 cursor-grab items-center justify-center rounded text-slate-400 transition hover:bg-blue-50 hover:text-slate-700 active:cursor-grabbing"
               aria-label="Kéo TI"
             >
               <GripVertical className="h-3.5 w-3.5" aria-hidden="true" />
@@ -4462,29 +4422,24 @@ function TechnicalIssueBoardCard({
           ) : null}
         </div>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5 px-2.5 pt-2">
+      <div className="flex min-w-0 items-center gap-1.5 px-2.5 pt-1.5 text-xs">
         {isCustomerOrder ? (
           <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
             <Receipt className="h-3 w-3" aria-hidden="true" />
             Đơn khách
           </span>
         ) : null}
-        <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", accent.chip)}>
+        <span className="shrink-0 text-xs text-slate-600">
           {technicalAreaLabel(item.area)}
         </span>
         {item.actionMode ? (
-          <span className="max-w-full truncate rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+          <span className="min-w-0 truncate text-xs text-slate-500">
             {technicalOwnerLabel(item.actionMode, item.vendorName)}
           </span>
         ) : null}
+        {item.processingDetails.length > 0 && <span className="min-w-0 truncate text-xs text-slate-500" title={`Xử lý: ${item.processingDetails.join(" · ")}`}>· {item.processingDetails.join(" · ")}</span>}
       </div>
-      {item.processingDetails.length ? (
-        <div className="px-2.5 pt-2 text-xs leading-5 text-slate-600">
-          <span className="font-semibold text-slate-800">Xử lý:</span>{" "}
-          {item.processingDetails.join(" · ")}
-        </div>
-      ) : null}
-      <div className="flex min-w-0 items-center justify-between gap-2 px-2.5 py-2 text-xs">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-1 px-2.5 pb-2 pt-1.5 text-xs">
         <div className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
@@ -4499,8 +4454,8 @@ function TechnicalIssueBoardCard({
               initials(lastUpdatedBy.label)
             )}
           </span>
-          <div className="min-w-0 leading-tight">
-            <div className="truncate font-semibold text-slate-800">{lastUpdatedBy.label}</div>
+          <div className="flex min-w-0 items-center gap-1.5 leading-tight">
+            <div className="truncate text-slate-600">{lastUpdatedBy.label}</div>
             <div
               className={cn(
                 "truncate text-[11px]",
@@ -4513,7 +4468,7 @@ function TechnicalIssueBoardCard({
             </div>
           </div>
         </div>
-        <div className="flex min-w-0 max-w-[58%] items-center justify-end gap-2 text-right">
+        <div className="flex min-w-0 max-w-full items-center justify-end gap-2 text-right">
           {item.expectedCompletionAt && item.stage === "DONE" && item.completedAt ? (
             <span
               className={cn(
@@ -4546,12 +4501,12 @@ function TechnicalIssueBoardCard({
               {item.expectedWorkingDays ? ` · ${item.expectedWorkingDays} ngày` : ""}
             </span>
           ) : null}
-          <span className="min-w-0 truncate font-semibold text-slate-800">
+          <span className="min-w-0 truncate text-slate-600">
             {item.actualCost != null
               ? formatMoneyCompact(item.actualCost)
               : item.estimatedCost != null
                 ? `Dự kiến ${formatMoneyCompact(item.estimatedCost)}`
-                : "Chưa có chi phí"}
+                : "—"}
           </span>
         </div>
       </div>

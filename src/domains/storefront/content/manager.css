@@ -570,12 +570,12 @@
 .sfc-home > header { margin-bottom: 0; }
 
 
-/* The document footer owns global save/preview/publish commands. */
+/* Document commands sit beside the active section heading. */
 .sfc-document-actions .sfc-actions { margin-left: auto; justify-content: flex-end; align-items: center; }
 .sfc-document-actions > h2 { margin-right: auto; }
 
 /* Home editor uses the same workspace rhythm as the regional admin pages. */
-.sfc-home .sfc-section-editor { width: 100%; max-width: var(--sfc-editor-max); }
+.sfc-home .sfc-section-editor { width: 100%; }
 .sfc-heading-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; margin-left: auto; }
 .sfc-home .sfc-section-row .sfc-section-select { font-size: var(--admin-nav-size, 13px); line-height: 20px; }
 .sfc-home .sfc-section-row:hover { background: var(--am-selected, #eff6ff); }

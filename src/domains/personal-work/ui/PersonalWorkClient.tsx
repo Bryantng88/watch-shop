@@ -46,7 +46,6 @@ import {
 import { useAppDialog } from "@/domains/shared/feedback";
 import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
-  AdminFlatToolbar,
   AdminPageCanvas,
   ProgressMetric,
   AdminViewTabs,
@@ -514,9 +513,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             onValueChange={value => setWorkType(value === "EVENT" ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
             className="mb-2 max-w-48"
           />
-          <AdminFlatToolbar
-            className={createStyles.toolbar}
-          >
+          <div className={createStyles.toolbar}>
             <input
               required
               value={title}
@@ -556,7 +553,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             >
               {creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </AdminButton>
-          </AdminFlatToolbar>
+          </div>
           <details className="mt-2 text-sm">
             <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</AdminDisclosureSummary>
             <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
@@ -680,7 +677,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             className="flex w-full items-start justify-between gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
           >
             <div className="flex gap-3">
-              <span className="rounded-lg bg-white p-2 text-blue-600 shadow-sm">
+              <span className="pt-0.5 text-blue-600">
                 <CalendarDays className="h-5 w-5" />
               </span>
               <div>
@@ -703,7 +700,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               />
             </div>
           </AdminButton>
-          <AsyncActionButton variant="secondary"
+          <AsyncActionButton variant="quiet"
             pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
             title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
             pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
@@ -716,7 +713,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     window.location.assign(result.url);
                   })
             }
-            className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-50 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:text-slate-400"
+            className="mt-3 inline-flex items-center gap-2 text-xs text-slate-500 disabled:cursor-not-allowed"
           >
             {data.calendar.connected && !calendar.reconnectRequired ? (
               <>
@@ -757,32 +754,32 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <AdminButton variant="secondary"
+                <AdminButton iconOnly variant="quiet" density="compact"
                   type="button"
                   onClick={() => setCalendarCursor((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}
                   aria-label="Tháng trước"
-                  className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+                  className="text-slate-500"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </AdminButton>
                 <p className="min-w-32 text-center text-sm font-semibold capitalize text-slate-800">
                   {new Intl.DateTimeFormat("vi-VN", { month: "long", year: "numeric" }).format(calendarCursor)}
                 </p>
-                <AdminButton variant="secondary"
+                <AdminButton iconOnly variant="quiet" density="compact"
                   type="button"
                   onClick={() => setCalendarCursor((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}
                   aria-label="Tháng sau"
-                  className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+                  className="text-slate-500"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </AdminButton>
-                <AdminButton variant="secondary" density="compact"
+                <AdminButton variant="quiet" density="compact"
                   type="button"
                   onClick={() => {
                     const date = new Date();
                     setCalendarCursor(new Date(date.getFullYear(), date.getMonth(), 1));
                   }}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  className="text-xs text-slate-600"
                 >
                   Hôm nay
                 </AdminButton>
@@ -892,7 +889,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                               );
                             })}
                             {dayEvents.length > 3 && (
-                              <AdminButton variant="secondary" density="compact" type="button" aria-label={`Xem tất cả ${dayEvents.length} lịch ngày ${key}`} onClick={(event) => {event.stopPropagation();setSelectedDay(key);}} className="rounded px-1 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">+{dayEvents.length - 3} lịch</AdminButton>
+                              <AdminButton variant="quiet" density="compact" type="button" aria-label={`Xem tất cả ${dayEvents.length} lịch ngày ${key}`} onClick={(event) => {event.stopPropagation();setSelectedDay(key);}} className="rounded px-1 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500">+{dayEvents.length - 3} lịch</AdminButton>
                             )}
                           </div>
                         </div>
