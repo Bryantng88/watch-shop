@@ -47,7 +47,7 @@ export function DashboardPanel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+    <section data-report-part="panel" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
       <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
         <div>
           <h2 className="text-base font-bold text-slate-950">{title}</h2>
@@ -71,10 +71,10 @@ export function PipelineList({ items }: { items: DashboardPipelineItem[] }) {
     <div className="space-y-3">
       {items.map((item) => {
         const row = (
-          <div className="flex items-center justify-between gap-4 rounded-2xl px-3 py-2.5 transition hover:bg-slate-50">
+          <div data-report-part="row" className="flex items-center justify-between gap-4 rounded-2xl px-3 py-2.5 transition hover:bg-slate-50">
             <div className="flex min-w-0 items-center gap-3">
               <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", dotTone[item.tone ?? "slate"])} />
-              <span className="truncate text-sm font-medium text-slate-700">{item.label}</span>
+              <span className="truncate text-sm font-medium text-slate-700">{({Draft:"Nháp",Processing:"Đang xử lý",Ready:"Sẵn sàng",Hold:"Giữ hàng",Sold:"Đã bán",Posted:"Đã nhập kho",Canceled:"Đã huỷ"} as Record<string,string>)[item.label]??item.label}</span>
             </div>
 
             <div className="flex items-center gap-2">
@@ -99,10 +99,10 @@ export function ActionList({ items }: { items: DashboardActionItem[] }) {
     <div className="space-y-3">
       {items.map((item) => {
         const row = (
-          <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition hover:border-slate-200 hover:bg-white">
+          <div data-report-part="action" className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 transition hover:border-slate-200 hover:bg-white">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold text-slate-900">{item.label}</div>
+                <div className="text-sm font-semibold text-slate-900">{({Draft:"Nháp",Processing:"Đang xử lý",Ready:"Sẵn sàng",Hold:"Giữ hàng",Sold:"Đã bán",Posted:"Đã nhập kho",Canceled:"Đã huỷ"} as Record<string,string>)[item.label]??item.label}</div>
                 {item.helper ? <div className="mt-1 text-xs text-slate-500">{item.helper}</div> : null}
               </div>
 

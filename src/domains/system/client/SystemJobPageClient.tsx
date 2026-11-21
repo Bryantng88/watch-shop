@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -454,9 +456,9 @@ export default function SystemJobPageClient({
             <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
+                        <AdminPageHeading className="text-3xl font-semibold tracking-tight text-slate-950">
                             System Jobs
-                        </h1>
+                        </AdminPageHeading>
                         <p className="mt-1 text-sm text-slate-500">
                             Quản lý processor chạy nền, backlog và lịch sử vận hành.
                         </p>

@@ -1,3 +1,4 @@
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
 import { redirect } from "next/navigation";
 
@@ -11,7 +12,7 @@ export default async function ProfilePage() {
         <div className="max-w-4xl space-y-6">
             {/* Page header */}
             <div>
-                <h1 className="text-2xl font-semibold">Profile</h1>
+                <AdminPageHeading className="text-2xl font-semibold">Profile</AdminPageHeading>
                 <p className="text-sm text-gray-500">
                     Quản lý thông tin tài khoản của bạn
                 </p>

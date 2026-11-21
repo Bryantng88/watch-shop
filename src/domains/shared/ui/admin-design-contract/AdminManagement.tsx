@@ -14,7 +14,7 @@ export function AdminManagementPage({ title, eyebrow, description, actions, chil
     "--am-line": f.colors.divider, "--am-border": f.colors.controlBorder, "--am-soft": f.colors.softSurface,
     "--am-ring": f.colors.focusRing, "--am-primary": f.colors.primary, "--am-hover": f.colors.primaryHover,
     "--am-error": f.colors.danger, "--am-link": f.colors.link, "--am-canvas": f.colors.canvas,
-    "--am-selected": f.colors.focusSurface,
+    "--am-selected": f.colors.focusSurface, "--am-row-hover": f.colors.rowHover,
     "--am-radius": `${f.radius.control}px`, "--am-control": `${f.controls.height}px`,
     "--am-touch": `${f.controls.touchMinHeight}px`, "--am-section": `${f.spacing.section}px`,
   } as CSSProperties;

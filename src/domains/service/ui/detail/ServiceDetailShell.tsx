@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import * as React from "react";
 import {
@@ -124,7 +126,7 @@ export function ServiceDetailHero({
     <div className="space-y-4">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950">Service Request Detail</h1>
+          <AdminPageHeading className="text-2xl font-semibold tracking-tight text-slate-950">Service Request Detail</AdminPageHeading>
           <p className="mt-1 text-sm text-slate-500">{sr.refNo || sr.id}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

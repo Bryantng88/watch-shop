@@ -2,15 +2,17 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ArrowLeft, Bell, Search, LogOut } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
 import type { AdminNotificationItem } from "../__hooks/useNotifications";
 import { useAdminNavigationHistory } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
+import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 
 type AdminTopbarProps = {
+    navigation?: ReactNode;
     title?: string;
     user?: {
         name?: string | null;
@@ -61,6 +63,7 @@ function formatRelativeTime(input: string) {
 
 export default function AdminTopbar({
     title = "Admin",
+    navigation,
     user,
 }: AdminTopbarProps) {
     const [loading, setLoading] = useState(false);
@@ -93,8 +96,8 @@ export default function AdminTopbar({
     const notifyItems = useMemo(() => items.slice(0, 6), [items]);
 
     return (
-        <header className="sticky top-0 z-40 shrink-0 border-b bg-white">
-            <div className="mx-auto flex items-center gap-3 px-4 py-3">
+        <header className="sticky top-0 z-40 shrink-0 bg-slate-50">
+            <div className="mx-auto flex items-center gap-3 px-4 py-3" style={{ maxWidth: ADMIN_UI_FOUNDATION.page.workspaceMaxWidth }}>
                 {canGoBack ? (
                     <AdminButton variant="secondary" density="compact"
                         type="button"
@@ -106,13 +109,14 @@ export default function AdminTopbar({
                         <span className="hidden sm:inline">Quay lại</span>
                     </AdminButton>
                 ) : null}
-                <h1 className="text-lg font-semibold">{title}</h1>
+                <h1 className={navigation ? "sr-only" : "min-w-0 truncate text-lg font-semibold"} title={title}>{title}</h1>
+                {navigation}
 
                 <div className="ml-auto flex items-center gap-2">
                     <div className="relative hidden md:block">
                         <input
                             placeholder="Search…"
-                            className="w-64 rounded-md border px-3 py-1.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+                            className="w-40 rounded-md border bg-white px-3 py-1.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
                         />
                         <Search
                             size={16}
@@ -224,10 +228,11 @@ export default function AdminTopbar({
                     <div className="flex items-center gap-2 rounded-full border px-3 py-1">
                         <Link
                             href="/admin/profile"
+                            aria-label="Thông tin tài khoản"
                             className="flex items-center gap-2 hover:opacity-80"
                         >
                             <TopbarAvatar user={user} />
-                            <div className="flex flex-col leading-tight">
+                            <div className="hidden sm:flex sm:flex-col leading-tight">
                                 <span className="text-sm font-medium">
                                     {user?.name ?? "User"}
                                 </span>
@@ -239,11 +244,11 @@ export default function AdminTopbar({
                             </div>
                         </Link>
 
-                        <AdminButton variant="secondary" density="compact"
+                        <AdminButton variant="quiet" density="compact" aria-label="Đăng xuất" title="Đăng xuất"
                             onClick={handleLogout}
                             className="ml-2 inline-flex items-center gap-1 text-xs text-gray-600 hover:text-black"
                         >
-                            <LogOut size={14} /> Logout
+                            <LogOut size={14} /><span className="hidden sm:inline">Logout</span>
                         </AdminButton>
                     </div>
                 </div>

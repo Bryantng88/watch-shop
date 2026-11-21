@@ -164,7 +164,7 @@ export default function MediaPostCreateForm({
             </AdminButton>
           ))}
         </div>
-        <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={onCancel} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
+        <AdminButton iconOnly variant="quiet" density="compact" type="button" onClick={onCancel} className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
           <X className="h-4 w-4" />
         </AdminButton>
         </div>

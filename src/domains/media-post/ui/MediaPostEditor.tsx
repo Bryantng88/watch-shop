@@ -180,7 +180,7 @@ export default function MediaPostEditor({
         title="Content"
         subtitle="Soạn nội dung dùng chung trước khi phân phối sang từng kênh."
         right={
-          <AdminButton variant="primary" density="compact"
+          <AdminButton variant="secondary" density="compact"
             type="button"
             onClick={() => void saveContent()}
             disabled={contentSaving || !content.title.trim()}
@@ -219,7 +219,7 @@ export default function MediaPostEditor({
       <SectionCard
         title="Hình ảnh"
         subtitle="Chọn ảnh từ NAS và quản lý bộ media dành riêng cho bài post."
-        right={<div className="flex items-center gap-3"><div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><ImageIcon className="h-4 w-4 text-violet-600" />{selected.length} ảnh đã chọn</div><AdminButton variant="primary" density="compact" type="button" onClick={() => void saveMedia()} disabled={mediaSaving || !mediaDirty} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">{mediaSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : mediaSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{mediaSaving ? "Đang lưu" : mediaSaved ? "Đã lưu" : "Lưu hình ảnh"}</AdminButton></div>}
+        right={<div className="flex items-center gap-3"><div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500"><ImageIcon className="h-4 w-4 text-violet-600" />{selected.length} ảnh đã chọn</div><AdminButton variant="secondary" density="compact" type="button" onClick={() => void saveMedia()} disabled={mediaSaving || !mediaDirty} className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-950 px-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50">{mediaSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : mediaSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}{mediaSaving ? "Đang lưu" : mediaSaved ? "Đã lưu" : "Lưu hình ảnh"}</AdminButton></div>}
         contentClassName="p-5"
       >
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-100 bg-violet-50/60 px-4 py-3">
@@ -227,7 +227,7 @@ export default function MediaPostEditor({
             <div className="text-sm font-semibold text-slate-900">Sharp cho media bài post</div>
             <p className="mt-0.5 text-xs text-slate-500">Crop, zoom và cân chỉnh ảnh đã chọn trước khi lưu vào bộ media của bài post.</p>
           </div>
-          <AdminButton variant="primary" density="compact"
+          <AdminButton variant="quiet" density="compact"
             type="button"
             onClick={() => setSharpOpen(true)}
             disabled={chosen.length === 0 || mediaSaving}

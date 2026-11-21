@@ -70,7 +70,7 @@ export default function BuyBackWatchModal({
             </div>
           </div>
 
-          <AdminButton variant="secondary"
+          <AdminButton iconOnly density="compact" variant="quiet"
             type="button"
             onClick={onClose}
             disabled={submitting}

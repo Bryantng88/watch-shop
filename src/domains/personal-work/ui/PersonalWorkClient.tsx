@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
@@ -461,7 +463,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     <AdminPageCanvas className="min-w-0 !px-4 !py-3 sm:!px-6 sm:!py-5">
       {listOnly && <Link href="/admin/ben" className={`${listStyles.back} focus-visible:ring-2 focus-visible:ring-blue-300`}>← Trò chuyện với Ben</Link>}
       <header className={listStyles.header}>
-        <h1 className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</h1>
+        <AdminPageHeading className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</AdminPageHeading>
         <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
       </header>
 

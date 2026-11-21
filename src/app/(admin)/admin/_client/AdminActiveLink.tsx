@@ -7,9 +7,10 @@ import { createPortal } from "react-dom";
 
 export const cn = (...a: (string | false | undefined)[]) => a.filter(Boolean).join(" ");
 
-function NavigationFeedback({ label, expanded }: { label: string; expanded: boolean }) {
+function NavigationFeedback({ label, expanded, inline }: { label: string; expanded: boolean; inline: boolean }) {
     const { pending } = useLinkStatus();
     if (!pending) return null;
+    if (inline) return <span data-navigation-pending="true" data-inline-navigation-pending="true" className="pointer-events-none absolute left-0 top-1/2 flex h-[15px] w-[15px] -translate-y-1/2 items-center justify-center text-blue-600"><Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden="true"/><span role="status" className="sr-only">Đang mở {label}…</span></span>;
     return <>
         <span data-navigation-pending="true" aria-busy="true" className={cn(
             "absolute inset-0 flex items-center rounded-xl bg-slate-800 px-4 text-blue-200",
@@ -38,6 +39,7 @@ export default function ActiveLink({
     expanded = false,
     label,
     onNavigate,
+    feedback = "overlay",
 }: {
     href: string;
     children: React.ReactNode;
@@ -49,6 +51,7 @@ export default function ActiveLink({
     expanded?: boolean;
     label: string;
     onNavigate?: () => void;
+    feedback?: "overlay" | "inline";
 }) {
     const pathname = usePathname();
     const isActive = activePaths ? activePaths.some(path => pathname === path || pathname?.startsWith(`${path}/`)) : exact ? pathname === href : pathname?.startsWith(href);
@@ -72,7 +75,7 @@ export default function ActiveLink({
             )}
         >
             {children}
-            <NavigationFeedback label={label} expanded={expanded} />
+            <NavigationFeedback label={label} expanded={expanded} inline={feedback === "inline"} />
         </Link>
     );
 }

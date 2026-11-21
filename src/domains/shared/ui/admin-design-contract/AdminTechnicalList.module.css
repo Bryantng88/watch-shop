@@ -7,12 +7,12 @@
 .filters select { max-width: 100%; min-width: 0; min-height: var(--ti-control-height); padding: 8px 12px; border: 1px solid var(--admin-list-controlBorder); border-radius: var(--ti-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font: inherit; font-size: var(--admin-list-meta-size); }
 .table { min-width: 0; }
 .header, .row { display: grid; grid-template-columns: minmax(0, 2.4fr) minmax(144px, 1.05fr) minmax(136px, .9fr) minmax(120px, .8fr) 64px; gap: var(--ti-row-gap); align-items: center; }
-.header { min-height: 36px; border-bottom: 1px solid var(--admin-list-divider); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-weight: 500; }
+.header { background: var(--admin-list-softSurface); min-height: 36px; border-bottom: 1px solid var(--admin-list-divider); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-weight: 500; }
 .header > :first-child { padding-left: calc(var(--admin-list-thumbnail) + 12px); }
 .header > :nth-last-child(2) { text-align: right; }
 .header > :last-child { padding-left: 12px; }
 .row { grid-template-areas: "issue owner due cost action"; align-items: center; min-height: 72px; padding: var(--ti-row-padding) 0; border-bottom: 1px solid var(--admin-list-divider); }
-.row:hover, .row:focus-within { background: var(--admin-list-softSurface); }
+.row:hover, .row:focus-within { background: var(--admin-list-rowHover); }
 .focused, .row.focused:hover { background: var(--admin-list-focusSurface); }
 .row > div { min-width: 0; }
 .identity { grid-area: issue; position: relative; display: grid; grid-template-columns: var(--admin-list-thumbnail) minmax(0, 1fr); align-items: center; gap: 12px; min-width: 0; }

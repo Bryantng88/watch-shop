@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import Link from "next/link";
@@ -171,7 +173,7 @@ export default function ShipmentListClient({
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Shipments</h1>
+                <AdminPageHeading className="text-2xl font-semibold">Shipments</AdminPageHeading>
                 <Link
                     href="/admin/orders"
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"

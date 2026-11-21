@@ -47,7 +47,7 @@ export function AdminRowActionMenu({ label, status, actions, disabled = false, t
     };
   }, [open]);
   return <>
-    <AdminButton variant={iconOnly ? "quiet" : "secondary"} iconOnly={iconOnly} density="compact" title={iconOnly ? label : undefined} ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
+    <AdminButton variant={"quiet"} iconOnly={iconOnly} density="compact" title={iconOnly ? label : undefined} ref={trigger} type="button" className={triggerClassName ?? styles.rowAction} disabled={disabled} aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen(value => !value)} onKeyDown={event => {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setOpen(true); }
     }}>{!iconOnly && status}<ChevronDown size={F.icon.inline} aria-hidden="true" /></AdminButton>
     {open && createPortal(<div ref={menu} id={id} role="menu" aria-label={label} className={styles.actionMenu} style={{ ...ADMIN_OPERATION_LIST_STYLE, ...position, zIndex: F.layers.popover }} onKeyDown={event => {

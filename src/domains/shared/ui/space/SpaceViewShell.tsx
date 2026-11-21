@@ -1,3 +1,6 @@
+"use client";
+import { useAdminShellHeading } from "../admin-design-contract/AdminShellHeading";
+import headerStyles from "../admin-design-contract/AdminPageHeader.module.css";
 import type { ReactNode } from "react";
 import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { ADMIN_UI } from "@/domains/shared/ui/admin-design-contract";
@@ -55,6 +58,7 @@ export function SpaceViewPage({
   headerVariant = "default",
   children,
 }: SpaceViewPageProps) {
+  const shellHeading = useAdminShellHeading();
   const compactHeader = headerVariant === "compact";
   const workspaceHeader = headerVariant === "workspace";
 
@@ -62,11 +66,11 @@ export function SpaceViewPage({
     <main style={workspaceHeader ? { fontFamily: ADMIN_UI_FOUNDATION.fontFamily } : undefined} className={workspaceHeader ? `${ADMIN_OPERATION_PAGE_CLASS} min-w-0 bg-white px-4 py-3 font-sans text-slate-950 sm:px-6 sm:py-5` : `${ADMIN_OPERATION_PAGE_CLASS} bg-[#f6f7fb] px-3 py-5 text-[#111a3d] sm:px-4 lg:px-5 xl:px-6 2xl:px-8`}>
       <div className="mx-auto flex w-full max-w-none min-w-0 flex-col gap-4">
         {breadcrumbs}
-        <section
+        {shellHeading ? ((actions || status) ? <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">{status}{actions}</div> : null) : <section
           className={
             compactHeader
               ? "relative flex flex-col gap-4 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-white via-violet-50/20 to-violet-100/65 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] lg:flex-row lg:items-center lg:justify-between"
-              : "flex flex-col gap-4 pb-2 lg:flex-row lg:items-start lg:justify-between"
+              : `flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between ${workspaceHeader ? headerStyles.workspace : "pb-2"}`
           }
         >
           {compactHeader ? (
@@ -110,7 +114,7 @@ export function SpaceViewPage({
               {actions}
             </div>
           ) : null}
-        </section>
+        </section>}
         {children}
       </div>
     </main>

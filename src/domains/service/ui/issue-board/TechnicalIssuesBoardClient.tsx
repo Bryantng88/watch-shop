@@ -1,4 +1,5 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
@@ -443,7 +444,7 @@ export default function TechnicalIssueBoardClient({
       <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 2xl:flex-row 2xl:items-start 2xl:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-stone-950">{title}</h1>
+            <AdminPageHeading className="text-2xl font-semibold text-stone-950">{title}</AdminPageHeading>
             <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
           </div>
 

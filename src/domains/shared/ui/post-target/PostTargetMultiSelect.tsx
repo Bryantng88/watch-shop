@@ -63,7 +63,7 @@ export function PostTargetMultiSelect({
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {selectedGroups.length ? selectedGroups.map((group) => (
-          <AdminButton variant="secondary" key={group.key} type="button" onClick={() => toggle(group.key)} className="rounded-full" title="Bỏ chọn">
+          <AdminButton variant="quiet" key={group.key} type="button" onClick={() => toggle(group.key)} className="rounded-full" title="Bỏ chọn">
             <PostTargetChip trailing={<span className="text-slate-300">x</span>}>{group.name}</PostTargetChip>
           </AdminButton>
         )) : <div className="text-sm text-slate-400">Chưa chọn page/kênh đăng</div>}

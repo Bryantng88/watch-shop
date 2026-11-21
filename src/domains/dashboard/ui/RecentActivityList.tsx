@@ -38,7 +38,7 @@ export default function RecentActivityList({ items }: { items: DashboardRecentIt
     <div className="space-y-2">
       {items.map((item) => {
         const row = (
-          <div className="flex items-center justify-between gap-4 rounded-2xl px-3 py-3 transition hover:bg-slate-50">
+          <div data-report-part="row" className="flex items-center justify-between gap-4 rounded-2xl px-3 py-3 transition hover:bg-slate-50">
             <div className="flex min-w-0 items-center gap-3">
               <DomainSignalIcon title={labelFor(item.type)} icon={iconFor(item.type)} />
               <div className="min-w-0">

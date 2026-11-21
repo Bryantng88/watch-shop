@@ -1447,3 +1447,60 @@ Không thêm phân trang giả vào danh sách đang lọc toàn bộ local. TI 
 Danh sách TI căn giữa theo chiều dọc cho ảnh và các ô xử lý, thời hạn, chi phí,
 thao tác. Dùng icon quiet 32px (44px touch), không nhãn thường trực/viền/bóng;
 nhãn accessible và title giữ rõ thao tác. Menu giữ nguyên các lựa chọn và xác nhận.
+
+### Header bảng và công cụ trong form/modal
+
+Header bảng dùng softSurface rất nhạt và divider mảnh, không card/bóng.
+Trạng thái có menu dùng quiet, giữ chấm màu/chữ và chevron.
+Nền đóng modal dùng contextual để giữ nguyên overlay, không nhận diện mạo nút.
+Đóng/phóng ảnh, phân trang ảnh, chọn kênh và công cụ phụ dùng quiet; giữ focus,
+nhãn accessible, pending/disabled và xác nhận. Crop giữ aria-pressed.
+Tạo preview là bước phụ; áp dụng kết quả là hành động chính, giữ nút primary.
+
+### Tiêu đề trang trên thanh quản trị
+
+AdminShell dùng tên trang theo route trên topbar thay nhãn Admin. Header trang
+trong nội dung không lặp lại tiêu đề/mô tả; status và action vẫn giữ. Sidebar,
+heading pane, tên/mã bản ghi và tiêu đề modal/form nghiệp vụ không bị ẩn.
+Dùng AdminShellHeadingProvider ở shell chính và AdminPageHeading cho heading
+trang cũ; không ẩn h1 bằng CSS toàn cục. Các trang Ben/embedded/technician không
+có shell vẫn giữ heading riêng. Không có dải nền, line hay card tiêu đề mới.
+
+### Điều hướng chính ngang — bản local
+
+Chỉ menu chính của shell chuyển từ sidebar đen lên topbar, giữ catalog route/quyền.
+Menu khu vực và các trạng thái vẫn ở pane bên trái như trước, giữ resize/collapse,
+số đếm, native select trên màn hình hẹp và callback/bộ lọc hiện có.
+Menu chính gom thành select dưới 1400px để chừa chỗ cho tài khoản.
+
+Top menu dùng nền softSurface #F8FAFC, không border-bottom/gradient/bóng;
+ô tìm kiếm giữ nền trắng, dropdown menu chính trong suốt theo nền thanh.
+
+Hover/focus-within của dòng list dùng rowHover #EFF6FF, cùng tông xanh primary.
+Chỉ đổi nền dòng khi tương tác; header/topbar giữ softSurface #F8FAFC. Không
+shadow/translate. Trạng thái chọn/focus nghiệp vụ vẫn giữ mapping hiện có.
+
+Menu khu vực dùng chung divider/grip theo Vận hành, bỏ mũi tên thu/mở ở
+Sản phẩm/Mua bán/Báo cáo/System. Nhấp grip để thu/mở; kéo để đổi width.
+Grip xanh rõ khi hover/focus hoặc menu thu. Enter/Space thu/mở, Home/End
+và phím mũi tên giữ hành vi cũ; không remount nội dung hay đổi bộ lọc.
+
+### Báo cáo và loading top menu
+
+Top menu giữ nguyên chữ/kích thước khi điều hướng; chỉ thay icon 15px bằng spinner
+xanh 14px. Không nền loading đậm, không thanh loading toàn trang. Giữ thông báo
+accessible và chống nhấp trùng; chế độ giảm chuyển động không xoay spinner.
+Báo cáo Tổng quan/Tài chính/Bán hàng dùng AdminReport opt-in: vùng phẳng nền trắng,
+metric nền softSurface, không bóng/hover nâng, số tabular 20/28, metadata 12/16.
+Bảng có header nhạt và hover xanh; tiền giữ baseline và currency nhỏ qua AdminMoney.
+Giữ nguồn dữ liệu, công thức, quyền, drilldown và bộ lọc kỳ/kênh. Chỉ metric có
+drilldown mới là button; bỏ nút không có handler, không giả lập xuất báo cáo.
+Demo không có projection phải ghi rõ minh hoạ. Không chạy thao tác ghi dữ liệu
+như đánh dấu thiết bị nội bộ trong kiểm tra giao diện.
+
+### Giới hạn không gian làm việc trên màn hình rộng
+
+Shell admin và phần trong top bar dùng chung `page.workspaceMaxWidth = 1680px`,
+căn giữa, rộng 100% khi viewport nhỏ hơn. Giới hạn bao gồm menu khu vực và nội dung;
+không kéo giãn cột tên để lấp màn hình ultrawide. Không thêm viền/card quanh trang.
+Workspace kỹ thuật chuyên dụng và các chế độ embedded/Ben giữ bố cục riêng.

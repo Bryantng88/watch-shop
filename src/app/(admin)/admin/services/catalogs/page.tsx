@@ -1,9 +1,10 @@
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
 import Link from "next/link";
 
 export default function ServiceCatalogHubPage() {
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-semibold">Quản lý danh mục service</h1>
+            <AdminPageHeading className="text-2xl font-semibold">Quản lý danh mục service</AdminPageHeading>
 
             <div className="grid gap-4 md:grid-cols-2">
                 <Link href="/admin/services/catalogs/technical" className="rounded-xl border bg-white p-5 shadow-sm hover:bg-slate-50">

@@ -2,10 +2,14 @@
 .scroll { max-width: 100%; overflow-x: auto; }
 .table { width: 100%; min-width: 1160px; table-layout: fixed; border-collapse: collapse; font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); }
 .table th, .table td { padding: var(--admin-list-cell-padding); vertical-align: middle; border-bottom: 1px solid var(--admin-list-divider); overflow-wrap: anywhere; }
-.table thead { background: var(--admin-list-canvas); text-transform: none; letter-spacing: normal; text-align: left; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); }
+.table thead { background: var(--admin-list-softSurface); text-transform: none; letter-spacing: normal; text-align: left; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); }
 .table th { font-weight: 500; }
 .table th:first-child, .table td:first-child { padding-left: 8px; padding-right: 8px; }
 .table th:last-child, .table td:last-child { position: sticky; right: 0; z-index: 1; background: var(--admin-list-canvas); padding-left: 4px; padding-right: 4px; box-shadow: none; }
-.table tbody tr:hover { background: var(--admin-list-softSurface); }
+.table tbody tr:hover, .table tbody tr:focus-within { background: var(--admin-list-rowHover); }
 
 .bulk { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--admin-list-divider, #f1f5f9); font-size: 12px; line-height: 16px; color: var(--admin-list-muted, #64748b); }
+
+.table thead th:last-child { background: var(--admin-list-softSurface); }
+
+.table tbody tr:hover td:last-child, .table tbody tr:focus-within td:last-child { background: var(--admin-list-rowHover); }

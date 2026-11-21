@@ -180,14 +180,14 @@ function ImagePreviewDialog({
 
     return (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 p-4">
-            <AdminButton variant="secondary"
+            <AdminButton variant="contextual"
                 type="button"
                 className="absolute inset-0 cursor-default"
                 aria-label="Close image preview"
                 onClick={onClose}
             />
             <div className="relative max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-3xl bg-white p-3 shadow-2xl">
-                <AdminButton variant="primary" density="compact"
+                <AdminButton variant="quiet" density="compact"
                     type="button"
                     onClick={onClose}
                     className="absolute right-4 top-4 z-10 rounded-full bg-black/75 px-3 py-1.5 text-xs font-semibold text-white"
@@ -201,7 +201,7 @@ function ImagePreviewDialog({
                 />
 
                 <div className="flex items-center gap-3 px-2 py-2">
-                    <AdminButton variant="secondary" density="compact"
+                    <AdminButton variant="quiet" density="compact"
                         type="button"
                         disabled={!canGoPrevious}
                         onClick={() => goToIndex(activeIndex - 1)}
@@ -215,7 +215,7 @@ function ImagePreviewDialog({
                     <div className="shrink-0 text-xs tabular-nums text-slate-500">
                         {activeIndex + 1}/{preview.items.length}
                     </div>
-                    <AdminButton variant="primary" density="compact"
+                    <AdminButton variant="quiet" density="compact"
                         type="button"
                         onClick={() => onToggleSelection(activeItem, preview.source)}
                         className={preview.source === "chosen"
@@ -224,7 +224,7 @@ function ImagePreviewDialog({
                     >
                         {preview.source === "chosen" ? "Chọn ảnh" : "Bỏ chọn"}
                     </AdminButton>
-                    <AdminButton variant="primary" density="compact"
+                    <AdminButton variant="quiet" density="compact"
                         type="button"
                         disabled={!canGoNext}
                         onClick={() => goToIndex(activeIndex + 1)}
@@ -419,11 +419,11 @@ function SortableGalleryCard({
                 <img src={src} alt={label} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </AdminButton>
             <div className="absolute inset-x-0 bottom-0 flex h-7 items-center justify-between border-t border-slate-100 bg-white px-2">
-                <AdminButton variant="secondary" density="compact" type="button" disabled={index === 0} onClick={() => onMove(index, index - 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</AdminButton>
+                <AdminButton variant="quiet" density="compact" type="button" disabled={index === 0} onClick={() => onMove(index, index - 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang trái`}>←</AdminButton>
                 <span className="text-[10px] font-semibold text-slate-600">{index + 1}</span>
-                <AdminButton variant="secondary" density="compact" type="button" disabled={index === itemCount - 1} onClick={() => onMove(index, index + 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</AdminButton>
+                <AdminButton variant="quiet" density="compact" type="button" disabled={index === itemCount - 1} onClick={() => onMove(index, index + 1)} className="text-xs text-slate-500 disabled:opacity-20" aria-label={`Đưa ${label} sang phải`}>→</AdminButton>
             </div>
-            <AdminButton variant="primary" density="compact"
+            <AdminButton variant="contextual" density="compact"
                 type="button"
                 onClick={() => { onPreviewClose(); onRemove(getItemKey(item)); }}
                 className="absolute right-1 top-1 rounded-full bg-black/80 px-2 py-0.5 text-[11px] text-white"
@@ -753,7 +753,7 @@ export default function MediaPickerMulti({
             ) : null}
 
             <div className="flex flex-wrap gap-2">
-                <AdminButton variant="secondary"
+                <AdminButton variant="quiet"
                     type="button"
                     onClick={() => setOpen(true)}
                     className="inline-flex items-center rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -777,17 +777,17 @@ export default function MediaPickerMulti({
                 <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                     <span className="text-xs font-medium text-slate-600">Đã chọn quản lý: {managementSelectedKeys.size}</span>
                     {onMoveToPost ? (
-                        <AdminButton variant="secondary" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("MOVE_TO_POST")} className="rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 disabled:opacity-40">
+                        <AdminButton variant="quiet" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("MOVE_TO_POST")} className="rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 disabled:opacity-40">
                             Đưa qua Post
                         </AdminButton>
                     ) : null}
                     {onReturnChosen ? (
-                        <AdminButton variant="secondary" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RETURN_TO_NAS")} className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-40">
+                        <AdminButton variant="quiet" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RETURN_TO_NAS")} className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 disabled:opacity-40">
                             Trả về NAS
                         </AdminButton>
                     ) : null}
                     {onRecycleChosen ? (
-                        <AdminButton variant="secondary" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RECYCLE")} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-40">
+                        <AdminButton variant="quiet" density="compact" type="button" disabled={!managementSelectedKeys.size || managementPending} onClick={() => void handleDisposition("RECYCLE")} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 disabled:opacity-40">
                             Đưa vào Recycle
                         </AdminButton>
                     ) : null}

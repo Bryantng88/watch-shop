@@ -516,7 +516,7 @@ export default function MediaBrowserDialog({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <AdminButton variant="secondary"
+                        <AdminButton variant="quiet"
                             type="button"
                             onClick={() => {
                                 setItems([]);
@@ -529,7 +529,7 @@ export default function MediaBrowserDialog({
                             Tải lại
                         </AdminButton>
 
-                        {presentation !== "page" ? <AdminButton variant="secondary"
+                        {presentation !== "page" ? <AdminButton variant="quiet"
                             type="button"
                             onClick={onClose}
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
@@ -562,7 +562,7 @@ export default function MediaBrowserDialog({
 
                 <div className="border-b border-slate-100 px-5 py-3">
                     <div className="flex flex-wrap items-center gap-2">
-                        <AdminButton variant="secondary"
+                        <AdminButton variant="quiet"
                             type="button"
                             onClick={handleGoUp}
                             disabled={!canGoUp}
@@ -572,7 +572,7 @@ export default function MediaBrowserDialog({
                             Lên thư mục cha
                         </AdminButton>
 
-                        <AdminButton variant="secondary"
+                        <AdminButton variant="quiet"
                             type="button"
                             onClick={handleGoRoot}
                             className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
@@ -582,7 +582,7 @@ export default function MediaBrowserDialog({
                         </AdminButton>
                         {enableRecycle ? (
                             <>
-                                <AdminButton variant="secondary"
+                                <AdminButton variant="quiet"
                                     type="button"
                                     onClick={() => {
                                         setInternalSelectedKeys([]);
@@ -600,7 +600,7 @@ export default function MediaBrowserDialog({
                                     {browsingRecycle ? "Về thư viện" : "Xem Recycle"}
                                 </AdminButton>
                                 {presentation === "page" ? (
-                                    <AdminButton variant="secondary"
+                                    <AdminButton variant="quiet"
                                         type="button"
                                         onClick={() => handleRecycleAction(browsingRecycle ? "RESTORE" : "RECYCLE")}
                                         disabled={internalSelectedKeys.length === 0 || recyclePending}
@@ -782,7 +782,7 @@ export default function MediaBrowserDialog({
 
                                     {hasMore ? (
                                         <div ref={loadMoreSentinelRef} className="flex justify-center pt-4">
-                                            <AdminButton variant="secondary"
+                                            <AdminButton variant="quiet"
                                                 type="button"
                                                 onClick={() =>
                                                     loadItems(
@@ -823,7 +823,7 @@ export default function MediaBrowserDialog({
 
                         <div className="flex items-center gap-2">
                             {enableRecycle ? (
-                                <AdminButton variant="secondary"
+                                <AdminButton variant="quiet"
                                     type="button"
                                     onClick={() =>
                                         handleRecycleAction(

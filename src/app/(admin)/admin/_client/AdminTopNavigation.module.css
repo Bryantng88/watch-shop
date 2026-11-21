@@ -1,0 +1,11 @@
+.nav { flex: 1; min-width: 0; }
+.links { display: flex; gap: 18px; align-items: center; }
+.links .link.link { height: 40px; padding: 0; gap: 6px; border-radius: 0; font-size: 13px; color: #64748b; white-space: nowrap; }
+.links .link.link:hover { color: #1d4ed8; background: transparent; }
+.links .active.active { color: #1d4ed8; background: transparent; font-weight: 600; }
+.select { display: none; min-width: 0; max-width: 100%; min-height: 40px; padding: 6px 24px 6px 0; background: transparent; color: #0f172a; font-size: 14px; border: 0; }
+@media(max-width: 1399px) { .links { display: none; } .select { display: block; } }
+
+.icon { width: 15px; height: 15px; flex: none; stroke-width: 1.75; }
+
+.link:has([data-inline-navigation-pending]) > svg { visibility: hidden; }
