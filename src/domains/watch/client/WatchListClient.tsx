@@ -522,22 +522,23 @@ export default function WatchListClient(props: WatchListClientProps) {
     });
   }
 
-  function handleApplyFilters() {
+  function handleApplyFilters(override: Partial<WatchFilterFormState> = {}) {
+    const nextFilters = { ...filters, ...override };
     pushParams(
       (next) => {
-        setParam(next, "q", filters.q);
-        setParam(next, "sku", filters.sku);
-        setParam(next, "brandId", filters.brandId);
-        setParam(next, "vendorId", filters.vendorId);
-        setParam(next, "hasImages", filters.hasImages);
-        setParam(next, "mediaStatus", filters.mediaStatus);
-        setParam(next, "storefrontStatus", filters.storefrontStatus);
-        setParam(next, "serviceStatus", filters.serviceStatus);
-        setParam(next, "saleStatus", filters.saleStatus);
-        setParam(next, "priceStatus", filters.priceStatus);
-        setParam(next, "pricePreset", filters.pricePreset);
-        setParam(next, "priceMin", filters.priceMin);
-        setParam(next, "priceMax", filters.priceMax);
+        setParam(next, "q", nextFilters.q);
+        setParam(next, "sku", nextFilters.sku);
+        setParam(next, "brandId", nextFilters.brandId);
+        setParam(next, "vendorId", nextFilters.vendorId);
+        setParam(next, "hasImages", nextFilters.hasImages);
+        setParam(next, "mediaStatus", nextFilters.mediaStatus);
+        setParam(next, "storefrontStatus", nextFilters.storefrontStatus);
+        setParam(next, "serviceStatus", nextFilters.serviceStatus);
+        setParam(next, "saleStatus", nextFilters.saleStatus);
+        setParam(next, "priceStatus", nextFilters.priceStatus);
+        setParam(next, "pricePreset", nextFilters.pricePreset);
+        setParam(next, "priceMin", nextFilters.priceMin);
+        setParam(next, "priceMax", nextFilters.priceMax);
         [
           "hasContent",
           "saleStage",
@@ -545,7 +546,7 @@ export default function WatchListClient(props: WatchListClientProps) {
           "subFilter",
           "quickFilter",
         ].forEach((key) => next.delete(key));
-        setParam(next, "sort", filters.sort || DEFAULT_SORT);
+        setParam(next, "sort", nextFilters.sort || DEFAULT_SORT);
         setParam(next, "page", "1");
       },
       { meta: "lite" },
@@ -1694,7 +1695,9 @@ export default function WatchListClient(props: WatchListClientProps) {
           brandOptions={brandOptions}
           vendorOptions={vendorOptions}
           onChange={handleFilterChange}
-          onApply={handleApplyFilters}
+          onApply={() => handleApplyFilters()}
+          pending={isPending}
+          onStatusChange={saleStatus => { setFilters(current => ({ ...current, saleStatus })); handleApplyFilters({ saleStatus }); }}
           onClear={handleClearFilters}
           onClearField={handleClearField}
           onSaveView={handleSaveView}

@@ -13,7 +13,7 @@ export default async function StrapListPage() {
   const rows = await listStraps();
 
   return (
-    <AdminRouteWorkspace title="Sản phẩm" description="Quản lý đồng hồ và dây đồng hồ." navigationLabel="Nhóm sản phẩm" storageKey="admin:products:menu-width:v1" entries={productEntries(user)} selected="/admin/straps">
+    <AdminRouteWorkspace title="Sản phẩm" description="Quản lý đồng hồ và dây đồng hồ." filtersUnderSelected navigationLabel="Nhóm sản phẩm" storageKey="admin:products:menu-width:v1" entries={productEntries(user)} selected="/admin/straps">
       <div className="min-w-0 space-y-4">
         <AdminWorkspaceHeadingRow><AdminWorkspaceHeading>Dây đồng hồ</AdminWorkspaceHeading>
           <div className="flex flex-wrap gap-2">

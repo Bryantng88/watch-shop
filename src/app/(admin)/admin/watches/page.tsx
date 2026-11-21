@@ -147,7 +147,7 @@ export default async function WatchesPage({
         : scrubWatchListSensitivePrices(watchListResult);
 
     return (
-        <AdminRouteWorkspace title="Sản phẩm" description="Quản lý đồng hồ và dây đồng hồ." navigationLabel="Nhóm sản phẩm" storageKey="admin:products:menu-width:v1" entries={productEntries(user)} selected="/admin/watches">
+        <AdminRouteWorkspace title="Sản phẩm" description="Quản lý đồng hồ và dây đồng hồ." filtersUnderSelected navigationLabel="Nhóm sản phẩm" storageKey="admin:products:menu-width:v1" entries={productEntries(user)} selected="/admin/watches">
         <WatchListClient embedded
             initialResult={serialize(initialResult)}
             vendors={serialize(vendors)}

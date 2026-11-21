@@ -13,9 +13,9 @@ export type AdminRouteEntry = { href: string; label: string };
 const icons = { "/admin/system/channels": BellRing, "/admin/activity": Activity, "/admin/watches": Package, "/admin/straps": Link2, "/admin/reports/overview": BarChart3, "/admin/reports/finance": BarChart3, "/admin/reports/sales": ChartNoAxesCombined, "/admin/acquisitions": Tags, "/admin/orders": ShoppingBag };
 
 /** Presentation only: callers retain permission policy, URLs and domain state. */
-export function AdminRouteWorkspace({ title, description, navigationLabel, storageKey, entries, selected, extraNavigation, selectedNavigation, children }: {
+export function AdminRouteWorkspace({ title, description, navigationLabel, storageKey, entries, selected, extraNavigation, selectedNavigation, filtersUnderSelected = false, children }: {
   title: string; description?: string; navigationLabel: string; storageKey: string;
-  entries: AdminRouteEntry[]; selected: string; extraNavigation?: ReactNode; selectedNavigation?: ReactNode; children: ReactNode;
+  entries: AdminRouteEntry[]; selected: string; extraNavigation?: ReactNode; selectedNavigation?: ReactNode; filtersUnderSelected?: boolean; children: ReactNode;
 }) {
   const ref = useAdminSplitWorkspace<HTMLDivElement>();
   const pane = useAdminSplitResize(ref, storageKey);
@@ -27,9 +27,9 @@ export function AdminRouteWorkspace({ title, description, navigationLabel, stora
         <AdminWorkspaceNavigation label={navigationLabel} entries={entries.map(entry => {
           const Icon = icons[entry.href as keyof typeof icons];
           return { ...entry, icon: Icon ? <Icon /> : undefined };
-        })} selected={selected} selectedNavigation={selectedNavigation} nestedWide={pane.wide} />
+        })} selected={selected} selectedNavigation={filtersUnderSelected ? <>{selectedNavigation}<AdminWorkspaceFilterTarget /></> : selectedNavigation} nestedWide={pane.wide} />
         {extraNavigation}
-        <AdminWorkspaceFilterTarget />
+        {!filtersUnderSelected && <AdminWorkspaceFilterTarget />}
       </aside>
       <div {...pane.separatorProps} aria-label={`Điều chỉnh độ rộng menu ${title.toLocaleLowerCase("vi-VN")}`} aria-controls={id} className={resize.separator} />
       <div data-admin-pane="content">{children}</div>

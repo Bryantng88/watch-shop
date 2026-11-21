@@ -1,4 +1,5 @@
 "use client";
+import { AdminWorkspaceFilter } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters";
 import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 
 import Link from "next/link";
@@ -27,7 +28,6 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
     return [
       options("material", "Loại dây", optionValues(rows, r => r.material), materialLabels),
       options("size", "Kích thước", optionValues(rows, r => String(r.lugWidthMM)), Object.fromEntries(rows.map(r => [String(r.lugWidthMM), `${r.lugWidthMM} mm`]))),
-      options("status", "Trạng thái", ["AVAILABLE", "LOW_STOCK", "ATTACHED"], { AVAILABLE: "Sẵn sàng", LOW_STOCK: "Sắp hết", ATTACHED: "Đang gắn đồng hồ" }),
       options("leatherType", "Loại da", optionValues(rows, r => r.leatherType), leatherLabels),
       options("origin", "Nguồn gốc", ["OEM", "AFTERMARKET"], { OEM: "Chính hãng", AFTERMARKET: "Linh kiện" }),
       options("color", "Màu", optionValues(rows, r => r.color)),
@@ -49,9 +49,11 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
   const lowStock = stocked.filter(row => row.lowStock).length;
   const attached = rows.filter(row => row.attachedWatch).length;
   return <section aria-label="Danh sách dây đồng hồ" className={styles.list} style={ADMIN_OPERATION_LIST_STYLE}>
+    <AdminWorkspaceFilter label="Trạng thái dây" value={applied.status} onChange={status => { setValues(current => ({ ...current, status })); setApplied(current => ({ ...current, status })); }}
+      options={[{ value: "", label: "Tất cả" }, { value: "AVAILABLE", label: "Sẵn sàng" }, { value: "LOW_STOCK", label: "Sắp hết" }, { value: "ATTACHED", label: "Đang gắn đồng hồ" }]} />
     <BusinessListFilterBar variant="flat" values={values}
       search={{ key: "q", placeholder: "Tìm tên dây, SKU, hãng, màu, kích thước…" }}
-      primaryFields={fields.slice(0, 3)} advancedFields={fields.slice(3)}
+      primaryFields={fields.slice(0, 2)} advancedFields={fields.slice(2)}
       onChange={patch => setValues(current => ({ ...current, ...patch }))} onApply={() => setApplied({ ...values })} onClearField={clearField} onClearAll={reset} />
     <table className={styles.table}>
       <caption className="sr-only">Dây đồng hồ, kích thước, nguồn, tồn kho và tình trạng</caption>

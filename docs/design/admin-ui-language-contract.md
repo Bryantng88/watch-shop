@@ -1414,12 +1414,13 @@ Stage thu/chi không là bộ lọc phụ để Xóa lọc không vô tình đ�
 quyền xem/xử lý và bước xác nhận đối soát hiện có; không đổi trạng thái dữ liệu.
 
 
-### Sản phẩm — trạng thái ở bộ lọc danh sách
+### Sản phẩm — trạng thái ngay dưới mục đang chọn
 
-Sidebar Sản phẩm chỉ chọn Đồng hồ/Dây đồng hồ. Bán hàng của Đồng hồ và Trạng thái
-của Dây đồng hồ nằm trong BusinessListFilterBar phía trên danh sách, dùng icon mở
-bộ lọc chung, không portal ra sidebar. Giữ các giá trị lọc, Áp dụng/Xóa lọc, query
-và phân trang hiện có. Navigation trạng thái Mua bán/Vận hành không thay đổi.
+Menu Sản phẩm đặt trạng thái thành danh sách con ngay dưới Đồng hồ hoặc Dây đồng hồ
+đang chọn, dùng cùng nested navigation với Mua bán. Không tách thành nhóm ở cuối
+sidebar, không lặp lại trạng thái trong bộ lọc trên bảng. Đồng hồ giữ query/bộ lọc
+khác và reset trang 1 khi đổi saleStatus; Dây đồng hồ giữ các bộ lọc đang áp dụng.
+Màn hình hẹp dùng native select; thu/mở menu không làm mất trạng thái lọc.
 
 
 Cột Tình trạng Đồng hồ hiển thị trạng thái cụ thể, không dùng prefix Bán/Kỹ thuật:
