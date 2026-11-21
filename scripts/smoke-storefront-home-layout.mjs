@@ -85,6 +85,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     assert.equal(await page.getByText(/lưu ý về cách hiển thị ảnh/).count(), 0);
     assert.equal(await bar.getByText('Trang chủ', { exact: true }).count(), 0);
     assert.equal(await bar.getByRole('button', {name:'Xuất bản',exact:true}).count(), 1);
+    assert.equal(await page.getByRole('group', {name:'Thao tác tài liệu',exact:true}).count(), 1, 'one active document action group');
+    assert.equal(await page.getByRole('link', {name:/Thư viện ảnh website|Mở website/}).count(), 0, 'home editor omits removed shortcuts');
     assert.equal(await page.locator('.sfc-section-editor:visible').count(), 1);
     await page.getByLabel('Tông màu khối mở đầu').selectOption('charcoal');
     await nav.getByRole('button', { name: /^Về Vintic/ }).click();
