@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
@@ -83,7 +85,7 @@ export function AdminHeader({
 
                     <div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
+                            <AdminPageHeading className="text-2xl font-semibold text-slate-900">{title}</AdminPageHeading>
                             {badge}
                         </div>
                         {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}

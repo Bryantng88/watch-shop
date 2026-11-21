@@ -142,7 +142,7 @@ function SectionCard({
                 </div>
 
                 {collapsible ? (
-                    <AdminButton iconOnly variant="secondary" density="compact"
+                    <AdminButton iconOnly variant="quiet" density="compact"
                         type="button"
                         onClick={() => setOpen((v) => !v)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
@@ -833,7 +833,7 @@ export default function OrderFormClient({
                                                     </div>
 
                                                     <div className="flex shrink-0 items-center gap-2">
-                                                        <AdminButton iconOnly variant="secondary" density="compact"
+                                                        <AdminButton iconOnly variant="quiet" density="compact"
                                                             type="button"
                                                             onClick={() => moveItem(index, -1)}
                                                             disabled={!canEdit || index === 0}
@@ -841,7 +841,7 @@ export default function OrderFormClient({
                                                         >
                                                             ↑
                                                         </AdminButton>
-                                                        <AdminButton iconOnly variant="secondary" density="compact"
+                                                        <AdminButton iconOnly variant="quiet" density="compact"
                                                             type="button"
                                                             onClick={() => moveItem(index, 1)}
                                                             disabled={!canEdit || index === items.length - 1}

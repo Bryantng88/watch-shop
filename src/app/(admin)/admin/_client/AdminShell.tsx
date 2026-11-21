@@ -1,10 +1,13 @@
 "use client";
+import { AdminShellHeadingProvider } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+import { adminRouteTitle } from "@/domains/shared/ui/admin-design-contract/admin-route-title";
+import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import type {BenEnvironment} from "@/domains/ai-assistant/environment";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import {useState,type CSSProperties,type ReactNode} from "react";
+import {type ReactNode} from "react";
 import AdminTopbar from "./AdminTopBar";
-import AdminSidebar from "./AdmidSideBar";
+import { AdminTopNavigation } from "./AdmidSideBar";
 import { AdminNavigationHistoryProvider } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
 import AiAssistant from "@/domains/ai-assistant/AiAssistant";
 
@@ -26,7 +29,6 @@ type AdminShellProps = {
 };
 
 export default function AdminShell({ user, children, assistantSimulation = false, assistantLive = false, assistantEnvironment, assistantImageSearch = false }: AdminShellProps) {
-    const [sidebarExpanded,setSidebarExpanded]=useState(false);
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const isBen = pathname === "/admin/ben";
@@ -42,26 +44,14 @@ export default function AdminShell({ user, children, assistantSimulation = false
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
-        <div style={{"--admin-sidebar-width":sidebarExpanded?"240px":"76px"} as CSSProperties} className={`relative ${isTechnicianWorkspace ? "h-[100dvh]" : "h-screen"} grid overflow-hidden bg-slate-50 lg:grid-cols-[var(--admin-sidebar-width)_minmax(0,1fr)] min-[2200px]:grid-cols-[240px_minmax(0,1fr)]`}>
-            <div className="relative z-50 hidden overflow-visible bg-[#11191f] lg:block">
-                <AdminSidebar
-                    onExpandedChange={setSidebarExpanded}
-                    user={{ permissions: user.permissions, name: user.name, roles: user.roles }}
-                />
-            </div>
-
-            <div className={isTechnicianWorkspace ? "hidden" : "lg:hidden"}>
-                <AdminSidebar
-                    user={{ permissions: user.permissions, name: user.name, roles: user.roles }}
-                    variant="mobile"
-                />
-            </div>
-
-            <div className="flex min-w-0 flex-col overflow-hidden">
+        <div className="relative flex h-[100dvh] min-w-0 flex-col overflow-hidden bg-white">
+            <AdminShellHeadingProvider enabled={!isTechnicianWorkspace}><div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <div className={isTechnicianWorkspace ? "hidden lg:block" : undefined}>
                 <AdminTopbar
-                    title="Admin"
+                    title={adminRouteTitle(pathname)}
+                    navigation={<AdminTopNavigation user={user} />}
                     user={{
+                        id: user.id,
                         name: user.name,
                         roles: user.roles,
                         avatarUrl: user.avatarUrl,
@@ -69,10 +59,10 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 />
                 </div>
 
-                <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50">
+                <main className="mx-auto w-full min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50" style={isTechnicianWorkspace ? undefined : { maxWidth: ADMIN_UI_FOUNDATION.page.workspaceMaxWidth }}>
                     {children}
                 </main>
-            </div>
+            </div></AdminShellHeadingProvider>
         </div>)}
         <div hidden={isEmbedded || isBenWorkList || isTechnicianWorkspace || isBenMediaList || (isBen && !assistantLive)}>
         {(assistantSimulation || assistantLive) && <AiAssistant key={`${user.id}:${assistantLive?"live":"simulation"}`} userId={user.id} userProfile={{name:user.name,avatarUrl:user.avatarUrl}} live={assistantLive} environment={assistantEnvironment} imageSearch={assistantImageSearch} fullPage={isBen && assistantLive} canViewMedia={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_VIEW")} canViewTechnical={!!user.roles?.includes("ADMIN") || user.permissions.includes("SERVICE_VIEW")} canManage={!!user.roles?.includes("ADMIN") || user.permissions.includes("TASK_MANAGE")} />}

@@ -1038,7 +1038,7 @@ export default function FlowItemListView({
             </AdminButton>
           ))}
           {!commonActions.length && !selectedPaymentItems.length ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
-          <AdminButton variant="secondary" density="compact" type="button" onClick={() => setSelectedIds([])} className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900">Bỏ chọn</AdminButton>
+          <AdminButton variant="quiet" density="compact" type="button" onClick={() => setSelectedIds([])} className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900">Bỏ chọn</AdminButton>
         </div>
       ) : null}
       {actionError ? (
@@ -1304,7 +1304,7 @@ export default function FlowItemListView({
                             Mở {item.purchaseRequest.orderRefNo ?? "đơn hàng"}
                           </Link>
                         ) : (
-                          <AdminButton variant="secondary" density="compact" type="button" onClick={() => openItemPreview(item)} className="h-8 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                          <AdminButton variant="quiet" density="compact" type="button" onClick={() => openItemPreview(item)} className="h-8 rounded-lg border border-violet-200 bg-violet-50 px-3 text-xs font-semibold text-violet-700 hover:bg-violet-100">
                             Xem chi tiết
                           </AdminButton>
                         )}
@@ -1323,7 +1323,7 @@ export default function FlowItemListView({
                             className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                           />
                         ) : (
-                          <AdminButton variant="secondary" density="compact"
+                          <AdminButton variant="quiet" density="compact"
                             type="button"
                             disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1349,7 +1349,7 @@ export default function FlowItemListView({
                               className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                             />
                           ) : (
-                            <AdminButton variant="secondary" density="compact"
+                            <AdminButton variant="quiet" density="compact"
                               type="button"
                               disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1405,7 +1405,7 @@ export default function FlowItemListView({
                           const transition = enabledActions[0];
                           const action = operationalActionFromMetadata(transition.metadata);
                           return (
-                            <AdminButton variant="secondary" density="compact"
+                            <AdminButton variant="quiet" density="compact"
                               type="button"
                               disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1467,7 +1467,7 @@ export default function FlowItemListView({
                         className={isCompact ? styles.rowAction : "inline-flex h-8 max-w-40 items-center gap-1.5 truncate rounded-lg border border-violet-200 bg-violet-50/70 px-3 text-xs font-semibold text-violet-700 transition hover:border-violet-300 hover:bg-violet-100"}
                       />
                     ) : primaryAction ? (
-                      <AdminButton variant="secondary" density="compact"
+                      <AdminButton variant="quiet" density="compact"
                         type="button"
                         disabled={isActionPending}
                             aria-busy={pendingActionId === item.id}
@@ -1578,7 +1578,7 @@ export default function FlowItemListView({
                           {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "VERIFIED" ? "Đã xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "DELIVERY_FAILED" ? "Gửi thất bại" : "Chưa xác minh"}
                         </span>
                         {purchaseRequestItem.purchaseRequest.emailVerificationStatus !== "VERIFIED" ? (
-                          <AdminButton variant="secondary" density="compact" type="button" disabled={pendingActionId === purchaseRequestItem.id || purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING"} onClick={() => void sendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
+                          <AdminButton variant="quiet" density="compact" type="button" disabled={pendingActionId === purchaseRequestItem.id || purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING"} onClick={() => void sendPurchaseRequestEmailVerification()} className="text-[11px] font-semibold text-violet-700 hover:underline disabled:opacity-50">
                             {purchaseRequestItem.purchaseRequest.emailVerificationStatus === "NOT_SENT" ? "Gửi email xác minh" : purchaseRequestItem.purchaseRequest.emailVerificationStatus === "SENDING" ? "Đang gửi..." : "Gửi lại email xác minh"}
                           </AdminButton>
                         ) : null}
@@ -1768,7 +1768,7 @@ export default function FlowItemListView({
                 </p>
                 </div>
               </div>
-              <AdminButton variant="secondary" density="compact"
+              <AdminButton variant="quiet" density="compact"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setIsBulkReconcileOpen(false)}
@@ -2007,7 +2007,7 @@ export default function FlowItemListView({
                 </p>
                 </div>
               </div>
-              <AdminButton variant="secondary" density="compact"
+              <AdminButton variant="quiet" density="compact"
                 type="button"
                 disabled={isActionPending}
                 onClick={() => setReconcileItem(null)}

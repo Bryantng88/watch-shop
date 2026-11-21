@@ -217,7 +217,7 @@ export default function WorkflowTemplateModal({
                                         ))}
                                     </select>
 
-                                    <AdminButton iconOnly variant="secondary"
+                                    <AdminButton iconOnly variant="quiet"
                                         type="button"
                                         onClick={() =>
                                             setConditions((prev) => prev.filter((_, idx) => idx !== index))

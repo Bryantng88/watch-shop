@@ -1,5 +1,8 @@
+"use client";
+import { useAdminShellHeading } from "./AdminShellHeading";
 import type { ReactNode } from "react";
 import clsx from "clsx";
+import headerStyles from "./AdminPageHeader.module.css";
 import { ADMIN_UI_FOUNDATION } from "./admin-ui.foundation";
 import { ADMIN_UI } from "./admin-ui.tokens";
 
@@ -22,7 +25,9 @@ export function AdminPageHeader({
   meta?: ReactNode;
   className?: string;
 }) {
-  return <header className={clsx("flex flex-wrap items-end justify-between gap-4", variant === "workspace" && "pb-2", className)}>
+  const shellHeading = useAdminShellHeading();
+  if (shellHeading) return meta ? <header className="flex min-w-0 flex-wrap items-center justify-end gap-3">{meta}</header> : null;
+  return <header className={clsx("flex flex-wrap items-end justify-between gap-4", variant === "workspace" && headerStyles.workspace, className)}>
     <div>
       {eyebrow ? <p className={ADMIN_UI.eyebrow}>{eyebrow}</p> : null}
       <h1 className={variant === "workspace" ? "m-0 text-xl font-bold leading-7 text-slate-950 sm:text-2xl sm:leading-8" : ADMIN_UI.pageTitle}>{title}</h1>

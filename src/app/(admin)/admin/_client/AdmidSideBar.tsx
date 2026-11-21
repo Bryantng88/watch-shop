@@ -23,6 +23,9 @@ import { TRADING_READ_PERMISSIONS, TRADING_ROUTES } from "@/domains/trading/shar
 import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries, SYSTEM_READ_PERMISSIONS, SYSTEM_ROUTES } from "@/domains/shared/ui/navigation/section-navigation";
 
 import ActiveLink from "./AdminActiveLink";
+import { usePathname } from "next/navigation";
+import { useRef } from "react";
+import topStyles from "./AdminTopNavigation.module.css";
 import styles from "./AdminSidebar.module.css";
 import { DIRECTORY_READ_PERMISSIONS, DIRECTORY_ROUTES } from "@/domains/contacts/shared/directory-navigation";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -79,6 +82,14 @@ function canAccess(user: Props["user"], item: NavItem): boolean {
 
 function buildAllowedNav(user: Props["user"]) {
     return NAV.filter(item => canAccess(user, item) && (item.href !== "/admin/reports" || reportEntries(user).length > 0));
+}
+
+/** Same permission/route catalog as the former sidebar. */
+export function AdminTopNavigation({user}: Pick<Props,"user">) {
+ const allowed=buildAllowedNav(user), pathname=usePathname(), ref=useRef<HTMLElement>(null);
+ const selected=allowed.find(item=>(item.activePaths??[item.href]).some(route=>pathname===route||pathname.startsWith(route+"/")))?.href??"";
+ return <nav ref={ref} className={topStyles.nav} aria-label="Điều hướng quản trị"><div className={topStyles.links}>{allowed.map(item=>{const Icon=item.icon;return <ActiveLink feedback="inline" key={item.href} href={item.href} label={item.label} activePaths={item.activePaths} exact={item.exact} expanded className={topStyles.link} activeClassName={topStyles.active}><Icon size={15} className={topStyles.icon}/><span>{item.label}</span></ActiveLink>;})}</div>
+ <select className={topStyles.select} aria-label="Khu vực quản trị" value={selected} onChange={event=>{Array.from(ref.current?.querySelectorAll<HTMLAnchorElement>("a[href]")??[]).find(link=>link.getAttribute("href")===event.target.value)?.click();}}>{!selected&&<option value="" disabled>Chọn khu vực</option>}{allowed.map(item=><option key={item.href} value={item.href}>{item.label}</option>)}</select></nav>;
 }
 
 export default function AdminSidebar({
@@ -167,7 +178,6 @@ export default function AdminSidebar({
                     </AdminButton>
 
                     <div className="ml-auto flex items-center gap-3">
-                        <span className="text-sm opacity-80">Admin</span>
                         <AdminButton variant="contextual" density="compact"
                             type="button"
                             onClick={handleLogout}

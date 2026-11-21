@@ -1934,8 +1934,8 @@ export default function OperationCoordinationWorkspace({
             : data.contextLabel
       }
       headerVariant="workspace"
-      meta={
-        <span>{isUnifiedOperation ? "Chọn khu vực và giai đoạn để xử lý công việc." : activeCoreFlow ? coreFlowDescription(activeCoreFlow) : activeViewMode ? displayText(activeViewMode.description) : "Theo dõi và xử lý công việc vận hành."}</span>
+      meta={isUnifiedOperation ? undefined :
+        <span>{activeCoreFlow ? coreFlowDescription(activeCoreFlow) : activeViewMode ? displayText(activeViewMode.description) : "Theo dõi và xử lý công việc vận hành."}</span>
       }
       actions={isUnifiedOperation ? undefined :
         <div className="flex items-center gap-2">

@@ -1,3 +1,5 @@
+"use client";
+import { useAdminShellHeading } from "../admin-design-contract/AdminShellHeading";
 import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "../admin-design-contract/AdminWorkspaceHeading";
 import type { ReactNode } from "react";
 
@@ -16,6 +18,8 @@ export default function BusinessListPageHeader({
     meta,
     actions,
 }: BusinessListPageHeaderProps) {
+    const shellHeading = useAdminShellHeading();
+    if (!embedded && shellHeading) return (meta || actions) ? <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">{meta && <div className="text-sm text-slate-500">{meta}</div>}{actions}</div> : null;
     if (embedded) return <AdminWorkspaceHeadingRow><div><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{meta && <div className="mt-1 text-xs text-slate-500">{meta}</div>}</div>{actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}</AdminWorkspaceHeadingRow>;
     return (
         <header className="relative flex flex-col gap-4 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-r from-white via-violet-50/20 to-violet-100/65 p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] md:flex-row md:items-center md:justify-between">

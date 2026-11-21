@@ -2,17 +2,24 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ArrowLeft, Bell, Search, LogOut } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useNotifications } from "../__hooks/useNotifications";
 import type { AdminNotificationItem } from "../__hooks/useNotifications";
 import { useAdminNavigationHistory } from "@/domains/shared/ui/navigation/AdminNavigationHistory";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
+import { ADMIN_UI_FOUNDATION } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
+
+import styles from "./AdminTopBar.module.css";
+
+import { useAdminNavigationProfile } from "@/domains/shared/ui/admin-design-contract/AdminNavigationProfile";
 
 type AdminTopbarProps = {
+    navigation?: ReactNode;
     title?: string;
     user?: {
+        id?: string;
         name?: string | null;
         avatarUrl?: string | null;
         roles?: string[];
@@ -61,8 +68,12 @@ function formatRelativeTime(input: string) {
 
 export default function AdminTopbar({
     title = "Admin",
+    navigation,
     user,
 }: AdminTopbarProps) {
+    const { profile } = useAdminNavigationProfile(user?.id);
+    const navTheme = ADMIN_UI_FOUNDATION.navigationProfiles[profile];
+    const navStyle = { "--nav-bg": navTheme.background, "--nav-text": navTheme.text, "--nav-muted": navTheme.muted, "--nav-active": navTheme.active, "--nav-hover": navTheme.hover, "--nav-border": navTheme.border, "--nav-scheme": navTheme.scheme } as CSSProperties;
     const [loading, setLoading] = useState(false);
     const [openNotify, setOpenNotify] = useState(false);
     const boxRef = useRef<HTMLDivElement | null>(null);
@@ -93,26 +104,27 @@ export default function AdminTopbar({
     const notifyItems = useMemo(() => items.slice(0, 6), [items]);
 
     return (
-        <header className="sticky top-0 z-40 shrink-0 border-b bg-white">
-            <div className="mx-auto flex items-center gap-3 px-4 py-3">
+        <header className={`sticky top-0 z-40 shrink-0 ${styles.header}`} style={navStyle}>
+            <div className="mx-auto flex items-center gap-3 px-4 py-3" style={{ maxWidth: ADMIN_UI_FOUNDATION.page.workspaceMaxWidth }}>
                 {canGoBack ? (
-                    <AdminButton variant="secondary" density="compact"
+                    <AdminButton variant="contextual" density="compact"
                         type="button"
                         onClick={goBack}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                        className={styles.tool}
                         aria-label="Quay lại trang trước"
                     >
                         <ArrowLeft size={16} />
                         <span className="hidden sm:inline">Quay lại</span>
                     </AdminButton>
                 ) : null}
-                <h1 className="text-lg font-semibold">{title}</h1>
+                <h1 className={navigation ? "sr-only" : "min-w-0 truncate text-lg font-semibold"} title={title}>{title}</h1>
+                {navigation}
 
                 <div className="ml-auto flex items-center gap-2">
                     <div className="relative hidden md:block">
                         <input
                             placeholder="Search…"
-                            className="w-64 rounded-md border px-3 py-1.5 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+                            className={`w-40 rounded-md border px-3 py-1.5 pr-9 text-sm ${styles.search}`}
                         />
                         <Search
                             size={16}
@@ -121,7 +133,7 @@ export default function AdminTopbar({
                     </div>
 
                     <div className="relative" ref={boxRef}>
-                        <AdminButton iconOnly variant="secondary" density="compact"
+                        <AdminButton iconOnly variant="contextual" density="compact" aria-label="Thông báo"
                             type="button"
                             onClick={() => {
                                 setOpenNotify((value) => {
@@ -130,7 +142,7 @@ export default function AdminTopbar({
                                     return next;
                                 });
                             }}
-                            className="relative grid h-9 w-9 place-items-center rounded-full border hover:bg-gray-50"
+                            className={`relative h-9 w-9 ${styles.tool}`}
                         >
                             <Bell size={16} />
                             {hasUnread ? (
@@ -141,7 +153,7 @@ export default function AdminTopbar({
                         </AdminButton>
 
                         {openNotify ? (
-                            <div className="absolute right-0 top-11 z-50 w-[380px] overflow-hidden rounded-2xl border bg-white shadow-xl">
+                            <div className={`absolute right-0 top-11 z-50 w-[380px] max-w-[calc(100vw-32px)] overflow-hidden rounded-2xl border bg-white shadow-xl ${styles.notifications}`}>
                                 <div className="flex items-center justify-between border-b px-4 py-3">
                                     <div>
                                         <div className="text-sm font-semibold">Thông báo</div>
@@ -221,29 +233,30 @@ export default function AdminTopbar({
                         ) : null}
                     </div>
 
-                    <div className="flex items-center gap-2 rounded-full border px-3 py-1">
+                    <div className={`flex items-center gap-2 rounded-full border px-3 py-1 ${styles.account}`}>
                         <Link
                             href="/admin/profile"
+                            aria-label="Thông tin tài khoản"
                             className="flex items-center gap-2 hover:opacity-80"
                         >
                             <TopbarAvatar user={user} />
-                            <div className="flex flex-col leading-tight">
+                            <div className="hidden sm:flex sm:flex-col leading-tight">
                                 <span className="text-sm font-medium">
                                     {user?.name ?? "User"}
                                 </span>
                                 {user?.roles?.length ? (
-                                    <span className="text-[11px] text-gray-500">
+                                    <span className={`text-[11px] ${styles.muted}`}>
                                         {user.roles.join(", ")}
                                     </span>
                                 ) : null}
                             </div>
                         </Link>
 
-                        <AdminButton variant="secondary" density="compact"
+                        <AdminButton variant="contextual" density="compact" aria-label="Đăng xuất" title="Đăng xuất"
                             onClick={handleLogout}
-                            className="ml-2 inline-flex items-center gap-1 text-xs text-gray-600 hover:text-black"
+                            className={`ml-2 ${styles.tool}`}
                         >
-                            <LogOut size={14} /> Logout
+                            <LogOut size={14} /><span className="hidden sm:inline">Logout</span>
                         </AdminButton>
                     </div>
                 </div>

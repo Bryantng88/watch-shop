@@ -7,6 +7,7 @@ on:
       - 'src/domains/**'
       - 'src/components/**'
       - 'scripts/check-admin-buttons.mjs'
+      - 'scripts/check-profile-workspace.cjs'
       - 'scripts/smoke-admin-buttons-browser.cjs'
       - 'scripts/smoke-ti-board-preview-browser.cjs'
       - 'tests/browser/admin-buttons.fixture.tsx'
@@ -37,3 +38,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: node scripts/smoke-admin-buttons-browser.cjs
       - run: node scripts/smoke-ti-board-preview-browser.cjs
+
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/admin-buttons-global.css --minify
+      - run: node scripts/check-profile-workspace.cjs

@@ -1,3 +1,4 @@
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
 import { prisma } from "@/server/db/client";
 
 export default async function SupplyCatalogPage() {
@@ -5,7 +6,7 @@ export default async function SupplyCatalogPage() {
 
     return (
         <div className="space-y-4">
-            <h1 className="text-2xl font-semibold">Danh mục vật tư</h1>
+            <AdminPageHeading className="text-2xl font-semibold">Danh mục vật tư</AdminPageHeading>
             <div className="rounded-xl border bg-white">
                 <table className="min-w-full text-sm">
                     <thead>

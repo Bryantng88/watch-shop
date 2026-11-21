@@ -874,7 +874,7 @@ export default function WatchImageSection({
                                 <div className="text-sm font-semibold text-slate-900">Sharp cho Gallery</div>
                                 <div className="mt-0.5 text-xs text-slate-500">Chọn nhiều ảnh, chỉnh sáng, màu, tương phản và độ nét rồi xem preview trước khi áp dụng. Ảnh gốc vẫn được giữ trong Media Core.</div>
                             </div>
-                            <AdminButton variant="primary" density="compact"
+                            <AdminButton variant="secondary" density="compact"
                                 type="button"
                                 onClick={() => setGalleryPhotoRoomOpen(true)}
                                 disabled={locked || galleryImages.length === 0}

@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { ProductType } from "@prisma/client";
@@ -468,7 +470,7 @@ export default function NewAcqForm({ vendors }: Props) {
                             </div>
 
                             <div>
-                                <h1 className="text-2xl font-semibold text-slate-900">Tạo phiếu nhập</h1>
+                                <AdminPageHeading className="text-2xl font-semibold text-slate-900">Tạo phiếu nhập</AdminPageHeading>
                                 <p className="mt-1 text-sm text-slate-500">
                                     Giữ nguyên logic hiện tại, chỉ tối ưu bố cục để đồng bộ với format phiếu đánh giá kỹ thuật.
                                 </p>

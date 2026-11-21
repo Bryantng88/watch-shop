@@ -29,7 +29,7 @@ export const ADMIN_UI_FOUNDATION = {
   colors: {
     canvas: '#ffffff', text: '#020617', body: '#334155', muted: '#64748b', tertiary: '#94a3b8',
     primary: '#020617', primaryHover: '#1e293b', link: '#1d4ed8',
-    softSurface: '#f8fafc', focusSurface: '#eff6ff', focusLabel: '#2563eb',
+    softSurface: '#f8fafc', rowHover: '#eff6ff', focusSurface: '#eff6ff', focusLabel: '#2563eb',
     divider: '#f1f5f9', controlBorder: '#e2e8f0', focusDivider: '#dbeafe', focusRing: '#60a5fa',
     success: '#047857', successSurface: '#ecfdf5', successDot: '#10b981',
     attention: '#c2410c', attentionSurface: '#fff7ed', attentionDot: '#f59e0b',
@@ -37,8 +37,13 @@ export const ADMIN_UI_FOUNDATION = {
     unknown: '#b45309', unknownSurface: '#fffbeb', neutralDot: '#cbd5e1',
   },
   radius: { mark: 2, badge: 6, control: 8, surface: 12, floating: 16, pill: 9999 },
+  navigationProfiles: {
+    simple: { background: '#f8fafc', text: '#334155', muted: '#64748b', active: '#1d4ed8', hover: '#eff6ff', border: '#e2e8f0', scheme: 'light' },
+    dark: { background: '#11191f', text: '#e2e8f0', muted: '#a8b5c4', active: '#93c5fd', hover: '#1e3044', border: '#334155', scheme: 'dark' },
+  },
   border: { hairline: 1, selectedUnderline: 2, focusRing: 2, focusOffset: 2 },
   page: {
+    workspaceMaxWidth: 1680,
     desktopPaddingX: 24, desktopPaddingY: 20, mobilePaddingX: 16, mobilePaddingY: 12,
     regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,

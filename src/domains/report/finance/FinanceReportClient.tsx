@@ -1,4 +1,7 @@
 "use client";
+import { ADMIN_REPORT as reportStyles, ADMIN_REPORT_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminReport";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 import { AdminWorkspaceFilter, useWorkspaceFilterHost } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceFilters";
 import { AdminWorkspaceHeading } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 
@@ -14,10 +17,8 @@ import {
   ChevronDown,
   CircleAlert,
   CircleDollarSign,
-  Download,
   Info,
   Landmark,
-  LineChart,
   ReceiptText,
   ShieldCheck,
   Sparkles,
@@ -111,52 +112,12 @@ const detailRows = [
   { code: "ORD-170826-0031", source: "Bán Watch", label: "Longines Flagship", amount: 29_600_000, margin: "24,4%" },
 ];
 
-function MetricCard({
-  label,
-  value,
-  note,
-  delta,
-  tone,
-  icon: Icon,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  note: string;
-  delta: string;
-  tone: "slate" | "emerald" | "blue" | "violet";
-  icon: typeof Banknote;
-  onClick: () => void;
+function MetricCard({label,value,note,delta,tone,icon:Icon,onClick}: {
+  label:string; value:string; note:string; delta:string; tone:"slate"|"emerald"|"blue"|"violet"; icon:typeof Banknote; onClick?:()=>void;
 }) {
-  const colors = {
-    slate: "bg-slate-950 text-white",
-    emerald: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-    blue: "bg-blue-50 text-blue-700 ring-blue-100",
-    violet: "bg-violet-50 text-violet-700 ring-violet-100",
-  };
-
-  return (
-    <AdminButton variant="contextual"
-      type="button"
-      onClick={onClick}
-      className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className={`grid h-9 w-9 place-items-center rounded-xl ring-1 ${colors[tone]}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${delta === "—" ? "bg-slate-50 text-slate-400" : "bg-emerald-50 text-emerald-700"}`}>
-          {delta !== "—" && <ArrowUpRight className="h-3 w-3" />} {delta}
-        </span>
-      </div>
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-      <p className="mt-1 text-[22px] font-bold tracking-[-0.025em] text-slate-950">{value}</p>
-      <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
-        <span className="text-[11px] text-slate-500">{note}</span>
-        <ArrowRight className="h-3.5 w-3.5 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-700" />
-      </div>
-    </AdminButton>
-  );
+  const color={slate:"text-slate-500",emerald:"text-emerald-700",blue:"text-blue-700",violet:"text-violet-700"}[tone];
+  const content=<><div className="mb-3 flex items-center justify-between gap-3"><Icon className={`h-4 w-4 ${color}`} aria-hidden="true"/>{delta!=="—"&&<span className="text-xs text-emerald-700">{delta}</span>}</div><p className={reportStyles.label}>{label}</p><p className={reportStyles.metricValue}>{value}</p><p className="mt-2 text-xs leading-4 text-slate-500">{note}</p>{onClick&&<span className="mt-3 inline-flex items-center gap-1 text-xs text-blue-700">Xem chi tiết <ArrowRight size={12}/></span>}</>;
+  return onClick ? <AdminButton variant="contextual" type="button" className={reportStyles.metric} onClick={onClick}>{content}</AdminButton> : <div className={reportStyles.metric}>{content}</div>;
 }
 
 export function FinanceReportClient({ initialProjection, embedded = false }: { initialProjection?: FinanceReportProjectionData | null; embedded?: boolean }) {
@@ -330,25 +291,21 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
     : detailRows.map((row) => ({ ...row, id: row.code, href: "#" }));
 
   return (
-    <main className={embedded ? "min-w-0 space-y-4" : "w-full space-y-4 px-4 py-5 lg:px-6"}>
+    <main style={ADMIN_REPORT_STYLE} className={`${reportStyles.report} ${embedded ? "min-w-0 space-y-4" : "w-full space-y-4 px-4 py-5 lg:px-6"}`}>
       {hosted && <AdminWorkspaceFilter label="Kỳ báo cáo tài chính" value={periodKey} options={[{ value: "month", label: "Tháng này" }, { value: "quarter", label: "Quý này" }]} onChange={value => setPeriodKey(value as PeriodKey)} />}
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5">
+      {!initialProjection && <section className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 px-3 py-2">
         <p className="text-xs text-violet-800">
-          {initialProjection
-            ? <><b>Finance Report v{initialProjection.formulaVersion}:</b> Dữ liệu thật từ projection local.</>
-            : <><b>UI test:</b> Báo cáo tài chính — dữ liệu minh hoạ, chưa tác động dữ liệu thật.</>}
+          <><b>Bản minh hoạ:</b> Không phải số liệu kinh doanh thực tế.</>
         </p>
         <Link href="/admin/reports/overview" className="text-xs font-semibold text-violet-700 hover:text-violet-950">
           Quay lại báo cáo tổng quan
         </Link>
-      </section>
+      </section>}
 
       <header className={embedded ? "flex flex-wrap items-start justify-between gap-4" : "flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-4"}>
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            <LineChart className="h-3.5 w-3.5" /> Báo cáo / Tài chính
-          </div>
-          {embedded ? <AdminWorkspaceHeading>Hiệu quả tài chính</AdminWorkspaceHeading> : <h1 className="mt-2 text-2xl font-bold tracking-[-0.025em] text-slate-950">Hiệu quả tài chính</h1>}
+
+          {embedded ? <AdminWorkspaceHeading>Hiệu quả tài chính</AdminWorkspaceHeading> : <AdminPageHeading className="mt-2 text-2xl font-bold tracking-[-0.025em] text-slate-950">Hiệu quả tài chính</AdminPageHeading>}
           <p className="mt-1 text-sm text-slate-500">Đọc nhanh sức khoẻ kinh doanh và giải trình được từng con số.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -365,13 +322,10 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           </div>)}
-          <AdminButton variant="secondary" density="compact" type="button" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-            <Download className="h-3.5 w-3.5" /> Xuất báo cáo
-          </AdminButton>
         </div>
       </header>
 
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_6px_20px_rgba(15,23,42,0.03)]">
+      <section className="flex flex-wrap items-center justify-between gap-3 py-2">
         <div className="flex min-w-0 items-center gap-1" role="tablist" aria-label="Kênh kinh doanh">
           {channels.map((item) => {
             const active = item.key === channelKey;
@@ -382,10 +336,10 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
                 role="tab"
                 aria-selected={active}
                 onClick={() => setChannelKey(item.key)}
-                className={`min-w-[94px] rounded-xl px-4 py-2 text-left transition ${active ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
+                className={`min-w-[94px] rounded-lg px-3 py-2 text-left transition ${active ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`}
               >
                 <span className="block text-xs font-bold">{item.label}</span>
-                <span className={`mt-0.5 block text-[9px] ${active ? "text-white/50" : "text-slate-400"}`}>{item.note}</span>
+                <span className={`mt-0.5 block text-[9px] ${active ? "text-slate-500" : "text-slate-400"}`}>{item.note}</span>
               </AdminButton>
             );
           })}
@@ -401,11 +355,11 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
         <MetricCard label="Tiền đã thực thu" value={money(period.collected)} note={`${(period.revenue > 0 ? (period.collected / period.revenue) * 100 : 0).toFixed(1)}% doanh thu`} delta={initialProjection ? "—" : "8,4%"} tone="emerald" icon={Banknote} onClick={() => setDetail("collected")} />
         <MetricCard label="Tổng chi phí" value={money(period.cost)} note="Giá vốn và phí vận hành" delta={initialProjection ? "—" : "5,9%"} tone="slate" icon={ReceiptText} onClick={() => setDetail("cost")} />
         <MetricCard label="Lợi nhuận gộp" value={money(period.profit)} note={`Biên lợi nhuận ${margin.toFixed(1)}%`} delta={initialProjection ? "—" : "14,2%"} tone="violet" icon={CircleDollarSign} onClick={() => setDetail("profit")} />
-        <MetricCard label="Số dư cuối kỳ" value={money(period.closingBalance)} note={`Đầu kỳ ${money(period.openingBalance)} · Dòng tiền ròng ${money(period.netCashFlow)}`} delta="—" tone="emerald" icon={Landmark} onClick={() => {}} />
+        <MetricCard label="Số dư cuối kỳ" value={money(period.closingBalance)} note={`Đầu kỳ ${money(period.openingBalance)} · Dòng tiền ròng ${money(period.netCashFlow)}`} delta="—" tone="emerald" icon={Landmark}  />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]">
+        <article className={`${reportStyles.panel} rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.035)]`}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-sm font-bold text-slate-950">Doanh thu & lợi nhuận</h2>
@@ -469,45 +423,45 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
                   ? "Kênh Nữ tăng nhanh hơn kỳ trước, biên lợi nhuận đang cải thiện."
                   : "Kênh Nam giữ doanh thu ổn định, cần theo dõi tỷ trọng giá vốn."}
             </div>
-            <AdminButton variant="secondary" density="compact" type="button" className="text-[11px] font-bold text-violet-700">Xem phân tích →</AdminButton>
+
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+        <article className={`${reportStyles.panel} rounded-2xl border border-slate-200 bg-slate-50 p-5 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.12)]`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold">Cầu nối lợi nhuận</h2>
-              <p className="mt-1 text-xs text-white/50">Từ doanh thu đến lợi nhuận gộp</p>
+              <p className="mt-1 text-xs text-slate-500">Từ doanh thu đến lợi nhuận gộp</p>
             </div>
-            <Info className="h-4 w-4 text-white/30" />
+            <Info className="h-4 w-4 text-slate-400" />
           </div>
           <div className="mt-6 space-y-4">
             {[
-              ["Doanh thu", period.revenue, "100%", "text-white"],
-              ...costComposition.slice(0, 3).map((item, index) => [item.label, -item.value, `${(period.revenue > 0 ? item.value / period.revenue * 100 : 0).toFixed(1)}%`, ["text-rose-300", "text-amber-300", "text-orange-300"][index]]),
+              ["Doanh thu", period.revenue, "100%", "text-slate-900"],
+              ...costComposition.slice(0, 3).map((item, index) => [item.label, -item.value, `${(period.revenue > 0 ? item.value / period.revenue * 100 : 0).toFixed(1)}%`, ["text-rose-700", "text-amber-700", "text-orange-700"][index]]),
             ].map(([label, value, ratio, color]) => (
               <div key={String(label)}>
                 <div className="flex items-center justify-between gap-3 text-xs">
-                  <span className="text-white/65">{label}</span>
+                  <span className="text-slate-600">{label}</span>
                   <span className={`font-semibold ${color}`}>{Number(value) < 0 ? "−" : ""}{money(Math.abs(Number(value)))}</span>
                 </div>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-white/30" style={{ width: String(ratio) }} /></div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-blue-300" style={{ width: String(ratio) }} /></div>
               </div>
             ))}
           </div>
           <div className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-semibold text-emerald-200">Lợi nhuận gộp</span>
-              <ArrowUpRight className="h-4 w-4 text-emerald-300" />
+              <span className="text-xs font-semibold text-emerald-700">Lợi nhuận gộp</span>
+              <ArrowUpRight className="h-4 w-4 text-emerald-700" />
             </div>
             <p className="mt-1 text-xl font-bold">{money(period.profit)}</p>
-            <p className="mt-1 text-[10px] text-white/45">Biên {margin.toFixed(1)}% · cao hơn kỳ trước 1,8 điểm</p>
+            <p className="mt-1 text-[10px] text-slate-500">Biên {margin.toFixed(1)}% · cao hơn kỳ trước 1,8 điểm</p>
           </div>
         </article>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
+        <article className={`${reportStyles.panel} rounded-2xl border border-slate-200 bg-white p-5`}>
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-950">Cơ cấu doanh thu</h2>
@@ -548,13 +502,13 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
+        <article className={`${reportStyles.panel} rounded-2xl border border-slate-200 bg-white p-5`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-slate-950">Cơ cấu chi phí</h2>
               <p className="mt-1 text-xs text-slate-500">Chi phí thực tế của kênh {channel.label}</p>
             </div>
-            <AdminButton variant="secondary" density="compact" type="button" onClick={() => setDetail("cost")} className="text-[10px] font-bold text-violet-700 hover:text-violet-900">Giải trình →</AdminButton>
+            <AdminButton variant="quiet" density="compact" type="button" onClick={() => setDetail("cost")} className="text-[10px] font-bold text-violet-700 hover:text-violet-900">Giải trình →</AdminButton>
           </div>
           <div className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-slate-100">
             {costComposition.map((item) => (
@@ -582,7 +536,7 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
           </div>
         </article>
 
-        <article className="rounded-2xl border border-slate-200 bg-white p-5">
+        <article className={`${reportStyles.panel} rounded-2xl border border-slate-200 bg-white p-5`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-bold text-slate-950">Payment chưa xử lý</h2>
@@ -618,7 +572,7 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
 
                   <div className="mt-2 divide-y divide-slate-100 border-y border-slate-100">
                     {item.breakdown.map((part) => (
-                      <AdminButton variant="contextual" key={part.label} type="button" className="group grid w-full grid-cols-[minmax(0,1fr)_34px_auto_14px] items-center gap-2 py-2.5 text-left">
+                      <div key={part.label} className="group grid w-full grid-cols-[minmax(0,1fr)_34px_auto_14px] items-center gap-2 py-2.5 text-left">
                         <span className="min-w-0">
                           <span className="block truncate text-[11px] font-semibold text-slate-700">{part.label}</span>
                           <span className="mt-0.5 block truncate text-[8px] uppercase tracking-wide text-slate-400">{part.owner}</span>
@@ -631,7 +585,7 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
                           {item.tone === "emerald" ? "+" : "−"}{money(part.amount)}
                         </span>
                         <ArrowRight className="h-3 w-3 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-700" />
-                      </AdminButton>
+                      </div>
                     ))}
                   </div>
 
@@ -648,14 +602,14 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
               );
             })}
           </div>
-          <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-3 py-3 text-white">
+          <div className="mt-5 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3 text-slate-900">
             <span>
-              <span className="block text-[10px] font-semibold text-white/50">Tổng Payment đang chờ</span>
+              <span className="block text-[10px] font-semibold text-slate-500">Tổng Payment đang chờ</span>
               <span className="mt-0.5 block text-xs font-bold">{pendingPayments.in.count + pendingPayments.out.count} chứng từ</span>
             </span>
             <span className="text-right">
-              <span className="block text-[10px] text-white/50">Chênh lệch IN − OUT</span>
-              <span className={`mt-0.5 block text-sm font-bold ${pendingPayments.in.amount - pendingPayments.out.amount >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+              <span className="block text-[10px] text-slate-500">Chênh lệch IN − OUT</span>
+              <span className={`mt-0.5 block text-sm font-bold ${pendingPayments.in.amount - pendingPayments.out.amount >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                 {pendingPayments.in.amount - pendingPayments.out.amount >= 0 ? "+" : "−"}{money(Math.abs(pendingPayments.in.amount - pendingPayments.out.amount))}
               </span>
             </span>
@@ -673,12 +627,12 @@ export function FinanceReportClient({ initialProjection, embedded = false }: { i
           <aside className="h-full w-full max-w-xl overflow-y-auto bg-white p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
               <div><p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-600">Giải trình chỉ số</p><h2 className="mt-1 text-lg font-bold text-slate-950">{detailTitle}</h2><p className="mt-1 text-xs text-slate-500">Các chứng từ đóng góp lớn nhất trong {period.label.toLowerCase()}.</p></div>
-              <AdminButton iconOnly variant="secondary" density="compact" type="button" onClick={() => setDetail(null)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></AdminButton>
+              <AdminButton iconOnly variant="quiet" density="compact" type="button" aria-label="Đóng chi tiết chỉ số" onClick={() => setDetail(null)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></AdminButton>
             </div>
-            <div className="mt-4 rounded-xl bg-slate-950 p-4 text-white">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/45">Tổng giá trị</p>
+            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-slate-900">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">Tổng giá trị</p>
               <p className="mt-1 text-2xl font-bold">{money(period[detail])}</p>
-              <p className="mt-2 flex items-center gap-1 text-[11px] text-emerald-300"><ArrowUpRight className="h-3.5 w-3.5" /> Tăng so với cùng kỳ trước</p>
+              <p className="mt-2 flex items-center gap-1 text-[11px] text-emerald-700"><ArrowUpRight className="h-3.5 w-3.5" /> Tăng so với cùng kỳ trước</p>
             </div>
             <div className="mt-5 space-y-2">
               {visibleDetailRows.map((row) => (

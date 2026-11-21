@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import type { CatalogKey } from "./types";
@@ -18,9 +20,9 @@ export default function ProductListToolbar({
     <div className="flex flex-col gap-4 px-1 py-1 md:flex-row md:items-start md:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-[30px] font-semibold tracking-[-0.035em] text-slate-950">
+          <AdminPageHeading className="text-[30px] font-semibold tracking-[-0.035em] text-slate-950">
             Danh sách sản phẩm
-          </h1>
+          </AdminPageHeading>
 
           <div className="inline-flex rounded-full bg-slate-100 p-1">
             <AdminButton variant="secondary" density="compact"

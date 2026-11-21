@@ -311,7 +311,7 @@ export default function ServiceCard({
 
             {intakeOpen && typeof document !== "undefined" ? createPortal(
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
-                    <AdminButton variant="primary"
+                    <AdminButton variant="contextual"
                         type="button"
                         className="absolute inset-0 bg-slate-950/35"
                         aria-label="Đóng modal tạo service"

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AdminMoney } from "@/domains/shared/ui/admin-design-contract/AdminMoney";
 import { ArrowUpRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -25,14 +26,14 @@ function formatValue(item: DashboardMetric) {
 
 export default function DashboardMetricCard({ item }: { item: DashboardMetric }) {
   const content = (
-    <div className="group rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div data-report-part="metric" className="group rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-            {item.label}
+          <div data-report-part="metric-label" className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            {({"Watch ready":"Đồng hồ sẵn sàng","Shipment active":"Giao hàng đang mở"} as Record<string,string>)[item.label]??item.label}
           </div>
-          <div className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
-            {formatValue(item)}
+          <div data-report-part="metric-value" className="mt-3 text-2xl font-bold tracking-tight text-slate-950">
+            {item.format === "money" ? <AdminMoney amount={item.value}/> : formatValue(item)}
           </div>
           {item.helper ? <div className="mt-2 text-sm text-slate-500">{item.helper}</div> : null}
         </div>

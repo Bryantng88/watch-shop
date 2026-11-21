@@ -43,11 +43,12 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
     return () => observer.disconnect();
   }, [enabled, layout]);
   const effectiveWidth = Math.min(width, maximum);
+  const toggle = () => { const next = effectiveWidth === 0 ? normalize(expanded.current) : 0; apply(next); persist(next); };
   const props: HTMLAttributes<HTMLDivElement> = {
     role: "separator", tabIndex: 0, "aria-orientation": "vertical", "aria-label": "Điều chỉnh độ rộng menu khu vực",
     "aria-valuemin": 0, "aria-valuemax": maximum, "aria-valuenow": effectiveWidth,
     "aria-valuetext": effectiveWidth === 0 ? "Menu đã thu gọn" : `Menu rộng ${effectiveWidth} pixel`,
-    title: "Kéo để đổi độ rộng menu. Nhấp đúp để đặt lại. Phím mũi tên để điều chỉnh; Home để thu gọn.",
+    title: "Nhấp tay nắm phía trên để thu/mở menu; kéo để đổi độ rộng. Nhấp đúp để đặt lại. Enter/Space để thu/mở, phím mũi tên để điều chỉnh.",
     onPointerDown: event => {
       if (!enabled || event.button !== 0 || layout.current?.dataset.wide !== "true") return;
       event.preventDefault(); event.currentTarget.focus();
@@ -57,7 +58,10 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
     onPointerMove: event => { if (drag.current?.id === event.pointerId) apply(normalize(drag.current.width + event.clientX - drag.current.x)); },
     onPointerUp: event => {
       if (drag.current?.id !== event.pointerId) return;
-      drag.current = null; setResizing(false); persist(latest.current);
+      const gripY = event.clientY - event.currentTarget.getBoundingClientRect().top;
+      const clicked = Math.abs(event.clientX - drag.current.x) <= 3 && gripY >= 8 && gripY <= 48;
+      drag.current = null; setResizing(false);
+      if (clicked) toggle(); else persist(latest.current);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     },
     onPointerCancel: event => { if (drag.current?.id === event.pointerId) { apply(drag.current.previous); drag.current = null; setResizing(false); } },
@@ -69,11 +73,12 @@ export function useAdminSplitResize(layout: RefObject<HTMLElement | null>, stora
         if (event.currentTarget.hasPointerCapture(id)) event.currentTarget.releasePointerCapture(id);
         event.preventDefault(); return;
       }
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); return; }
       const next = event.key === "Home" ? 0 : event.key === "End" ? F.splitWorkspace.sidebarWidth
         : event.key === "ArrowLeft" ? effectiveWidth <= spec.minSidebarWidth ? 0 : effectiveWidth - spec.step
         : event.key === "ArrowRight" ? effectiveWidth === 0 ? spec.minSidebarWidth : effectiveWidth + spec.step : null;
       if (next !== null) { event.preventDefault(); const value = normalize(next); apply(value); persist(value); }
     },
   };
-  return { width: effectiveWidth, wide, toggle: () => { const next = effectiveWidth === 0 ? normalize(expanded.current) : 0; apply(next); persist(next); }, resizing, separatorProps: props, style: { ...ADMIN_SPLIT_RESIZE_STYLE, "--admin-split-width": `${effectiveWidth}px` } as CSSProperties };
+  return { width: effectiveWidth, wide, toggle, resizing, separatorProps: props, style: { ...ADMIN_SPLIT_RESIZE_STYLE, "--admin-split-width": `${effectiveWidth}px` } as CSSProperties };
 }

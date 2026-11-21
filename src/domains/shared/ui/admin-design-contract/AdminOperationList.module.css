@@ -9,7 +9,7 @@
 .mediaTable .amountColumn { width: 160px; }
 .mediaTable td { font-size: var(--admin-list-title-size); line-height: var(--admin-list-title-line); color: var(--admin-list-body); }
 .mediaTable.withPayment td { overflow-wrap: anywhere; }
-.workspaceList > div:first-child { background: transparent; font-weight: 500; text-transform: none; letter-spacing: normal; border-color: var(--admin-list-divider); padding: 12px; }
+.workspaceList > div:first-child { background: var(--admin-list-softSurface); font-weight: 500; text-transform: none; letter-spacing: normal; border-color: var(--admin-list-divider); padding: 12px; }
 .workspaceList > div:nth-child(2) { border-color: var(--admin-list-divider); }
 .workspaceList > div:nth-child(2) > div { padding: 12px; gap: 12px; border-color: var(--admin-list-divider); }
 .bulkBar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px; border-bottom: 1px solid var(--admin-list-divider); background: var(--admin-list-softSurface); }
@@ -18,7 +18,7 @@
 .bulkAction:disabled { opacity: .5; }
 @media(pointer:coarse) { .bulkAction { min-height: var(--admin-list-touch); } }
 .mediaTable th, .mediaTable td { padding: var(--admin-list-cell-padding); vertical-align: middle; }
-.mediaTable thead tr { background: transparent; border-bottom-color: var(--admin-list-divider); color: var(--admin-list-muted); font-size: 12px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.mediaTable thead tr { background: var(--admin-list-softSurface); border-bottom-color: var(--admin-list-divider); color: var(--admin-list-muted); font-size: 12px; font-weight: 500; letter-spacing: normal; text-transform: none; }
 .mediaTable th { font-weight: 500; white-space: nowrap; }
 .mediaTable .selectionColumn { width: 40px; }
 .mediaTable th:first-child, .mediaTable td:first-child { padding-left: 8px; padding-right: 8px; }
@@ -40,11 +40,7 @@
 .activity:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
 .mediaTable .time { display: block; white-space: nowrap; font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); color: var(--admin-list-muted); font-variant-numeric: tabular-nums; }
 /* Explicit trigger class: never style buttons inside the editor's overlay. */
-.mediaTable .rowAction { display: inline-flex; align-items: center; justify-content: center; gap: var(--admin-list-action-gap); min-height: var(--admin-list-action-height); max-width: 100%; padding: 0 var(--admin-list-action-padding); border: 1px solid var(--admin-list-controlBorder); border-radius: var(--admin-list-action-radius); background: var(--admin-list-canvas); color: var(--admin-list-body); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-weight: 600; white-space: nowrap; border-color: var(--admin-button-neutral-border); background-image: var(--admin-button-neutral-gradient); box-shadow: var(--admin-button-neutral-shadow); }
-.mediaTable .rowAction:hover:not(:disabled) { background-image: var(--admin-button-neutral-hover); border-color: var(--admin-button-neutral-hover-border); }
-.mediaTable .rowAction:active:not(:disabled) { background-image: var(--admin-button-neutral-pressed); box-shadow: var(--admin-button-neutral-inset); }
-.mediaTable .rowAction:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: 2px; }
-.mediaTable .rowAction:disabled { opacity: .5; cursor: wait; background-image: none; box-shadow: none; }
+.mediaTable .rowAction { max-width: 100%; white-space: nowrap; }
 .previewButton { display: grid; width: 32px; min-height: 32px; place-items: center; border-radius: 8px; color: var(--admin-list-tertiary); }
 .previewButton:hover { background: var(--admin-list-divider); color: var(--admin-list-body); }
 .previewButton:focus-visible { outline: 2px solid var(--admin-list-focusRing); outline-offset: -2px; }
@@ -59,3 +55,5 @@
 .actionMenu button:disabled { opacity: .5; cursor: default; }
 .progressSummary { display: inline-flex; min-width: 0; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--admin-list-muted); font-size: var(--admin-list-meta-size); line-height: var(--admin-list-meta-line); font-variant-numeric: tabular-nums; }
 @media (pointer: coarse) { .actionMenu button { min-height: var(--admin-list-touch); } }
+
+.mediaTable tbody tr:hover, .mediaTable tbody tr:focus-within { background-color: var(--admin-list-rowHover); }

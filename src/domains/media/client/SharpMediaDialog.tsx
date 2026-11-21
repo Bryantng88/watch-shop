@@ -202,10 +202,10 @@ export default function SharpMediaDialog({
           <div className="flex items-center justify-between gap-4 border-b border-white/10 px-4 py-3 text-white">
             <div className="min-w-0 truncate text-sm font-semibold">{largePreview.name}</div>
             <div className="flex shrink-0 items-center gap-2">
-              <AdminButton variant="secondary" type="button" onClick={() => setPreviewZoom((value) => Math.max(50, value - 25))} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Thu nhỏ"><ZoomOut className="h-5 w-5" /></AdminButton>
-              <AdminButton variant="secondary" type="button" onClick={() => setPreviewZoom(100)} className="min-w-16 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20">{previewZoom}%</AdminButton>
-              <AdminButton variant="secondary" type="button" onClick={() => setPreviewZoom((value) => Math.min(400, value + 25))} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Phóng lớn"><ZoomIn className="h-5 w-5" /></AdminButton>
-              <AdminButton variant="secondary" type="button" onClick={() => setLargePreview(null)} className="ml-2 rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Đóng xem lớn"><X className="h-5 w-5" /></AdminButton>
+              <AdminButton iconOnly density="compact" variant="quiet" type="button" onClick={() => setPreviewZoom((value) => Math.max(50, value - 25))} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Thu nhỏ"><ZoomOut className="h-5 w-5" /></AdminButton>
+              <AdminButton variant="quiet" type="button" onClick={() => setPreviewZoom(100)} className="min-w-16 rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/20">{previewZoom}%</AdminButton>
+              <AdminButton iconOnly density="compact" variant="quiet" type="button" onClick={() => setPreviewZoom((value) => Math.min(400, value + 25))} className="rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Phóng lớn"><ZoomIn className="h-5 w-5" /></AdminButton>
+              <AdminButton iconOnly density="compact" variant="quiet" type="button" onClick={() => setLargePreview(null)} className="ml-2 rounded-lg bg-white/10 p-2 hover:bg-white/20" aria-label="Đóng xem lớn"><X className="h-5 w-5" /></AdminButton>
             </div>
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-4">
@@ -222,7 +222,7 @@ export default function SharpMediaDialog({
             <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
             <p className="mt-1 text-sm text-slate-500">{description}</p>
           </div>
-          <AdminButton variant="secondary" type="button" onClick={onClose} disabled={running} className="rounded-full bg-slate-100 p-2 text-slate-500 disabled:opacity-40"><X className="h-5 w-5" /></AdminButton>
+          <AdminButton iconOnly density="compact" aria-label="Đóng xử lý Sharp" variant="quiet" type="button" onClick={onClose} disabled={running} className="rounded-full bg-slate-100 p-2 text-slate-500 disabled:opacity-40"><X className="h-5 w-5" /></AdminButton>
         </div>
 
         <div className="grid min-h-0 flex-1 gap-5 overflow-hidden p-6 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -233,6 +233,8 @@ export default function SharpMediaDialog({
                 {QUICK_PRESETS.map((brightness) => (
                   <AdminButton variant="contextual" density="compact"
                     key={brightness}
+                    title={`Tăng sáng ${brightness}%`}
+                    aria-label={`Tăng sáng ${brightness}%`}
                     type="button"
                     onClick={() => updatePreset((current) => ({ ...current, brightness, saturation: 92, contrast: 5 }))}
                     disabled={running}
@@ -242,7 +244,7 @@ export default function SharpMediaDialog({
                         : "border-violet-200 bg-white text-violet-700 hover:border-violet-400"
                     }`}
                   >
-                    Sáng {brightness}%
+                    +{brightness}%
                   </AdminButton>
                 ))}
               </div>
@@ -271,9 +273,10 @@ export default function SharpMediaDialog({
                 <p className="mt-1 text-[11px] leading-4 text-slate-500">Chủ thể lệch trái thì chọn “Lấy vùng trái” để đưa chủ thể về giữa ảnh kết quả.</p>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
-                {([[-100, "Lấy vùng trái"], [0, "Giữa"], [100, "Lấy vùng phải"]] as const).map(([value, label]) => (
-                  <AdminButton variant="secondary" density="compact"
+                {([[-100, "Trái"], [0, "Giữa"], [100, "Phải"]] as const).map(([value, label]) => (
+                  <AdminButton variant="quiet" density="compact"
                     key={value}
+                    aria-pressed={preset.cropOffsetX === value}
                     type="button"
                     disabled={running}
                     onClick={() => updatePreset((current) => ({ ...current, cropOffsetX: value }))}
@@ -302,9 +305,10 @@ export default function SharpMediaDialog({
                 <span className="rounded-md bg-violet-50 px-2 py-1 text-violet-700">{preset.cropOffsetY}</span>
               </span>
               <div className="grid grid-cols-3 gap-1.5">
-                {([[-100, "Lấy phía trên"], [0, "Giữa"], [100, "Lấy phía dưới"]] as const).map(([value, label]) => (
-                  <AdminButton variant="secondary" density="compact"
+                {([[-100, "Trên"], [0, "Giữa"], [100, "Dưới"]] as const).map(([value, label]) => (
+                  <AdminButton variant="quiet" density="compact"
                     key={value}
+                    aria-pressed={preset.cropOffsetY === value}
                     type="button"
                     disabled={running}
                     onClick={() => updatePreset((current) => ({ ...current, cropOffsetY: value }))}
@@ -353,7 +357,7 @@ export default function SharpMediaDialog({
                 />
               </label>
             ))}
-            <AdminButton variant="secondary"
+            <AdminButton variant="quiet"
               type="button"
               onClick={resetPreset}
               disabled={running}
@@ -398,7 +402,7 @@ export default function SharpMediaDialog({
                       ? "Đây là preview Sharp chính xác. Có thể bấm vào ảnh để phóng lớn kiểm tra."
                       : "Chọn vị trí crop rồi tạo preview ảnh này để kiểm tra kết quả chính xác trước khi áp dụng."}
                   </p>
-                  <AdminButton variant="primary"
+                  <AdminButton variant="secondary"
                     type="button"
                     onClick={() => void runActivePreview()}
                     disabled={running || activeState?.status === "processing" || unavailable.has(activeImage.key)}
@@ -416,7 +420,7 @@ export default function SharpMediaDialog({
             ) : null}
             <div className="mb-3 flex items-center justify-between gap-3">
               <span className="text-sm font-semibold text-slate-800">Đã chọn {selected.size}/{images.length} ảnh</span>
-              <AdminButton variant="secondary" density="compact" type="button" disabled={running} onClick={() => setSelected(selected.size === images.length - unavailable.size ? new Set() : new Set(keys.filter((key) => !unavailable.has(key))))} className="text-xs font-semibold text-violet-700">{selected.size === images.length - unavailable.size ? "Bỏ chọn tất cả" : "Chọn tất cả"}</AdminButton>
+              <AdminButton variant="quiet" density="compact" type="button" disabled={running} onClick={() => setSelected(selected.size === images.length - unavailable.size ? new Set() : new Set(keys.filter((key) => !unavailable.has(key))))} className="text-xs font-semibold text-violet-700">{selected.size === images.length - unavailable.size ? "Bỏ chọn tất cả" : "Chọn tất cả"}</AdminButton>
             </div>
             <div className="mb-4 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
               <AdminButton variant="contextual" type="button" onClick={() => setPresetScope("active")} className={`rounded-lg px-3 py-2 ${presetScope === "active" ? "bg-white text-violet-700 shadow-sm" : "text-slate-500"}`}>Chỉ ảnh đang chỉnh</AdminButton>
@@ -460,7 +464,7 @@ export default function SharpMediaDialog({
                     </AdminButton>
                     <AdminButton iconOnly variant="contextual" density="compact" type="button" disabled={running || unavailable.has(item.key)} onClick={() => setSelected((current) => { const next = new Set(current); if (next.has(item.key)) next.delete(item.key); else next.add(item.key); return next; })} className={`absolute left-2 top-2 grid h-7 w-7 place-items-center rounded-full shadow ${checked ? "bg-violet-600 text-white" : "bg-white text-slate-400"}`} aria-label={checked ? "Bỏ chọn ảnh" : "Chọn ảnh"}>{checked ? <Check className="h-4 w-4" /> : null}</AdminButton>
                     {src ? (
-                      <AdminButton iconOnly variant="primary" density="compact"
+                      <AdminButton iconOnly variant="quiet" density="compact"
                         type="button"
                         onClick={() => {
                           setPreviewZoom(100);
@@ -474,7 +478,7 @@ export default function SharpMediaDialog({
                     ) : null}
                     <div className="min-h-14 px-3 py-2 text-xs">
                       {state.status === "done" ? <span className="font-semibold text-emerald-700">Đã có preview{state.result?.cached ? " · dùng cache" : ""}</span> : null}
-                      {state.status === "error" ? <div><div className="line-clamp-2 text-red-600">{state.error}</div><AdminButton variant="secondary" type="button" onClick={() => void processOne(item.key)} disabled={running} className="mt-1 inline-flex items-center gap-1 font-semibold text-violet-700"><RotateCcw className="h-3 w-3" /> Thử lại</AdminButton></div> : null}
+                      {state.status === "error" ? <div><div className="line-clamp-2 text-red-600">{state.error}</div><AdminButton variant="quiet" type="button" onClick={() => void processOne(item.key)} disabled={running} className="mt-1 inline-flex items-center gap-1 font-semibold text-violet-700"><RotateCcw className="h-3 w-3" /> Thử lại</AdminButton></div> : null}
                       {unavailable.has(item.key) ? <span className="font-medium text-red-600">Ảnh nguồn không tồn tại</span> : state.status === "idle" ? <span className="text-slate-500">Chờ xử lý</span> : null}
                     </div>
                   </div>
@@ -486,9 +490,9 @@ export default function SharpMediaDialog({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
           <span className="text-sm text-slate-500">{running ? "Đang xử lý…" : completed ? `${completed} ảnh sẵn sàng áp dụng` : "Chưa tạo preview"}</span>
-          <div className="flex gap-2">
-            <AdminButton variant="secondary" type="button" onClick={onClose} disabled={running} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">Đóng</AdminButton>
-            <AdminButton variant="primary" type="button" onClick={() => void run()} disabled={running || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"><Sparkles className="h-4 w-4" />{running ? "Đang xử lý" : "Tạo preview Sharp"}</AdminButton>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <AdminButton variant="quiet" type="button" onClick={onClose} disabled={running} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-40">Đóng</AdminButton>
+            <AdminButton variant="secondary" type="button" onClick={() => void run()} disabled={running || selected.size === 0} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"><Sparkles className="h-4 w-4" />{running ? "Đang xử lý" : "Tạo preview Sharp"}</AdminButton>
             <AdminButton variant="primary" type="button" onClick={() => void apply()} disabled={running || applying || completed === 0} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">{applying ? "Đang áp dụng…" : applyLabel}</AdminButton>
           </div>
         </div>

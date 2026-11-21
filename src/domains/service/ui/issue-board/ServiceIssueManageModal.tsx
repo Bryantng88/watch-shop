@@ -75,7 +75,7 @@ export default function ServiceIssueManageModal({
             </div>
           </div>
 
-          <AdminButton variant="secondary"
+          <AdminButton iconOnly density="compact" variant="quiet"
             type="button"
             onClick={onClose}
             className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-800"

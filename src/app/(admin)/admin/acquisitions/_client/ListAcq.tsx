@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
@@ -190,7 +192,7 @@ export default function AcquisitionListClient(props: PageProps) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Phiếu nhập hàng</h1>
+                <AdminPageHeading className="text-2xl font-semibold">Phiếu nhập hàng</AdminPageHeading>
                 <Link
                     href="/admin/acquisitions/new"
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"

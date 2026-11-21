@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
@@ -323,9 +325,9 @@ export default function ServiceRequestListClient(props: Props) {
         <div className="mx-auto w-full max-w-[1360px] min-w-0 space-y-5 px-4 py-6 lg:px-5 xl:px-6">
             <div className="flex items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-semibold text-slate-950">
+                    <AdminPageHeading className="text-2xl font-semibold text-slate-950">
                         Service Requests
-                    </h1>
+                    </AdminPageHeading>
                     <p className="mt-1 text-sm text-slate-500">
                         Quản lý service đi kèm watch, kỹ thuật, vendor và maintenance.
                     </p>

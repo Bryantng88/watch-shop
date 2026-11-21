@@ -1,47 +1,13 @@
 import { getCurrentUser } from "@/server/auth/getCurrentUser";
+import { prisma } from "@/server/db/client";
 import { redirect } from "next/navigation";
+import ProfileWorkspace from "./_client/ProfileWorkspace";
 
-import ProfileForm from "./_client/ProfileForm";
-import ChangePasswordForm from "./_client/ChangePasswordForm";
 export default async function ProfilePage() {
-    const user = await getCurrentUser();
-    if (!user) redirect("/login");
-
-    return (
-        <div className="max-w-4xl space-y-6">
-            {/* Page header */}
-            <div>
-                <h1 className="text-2xl font-semibold">Profile</h1>
-                <p className="text-sm text-gray-500">
-                    Quản lý thông tin tài khoản của bạn
-                </p>
-            </div>
-
-            <ProfileForm user={user} />
-            <ChangePasswordForm />
-
-            <div className="rounded-lg border bg-gray-50 p-6">
-                <h2 className="text-sm font-medium text-gray-700 mb-3">
-                    Quyền hạn
-                </h2>
-
-                <div className="flex flex-wrap gap-2">
-                    {user.permissions.map((p) => (
-                        <span
-                            key={p}
-                            className="rounded-full bg-white border px-3 py-1 text-xs text-gray-700"
-                        >
-                            {p}
-                        </span>
-                    ))}
-                </div>
-            </div>
-
-        </div>
-
-
-
-
-
-    );
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const catalog = await prisma.permission.findMany({ where: { code: { in: user.permissions } }, select: { code: true, description: true } });
+  const descriptions = new Map(catalog.map(p => [p.code, p.description]));
+  const permissions = [...user.permissions].sort().map(code => ({ code, description: descriptions.get(code) ?? null }));
+  return <ProfileWorkspace user={user} permissions={permissions} />;
 }

@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
@@ -196,7 +198,7 @@ export default function PaymentListClient(props: {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Payments</h1>
+                <AdminPageHeading className="text-2xl font-semibold">Payments</AdminPageHeading>
                 <AdminButton variant="secondary"
                     type="button"
                     className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"

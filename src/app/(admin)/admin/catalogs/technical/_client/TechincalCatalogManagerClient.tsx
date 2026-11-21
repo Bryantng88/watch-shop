@@ -1,4 +1,6 @@
 "use client";
+import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
@@ -543,9 +545,9 @@ export default function TechnicalCatalogManagerClient({
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-slate-950">
+                <AdminPageHeading className="text-2xl font-semibold tracking-tight text-slate-950">
                     Technical Catalogs
-                </h1>
+                </AdminPageHeading>
                 <p className="mt-1 text-sm text-slate-500">
                     Quản lý action, linh kiện và khuyết điểm ngoại hình dùng cho Technical Assessment.
                 </p>

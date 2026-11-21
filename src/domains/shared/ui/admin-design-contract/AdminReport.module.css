@@ -1,0 +1,28 @@
+.report { min-width: 0; color: var(--report-body); font: 400 14px/20px var(--report-font); }
+.panel.panel { min-width: 0; border: 0; border-radius: 0; background: var(--report-canvas); color: var(--report-body); box-shadow: none; padding: 16px 0; }
+.metric.metric { min-width: 0; width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; background: var(--report-softSurface); color: var(--report-body); padding: 16px; transform: none; text-align: left; }
+a:hover .metric.metric, button.metric.metric:hover { background: var(--report-rowHover); box-shadow: none; transform: none; }
+.metric.metric:focus-visible { outline: 2px solid var(--report-focusRing); outline-offset: 2px; }
+.metric p { overflow-wrap: anywhere; }
+.metricValue { color: var(--report-text); font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.label { color: var(--report-muted); font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: normal; text-transform: none; }
+.report h2 { color: var(--report-text); font-size: 14px; line-height: 20px; font-weight: 600; }
+.report table { width: 100%; font-size: 13px; line-height: 20px; }
+.report thead { background: var(--report-softSurface); color: var(--report-muted); }
+.report th { padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 500; }
+.report td { padding: 12px; border-bottom: 1px solid var(--report-divider); }
+.report tbody tr:hover { background: var(--report-rowHover); }
+.report td:not(:first-child) { font-variant-numeric: tabular-nums; }
+.report :global([data-report-part="panel"]) { min-width: 0; overflow: visible; border: 0; border-radius: 0; box-shadow: none; }
+.report :global([data-report-part="panel"]) > div:first-child { padding: 12px 0; border: 0; }
+.report :global([data-report-part="panel"]) > div:last-child { padding: 8px 0; }
+.report :global([data-report-part="metric"]) { border: 0; border-radius: 0; background: var(--report-softSurface); padding: 16px; box-shadow: none; transform: none; }
+.report a:hover :global([data-report-part="metric"]) { background: var(--report-rowHover); box-shadow: none; transform: none; }
+.report :global([data-report-part="metric-label"]) { font-size: 12px; line-height: 16px; letter-spacing: normal; text-transform: none; font-weight: 500; }
+.report :global([data-report-part="metric-value"]) { font-size: 20px; line-height: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.report :global([data-report-part="row"]):hover { background: var(--report-rowHover); }
+.report :global([data-report-part="row"]) { border-radius: 0; }
+@media(max-width: 639px) { .metric.metric { padding: 12px; } .report table { min-width: 480px; } }
+
+.report :global([data-report-part="action"]) { border: 0; border-radius: 0; background: var(--report-softSurface); }
+.report :global([data-report-part="action"]):hover { background: var(--report-rowHover); }

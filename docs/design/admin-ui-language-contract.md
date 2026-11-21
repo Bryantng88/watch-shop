@@ -1447,3 +1447,74 @@ Không thêm phân trang giả vào danh sách đang lọc toàn bộ local. TI 
 Danh sách TI căn giữa theo chiều dọc cho ảnh và các ô xử lý, thời hạn, chi phí,
 thao tác. Dùng icon quiet 32px (44px touch), không nhãn thường trực/viền/bóng;
 nhãn accessible và title giữ rõ thao tác. Menu giữ nguyên các lựa chọn và xác nhận.
+
+### Header bảng và công cụ trong form/modal
+
+Header bảng dùng softSurface rất nhạt và divider mảnh, không card/bóng.
+Trạng thái có menu dùng quiet, giữ chấm màu/chữ và chevron.
+Nền đóng modal dùng contextual để giữ nguyên overlay, không nhận diện mạo nút.
+Đóng/phóng ảnh, phân trang ảnh, chọn kênh và công cụ phụ dùng quiet; giữ focus,
+nhãn accessible, pending/disabled và xác nhận. Crop giữ aria-pressed.
+Tạo preview là bước phụ; áp dụng kết quả là hành động chính, giữ nút primary.
+
+### Tiêu đề trang trên thanh quản trị
+
+AdminShell dùng tên trang theo route trên topbar thay nhãn Admin. Header trang
+trong nội dung không lặp lại tiêu đề/mô tả; status và action vẫn giữ. Sidebar,
+heading pane, tên/mã bản ghi và tiêu đề modal/form nghiệp vụ không bị ẩn.
+Dùng AdminShellHeadingProvider ở shell chính và AdminPageHeading cho heading
+trang cũ; không ẩn h1 bằng CSS toàn cục. Các trang Ben/embedded/technician không
+có shell vẫn giữ heading riêng. Không có dải nền, line hay card tiêu đề mới.
+
+### Điều hướng chính ngang — bản local
+
+Chỉ menu chính của shell chuyển từ sidebar đen lên topbar, giữ catalog route/quyền.
+Menu khu vực và các trạng thái vẫn ở pane bên trái như trước, giữ resize/collapse,
+số đếm, native select trên màn hình hẹp và callback/bộ lọc hiện có.
+Menu chính gom thành select dưới 1400px để chừa chỗ cho tài khoản.
+
+Top menu dùng nền softSurface #F8FAFC, không border-bottom/gradient/bóng;
+ô tìm kiếm giữ nền trắng, dropdown menu chính trong suốt theo nền thanh.
+
+Hover/focus-within của dòng list dùng rowHover #EFF6FF, cùng tông xanh primary.
+Chỉ đổi nền dòng khi tương tác; table header giữ softSurface #F8FAFC; topbar dùng navigationSurface tối. Không
+shadow/translate. Trạng thái chọn/focus nghiệp vụ vẫn giữ mapping hiện có.
+
+Menu khu vực dùng chung divider/grip theo Vận hành, bỏ mũi tên thu/mở ở
+Sản phẩm/Mua bán/Báo cáo/System. Nhấp grip để thu/mở; kéo để đổi width.
+Grip xanh rõ khi hover/focus hoặc menu thu. Enter/Space thu/mở, Home/End
+và phím mũi tên giữ hành vi cũ; không remount nội dung hay đổi bộ lọc.
+
+### Báo cáo và loading top menu
+
+Top menu giữ nguyên chữ/kích thước khi điều hướng; chỉ thay icon 15px bằng spinner
+xanh 14px. Không nền loading đậm, không thanh loading toàn trang. Giữ thông báo
+accessible và chống nhấp trùng; chế độ giảm chuyển động không xoay spinner.
+Báo cáo Tổng quan/Tài chính/Bán hàng dùng AdminReport opt-in: vùng phẳng nền trắng,
+metric nền softSurface, không bóng/hover nâng, số tabular 20/28, metadata 12/16.
+Bảng có header nhạt và hover xanh; tiền giữ baseline và currency nhỏ qua AdminMoney.
+Giữ nguồn dữ liệu, công thức, quyền, drilldown và bộ lọc kỳ/kênh. Chỉ metric có
+drilldown mới là button; bỏ nút không có handler, không giả lập xuất báo cáo.
+Demo không có projection phải ghi rõ minh hoạ. Không chạy thao tác ghi dữ liệu
+như đánh dấu thiết bị nội bộ trong kiểm tra giao diện.
+
+### Giới hạn không gian làm việc trên màn hình rộng
+
+Shell admin và phần trong top bar dùng chung `page.workspaceMaxWidth = 1680px`,
+căn giữa, rộng 100% khi viewport nhỏ hơn. Giới hạn bao gồm menu khu vực và nội dung;
+không kéo giãn cột tên để lấp màn hình ultrawide. Không thêm viền/card quanh trang.
+Workspace kỹ thuật chuyên dụng và các chế độ embedded/Ben giữ bố cục riêng.
+
+
+Top menu dùng navigationSurface nền #11191f như sidebar cũ, chữ sáng, active/hover xanh nhạt. Công cụ header dùng contextual để giữ nền tối phẳng, không gradient/card; popup thông báo vẫn nền trắng và chữ tối. Native select dùng dark color scheme; spinner kế thừa màu active sáng.
+
+### Profile màu top menu theo người dùng
+
+Top menu có hai profile: Simple (mặc định, nền #f8fafc) và Dark (nền #11191f).
+Chọn qua radio Simple/Dark trong trang Hồ sơ, có nhãn truy cập; chỉ đổi màu header,
+không đổi nền trang hay nghiệp vụ. Palette dùng navigationProfiles trong foundation.
+Lưu localStorage theo user ID trên trình duyệt; giá trị lạ quay về Simple, lỗi storage
+không chặn đổi profile trong phiên. Native select và popup giữ độ tương phản phù hợp.
+
+
+Trang Hồ sơ dùng các vùng phẳng: thông tin cá nhân, giao diện, bảo mật và quyền truy cập. Một ảnh đại diện chỉnh sửa được; URL ảnh nâng cao thu gọn. Quyền đọc theo danh sách quyền hiện tại, có tên mô tả và tìm kiếm, không có chức năng tự cấp quyền. Lưu hồ sơ/đổi mật khẩu kiểm tra API thành công, có pending và chống gửi trùng, lỗi giữ bản nhập. Xác nhận mật khẩu mới trước khi gửi; không đổi chính sách mật khẩu hoặc xác thực backend.
