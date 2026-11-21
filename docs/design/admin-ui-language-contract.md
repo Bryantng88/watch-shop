@@ -1477,7 +1477,7 @@ Top menu dùng nền softSurface #F8FAFC, không border-bottom/gradient/bóng;
 ô tìm kiếm giữ nền trắng, dropdown menu chính trong suốt theo nền thanh.
 
 Hover/focus-within của dòng list dùng rowHover #EFF6FF, cùng tông xanh primary.
-Chỉ đổi nền dòng khi tương tác; header/topbar giữ softSurface #F8FAFC. Không
+Chỉ đổi nền dòng khi tương tác; table header giữ softSurface #F8FAFC; topbar dùng navigationSurface tối. Không
 shadow/translate. Trạng thái chọn/focus nghiệp vụ vẫn giữ mapping hiện có.
 
 Menu khu vực dùng chung divider/grip theo Vận hành, bỏ mũi tên thu/mở ở
@@ -1504,3 +1504,6 @@ Shell admin và phần trong top bar dùng chung `page.workspaceMaxWidth = 1680p
 căn giữa, rộng 100% khi viewport nhỏ hơn. Giới hạn bao gồm menu khu vực và nội dung;
 không kéo giãn cột tên để lấp màn hình ultrawide. Không thêm viền/card quanh trang.
 Workspace kỹ thuật chuyên dụng và các chế độ embedded/Ben giữ bố cục riêng.
+
+
+Top menu dùng navigationSurface nền #11191f như sidebar cũ, chữ sáng, active/hover xanh nhạt. Công cụ header dùng contextual để giữ nền tối phẳng, không gradient/card; popup thông báo vẫn nền trắng và chữ tối. Native select dùng dark color scheme; spinner kế thừa màu active sáng.
