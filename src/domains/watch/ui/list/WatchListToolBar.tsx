@@ -66,7 +66,6 @@ export default function WatchListToolbar({
                 </span>
             }
             icon={<WatchIcon className="h-5 w-5" />}
-            meta={<span>Danh mục đồng hồ · Nội dung, media và trạng thái sẵn sàng</span>}
             actions={
                 <>
                 <div

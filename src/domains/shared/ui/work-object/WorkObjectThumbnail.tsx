@@ -1,13 +1,15 @@
 "use client";
+
+import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 export function WorkObjectThumbnail({
   object,
-  size = 28,
+  size = F.thumbnail.row,
 }: {
   object: { label: string; imageUrl?: string | null };
-  size?: 28 | 32 | 40;
+  size?: 28 | 32 | 40 | 48;
 }) {
   const src = resolveMediaPreviewSrc(object.imageUrl);
   return (

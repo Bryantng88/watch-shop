@@ -8,7 +8,7 @@ import type { StrapListProjectionRow } from "@/domains/projection/server/strap-l
 import { BusinessListFilterBar } from "@/domains/shared/ui/business-list";
 import type { FilterBarField, FilterBarValues } from "@/domains/shared/ui/filter-bar";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
-import { ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
+import { ADMIN_OPERATION_LIST as surface, ADMIN_OPERATION_LIST_STYLE } from "@/domains/shared/ui/admin-design-contract/AdminOperationList";
 import styles from "./StrapInventoryTable.module.css";
 
 const materialLabels: Record<string, string> = { LEATHER: "Dây da", BRACELET: "Dây thép", RUBBER: "Cao su", NATO: "NATO", CANVASS: "Vải / Canvas", SPECIAL: "Khác" };
@@ -55,7 +55,7 @@ export default function StrapInventoryTable({ rows }: { rows: StrapListProjectio
       search={{ key: "q", placeholder: "Tìm tên dây, SKU, hãng, màu, kích thước…" }}
       primaryFields={fields.slice(0, 2)} advancedFields={fields.slice(2)}
       onChange={patch => setValues(current => ({ ...current, ...patch }))} onApply={() => setApplied({ ...values })} onClearField={clearField} onClearAll={reset} />
-    <table className={styles.table}>
+    <table className={`${styles.table} ${surface.tableSurface}`}>
       <caption className="sr-only">Dây đồng hồ, kích thước, nguồn, tồn kho và tình trạng</caption>
       <thead><tr><th scope="col">Dây đồng hồ</th><th scope="col">Kích thước</th><th scope="col">Nguồn</th><th scope="col" className={styles.stock}>Tồn kho</th><th scope="col">Tình trạng</th></tr></thead>
       <tbody>{filteredRows.map(row => <tr key={row.variantId}>

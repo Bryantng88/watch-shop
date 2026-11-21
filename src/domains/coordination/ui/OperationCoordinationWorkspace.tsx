@@ -1,4 +1,6 @@
 "use client";
+
+import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminIconSelect } from "@/domains/shared/ui/admin-design-contract/AdminToolbarControls";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -4393,12 +4395,12 @@ function TechnicalIssueBoardCard({
         </div>
       ) : null}
       <div className={cn("flex items-start gap-2 border-b px-2.5 py-2.5", accent.header)}>
-        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-100">
+        <div style={{ width: F.thumbnail.row, height: F.thumbnail.row }} className="grid shrink-0 place-items-center overflow-hidden rounded-md bg-slate-100">
           {imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={imageSrc} alt="" className="h-full w-full object-cover" />
           ) : (
-            <Monitor className="m-2.5 h-5 w-5 text-slate-400" aria-hidden="true" />
+            <Monitor className="h-5 w-5 text-slate-400" aria-hidden="true" />
           )}
         </div>
         <div className={cn("min-w-0 flex-1", isUrgent && "pl-4")}>

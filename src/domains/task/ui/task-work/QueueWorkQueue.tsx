@@ -1,4 +1,6 @@
 "use client";
+
+import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
@@ -756,14 +758,14 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
 
   if ((item.targetType === "ORDER" && imageUrls.length > 1) || (item.targetType === "PAYMENT" && (item.payment?.itemCount ?? imageUrls.length) > 1)) {
     return (
-      <div className="relative h-11 w-14 shrink-0">
+      <div style={{ width: F.thumbnail.row + 12, height: F.thumbnail.row }} className="relative shrink-0">
         {imageUrls.slice(0, 3).map((url, index) => {
           const stackedSrc = resolveQueuePreviewSrc(url);
           return (
             <div
               key={`${url}:${index}`}
-              className="absolute top-0 flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200"
-              style={{ left: index * 6, zIndex: 3 - index }}
+              className="absolute top-0 flex items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200"
+              style={{ width: F.thumbnail.row, height: F.thumbnail.row, left: index * 6, zIndex: 3 - index }}
             >
               {stackedSrc ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -784,7 +786,7 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   }
 
   return (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+    <div style={{ width: F.thumbnail.row, height: F.thumbnail.row }} className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={label} className="h-full w-full object-cover" />

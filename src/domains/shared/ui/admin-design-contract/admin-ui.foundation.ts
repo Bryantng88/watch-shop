@@ -44,6 +44,7 @@ export const ADMIN_UI_FOUNDATION = {
   border: { hairline: 1, selectedUnderline: 2, focusRing: 2, focusOffset: 2 },
   page: {
     workspaceMaxWidth: 2240,
+    desktopOuterGutter: 24,
     desktopPaddingX: 24, desktopPaddingY: 20, mobilePaddingX: 16, mobilePaddingY: 12,
     regionGap: 24, majorRegionGap: 32, titleDescriptionGap: 4, headerContentGap: 16,
     splitGap: 28, formMaxWidth: 960, detailSidebarWidth: 320,
@@ -88,7 +89,7 @@ export const ADMIN_UI_FOUNDATION = {
   icon: { metadata: 14, inline: 16, heading: 20, strokeWidth: 1.75, tileSize: 32, tileRadius: 8 },
   badge: { minHeight: 24, paddingX: 8, paddingY: 4, gap: 4, dotSize: 6, denseMinHeight: 20 },
   avatar: { xs: 20, sm: 28, md: 32, stackOverlap: 4, stackMax: 3, inlineMax: 2, nameGap: 4, groupGap: 8 },
-  thumbnail: { row: 36, detail: 64, radius: 8 },
+  thumbnail: { row: 48, detail: 64, radius: 8 },
   floating: {
     viewportGutter: 16, mobileViewportGutter: 8, headerPadding: 20, bodyPadding: 20, footerPadding: 20,
     sectionGap: 20, footerGap: 8, popoverGap: 8, popoverPadding: 12, popoverWidth: 288,

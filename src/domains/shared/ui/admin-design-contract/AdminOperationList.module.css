@@ -57,3 +57,7 @@
 @media (pointer: coarse) { .actionMenu button { min-height: var(--admin-list-touch); } }
 
 .mediaTable tbody tr:hover, .mediaTable tbody tr:focus-within { background-color: var(--admin-list-rowHover); }
+
+/* Shared color-only adapter: keep domain geometry, selection and callbacks. */
+.tableSurface > thead > tr > th { background: var(--admin-list-softSurface); }
+.tableSurface > tbody > tr:hover > td, .tableSurface > tbody > tr:focus-within > td { background: var(--admin-list-rowHover); }

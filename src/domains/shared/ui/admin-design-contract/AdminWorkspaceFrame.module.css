@@ -1,0 +1,2 @@
+.frame { width: 100%; max-width: var(--admin-workspace-max); margin-inline: auto; }
+@media(min-width: 1280px) { .frame { width: calc(100% - 2 * var(--admin-workspace-edge)); } }

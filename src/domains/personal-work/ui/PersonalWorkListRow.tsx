@@ -34,6 +34,7 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
   const fullSchedule = `${late ? "Quá hạn · " : ""}${scheduleLabel}${item.estimatedDays > 1 ? ` · ${item.estimatedDays} ngày` : ""}`;
   return <div ref={root} role="listitem" data-work-row={item.id} className={styles.row} onClick={e => { if (!(e.target as HTMLElement).closest("button,a,input,select,textarea")) onOpen(); }}>
     {event ? <span title="Sự kiện không cần hoàn thành" aria-label="Sự kiện không cần hoàn thành" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><CalendarDays className="h-4 w-4" /></span> : <AdminButton iconOnly variant="contextual" density="compact" type="button" aria-label={`Đánh dấu hoàn thành ${code}`} disabled={pending || item.access === "VIEWER"} onClick={onComplete} className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-blue-300 ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}><Check className="h-3.5 w-3.5" /></AdminButton>}
+    {rowObject&&<WorkObjectThumbnail object={rowObject}/>}
     <div className={styles.body}>
       <div data-work-headline className={styles.headline}>
         {!item.checklistOnly && <span className={styles.tag} title={event ? "Sự kiện" : item.category.label} style={event ? { backgroundColor: "#f1f5f9", color: "#475569" } : personalCategoryStyle(item.category.color)}>{event ? "Sự kiện" : item.category.label}</span>}
@@ -42,7 +43,6 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
           className="inline-flex h-8 shrink-0 items-center rounded px-1 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-blue-300">
           <AdminUserAvatar user={item.owner} size="sm" className="ring-1 ring-slate-200" />
         </AdminButton>}
-        {rowObject&&<WorkObjectThumbnail object={rowObject}/>}
         <AdminButton variant="contextual" type="button" aria-label={`Mở ${code}: ${item.title}`} title={item.title} onClick={onOpen} className={`${styles.title} focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500 ${item.status === "DONE" ? "text-slate-400 line-through" : "text-slate-950"}`}>{item.title}</AdminButton>
         {item.access !== "OWNER" && <span title={accessLabel} aria-label={accessLabel} className="inline-flex shrink-0 items-center gap-1 rounded bg-violet-50 px-1 py-0.5 text-[10px] text-violet-700"><Share2 className="h-3 w-3" />{sharedEditable ? "Sửa" : "Xem"}</span>}
         {hasContext && !showSharing && <AdminButton iconOnly variant="contextual" density="compact" ref={contextTrigger} type="button" aria-label={`Thông tin thêm ${code}`} aria-expanded={popup === "context"} onClick={() => setPopup(popup === "context" ? null : "context")} className="grid h-8 w-8 shrink-0 place-items-center rounded text-slate-400 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-300"><Info className="h-3.5 w-3.5" /></AdminButton>}
