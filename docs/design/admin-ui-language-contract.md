@@ -1544,3 +1544,9 @@ chi tiết xử lý khi có, rồi người cập nhật – thời gian – h�
 padding và nhãn, không bỏ dữ liệu nghiệp vụ; ảnh inline vẫn 48px. Không có bóng
 nâng card. Lớp kéo-thả có paint containment phải dùng cùng độ bo 6px với khung
 card để không cắt mất viền bốn góc; overlay mở preview trong suốt và bo kế thừa.
+
+### TI board: compact metadata
+
+Giữ thanh màu và nền tiêu đề theo nhóm TI (Máy, Vỏ, Kính, Dây).
+Không hiển thị hàng phân loại / cách xử lý (ví dụ “Tổng quát · Nội bộ”) trên thẻ;
+xem và chỉnh các thông tin này trong chi tiết TI. Nhãn Đơn khách vẫn hiện khi có.

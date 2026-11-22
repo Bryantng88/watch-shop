@@ -4464,22 +4464,14 @@ function TechnicalIssueBoardCard({
           ) : null}
         </div>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-1 px-2 pt-1">
-        {isCustomerOrder ? (
+      {isCustomerOrder ? (
+        <div className="px-2 pt-1">
           <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0 text-[11px] font-semibold text-amber-800">
             <Receipt className="h-3 w-3" aria-hidden="true" />
             Đơn khách
           </span>
-        ) : null}
-        <span className={cn("rounded-full border px-1.5 py-0 text-[11px] font-medium", accent.chip)}>
-          {technicalAreaLabel(item.area)}
-        </span>
-        {item.actionMode ? (
-          <span className="max-w-full truncate rounded-full border border-violet-100 bg-violet-50 px-1.5 py-0 text-[11px] font-medium text-violet-700">
-            {technicalOwnerLabel(item.actionMode, item.vendorName)}
-          </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {item.processingDetails.length ? (
         <div className="px-2 pt-1 text-[11px] leading-4 text-slate-600">
           <span className="font-semibold text-slate-800">Xử lý:</span>{" "}
@@ -4945,28 +4937,6 @@ function normalizeTechnicalArea(value?: string | null) {
     GENERAL: "GENERAL",
   };
   return aliases[area] ?? area;
-}
-
-function technicalAreaLabel(value?: string | null) {
-  const raw = normalizeTechnicalArea(value);
-  const labels: Record<string, string> = {
-    GENERAL: "Tổng quát",
-    MOVEMENT: "Máy",
-    CASE: "Vỏ",
-    CRYSTAL: "Kính",
-    DIAL: "Mặt số",
-    HANDS_MARKERS: "Kim cọc",
-    CROWN: "Núm",
-    BRACELET: "Dây",
-  };
-  return labels[raw] ?? (raw || "Tổng quát");
-}
-
-function technicalOwnerLabel(actionMode?: string | null, vendorName?: string | null) {
-  const mode = String(actionMode ?? "").trim().toUpperCase();
-  if (mode === "VENDOR") return vendorName ? `Vendor: ${vendorName}` : "Vendor";
-  if (mode === "INTERNAL") return "Nội bộ";
-  return mode || "Chưa chọn";
 }
 
 function QueueSummaryCell({
