@@ -59,7 +59,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 />
                 </div>
 
-                <main className={`min-h-0 min-w-0 flex-1 overflow-y-auto bg-slate-50 ${isTechnicianWorkspace ? "w-full" : ADMIN_WORKSPACE_FRAME}`} style={isTechnicianWorkspace ? undefined : ADMIN_WORKSPACE_FRAME_STYLE}>
+                <main className={`min-h-0 min-w-0 flex-1 overflow-y-auto bg-white ${isTechnicianWorkspace ? "w-full" : ADMIN_WORKSPACE_FRAME}`} style={isTechnicianWorkspace ? undefined : ADMIN_WORKSPACE_FRAME_STYLE}>
                     {children}
                 </main>
             </div></AdminShellHeadingProvider>
