@@ -17,7 +17,6 @@ import {
   CircleDollarSign,
   FileText,
   ImageIcon,
-  Info,
   Landmark,
   Loader2,
   Pencil,
@@ -180,8 +179,8 @@ export default function WatchDetailUiProposal({
   const costRows = [
     { label: "Giá nhập", note: "Từ phiếu nhập gần nhất", amount: acquisitionCost },
     { label: "Service", note: `${rows(tradeHistory.serviceFees).length} hạng mục kỹ thuật`, amount: serviceCost },
-    { label: "Vận chuyển", note: `${rows(tradeHistory.shipmentFees).length} shipment liên quan`, amount: shipmentCost },
-    { label: "Chi phí khác", note: "Payment OUT khác", amount: otherCost },
+    { label: "Vận chuyển", note: `${rows(tradeHistory.shipmentFees).length} vận đơn liên quan`, amount: shipmentCost },
+    { label: "Chi phí khác", note: "Các khoản chi đã ghi nhận", amount: otherCost },
   ];
 
   const contentReady = Boolean(values.content.titleOverride || values.content.body);
@@ -336,7 +335,7 @@ export default function WatchDetailUiProposal({
   }
 
   return (
-    <AdminDetailPage>
+    <AdminDetailPage surface="record">
         {!live && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-violet-900">
             <Sparkles className="h-4 w-4 text-violet-600" />
@@ -362,11 +361,12 @@ export default function WatchDetailUiProposal({
                 <div className={detailUi.tags}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(values.basic.stockState)}</span><span className="text-blue-700">{statusLabel(values.basic.saleState)}</span></div>
                 <h1 className={detailUi.recordTitle}>{title}</h1>
                 <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
+                {canEditMedia && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
+                  {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <Camera className="h-4 w-4"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
+                </AdminButton>}
               </div>
             </div>
-            {canEditMedia && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
-              {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <Camera className="h-4 w-4"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
-            </AdminButton>}
+
           </div>
         </header>
 
@@ -384,7 +384,7 @@ export default function WatchDetailUiProposal({
             <div hidden={activeSection !== "overview"} data-watch-section="overview" className="space-y-6">
             <section aria-label="Thông tin đồng hồ" className={detailUi.section}>
               <h2 className="text-sm font-bold">Thông tin đồng hồ</h2>
-          <dl className={detailUi.facts}>{[["Nhà cung cấp", text(vendor.name)], ["Năm sản xuất", values.basic.yearText || "—"], ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"], ["Tình trạng", values.basic.conditionGrade || "—"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+              <dl className={detailUi.facts}>{[["Nhà cung cấp", text(vendor.name)], ["Năm sản xuất", values.basic.yearText || "—"], ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"], ["Tình trạng", values.basic.conditionGrade || "—"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
             </section>
             <section id="overview" className={detailUi.section}>
               <div className={detailUi.sectionHeader}>
@@ -392,7 +392,7 @@ export default function WatchDetailUiProposal({
                   <h2 className="flex items-center gap-2 text-sm font-bold">
                     <CircleDollarSign className="h-4 w-4 text-violet-600" /> Giá & lợi nhuận
                   </h2>
-                  <p className="mt-1 text-xs text-slate-400">Một nguồn thông tin tài chính duy nhất cho Watch.</p>
+
                 </div>
                 {canEditPrice ? (
                   <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Chỉnh giá bán" title="Chỉnh giá bán" onClick={() => setPricingOpen(true)}>
@@ -499,7 +499,7 @@ export default function WatchDetailUiProposal({
             </section>
             </div>
             <div hidden={activeSection !== "service"} data-watch-section="service">
-            <ServiceCard flat
+            <ServiceCard flat flatTitle="Yêu cầu dịch vụ"
               projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
               productId={values.productId}
               title={title}
@@ -512,7 +512,7 @@ export default function WatchDetailUiProposal({
             <div hidden={activeSection !== "trade-history"} data-watch-section="trade-history">
             <section id="trade-history" className={detailUi.section}>
               <div className="flex items-center justify-between">
-                <h2 className="flex items-center gap-2 text-sm font-bold"><ArrowLeftRight className="h-4 w-4 text-indigo-600" /> Lịch sử mua bán</h2>
+                <h2 className="text-sm font-bold">Giao dịch đã ghi nhận</h2>
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
@@ -552,7 +552,6 @@ export default function WatchDetailUiProposal({
                   <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" /> Không có việc cần xử lý</div>
                 )}
               </div>
-              <div className="mt-3 flex items-start gap-2 text-xs leading-4 text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Checklist chỉ hiện vấn đề cần hành động, không lặp lại toàn bộ tiến độ.</div>
             </section>
 
             </div>

@@ -18,6 +18,7 @@ import type { WatchServiceProjection } from "@/domains/watch/shared/watch-detail
 export default function ServiceCard({
     projection,
     flat = false,
+    flatTitle = "Kỹ thuật",
     productId,
     title,
     sku,
@@ -26,6 +27,7 @@ export default function ServiceCard({
 }: {
     projection: WatchServiceProjection;
     flat?: boolean;
+    flatTitle?: string;
     productId?: string | null;
     title?: string | null;
     sku?: string | null;
@@ -205,7 +207,7 @@ export default function ServiceCard({
     return (
         <>
         <aside id="service" className={flat ? detailUi.section : "scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"}>
-                {flat ? <AdminDetailSectionHeader title="Kỹ thuật" description={`${projection.activeRequestCount} yêu cầu đang mở · ${projection.activeIssueCount} lỗi đang mở`} /> : (
+                {flat ? <AdminDetailSectionHeader title={flatTitle} description={`${projection.activeRequestCount} yêu cầu đang mở · ${projection.activeIssueCount} lỗi đang mở`} /> : (
                 <Header
                     icon={<Wrench className="h-4 w-4" />}
                     title="Service"

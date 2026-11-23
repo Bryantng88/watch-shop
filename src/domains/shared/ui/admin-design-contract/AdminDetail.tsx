@@ -11,10 +11,10 @@ const detailStyle = {
   "--detail-gap": `${f.page.splitGap}px`, "--detail-sidebar": `${f.page.detailSidebarWidth}px`,
   "--detail-text": f.colors.text, "--detail-body": f.colors.body, "--detail-muted": f.colors.muted,
   "--detail-line": f.colors.divider, "--detail-focus": f.colors.focusSurface, "--detail-link": f.colors.link,
-  "--detail-canvas": f.colors.canvas, "--detail-ring": f.colors.focusRing,
+  "--detail-soft": f.colors.softSurface, "--detail-canvas": f.colors.canvas, "--detail-ring": f.colors.focusRing,
 } as CSSProperties;
 /** Record pages own one centered frame. Dialogs/portals are never contained. */
-export function AdminDetailPage({ children }: { children: ReactNode }) {
+export function AdminDetailPage({ children, surface = "plain" }: { children: ReactNode; surface?: "plain" | "record" }) {
   const pageRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const page = pageRef.current;
@@ -26,7 +26,7 @@ export function AdminDetailPage({ children }: { children: ReactNode }) {
     observer.observe(frame);
     return () => observer.disconnect();
   }, []);
-  return <main ref={pageRef} data-admin-detail="page" className={styles.page} style={detailStyle}><div data-detail-frame className={styles.frame}>{children}</div></main>;
+  return <main ref={pageRef} data-admin-detail="page" data-detail-surface={surface} className={styles.page} style={detailStyle}><div data-detail-frame className={styles.frame}>{surface === "record" ? <div data-detail-record className={styles.recordSurface}>{children}</div> : children}</div></main>;
 }
 export function AdminDetailSectionHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return <AdminWorkspaceHeadingRow className={styles.sectionHeader}><div><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{description && <p className={styles.metadata}>{description}</p>}</div>{actions && <div className={styles.actions}>{actions}</div>}</AdminWorkspaceHeadingRow>;
