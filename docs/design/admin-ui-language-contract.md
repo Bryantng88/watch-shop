@@ -1600,4 +1600,13 @@ Static WorkCase reachability and remaining legacy task/permission inconsistencie
 
 ### Watch compact actions (2026-11-23)
 
-Watch related actions (Media, Service, Order and Acquisition) share a labeled action group and use the existing AdminButton quiet + iconOnly appearance: no border or raised surface, 16px icons, preserved focus/hover/touch behavior, accessible names and descriptive native title tooltips. The price edit icon stays beside its section heading and uses the same appearance. Preserve permission guards and callbacks. Other action surfaces are unchanged. Watch recordImage is 112px on desktop and 88px on mobile; do not enlarge every thumbnail globally. Section navigation remains in place pending a separate discussion about a left-side menu.
+Watch related actions (Media, Service, Order and Acquisition) share a labeled action group and use the existing AdminButton quiet + iconOnly appearance: no border or raised surface, 16px icons, preserved focus/hover/touch behavior, accessible names and descriptive native title tooltips. The price edit icon stays beside its section heading and uses the same appearance. Preserve permission guards and callbacks. Other action surfaces are unchanged. Watch recordImage is 112px on desktop and 88px on mobile; do not enlarge every thumbnail globally. Watch section navigation now uses the shared record workspace described below.
+
+
+### Watch detail section workspace (2026-11-23)
+
+Within the centered record frame, keep identity/INLINE image above a shared AdminDetailWorkspace. Reuse AdminWorkspaceViewNavigation, available-width split measurement and the existing drag/keyboard separator with persisted width; on narrow hosts use the shared native section selector. Share the management style tokens without adding a second page header or nested page padding.
+
+Watch sections are Tổng quan, Nội dung & hình ảnh, Kỹ thuật and Lịch sử mua bán. Show one section at a time, retaining mounted section components so local drafts and existing Service event/portal callbacks survive navigation. Tổng quan includes price/cost information and attention links; the other sections own their corresponding full-width content. Related icon actions remain above the content pane.
+
+Section choices update only the URL hash; support direct links and Back/Forward, preserve the path/query, and honor attention links to #content-media. Existing record permissions, callbacks and modal flows remain unchanged. Do not render hidden section controls as keyboard targets. Regression checks cover section exclusivity, direct hashes/history, desktop buttons, narrow selector, separator collapse/restore and Media interaction after switching.

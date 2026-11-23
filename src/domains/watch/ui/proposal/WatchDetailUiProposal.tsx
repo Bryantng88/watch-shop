@@ -2,7 +2,8 @@
 
 import { AdminDetailPage, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { AdminDetailWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminDetailWorkspace";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -83,6 +84,18 @@ function money(value: unknown, canView = true) {
   return canView ? `${moneyText(value, "0")} ₫` : "••••••";
 }
 
+const detailSections = [
+  { value: "overview", label: "Tổng quan" },
+  { value: "content-media", label: "Nội dung & hình ảnh" },
+  { value: "service", label: "Kỹ thuật" },
+  { value: "trade-history", label: "Lịch sử mua bán" },
+] as const;
+type DetailSection = typeof detailSections[number]["value"];
+function sectionFromHash(): DetailSection {
+  const value = window.location.hash.slice(1);
+  return detailSections.find(item => item.value === value)?.value ?? "overview";
+}
+
 export default function WatchDetailUiProposal({
   detail,
   service,
@@ -109,6 +122,18 @@ export default function WatchDetailUiProposal({
   const [savingPrice, setSavingPrice] = useState(false);
   const previewState = useBusinessEntityPreview();
   const notify = useNotify();
+  const [activeSection, setActiveSection] = useState<DetailSection>("overview");
+  useEffect(() => {
+    const sync = () => setActiveSection(sectionFromHash());
+    sync();
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    return () => { window.removeEventListener("hashchange", sync); window.removeEventListener("popstate", sync); };
+  }, []);
+  function selectSection(value: DetailSection) {
+    if (window.location.hash !== `#${value}`) window.history.pushState(null, "", `#${value}`);
+    setActiveSection(value);
+  }
   const router = useRouter();
   const values = mapWatchDetailToFormValues(detail);
   const audienceSegment = text(detail.audienceSegment, "MEN").toUpperCase() === "WOMEN"
@@ -346,30 +371,18 @@ export default function WatchDetailUiProposal({
           <dl className={detailUi.facts}>{[["Nhà cung cấp", text(vendor.name)], ["Năm sản xuất", values.basic.yearText || "—"], ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"], ["Tình trạng", values.basic.conditionGrade || "—"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
         </header>
 
-        <div className={detailUi.navigationRow}>
-          <nav className={detailUi.tabs} aria-label="Các phần chi tiết">
-            {[
-              ["Tổng quan", "#overview"],
-              ["Nội dung & hình ảnh", "#content-media"],
-              ["Service", "#service"],
-              ["Lịch sử", "#trade-history"],
-            ].map(([label, href]) => (
-              <a href={href} key={label} className={detailUi.tabLink}>{label}</a>
-            ))}
-          </nav>
-
-          {live && (
+        <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection} actions={
+          live && (
             <div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
               <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><Camera className="h-4 w-4" aria-hidden="true"/></AdminButton>
               <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
               <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
               <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Phiếu nhập / Buy Back" title={latestAcquisition ? "Xem phiếu nhập" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")}><ArrowLeftRight className="h-4 w-4" aria-hidden="true"/></AdminButton>
             </div>
-          )}
-        </div>
-
-        <div className={detailUi.layout}>
+          )
+        }>
           <div className={detailUi.column}>
+            <div hidden={activeSection !== "overview"} data-watch-section="overview">
             <section id="overview" className={detailUi.section}>
               <div className={detailUi.sectionHeader}>
                 <div>
@@ -430,6 +443,8 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
 
+            </div>
+            <div hidden={activeSection !== "content-media"} data-watch-section="content-media">
             <section id="content-media" className="scroll-mt-24">
               <div className={detailUi.section}>
                 <div className={detailUi.sectionHeader}>
@@ -479,9 +494,8 @@ export default function WatchDetailUiProposal({
                 </div>
               </div>
             </section>
-          </div>
-
-          <aside className={detailUi.sidebar}>
+            </div>
+            <div hidden={activeSection !== "service"} data-watch-section="service">
             <ServiceCard flat
               projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
               productId={values.productId}
@@ -491,6 +505,8 @@ export default function WatchDetailUiProposal({
               onIssuePreview={(issue) => openRelatedPreview("TECHNICAL_ISSUE", issue, "Technical Issue")}
             />
 
+            </div>
+            <div hidden={activeSection !== "trade-history"} data-watch-section="trade-history">
             <section id="trade-history" className={detailUi.section}>
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold"><ArrowLeftRight className="h-4 w-4 text-indigo-600" /> Lịch sử mua bán</h2>
@@ -515,6 +531,8 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
 
+            </div>
+            <div hidden={activeSection !== "overview"}>
             <section className={detailUi.section}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
@@ -534,8 +552,9 @@ export default function WatchDetailUiProposal({
               <div className="mt-3 flex items-start gap-2 text-xs leading-4 text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Checklist chỉ hiện vấn đề cần hành động, không lặp lại toàn bộ tiến độ.</div>
             </section>
 
-          </aside>
-        </div>
+            </div>
+          </div>
+        </AdminDetailWorkspace>
       <BusinessEntityPreviewModal
         open={previewState.open}
         preview={previewState.preview}

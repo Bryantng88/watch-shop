@@ -7,6 +7,7 @@ on:
       - 'src/domains/watch/ui/proposal/WatchDetailUiProposal.tsx'
       - 'src/domains/watch/ui/operations/side/ServiceCard.tsx'
       - 'src/domains/shared/ui/admin-design-contract/AdminDetail*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminManagement.tsx'
       - 'src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts'
       - 'src/domains/acquisition/client/AcquisitionDetailClient.tsx'
       - 'src/domains/acquisition/client/AcquisitionListClient.tsx'
@@ -34,6 +35,8 @@ jobs:
           src/domains/watch/ui/proposal/WatchDetailUiProposal.tsx
           src/domains/watch/ui/operations/side/ServiceCard.tsx
           src/domains/shared/ui/admin-design-contract/AdminDetail.tsx
+          src/domains/shared/ui/admin-design-contract/AdminDetailWorkspace.tsx
+          src/domains/shared/ui/admin-design-contract/AdminManagement.tsx
           src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts
           scripts/check-admin-detail-ui.cjs scripts/check-acquisition-detail-ui.cjs
           src/domains/acquisition/client/AcquisitionDetailClient.tsx
