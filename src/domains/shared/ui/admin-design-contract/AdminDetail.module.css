@@ -12,6 +12,7 @@
 .recordIdentity { display: flex; gap: 12px; min-width: 0; flex: 1 1 300px; }
 .identityText { min-width: 0; flex: 1; }
 .thumbnail { position: relative; width: 64px; height: 64px; flex-shrink: 0; border-radius: 8px; overflow: hidden; background: #f8fafc; display: grid; place-items: center; }
+.recordImage { width: 112px; height: 112px; }
 .recordTitle { margin: 4px 0; font: 700 24px/32px var(--detail-font); color: var(--detail-text); overflow-wrap: anywhere; }
 .metadata { margin: 4px 0 0; font: 400 12px/16px var(--detail-font); color: var(--detail-muted); overflow-wrap: anywhere; }
 .breadcrumb { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px; line-height: 16px; color: var(--detail-muted); min-width: 0; overflow-wrap: anywhere; }
@@ -41,4 +42,4 @@
 .itemName { min-width: 0; font-size: 14px; line-height: 20px; font-weight: 600; overflow-wrap: anywhere; }
 .note { font-size: 14px; line-height: 20px; white-space: pre-wrap; color: var(--detail-body); }
 .page[data-detail-wide="true"] .layout { grid-template-columns: minmax(0,1fr) var(--detail-sidebar); } .page[data-detail-wide="true"] .facts { grid-template-columns: repeat(4,minmax(0,1fr)); } .page[data-detail-wide="true"] .pricingGrid { grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); } .page[data-detail-wide="true"] .contentGrid { grid-template-columns: minmax(0,1fr) 280px; }
-@media(max-width:639px) { .frame { padding: 12px var(--detail-mobile-gutter) 32px; } .recordTitle { font-size: 20px; line-height: 28px; } .itemHead { display: none; } .itemRow { grid-template-columns: repeat(2,minmax(0,1fr)); } .itemRow > :first-child { grid-column: 1 / -1; } .focus { padding: 16px; } }
+@media(max-width:639px) { .recordImage { width: 88px; height: 88px; } .frame { padding: 12px var(--detail-mobile-gutter) 32px; } .recordTitle { font-size: 20px; line-height: 28px; } .itemHead { display: none; } .itemRow { grid-template-columns: repeat(2,minmax(0,1fr)); } .itemRow > :first-child { grid-column: 1 / -1; } .focus { padding: 16px; } }

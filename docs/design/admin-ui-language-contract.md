@@ -1579,7 +1579,7 @@ kết nối Google nằm chung ở pane phụ bên phải (xuống dưới trên
 
 Order and Watch detail pages use `AdminDetailPage` and `ADMIN_UI_FOUNDATION.page.detailMaxWidth = 1440`. This is a centered, border-box maximum including 24px horizontal gutters on desktop and 16px below 640px. The surrounding canvas is white. Reuse this recipe when migrating subsequent record pages; list workspace width is unchanged.
 
-Use breadcrumb/back navigation, a compact identity and action row, section navigation, then business sections and activity. Watch identity thumbnails are 64px. Record titles use 24/32 (20/28 on mobile), body 14/20 and metadata 12/16. Keep technical IDs in a disclosure rather than permanent identity chrome.
+Use breadcrumb/back navigation, a compact identity and action row, section navigation, then business sections and activity. The default compact identity thumbnail is 64px; Watch uses the shared recordImage variant at 112px on desktop / 88px below 640px for easier visual identification. Record titles use 24/32 (20/28 on mobile), body 14/20 and metadata 12/16. Keep technical IDs in a disclosure rather than permanent identity chrome.
 
 Sections are flat, without enclosing card borders, shadows or decorative header icons. Use a light bottom divider and spacing to distinguish sections. Keep one meaningful financial focus surface: remaining amount for Order, current selling price for Watch. Do not repeat totals as hero metrics and sidebar cards.
 
@@ -1596,3 +1596,8 @@ The existing acquisition entry opens a dialog, not a new full-page route. It use
 Editing requires the existing management and financial visibility props and a DRAFT or POSTED status. DRAFT retains item/image/quantity/notes editing; POSTED retains price-only editing. Other statuses remain read-only. Null financial values remain unavailable, never rendered as zero. Preserve the existing GET/PUT authorization, confirmation, full-currency payload, projection delivery wait, callbacks and draft retention on errors. Close/Escape and editable controls are locked while saving; keyboard focus remains in the dialog and returns to the trigger on close.
 
 Static WorkCase reachability and remaining legacy task/permission inconsistencies are recorded in `docs/reviews/work-case-usage-20261123.md`. This detail migration does not retire WorkCase, TaskItem infrastructure or change access policy.
+
+
+### Watch compact actions (2026-11-23)
+
+Watch related actions (Media, Service, Order and Acquisition) share a labeled action group and use the existing AdminButton quiet + iconOnly appearance: no border or raised surface, 16px icons, preserved focus/hover/touch behavior, accessible names and descriptive native title tooltips. The price edit icon stays beside its section heading and uses the same appearance. Preserve permission guards and callbacks. Other action surfaces are unchanged. Watch recordImage is 112px on desktop and 88px on mobile; do not enlarge every thumbnail globally. Section navigation remains in place pending a separate discussion about a left-side menu.

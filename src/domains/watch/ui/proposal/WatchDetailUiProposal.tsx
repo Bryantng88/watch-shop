@@ -332,7 +332,7 @@ export default function WatchDetailUiProposal({
         <header>
           <div className={detailUi.recordHeader}>
             <div className={detailUi.recordIdentity}>
-              <div className={detailUi.thumbnail}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="64px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
+              <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 88px, 112px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
               <div className={detailUi.identityText}>
                 <div className={detailUi.tags}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(values.basic.stockState)}</span><span className="text-blue-700">{statusLabel(values.basic.saleState)}</span></div>
                 <h1 className={detailUi.recordTitle}>{title}</h1>
@@ -359,11 +359,11 @@ export default function WatchDetailUiProposal({
           </nav>
 
           {live && (
-            <div className="flex flex-wrap items-center justify-end gap-1.5">
-              <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-xs font-semibold text-violet-700"><Camera className="h-3.5 w-3.5" /> Xử lý Media</AdminButton>
-              <AdminButton variant="secondary" density="compact" type="button" title={latestServiceRequest ? "Xem Service Request gần nhất và thao tác" : "Tạo Service cho Watch"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><Wrench className="h-3.5 w-3.5" /> Service</AdminButton>
-              <AdminButton variant="secondary" density="compact" type="button" title={latestOrder ? "Xem và xử lý Order gần nhất" : "Tạo Order từ Watch"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ReceiptText className="h-3.5 w-3.5" /> Order</AdminButton>
-              <AdminButton variant="secondary" density="compact" type="button" title={latestAcquisition ? "Xem phiếu nhập và thao tác" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-700"><ArrowLeftRight className="h-3.5 w-3.5" /> Phiếu nhập / Buy Back</AdminButton>
+            <div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
+              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><Camera className="h-4 w-4" aria-hidden="true"/></AdminButton>
+              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
+              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
+              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Phiếu nhập / Buy Back" title={latestAcquisition ? "Xem phiếu nhập" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")}><ArrowLeftRight className="h-4 w-4" aria-hidden="true"/></AdminButton>
             </div>
           )}
         </div>
@@ -379,8 +379,8 @@ export default function WatchDetailUiProposal({
                   <p className="mt-1 text-xs text-slate-400">Một nguồn thông tin tài chính duy nhất cho Watch.</p>
                 </div>
                 {canEditPrice ? (
-                  <AdminButton variant="secondary" density="compact" type="button" onClick={() => setPricingOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700">
-                    <Pencil className="h-3.5 w-3.5" /> Chỉnh giá bán
+                  <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Chỉnh giá bán" title="Chỉnh giá bán" onClick={() => setPricingOpen(true)}>
+                    <Pencil className="h-4 w-4" aria-hidden="true"/>
                   </AdminButton>
                 ) : null}
               </div>
