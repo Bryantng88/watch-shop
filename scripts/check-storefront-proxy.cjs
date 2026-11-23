@@ -7,3 +7,13 @@ for (const path of ['ops/nginx/storefront-production.conf', 'ops/deployment/ngin
   assert.match(config, /location\s+\/\s*\{\s*return\s+404;/, path + ': unknown and private routes must stay closed');
 }
 console.log('PASS public policy route in all three proxy configurations; default deny retained.');
+
+const admin = fs.readFileSync('ops/nginx-admin-internal.conf', 'utf8');
+const upload = admin.match(/location\s*=\s*\/api\/admin\/storefront\/media\s*\{([^}]+)\}/)?.[1];
+assert.ok(upload, 'Website upload must have an exact proxy route');
+assert.match(upload, /client_max_body_size\s+21m;/, 'Allow 20 MB files plus multipart framing');
+assert.match(upload, /proxy_pass\s+http:\/\/127\.0\.0\.1:3000;/);
+assert.match(upload, /proxy_set_header\s+Host\s+\$host;/);
+assert.match(upload, /proxy_set_header\s+X-Forwarded-Proto\s+https;/);
+assert.equal((admin.match(/client_max_body_size/g) || []).length, 1, 'Do not widen unrelated admin endpoints');
+console.log('PASS exact admin website upload route; forwarding and limits retained.');

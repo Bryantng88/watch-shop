@@ -99,18 +99,21 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await row(28).getByRole('button', { name: /^Mở CV-28:/ }).click();
     await page.getByRole('button', { name: 'Hủy', exact: true }).waitFor();
     assert.ok(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count());
+    assert.equal(await page.getByRole('dialog').getByText('Ghi chú', {exact:true}).count(), 0);
+    assert.equal(await page.getByRole('button', {name:'← Danh sách công việc', exact:true}).getAttribute('data-admin-button'), 'contextual');
+    assert.equal(await page.getByRole('dialog').getByPlaceholder('Ví dụ: báo cáo, codex (ngăn cách bằng dấu phẩy)').isVisible().catch(()=>false), false);
+
     assert.equal((await page.evaluate(() => window.__actions)).filter(a => a.name === 'updatePersonalWorkAction').length, 1); // Opening never mutates work.
     await page.getByRole('button', { name: 'Hủy', exact: true }).click();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(origin + '/?full=1');
     await page.locator('[data-work-row]').first().waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    assert.equal(await page.locator('#personal-google-calendar-agenda').count(), 0);
+    assert.equal(await page.locator('#personal-google-calendar-agenda').count(), 1);
     const leftHeading = await page.getByRole('navigation', { name: 'Hiển thị công việc' }).getByRole('heading').boundingBox();
     const contentHeading = await page.getByRole('heading', { name: 'Hôm nay', exact: true }).boundingBox();
     assert.ok(Math.abs(leftHeading.y - contentHeading.y) <= 1, 'Pane headings align');
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-desktop.png'), fullPage: true });
-    await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
     await page.locator('#personal-google-calendar-agenda').waitFor();
     const calendarWidth = (await page.locator('#personal-google-calendar-agenda').boundingBox()).width;
     const listWidth = (await page.getByRole('list', { name: 'Công việc', exact: true }).boundingBox()).width;
@@ -179,6 +182,7 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.equal(saveCalls.filter(a=>a.name==='updatePersonalWorkAction').length,1);
     assert.equal(saveCalls.filter(a=>a.name==='syncPersonalWorkCalendarAction').length,1);
     assert.equal(saveCalls.find(a=>a.name==='updatePersonalWorkAction').input.updateBody,'500.000');
+    assert.equal(saveCalls.find(a=>a.name==='updatePersonalWorkAction').input.note, 'Ghi chú đầy đủ của công việc mẫu');
     await phone.goto(origin+'/?view=list&item=item-23');
     await phone.getByRole('dialog').waitFor();
     await phone.evaluate(()=>{window.__saveError=true});
@@ -194,12 +198,10 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
       await route.fulfill({json:{events:calendarMode==='ok'?[]:null,items:fixture.items,lastSyncedAt:null,loadError:calendarMode==='ok'?null:calendarMode==='reconnect'?'Quyền truy cập đã hết hạn. Hãy kết nối lại.':'Google Calendar tạm thời chưa phản hồi.',reconnectRequired:calendarMode==='reconnect'}});
     });
     await page.goto(origin+'/?full=1&calendarFault=1');
-    await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
     await page.getByText('CẦN KẾT NỐI LẠI',{exact:true}).waitFor();
     assert.ok(await page.getByRole('button',{name:'Kết nối lại Google Calendar',exact:true}).isVisible());
     assert.ok(await page.locator('[data-work-row="item-31"]').isVisible());
     calendarMode='temporary';await page.reload();
-    await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
     await page.getByText('LỖI ĐỒNG BỘ',{exact:true}).waitFor();
     assert.ok(await page.getByRole('button',{name:'Tải lại lịch',exact:true}).isVisible());
     calendarMode='ok';await page.getByRole('button',{name:'Tải lại lịch',exact:true}).click();

@@ -49,6 +49,7 @@ async function jsonRequest<T = { record: ContentRecord; articles: ArticleItem[];
   const fallback = "Không thể tải hoặc lưu dữ liệu website. Vui lòng thử lại.";
   try {
     const res = await fetch(url, { cache: "no-store", ...init });
+    if (res.status === 413) throw new Error("Máy chủ từ chối kích thước ảnh. Chọn ảnh tối đa 20 MB; nếu ảnh nhỏ hơn, cần kiểm tra giới hạn upload của proxy.");
     const result = await readUiResponse(res, fallback);
     if (url.startsWith("/api/admin/storefront/content") && (!result.record || typeof result.record !== "object" || !("id" in result.record) || !("draft" in result.record))) throw new Error(fallback);
     return result as T;
@@ -133,8 +134,8 @@ function ImageField({
           )}
         </div>
         <div className="sfc-image-controls">
-          <AdminButton ref={chooseButton} variant="quiet" type="button" disabled={disabled} aria-label={`Chọn ${label}`} aria-expanded={browsing} aria-controls={pickerId} aria-describedby={showHint ? hintId : undefined} onClick={() => setBrowsing(value => !value)}><ImagePlus size={15} />Chọn ảnh</AdminButton>
-          <AdminButton variant="quiet" type="button" className="sfc-upload" disabled={disabled} aria-label={`Tải ${label}`} onClick={()=>fileInput.current?.click()}><ImagePlus size={15}/>Tải ảnh mới</AdminButton>
+          <AdminButton ref={chooseButton} className="sfc-image-action" variant="contextual" type="button" disabled={disabled} aria-label={`Chọn ${label}`} aria-expanded={browsing} aria-controls={pickerId} aria-describedby={showHint ? hintId : undefined} onClick={() => setBrowsing(value => !value)}><ImagePlus size={15} />Chọn ảnh</AdminButton>
+          <AdminButton variant="contextual" type="button" className="sfc-image-action" disabled={disabled} aria-label={`Tải ${label}`} onClick={()=>fileInput.current?.click()}><ImagePlus size={15}/>Tải ảnh mới</AdminButton>
             <input
               ref={fileInput}
               hidden
@@ -151,10 +152,10 @@ function ImageField({
                 e.target.value = "";
               }}
             />
-          {suggestedImage && suggestedImage.key !== value.key && <AdminButton variant="quiet" type="button" disabled={disabled} title={suggestedImage.name} aria-label={`Dùng ảnh từ thư viện cho ${label}`} onClick={() => onChange({ ...value, key: suggestedImage.key })}>Dùng ảnh từ thư viện</AdminButton>}
+          {suggestedImage && suggestedImage.key !== value.key && <AdminButton className="sfc-image-action" variant="contextual" type="button" disabled={disabled} title={suggestedImage.name} aria-label={`Dùng ảnh từ thư viện cho ${label}`} onClick={() => onChange({ ...value, key: suggestedImage.key })}>Dùng ảnh từ thư viện</AdminButton>}
           <small className="sfc-image-hint">{folderName}</small>
           {value.key ? (
-            <AdminButton variant="quiet" type="button" onClick={() => onChange(emptyImage())}>
+            <AdminButton className="sfc-image-action" variant="contextual" type="button" onClick={() => onChange(emptyImage())}>
               Bỏ ảnh
             </AdminButton>
           ) : null}
@@ -400,6 +401,7 @@ export default function StorefrontManager({
   async function upload(file: File, folder: WebsiteFolder) {
     setError("");
     return await uploadMutation.run({key:"media-upload",notifyOnError:false,onError:(error)=>setError(error instanceof Error?error.message:"Không thể tải ảnh. Vui lòng thử lại."),action:async()=>{
+      if (file.size > 20 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Chọn ảnh JPEG, PNG hoặc WebP tối đa 20 MB.");
       const data=new FormData();data.append("file",file);data.append("folder",folder);
       const result=await jsonRequest("/api/admin/storefront/media",{method:"POST",body:data});
       libraryRequest.current += 1; setLibrary(value=>[result.item,...value]);return result.item as LibraryImage;
