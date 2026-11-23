@@ -1650,11 +1650,10 @@ The server requires the existing TASK_VIEW capability (or Admin) before querying
 Personal Work and checklist images use the shared WorkImageAttachments component and WorkAttachmentIcon. Keep whole-work media out of checklist-only projections. Show an explicit Thêm ảnh action, private thumbnails, read-only state, pending/error/retry and confirmed remove; file choice/upload saves independently of text-form Save. Images do not imply work completion or media review/publication. Canonical storage, access and lifecycle rules are in `docs/design/work-image-attachments.md`. Never use generic Media sign URLs or the Next optimizer for private work images.
 
 
-### Record detail surface separation (2026-11-23)
+### Record details use the shared canvas (2026-11-23)
 
-The opt-in `AdminDetailPage surface="record"` uses the shared soft surface outside
-one white record surface, with one control-border outline and 12px radius. The
-record header has a light divider below it. Keep the interior flat: no additional
-section cards, shadows or filled sidebar. Only the active navigation entry uses
-a focus surface. This is the explicit record-page exception to the white default
-canvas; plain details, lists, dashboard and Ben retain their existing background.
+`AdminDetailPage surface="record"` uses the same white admin canvas as list pages.
+Do not add an outer gray background, enclosing border, rounded record card, or
+extra record padding inside the frame gutters. Keep the light divider below the
+record header, flat content sections and white sidebar; only the active navigation
+entry uses the focus surface. Use spacing and section headings for hierarchy.
