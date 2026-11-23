@@ -25,8 +25,8 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     build.onResolve({ filter: /^next\/(navigation|link|image)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onResolve({ filter: /^@\/domains\/shared\/feedback$/ }, () => ({ path: 'feedback', namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'feedback' ? `const dialog={confirm:async()=>true,alert:async()=>{}};export const useAppDialog=()=>dialog;` : args.path.endsWith('navigation') ? `const params=new URLSearchParams(location.search);if(!params.has('full'))params.set('view','list');const router={refresh(){window.__refreshed=true;window.__renderFixture?.()},push(path){window.__route=path},replace(){}};export const useRouter=()=>router;export const useSearchParams=()=>params;` : args.path.endsWith('link') ? `import React from 'react';export default function Link({children,href,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}` : `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`, loader: 'tsx', resolveDir: root }));
-    build.onLoad({ filter: /\/personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
-    build.onLoad({ filter: /\/AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;`, loader: 'js' }));
+    build.onLoad({ filter: /[\\/]personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
+    build.onLoad({ filter: /[\\/]AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;`, loader: 'js' }));
   } }] });
   return { js: bundle.outputFiles.find(f => f.path.endsWith('.js')).text, css: bundle.outputFiles.find(f => f.path.endsWith('.css'))?.text || '' };
 }
@@ -105,9 +105,39 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await page.goto(origin + '/?full=1');
     await page.locator('[data-work-row]').first().waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    assert.equal(await page.locator('#personal-google-calendar-agenda').count(), 0);
+    const leftHeading = await page.getByRole('navigation', { name: 'Hiển thị công việc' }).getByRole('heading').boundingBox();
+    const contentHeading = await page.getByRole('heading', { name: 'Hôm nay', exact: true }).boundingBox();
+    assert.ok(Math.abs(leftHeading.y - contentHeading.y) <= 1, 'Pane headings align');
+    if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-desktop.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
+    await page.locator('#personal-google-calendar-agenda').waitFor();
+    const calendarWidth = (await page.locator('#personal-google-calendar-agenda').boundingBox()).width;
+    const listWidth = (await page.getByRole('list', { name: 'Công việc', exact: true }).boundingBox()).width;
+    assert.ok(calendarWidth >= 420 && calendarWidth > listWidth, 'Calendar receives the wider desktop pane');
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-calendar-desktop.png'), fullPage: true });
-    assert.ok(await page.getByRole('combobox', { name: 'Hiển thị công việc' }).isVisible()); // Container width, not screen width.
-    await page.getByRole('combobox', { name: 'Hiển thị công việc' }).selectOption('ALL');
+    const navigation = page.getByRole('navigation', { name: 'Hiển thị công việc' });
+    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    assert.equal(await navigation.getByRole('button', { name: 'Tất cả', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.ok(await page.getByRole('separator', { name: 'Điều chỉnh độ rộng menu công việc' }).isVisible());
+    await page.getByPlaceholder('Việc cần làm...').fill('Bản nháp đang nhập');
+    await navigation.getByRole('button', { name: 'Quá hạn', exact: true }).click();
+    await row(28).waitFor(); assert.equal(await row(31).count(), 0);
+    await navigation.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+    await row(26).waitFor(); assert.equal(await row(28).count(), 0);
+    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    assert.equal(await page.getByPlaceholder('Việc cần làm...').inputValue(), 'Bản nháp đang nhập');
+    assert.equal(await page.evaluate(() => (window.__actions || []).length), 0);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const viewSelect = navigation.getByRole('combobox', { name: 'Hiển thị công việc', exact: true });
+      await viewSelect.waitFor(); await viewSelect.selectOption('OVERDUE'); await row(28).waitFor();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-' + width + '.png'), fullPage: true });
+      await viewSelect.selectOption('ALL');
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
     await row(31).getByRole('button', { name: /^Lịch CV-31:/ }).click();
     const lastSchedule = page.getByRole('group', { name: 'Lịch CV-31', exact: true }); await lastSchedule.waitFor();
     const box = await lastSchedule.boundingBox(); assert.ok(box.x >= 0 && box.y >= 0 && box.y + box.height <= 1000);
@@ -164,10 +194,12 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
       await route.fulfill({json:{events:calendarMode==='ok'?[]:null,items:fixture.items,lastSyncedAt:null,loadError:calendarMode==='ok'?null:calendarMode==='reconnect'?'Quyền truy cập đã hết hạn. Hãy kết nối lại.':'Google Calendar tạm thời chưa phản hồi.',reconnectRequired:calendarMode==='reconnect'}});
     });
     await page.goto(origin+'/?full=1&calendarFault=1');
+    await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
     await page.getByText('CẦN KẾT NỐI LẠI',{exact:true}).waitFor();
     assert.ok(await page.getByRole('button',{name:'Kết nối lại Google Calendar',exact:true}).isVisible());
     assert.ok(await page.locator('[data-work-row="item-31"]').isVisible());
     calendarMode='temporary';await page.reload();
+    await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
     await page.getByText('LỖI ĐỒNG BỘ',{exact:true}).waitFor();
     assert.ok(await page.getByRole('button',{name:'Tải lại lịch',exact:true}).isVisible());
     calendarMode='ok';await page.getByRole('button',{name:'Tải lại lịch',exact:true}).click();

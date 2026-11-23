@@ -1550,3 +1550,17 @@ card để không cắt mất viền bốn góc; overlay mở preview trong su�
 Giữ thanh màu và nền tiêu đề theo nhóm TI (Máy, Vỏ, Kính, Dây).
 Không hiển thị hàng phân loại / cách xử lý (ví dụ “Tổng quát · Nội bộ”) trên thẻ;
 xem và chỉnh các thông tin này trong chi tiết TI. Nhãn Đơn khách vẫn hiện khi có.
+
+### Personal Work workspace navigation
+
+Trang Quản lý công việc đầy đủ dùng menu trái với Hôm nay, Quá hạn, Sắp tới,
+Tất cả, Sự kiện và Đã xong. Dùng shared split workspace, resize và
+AdminWorkspaceViewNavigation; màn hình hẹp dùng native select của cùng menu.
+Đổi view là state trong trang, không tải lại route hoặc mất bản nháp tạo việc.
+Thanh danh sách chỉ giữ bộ lọc phạm vi/loại; không lặp lại các view ngang.
+Danh sách riêng của Ben (`view=list`) giữ bố cục gọn và điều hướng hiện tại.
+
+Hai pane dùng AdminWorkspaceHeading cùng hàng 40/44px. Pane nội dung có tiêu đề
+view đang chọn, số việc và công cụ lịch; form tạo nằm dưới hàng đó, không chia cột
+với kết nối Google. Danh sách là vùng chính, lịch thu gọn mặc định; khi mở, lịch và
+kết nối Google nằm chung ở pane phụ bên phải (xuống dưới trên màn hình hẹp).

@@ -4,6 +4,7 @@ import { ADMIN_UI_FOUNDATION as f } from "./admin-ui.foundation";
 import { useRef, type ReactNode, type CSSProperties } from "react";
 import { AdminWorkspaceHeading } from "./AdminWorkspaceHeading";
 import Link from "next/link";
+import { AdminButton } from "./AdminButton";
 import { ADMIN_SPLIT_WORKSPACE as s } from "./AdminSplitWorkspace";
 
 export const ADMIN_WORKSPACE_NAVIGATION_STYLE = { "--admin-nav-size": `${f.typography.navigation.size}px` } as CSSProperties;
@@ -18,5 +19,21 @@ export function AdminWorkspaceNavigation({ label, entries, selected, compact = f
       link?.click();
     }}>{entries.map(entry => <option value={entry.href} key={entry.href}>{entry.label}{entry.count !== undefined ? ` (${entry.count.toLocaleString("vi-VN")})` : ""}</option>)}</select></label>
     {!nestedWide && selectedNavigation ? <div className={s.nestedMobile}>{selectedNavigation}</div> : null}
+  </nav>;
+}
+
+/** In-place workspace views share route navigation styling without a server round trip. */
+export function AdminWorkspaceViewNavigation<T extends string>({ label, items, value, onChange }: {
+  label: string; items: readonly { value: T; label: string }[]; value: T; onChange: (value: T) => void;
+}) {
+  return <nav aria-label={label} className={s.filterNavigation} style={ADMIN_WORKSPACE_NAVIGATION_STYLE}>
+    <div className={s.navigationLinks}>
+      <AdminWorkspaceHeading navigation>{label}</AdminWorkspaceHeading>
+      {items.map(item => <AdminButton key={item.value} variant="contextual" type="button" className={s.navigationLink}
+        aria-pressed={value === item.value} onClick={() => onChange(item.value)}>{item.label}</AdminButton>)}
+    </div>
+    <label className={s.navigationSelect}>{label}<select value={value} onChange={event => onChange(event.target.value as T)}>
+      {items.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+    </select></label>
   </nav>;
 }
