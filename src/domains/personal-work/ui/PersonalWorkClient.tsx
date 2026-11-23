@@ -200,7 +200,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(true);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
@@ -241,7 +241,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editTitle, setEditTitle] = useState("");
   const [editReminder,setEditReminder]=useState<number|null>(0);
   const [editNote, setEditNote] = useState("");
-  const editNoteRef = useRef<HTMLTextAreaElement>(null);
   const [editUpdateBody, setEditUpdateBody] = useState("");
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
@@ -300,13 +299,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     const timeoutId = window.setTimeout(() => setMessage(null), 5000);
     return () => window.clearTimeout(timeoutId);
   }, [message, messageIsError]);
-
-  useEffect(() => {
-    const textarea = editNoteRef.current;
-    if (!editingItem || !textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.max(224, Math.min(textarea.scrollHeight, window.innerHeight * 0.55))}px`;
-  }, [editNote, editingItem]);
 
   useEffect(() => {
     if (!editingItemId) return;
@@ -978,7 +970,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             className="h-[100dvh] w-full max-w-2xl overflow-y-auto overscroll-contain bg-white px-4 pb-5 sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:px-5 sm:shadow-2xl"
           >
             <div className="sticky top-0 z-10 border-b border-slate-100 bg-white pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-              <AdminButton variant="secondary" type="button" onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</AdminButton>
+              <AdminButton variant="contextual" type="button" onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</AdminButton>
               <div>
                 <p className="font-mono text-xs text-slate-600">{personalWorkCode(editingItem.id, editingItem.personalWorkNumber, editingItem.workType)}</p>
                 <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.title}</h2>
@@ -987,7 +979,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             </div>
             <div className="mt-5 space-y-4">
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
-              {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+              {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Các đầu việc</h3>
@@ -995,13 +987,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       {editingItem.checklist.filter((item) => item.isDone).length}/{editingItem.checklist.length} hoàn thành
                     </p>
                   </div>
-                  <ProgressMetric
+                  {editingItem.checklist.length > 0 && <ProgressMetric
                     value={editingItem.progressPercent}
                     numerator={editingItem.checklist.filter((entry) => entry.isDone).length}
                     denominator={editingItem.checklist.length}
                     className="max-w-[210px]"
                     label={`Tiến độ ${editingItem.title}: ${editingItem.progressPercent}%`}
-                  />
+                  />}
                 </div>
                 {editingItem.checklist.length > 0 && (
                   <div className="space-y-2">
@@ -1185,19 +1177,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
               </label>
-              <PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} />
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">Ghi chú</span>
-                <textarea
-                  ref={editNoteRef}
-                  value={editNote}
-                  disabled={editingItem.access === "VIEWER"}
-                  onChange={(event) => setEditNote(event.target.value)}
-                  rows={8}
-                  placeholder="Mô tả chi tiết công việc, yêu cầu hoặc các bước cần thực hiện..."
-                  className="min-h-56 max-h-[55vh] w-full resize-y overflow-y-auto rounded-lg border border-slate-200 px-3 py-3 text-sm leading-6 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
+              <details className="border-b border-slate-100 pb-2">
+                <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500">Thẻ công việc</AdminDisclosureSummary>
+                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
+              </details>
               <label className="block space-y-1.5">
                 <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
                 <textarea

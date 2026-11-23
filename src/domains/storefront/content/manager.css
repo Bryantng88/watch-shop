@@ -587,3 +587,8 @@
   .sfc-home input:not([type="checkbox"]):not([type="range"]):not([type="file"]),
   .sfc-home textarea, .sfc-home select { min-height: 44px; font-size: 16px; }
 }
+
+/* Image tools are text actions; keep the shared touch target without a button box. */
+.sfc button.sfc-image-action { min-height: 32px; padding: 4px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-weight: 500; }
+.sfc button.sfc-image-action:hover { background: transparent; text-decoration: underline; }
+@media (pointer: coarse) { .sfc button.sfc-image-action { min-height: 44px; } }
