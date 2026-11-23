@@ -1573,3 +1573,18 @@ Hai pane dùng AdminWorkspaceHeading cùng hàng 40/44px. Pane nội dung có ti
 view đang chọn, số việc và công cụ lịch; form tạo nằm dưới hàng đó, không chia cột
 với kết nối Google. Danh sách là vùng chính, lịch thu gọn mặc định; khi mở, lịch và
 kết nối Google nằm chung ở pane phụ bên phải (xuống dưới trên màn hình hẹp).
+
+
+### Record detail frame — Order and Watch (2026-11-23)
+
+Order and Watch detail pages use `AdminDetailPage` and `ADMIN_UI_FOUNDATION.page.detailMaxWidth = 1440`. This is a centered, border-box maximum including 24px horizontal gutters on desktop and 16px below 640px. The surrounding canvas is white. Reuse this recipe when migrating subsequent record pages; list workspace width is unchanged.
+
+Use breadcrumb/back navigation, a compact identity and action row, section navigation, then business sections and activity. Watch identity thumbnails are 64px. Record titles use 24/32 (20/28 on mobile), body 14/20 and metadata 12/16. Keep technical IDs in a disclosure rather than permanent identity chrome.
+
+Sections are flat, without enclosing card borders, shadows or decorative header icons. Use a light bottom divider and spacing to distinguish sections. Keep one meaningful financial focus surface: remaining amount for Order, current selling price for Watch. Do not repeat totals as hero metrics and sidebar cards.
+
+The main/sidebar layout has a 320px sidebar and 28px gap only when the measured detail frame is at least 1200px wide. Measure available width with ResizeObserver before paint, including narrow hosts and 200% zoom; do not use CSS containment that traps existing fixed dialogs. Stack sections in narrower frames. Long identity, item and monetary content must wrap without horizontal page overflow.
+
+Order mutations, confirmations, pending/error feedback, status guards and service intake conditions remain unchanged. Watch pricing, image selection, related record preview and media flows retain their callbacks and permissions; financial masking remains in force. ServiceCard uses an opt-in flat presentation for Watch details; other callers retain their existing presentation.
+
+The browser regression check `scripts/check-admin-detail-ui.cjs` renders the actual Order and Watch detail components with synthetic action/auth/data ports. Cover widths 320–1920px, centered gutters, narrow hosts and 200% zoom, order state/pending/error guards, price error/retry drafts and payloads, inline image selection, related previews/media and restricted financial visibility. Its screenshots are fixture previews, not production records.

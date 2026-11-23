@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDetailSectionHeader, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -16,6 +17,7 @@ import type { WatchServiceProjection } from "@/domains/watch/shared/watch-detail
 
 export default function ServiceCard({
     projection,
+    flat = false,
     productId,
     title,
     sku,
@@ -23,6 +25,7 @@ export default function ServiceCard({
     onIssuePreview,
 }: {
     projection: WatchServiceProjection;
+    flat?: boolean;
     productId?: string | null;
     title?: string | null;
     sku?: string | null;
@@ -201,13 +204,15 @@ export default function ServiceCard({
 
     return (
         <>
-        <aside id="service" className="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <aside id="service" className={flat ? detailUi.section : "scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"}>
+                {flat ? <AdminDetailSectionHeader title="Kỹ thuật" description={`${projection.activeRequestCount} yêu cầu đang mở · ${projection.activeIssueCount} lỗi đang mở`} /> : (
                 <Header
                     icon={<Wrench className="h-4 w-4" />}
                     title="Service"
                     subtitle={`${projection.activeRequestCount} SR active · ${projection.activeIssueCount} TI active`}
                 />
-                <div className="p-4">
+)}
+                <div className={flat ? detailUi.sectionBody : "p-4"}>
                     <div className="max-h-[420px] overflow-y-auto rounded-lg border border-slate-200/80">
                         <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-2 bg-slate-50/80 px-3 py-2.5 text-[10px] font-semibold uppercase text-slate-400">
                             <div>Service / Technical Issue</div>
@@ -217,7 +222,7 @@ export default function ServiceCard({
                             <div key={item.id} className="border-t border-slate-100">
                                 <div className="grid min-h-[44px] grid-cols-[minmax(0,1fr)_88px] items-center gap-2 bg-slate-50/40 px-3 py-2 text-xs">
                                     {onPreview || item.workspaceHref ? (
-                                        <AdminButton variant="secondary"
+                                        <AdminButton variant={flat ? "contextual" : "secondary"}
                                             type="button"
                                             onClick={() => {
                                                 if (onPreview) onPreview(item);
@@ -241,7 +246,7 @@ export default function ServiceCard({
                                     >
                                         <div className="min-w-0 pl-2">
                                             {onIssuePreview ? (
-                                                <AdminButton variant="secondary" type="button" onClick={() => onIssuePreview(issue)} className="line-clamp-2 text-left font-medium leading-5 text-slate-800 hover:text-violet-700">
+                                                <AdminButton variant={flat ? "contextual" : "secondary"} type="button" onClick={() => onIssuePreview(issue)} className="line-clamp-2 text-left font-medium leading-5 text-slate-800 hover:text-violet-700">
                                                     {issue.summary}
                                                 </AdminButton>
                                             ) : (

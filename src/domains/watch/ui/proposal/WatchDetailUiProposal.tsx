@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDetailPage, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
 import Image from "next/image";
@@ -310,8 +311,7 @@ export default function WatchDetailUiProposal({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-20 text-slate-900">
-      <div className="mx-auto w-full max-w-[1500px] px-4 py-5 lg:px-8">
+    <AdminDetailPage>
         {!live && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-violet-900">
             <Sparkles className="h-4 w-4 text-violet-600" />
@@ -323,80 +323,38 @@ export default function WatchDetailUiProposal({
           </Link>
         </div>}
 
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Link href="/admin/watches" className="hover:text-violet-700">Danh sách Watch</Link>
+        <nav className={detailUi.breadcrumb} aria-label="Breadcrumb">
+            <Link href="/admin/watches" className="hover:text-violet-700">Đồng hồ</Link>
             <ChevronRight className="h-3.5 w-3.5" />
             <span className="font-semibold text-slate-800">{title}</span>
-          </div>
-        </div>
+        </nav>
 
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-          <div className="grid lg:grid-cols-[260px_minmax(0,1fr)]">
-            <div className="relative min-h-[250px] bg-slate-100">
-              {imageSrc ? (
-                <Image src={imageSrc} alt={title} fill sizes="260px" unoptimized className="object-cover" />
-              ) : (
-                <div className="grid h-full min-h-[250px] place-items-center text-slate-300"><Camera className="h-10 w-10" /></div>
-              )}
-              <span className="absolute bottom-3 left-3 rounded-lg bg-slate-950/85 px-2.5 py-1.5 text-[10px] font-bold text-white backdrop-blur">
-                {Math.max(values.media.galleryImages.length, images.length)} ảnh
-              </span>
-              {canEditMedia && (
-                <AdminButton variant="secondary" density="compact"
-                  type="button"
-                  onClick={() => setInlinePickerOpen(true)}
-                  disabled={savingInline}
-                  className="absolute bottom-3 right-3 inline-flex h-9 items-center gap-1.5 rounded-lg bg-white/95 px-3 text-xs font-bold text-violet-700 shadow-lg ring-1 ring-violet-200 backdrop-blur hover:bg-white disabled:opacity-60"
-                >
-                  {savingInline ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                  {values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
-                </AdminButton>
-              )}
-            </div>
-
-            <div className="flex min-w-0 flex-col p-5 lg:p-7">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-md bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700">{values.header.sku || values.productId}</span>
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">{statusLabel(values.basic.stockState)}</span>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">{statusLabel(values.basic.saleState)}</span>
-                  </div>
-                  <h1 className="mt-4 text-3xl font-bold tracking-[-0.04em] text-slate-950">{title}</h1>
-                  <p className="mt-2 text-sm text-slate-500">
-                    {[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"}
-                  </p>
-                </div>
-
-              </div>
-
-              <div className="mt-auto grid grid-cols-2 gap-x-4 border-t border-slate-100 pt-5 sm:grid-cols-4">
-                {[
-                  ["Vendor", text(vendor.name)],
-                  ["Năm sản xuất", values.basic.yearText || "—"],
-                  ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"],
-                  ["Tình trạng", values.basic.conditionGrade || "—"],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{label}</div>
-                    <div className="mt-1 truncate text-xs font-bold text-slate-800">{value}</div>
-                  </div>
-                ))}
+        <header>
+          <div className={detailUi.recordHeader}>
+            <div className={detailUi.recordIdentity}>
+              <div className={detailUi.thumbnail}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="64px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
+              <div className={detailUi.identityText}>
+                <div className={detailUi.tags}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(values.basic.stockState)}</span><span className="text-blue-700">{statusLabel(values.basic.saleState)}</span></div>
+                <h1 className={detailUi.recordTitle}>{title}</h1>
+                <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
               </div>
             </div>
+            {canEditMedia && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
+              {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <Camera className="h-4 w-4"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
+            </AdminButton>}
           </div>
-        </section>
+          <dl className={detailUi.facts}>{[["Nhà cung cấp", text(vendor.name)], ["Năm sản xuất", values.basic.yearText || "—"], ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"], ["Tình trạng", values.basic.conditionGrade || "—"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        </header>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
-          <nav className="flex min-w-0 gap-1 overflow-x-auto">
+        <div className={detailUi.navigationRow}>
+          <nav className={detailUi.tabs} aria-label="Các phần chi tiết">
             {[
               ["Tổng quan", "#overview"],
               ["Nội dung & hình ảnh", "#content-media"],
               ["Service", "#service"],
               ["Lịch sử", "#trade-history"],
             ].map(([label, href]) => (
-              <a href={href} key={label} className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-violet-700">{label}</a>
+              <a href={href} key={label} className={detailUi.tabLink}>{label}</a>
             ))}
           </nav>
 
@@ -410,10 +368,10 @@ export default function WatchDetailUiProposal({
           )}
         </div>
 
-        <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="space-y-4">
-            <section id="overview" className="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className={detailUi.layout}>
+          <div className={detailUi.column}>
+            <section id="overview" className={detailUi.section}>
+              <div className={detailUi.sectionHeader}>
                 <div>
                   <h2 className="flex items-center gap-2 text-sm font-bold">
                     <CircleDollarSign className="h-4 w-4 text-violet-600" /> Giá & lợi nhuận
@@ -427,17 +385,16 @@ export default function WatchDetailUiProposal({
                 ) : null}
               </div>
 
-              <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(420px,1.2fr)] lg:gap-0">
-                <div className="lg:border-r lg:border-slate-200 lg:pr-6">
-                  <div className="rounded-xl border border-violet-100 bg-violet-50/60 p-4 shadow-[0_2px_8px_rgba(109,40,217,0.06)]">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-violet-500">Giá bán hiện tại</div>
-                    <div className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-950">{money(salePrice)}</div>
-                    <p className="mt-1 text-[11px] text-slate-500">Giá đang áp dụng cho Watch</p>
+              <div className={detailUi.pricingGrid}>
+                <div className="min-w-0">
+                  <div className={detailUi.focus}>
+                    <div className={detailUi.focusLabel}>Giá bán hiện tại</div>
+                    <div className={detailUi.focusValue}>{money(salePrice)}</div>
+                    <p className="mt-1 text-xs text-slate-500">Giá đang áp dụng cho Watch</p>
                   </div>
 
                   <dl className="mt-3 divide-y divide-slate-100 border-y border-slate-200">
                     {[
-                      ["Tổng giá vốn", money(landedCost, canViewFinancials)],
                       ["Lợi nhuận dự kiến", money(profit, canViewFinancials)],
                       ["Biên lợi nhuận", canViewFinancials ? `${margin.toFixed(1)}%` : "••••"],
                     ].map(([label, value]) => (
@@ -449,17 +406,17 @@ export default function WatchDetailUiProposal({
                   </dl>
                 </div>
 
-                <div className="lg:pl-6">
+                <div className="min-w-0">
                   <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">Cấu thành giá vốn</h3>
-                    <span className="text-[10px] text-slate-400">Đọc từ projection</span>
+                    <h3 className="text-sm font-semibold text-slate-700">Cấu thành giá vốn</h3>
+                    
                   </div>
                   <div className="divide-y divide-slate-100 border-y border-slate-200">
                     {costRows.map(({ label, note, amount }) => (
                       <div key={label} className="flex items-center justify-between gap-4 py-2.5">
                         <div className="min-w-0">
                           <div className="text-sm font-medium text-slate-800">{label}</div>
-                          <div className="truncate text-[11px] text-slate-400">{note}</div>
+                          <div className="text-xs text-slate-500">{note}</div>
                         </div>
                         <div className="shrink-0 text-sm font-semibold text-slate-800">{money(amount, canViewFinancials)}</div>
                       </div>
@@ -474,38 +431,38 @@ export default function WatchDetailUiProposal({
             </section>
 
             <section id="content-media" className="scroll-mt-24">
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className={detailUi.section}>
+                <div className={detailUi.sectionHeader}>
                   <div>
                     <h2 className="flex items-center gap-2 text-sm font-bold"><FileText className="h-4 w-4 text-violet-600" /> Nội dung & hình ảnh</h2>
                     <p className="mt-1 text-xs text-slate-400">Nội dung bán hàng và gallery đang gắn với Watch.</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className={detailUi.actions}>
                     <WatchPublishAssetActions detail={detail} />
                     <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</AdminButton>
                   </div>
                 </div>
-                <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className={detailUi.contentGrid}>
                   <div className="min-w-0">
-                    <h3 className="text-lg font-bold text-slate-950">{values.content.titleOverride || title}</h3>
+                    <h3 className="text-base font-semibold text-slate-950">{values.content.titleOverride || title}</h3>
                     {values.content.hookText && <p className="mt-2 text-sm font-semibold text-violet-700">{values.content.hookText}</p>}
                     <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
                       {values.content.body || "Watch chưa có nội dung bán hàng."}
                     </div>
                     {values.content.bulletSpecs.length > 0 && (
                       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {values.content.bulletSpecs.map((item, index) => <li key={`${item}-${index}`} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-700">{item}</li>)}
+                        {values.content.bulletSpecs.map((item, index) => <li key={`${item}-${index}`} className="border-b border-slate-100 py-2 text-sm text-slate-700">{item}</li>)}
                       </ul>
                     )}
                     {values.content.hashTags && <p className="mt-4 text-xs font-semibold text-blue-600">{values.content.hashTags}</p>}
                     <div className="mt-5 grid grid-cols-2 gap-3 text-xs">
-                      <div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-400">Box</span><div className="mt-1 font-bold">{values.media.hasBox ? "Có" : "Không"}</div></div>
-                      <div className="rounded-lg bg-slate-50 p-3"><span className="text-slate-400">Papers</span><div className="mt-1 font-bold">{values.media.hasPapers ? "Có" : "Không"}</div></div>
+                      <div className="border-t border-slate-100 pt-3"><span className="text-slate-400">Box</span><div className="mt-1 font-bold">{values.media.hasBox ? "Có" : "Không"}</div></div>
+                      <div className="border-t border-slate-100 pt-3"><span className="text-slate-400">Papers</span><div className="mt-1 font-bold">{values.media.hasPapers ? "Có" : "Không"}</div></div>
                     </div>
                   </div>
                   <div>
                     <div className="mb-3 flex items-center justify-between gap-2">
-                      <div><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Gallery</h3><span className="text-[10px] text-slate-400">Ảnh bán hàng của Watch</span></div>
+                      <div><h3 className="text-xs font-semibold text-slate-500">Gallery</h3><span className="text-xs text-slate-400">Ảnh bán hàng của Watch</span></div>
                       <span className="text-xs text-slate-400">{values.media.galleryImages.length} ảnh</span>
                     </div>
                     {values.media.galleryImages.length ? (
@@ -514,7 +471,7 @@ export default function WatchDetailUiProposal({
                           const rawSrc = item.url || "";
                           const src = resolveMediaPreviewSrc(rawSrc) ?? rawSrc;
                           if (!src) return null;
-                          return <div key={`${rawSrc}-${index}`} className={`relative overflow-hidden rounded-lg bg-slate-100 ${index === 0 ? "col-span-2 aspect-[4/3]" : "aspect-square"}`}><Image src={src} alt={`${title} ${index + 1}`} fill sizes="280px" unoptimized className="object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded bg-slate-950/75 px-2 py-1 text-[9px] font-bold text-white">Cover</span>}</div>;
+                          return <div key={`${rawSrc}-${index}`} className={`relative overflow-hidden rounded-lg bg-slate-100 ${index === 0 ? "col-span-2 aspect-[4/3]" : "aspect-square"}`}><Image src={src} alt={`${title} ${index + 1}`} fill sizes="280px" unoptimized className="object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded bg-slate-950/75 px-2 py-1 text-xs font-bold text-white">Cover</span>}</div>;
                         })}
                       </div>
                     ) : <div className="grid aspect-[4/3] place-items-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-xs text-slate-400"><ImageIcon className="mb-2 h-6 w-6" />Chưa có ảnh gallery</div>}
@@ -524,8 +481,8 @@ export default function WatchDetailUiProposal({
             </section>
           </div>
 
-          <aside className="space-y-4 xl:sticky xl:top-[76px]">
-            <ServiceCard
+          <aside className={detailUi.sidebar}>
+            <ServiceCard flat
               projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
               productId={values.productId}
               title={title}
@@ -534,14 +491,14 @@ export default function WatchDetailUiProposal({
               onIssuePreview={(issue) => openRelatedPreview("TECHNICAL_ISSUE", issue, "Technical Issue")}
             />
 
-            <section id="trade-history" className="scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <section id="trade-history" className={detailUi.section}>
               <div className="flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold"><ArrowLeftRight className="h-4 w-4 text-indigo-600" /> Lịch sử mua bán</h2>
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
                   <AdminButton variant="contextual" type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
-                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${event.tone}`}>
+                    <span className="mt-0.5 text-slate-500">
                       {event.type === "ACQUISITION" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -549,7 +506,7 @@ export default function WatchDetailUiProposal({
                         <span className="text-xs font-bold text-slate-800">{event.label}</span>
                         <span className="text-xs font-bold text-slate-700">{money(event.amount, canViewFinancials)}</span>
                       </div>
-                      <div className="mt-1 truncate text-[10px] text-slate-400">{normalizeDate(event.occurredAt)} · {event.party}</div>
+                      <div className="mt-1 text-xs text-slate-500">{normalizeDate(event.occurredAt)} · {event.party}</div>
                     </div>
                   </AdminButton>
                 )) : (
@@ -558,10 +515,10 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <section className={detailUi.section}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                <span className={`rounded-full px-2 py-1 text-xs font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                   {attention.length ? `${attention.length} việc` : "Ổn"}
                 </span>
               </div>
@@ -574,12 +531,11 @@ export default function WatchDetailUiProposal({
                   <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" /> Không có việc cần xử lý</div>
                 )}
               </div>
-              <div className="mt-3 flex items-start gap-2 text-[10px] leading-4 text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Checklist chỉ hiện vấn đề cần hành động, không lặp lại toàn bộ tiến độ.</div>
+              <div className="mt-3 flex items-start gap-2 text-xs leading-4 text-slate-400"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" /> Checklist chỉ hiện vấn đề cần hành động, không lặp lại toàn bộ tiến độ.</div>
             </section>
 
           </aside>
         </div>
-      </div>
       <BusinessEntityPreviewModal
         open={previewState.open}
         preview={previewState.preview}
@@ -647,6 +603,6 @@ export default function WatchDetailUiProposal({
           if (keys[0]) void saveInlineImage(keys[0]);
         }}
       />}
-    </main>
+    </AdminDetailPage>
   );
 }

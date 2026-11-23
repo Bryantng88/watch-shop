@@ -5,7 +5,7 @@ import { DetailText, fullAddress, SectionCard, type OrderDetailData } from "./sh
 
 export default function OrderCustomerPanel({ data }: { data: OrderDetailData }) {
   return (
-    <SectionCard icon={<UserRound className="h-5 w-5" />} title="Khách hàng" subtitle="Thông tin người mua và giao nhận">
+    <SectionCard id="order-customer" icon={<UserRound className="h-5 w-5" />} title="Khách hàng" subtitle="Thông tin người mua và giao nhận">
       <div className="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2">
         <DetailText label="Khách hàng" value={data.customerName || "-"} />
         <DetailText label="Điện thoại" value={data.shipPhone || "-"} />

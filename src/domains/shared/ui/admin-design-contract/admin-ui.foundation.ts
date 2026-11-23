@@ -43,6 +43,7 @@ export const ADMIN_UI_FOUNDATION = {
   },
   border: { hairline: 1, selectedUnderline: 2, focusRing: 2, focusOffset: 2 },
   page: {
+    detailMaxWidth: 1440,
     workspaceMaxWidth: 2240,
     desktopOuterGutter: 24,
     desktopPaddingX: 24, desktopPaddingY: 20, mobilePaddingX: 16, mobilePaddingY: 12,
