@@ -28,7 +28,7 @@ export function AdminWorkspaceViewNavigation<T extends string>({ label, items, v
 }) {
   return <nav aria-label={label} className={s.filterNavigation} style={ADMIN_WORKSPACE_NAVIGATION_STYLE}>
     <div className={s.navigationLinks}>
-      <AdminWorkspaceHeading navigation compact>{label}</AdminWorkspaceHeading>
+      <AdminWorkspaceHeading navigation>{label}</AdminWorkspaceHeading>
       {items.map(item => <AdminButton key={item.value} variant="contextual" type="button" className={s.navigationLink}
         aria-pressed={value === item.value} onClick={() => onChange(item.value)}>{item.label}</AdminButton>)}
     </div>

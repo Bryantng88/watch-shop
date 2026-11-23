@@ -200,7 +200,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(true);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
@@ -459,10 +459,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   return (
     <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
       <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
-    }>
+    } tools={<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
+      aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
+      <CalendarDays className="h-4 w-4" />Lịch
+      {calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label={calendar.reconnectRequired ? "Lịch cần kết nối lại" : "Lịch có lỗi đồng bộ"} />}
+    </AdminButton>}>
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
-      <section hidden={listOnly} className={listOnly ? "hidden" : "grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]"}>
+      <section hidden={listOnly} className={listOnly ? "hidden" : "border-b border-slate-100 pb-4"}>
         <form
           className="flex h-full min-w-0 flex-col justify-center px-1"
           onSubmit={(event) => {
@@ -662,7 +666,25 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           )}
         </form>
 
-        <aside className="border-t border-slate-100 pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+
+      </section>
+
+      {message && !(editingItem && messageIsError) && (
+        <div role={messageIsError ? "alert" : "status"} className={messageIsError ? "rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" : "rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"}>{message}</div>
+      )}
+      {Object.values(calendarSyncFailures).map(task => (
+        <div key={task.id} role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span>Đã lưu “{task.title}”. Chưa đồng bộ Google Calendar.</span>
+          <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${task.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(task)} className="rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Thử đồng bộ lại</AsyncActionButton>
+        </div>
+      ))}
+
+      <div
+        className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.8fr)]" : "grid-cols-1"}`}
+      >
+        {calendarOpen && !listOnly && (
+          <section id="personal-google-calendar-agenda" className="order-2 min-w-0 bg-white xl:border-l xl:border-slate-100 xl:pl-5">
+        <aside className="mb-4 border-b border-slate-100 pb-3">
           <AdminButton variant="contextual"
             type="button"
             aria-expanded={calendarOpen}
@@ -723,26 +745,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
           )}
         </aside>
-      </section>
-
-      {message && !(editingItem && messageIsError) && (
-        <div role={messageIsError ? "alert" : "status"} className={messageIsError ? "rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" : "rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"}>{message}</div>
-      )}
-      {Object.values(calendarSyncFailures).map(task => (
-        <div key={task.id} role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <span>Đã lưu “{task.title}”. Chưa đồng bộ Google Calendar.</span>
-          <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${task.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(task)} className="rounded-md px-2 py-1 font-semibold hover:bg-amber-100">Thử đồng bộ lại</AsyncActionButton>
-        </div>
-      ))}
-
-      <div
-        className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.85fr)]" : "grid-cols-1"}`}
-      >
-        {calendarOpen && !listOnly && (
-          <section id="personal-google-calendar-agenda" className="min-w-0 overflow-hidden bg-white">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
-                <h2 className="text-sm font-semibold text-slate-950">Lịch công việc</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Màu nền theo nhóm · Sọc cam: quá hạn · Gạch ngang: đã xong.
                 </p>
@@ -785,7 +789,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </div>
             ) : null}
               <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                <div className="min-w-[640px]">
+                <div className="min-w-0">
                   <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70">
                     {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((day) => (
                       <div
@@ -813,7 +817,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             if (event.target !== event.currentTarget) return;
                             if (event.key === "Enter" || event.key === " ") openCalendarCreate(date);
                           }}
-                          className={`min-h-28 cursor-pointer border-b border-r border-slate-100 p-2 transition-colors hover:bg-blue-50/30 ${outsideMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "relative z-10 !bg-blue-50/40 ring-2 ring-inset ring-blue-500/70" : ""}`}
+                          className={`min-h-20 cursor-pointer border-b border-r border-slate-100 p-2 transition-colors hover:bg-blue-50/30 ${outsideMonth ? "bg-slate-50/50" : "bg-white"} ${isToday ? "relative z-10 !bg-blue-50/40 ring-2 ring-inset ring-blue-500/70" : ""}`}
                         >
                           <div className="mb-1.5 flex items-center justify-between">
                             <span
@@ -895,7 +899,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           </section>
         )}
 
-        <section className={`${listStyles.pane} bg-transparent xl:flex xl:h-[766px] xl:flex-col ${calendarOpen && !listOnly ? "xl:border-l xl:border-slate-100 xl:pl-5" : ""}`}>
+        <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
           <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (

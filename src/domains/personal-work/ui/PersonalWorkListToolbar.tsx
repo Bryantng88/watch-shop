@@ -18,7 +18,7 @@ export function PersonalWorkListToolbar({ hideViews = false, view, onView, scope
   const trigger = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => setOpen(false), []);
   const scopeLabel = scope === "MINE" ? "Của tôi" : scope === "SHARED" ? "Được chia sẻ" : "Tất cả";
-  return <div className={styles.toolbar}>
+  return <div className={styles.toolbar} data-views-hidden={hideViews || undefined}>
     {!hideViews && <AdminViewTabs label="Hiển thị công việc" value={view} onValueChange={onView}
       items={PERSONAL_WORK_VIEWS.map(([value, label]) => ({ value, label }))} className={styles.viewTabs} />}
     <AdminButton variant="quiet" density="compact" ref={trigger} type="button" aria-label={`Bộ lọc công việc: ${scopeLabel}`} aria-expanded={open} onClick={() => setOpen(value => !value)} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-slate-50 px-2 text-xs text-slate-600 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-300"><SlidersHorizontal className="h-3.5 w-3.5" />{scopeLabel}{domain !== "ALL" && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-label="Đang lọc loại công việc" />}</AdminButton>
