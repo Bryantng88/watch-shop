@@ -4939,6 +4939,28 @@ function normalizeTechnicalArea(value?: string | null) {
   return aliases[area] ?? area;
 }
 
+function technicalAreaLabel(value?: string | null) {
+  const raw = normalizeTechnicalArea(value);
+  const labels: Record<string, string> = {
+    GENERAL: "Tổng quát",
+    MOVEMENT: "Máy",
+    CASE: "Vỏ",
+    CRYSTAL: "Kính",
+    DIAL: "Mặt số",
+    HANDS_MARKERS: "Kim cọc",
+    CROWN: "Núm",
+    BRACELET: "Dây",
+  };
+  return labels[raw] ?? (raw || "Tổng quát");
+}
+
+function technicalOwnerLabel(actionMode?: string | null, vendorName?: string | null) {
+  const mode = String(actionMode ?? "").trim().toUpperCase();
+  if (mode === "VENDOR") return vendorName ? `Vendor: ${vendorName}` : "Vendor";
+  if (mode === "INTERNAL") return "Nội bộ";
+  return mode || "Chưa chọn";
+}
+
 function QueueSummaryCell({
   summary,
 }: {
