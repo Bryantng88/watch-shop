@@ -389,6 +389,15 @@ export default function WatchDetailUiProposal({
         <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection}>
           <div className={detailUi.column}>
             <div hidden={activeSection !== "overview"} data-watch-section="overview" className="space-y-6">
+            <section aria-label="Tình trạng đồng hồ" className={detailUi.section}>
+              <h2 className="text-sm font-bold">Tình trạng đồng hồ</h2>
+              {operationalOverview ? <dl className={detailUi.facts}>
+                <div><dt>Bán hàng</dt><dd>{operationalOverview.sale === "SOLD" ? "Đã bán" : "Chưa bán"}<p className={detailUi.metadata}>{statusLabel(operationalOverview.sale)}</p></dd></div>
+                <div><dt>Service</dt><dd>{operationalOverview.serviceCompleted} yêu cầu đã hoàn tất<p className={detailUi.metadata}>{operationalOverview.serviceOpen} yêu cầu đang mở</p></dd></div>
+                <div><dt>Ký gửi</dt><dd>{({CONSIGNED_TO:"Đang gửi đối tác",CONSIGNED_FROM:"Đang nhận ký gửi",NONE:"Không ký gửi"} as Record<string,string>)[operationalOverview.consignment] ?? "Chưa xác định"}</dd></div>
+                <div><dt>Tồn kho</dt><dd>{statusLabel(operationalOverview.stock)}</dd></div>
+              </dl> : <p className={detailUi.metadata}>Chưa có dữ liệu tình trạng vận hành.</p>}
+            </section>
             <section id="overview" className={detailUi.section}>
               <div className={detailUi.sectionHeader}>
                 <div>
@@ -448,15 +457,7 @@ export default function WatchDetailUiProposal({
                 </div>
               </div>
             </section>
-            <section aria-label="Tình trạng đồng hồ" className={detailUi.section}>
-              <h2 className="text-sm font-bold">Tình trạng đồng hồ</h2>
-              {operationalOverview ? <dl className={detailUi.facts}>
-                <div><dt>Bán hàng</dt><dd>{operationalOverview.sale === "SOLD" ? "Đã bán" : "Chưa bán"}<p className={detailUi.metadata}>{statusLabel(operationalOverview.sale)}</p></dd></div>
-                <div><dt>Service</dt><dd>{operationalOverview.serviceCompleted} yêu cầu đã hoàn tất<p className={detailUi.metadata}>{operationalOverview.serviceOpen} yêu cầu đang mở</p></dd></div>
-                <div><dt>Ký gửi</dt><dd>{({CONSIGNED_TO:"Đang gửi đối tác",CONSIGNED_FROM:"Đang nhận ký gửi",NONE:"Không ký gửi"} as Record<string,string>)[operationalOverview.consignment] ?? "Chưa xác định"}</dd></div>
-                <div><dt>Tồn kho</dt><dd>{statusLabel(operationalOverview.stock)}</dd></div>
-              </dl> : <p className={detailUi.metadata}>Chưa có dữ liệu tình trạng vận hành.</p>}
-            </section>
+
             <section aria-label="Công việc liên quan" className={detailUi.section}>
               <h2 className="text-sm font-bold">Công việc liên quan</h2>
               <p className={detailUi.metadata}>Các việc được liên kết với đồng hồ hoặc hồ sơ kỹ thuật, trong phạm vi bạn được xem.</p>
