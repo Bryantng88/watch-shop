@@ -384,13 +384,19 @@ export default function WatchFormClient({
   const [mediaPoolReady, setMediaPoolReady] = useState(false);
   const initialPool = useRef(initialValues.media.poolImages).current;
   const mediaSaveVersion = useRef(0);
-  const mediaWorkDone = effectiveMediaParts(storedMediaWorkDone, values, completionValues);
-  const mediaDirty = Object.fromEntries((["profile", "content", "image", "cover"] as const).map(part => [part, mediaPartSaveSnapshot(values, part) !== mediaPartSaveSnapshot(savedValues, part)])) as Record<MediaWorkPart, boolean>;
+  const [coverDraftPending, setCoverDraftPending] = useState(false);
+  const effectiveDone = effectiveMediaParts(storedMediaWorkDone, values, completionValues);
+  const mediaWorkDone = {...effectiveDone, cover: effectiveDone.cover && !coverDraftPending};
+  const mediaDirty = Object.fromEntries((["profile", "content", "image", "cover"] as const).map(part => [part, mediaPartSaveSnapshot(values, part) !== mediaPartSaveSnapshot(savedValues, part) || (part === "cover" && coverDraftPending)])) as Record<MediaWorkPart, boolean>;
   const mediaSession = useMemo(() => ({productId: values.productId}), [values.productId]);
   const [mediaDraft, setMediaDraft] = useState<{productId: string; draft: MediaDraft}>();
   const [activeMediaSection, setActiveMediaSection] = useState<
     "basic" | "content" | "image" | "cover"
   >("basic");
+  const [mediaImagesVisited, setMediaImagesVisited] = useState(false);
+  useEffect(() => {
+    if (activeMediaSection === "image" || activeMediaSection === "cover") setMediaImagesVisited(true);
+  }, [activeMediaSection]);
 
   const [afterSaveOpen, setAfterSaveOpen] = useState(false);
   const [afterSaveMode, setAfterSaveMode] = useState<AfterSaveMode>("normal");
@@ -515,7 +521,7 @@ export default function WatchFormClient({
   const canReturnMediaWorkspace =
     canApproveMediaWorkspace && workspaceState === "REVIEW";
   const inlineImage = values.media.inlineImage;
-  const isDirty = isMediaMode ? Object.values(mediaDirty).some(Boolean) : stableStringify(values) !== stableStringify(savedValues);
+  const isDirty = coverDraftPending || (isMediaMode ? Object.values(mediaDirty).some(Boolean) : stableStringify(values) !== stableStringify(savedValues));
   const setFormValues = (
     updater: (prev: WatchFormValues) => WatchFormValues,
   ) => {
@@ -549,7 +555,7 @@ export default function WatchFormClient({
   }, [initialValues.productId, isMediaMode, isMediaProgressContext, applyLoadedMediaPool]);
 
   const saveMediaWorkspacePart = async (part: MediaWorkPart, complete: boolean) => {
-    if (!isMediaProgressContext || !mediaPoolReady || mediaStatusUnknown || mediaSaveInFlight.current || mediaSubmitPending) return;
+    if ((part === "cover" && coverDraftPending) || !isMediaProgressContext || !mediaPoolReady || mediaStatusUnknown || mediaSaveInFlight.current || mediaSubmitPending) return;
 
     const nextDone = complete || mediaWorkDone[part];
     mediaSaveInFlight.current = true;
@@ -1641,7 +1647,7 @@ export default function WatchFormClient({
         statusUnknown={mediaStatusUnknown}
         onRecheck={() => void recheckMediaWorkState()}
         disabled={
-          mediaSubmitPending || isMediaWorkspaceDone || isMediaWorkspaceReturned
+          mediaSubmitPending || isMediaWorkspaceDone || isMediaWorkspaceReturned || (part === "cover" && coverDraftPending)
         }
         onSaveDraft={() => void saveMediaWorkspacePart(part, false)}
         onComplete={() => void saveMediaWorkspacePart(part, true)}
@@ -1845,6 +1851,7 @@ export default function WatchFormClient({
         inlineImage={inlineImage}
         coverImage={values.media.coverImage}
         onCoverImageChange={handleCoverImageChange}
+        onCoverDraftPendingChange={setCoverDraftPending}
         watchId={values.watchId}
         productId={values.productId}
         audienceSegment={detail.audienceSegment === "WOMEN" ? "WOMEN" : detail.audienceSegment === "UNISEX" ? "UNISEX" : "MEN"}
@@ -1952,8 +1959,11 @@ export default function WatchFormClient({
                 {contentSection}
               </div>
             ) : null}
-            {activeMediaSection === "image" || activeMediaSection === "cover" ? (
-              <div ref={imageRef}>{imageSection}</div>
+            {mediaImagesVisited || activeMediaSection === "image" || activeMediaSection === "cover" ? (
+              <div ref={imageRef} hidden={activeMediaSection !== "image" && activeMediaSection !== "cover"}
+                className={activeMediaSection === "image" || activeMediaSection === "cover" ? undefined : "hidden"}>
+                {imageSection}
+              </div>
             ) : null}
           </div>
         </div>
@@ -2021,6 +2031,7 @@ export default function WatchFormClient({
             inlineImage={inlineImage}
             coverImage={values.media.coverImage}
             onCoverImageChange={handleCoverImageChange}
+        onCoverDraftPendingChange={setCoverDraftPending}
             watchId={values.watchId}
             productId={values.productId}
             audienceSegment={
