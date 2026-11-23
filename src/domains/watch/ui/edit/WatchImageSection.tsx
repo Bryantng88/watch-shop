@@ -59,6 +59,7 @@ type Props = {
     inlineImage?: PickedMediaItem | null;
     coverImage?: PickedMediaItem | null;
     onCoverImageChange?: (item: PickedMediaItem | null) => void;
+    onCoverDraftPendingChange?: (pending: boolean) => void;
     watchTitle?: string | null;
     storefrontSlug?: string | null;
     contentReviewStatus?: string | null;
@@ -117,6 +118,7 @@ export default function WatchImageSection({
     inlineImage,
     coverImage,
     onCoverImageChange,
+    onCoverDraftPendingChange,
     watchTitle,
     storefrontSlug,
     productStatus,
@@ -164,6 +166,7 @@ export default function WatchImageSection({
     const [coverPreviewOpen, setCoverPreviewOpen] = useState(false);
     const [coverPickerVersion, setCoverPickerVersion] = useState(0);
     const [pendingCoverKey, setPendingCoverKey] = useState<string | null>(null);
+    useEffect(() => { onCoverDraftPendingChange?.(Boolean(pendingCoverKey)); }, [pendingCoverKey, onCoverDraftPendingChange]);
     const [coverPending, setCoverPending] = useState(false);
     const [publishPending, setPublishPending] = useState(false);
     const [quickPublished, setQuickPublished] = useState(
@@ -936,6 +939,11 @@ export default function WatchImageSection({
                 enableRecycle={false}
                 footerHint="Chọn một ảnh Cover để đưa về màn hình Media trước khi xác nhận."
                 footerLeadingAction={currentCoverKey ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                    <AdminButton variant="quiet" type="button" disabled={coverPending}
+                        onClick={() => { setPendingCoverKey(currentCoverKey); setCoverPickerOpen(false); }}>
+                        Dùng lại Cover hiện tại
+                    </AdminButton>
                     <AdminButton variant="secondary"
                         type="button"
                         onClick={() => void handleCoverReturn()}
@@ -945,6 +953,7 @@ export default function WatchImageSection({
                         <Undo2 className="h-4 w-4" />
                         {coverPending ? "Đang trả ảnh..." : "Trả ảnh hiện tại về kho Cover"}
                     </AdminButton>
+                    </div>
                 ) : null}
                 onSubmit={(keys) => {
                     if (!keys[0]) return;
