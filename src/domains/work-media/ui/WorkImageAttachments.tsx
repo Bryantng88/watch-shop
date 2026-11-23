@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Trash2, RefreshCw } from "lucide-react";
 import { WorkAttachmentIcon } from "@/domains/shared/ui/icons/MediaIcons";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
-import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
+import { useAppDialog } from "@/domains/shared/feedback";
 import { WORK_IMAGE_MAX_BYTES, workImagesUrl, type WorkImages, type WorkMediaTarget } from "../shared/work-media";
 
 type Upload={id:string;file:File};
