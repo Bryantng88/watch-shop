@@ -13,7 +13,7 @@ type Ports = { db: typeof prisma; storage: MediaStorage; authorize: typeof autho
 const defaults: Ports = { db:prisma, storage:mediaStorage, authorize:authorizeWorkMedia, prepare:prepareWorkImage, bucket:S3_BUCKET };
 const image = (id:string,name:string|null,state:WorkImage["state"]):WorkImage => ({id,name:name||"Ảnh công việc",state,url:state==="READY"?`/api/admin/personal-work/images/${id}`:null});
 const ownerType = (value:"TASK_ITEM"|"TASK_CHECKLIST") => value as MediaOwnerType;
-async function lock(db:DB,key:string) { await db.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${`work-media:${key}`}))`); }
+async function lock(db:DB,key:string,workId:string) { await db.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${workId} FOR UPDATE`; await db.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext(${`work-media:${key}`}))`); }
 
 export function createWorkMediaService(ports: Partial<Ports> = {}) {
  const {db,storage,authorize,prepare,bucket}={...defaults,...ports};
@@ -36,7 +36,7 @@ export function createWorkMediaService(ports: Partial<Ports> = {}) {
   const checksum=createHash("sha256").update(bytes).digest("hex");
   const receipt=`work-upload:${access.ownerType}:${access.ownerId}:${input.uploadId}`;
   const reservation=await db.$transaction(async tx=>{
-   const current=await authorize(target,auth,true,tx);await lock(tx,`${current.ownerType}:${current.ownerId}`);
+   await lock(tx,`${access.ownerType}:${access.ownerId}`,target.workId);const current=await authorize(target,auth,true,tx);
    const existing=await tx.mediaOperation.findUnique({where:{idempotencyKey:receipt},include:{mediaObject:{include:{bindings:{where:{ownerType:ownerType(current.ownerType),ownerId:current.ownerId}}}}}});
    if(existing){
     const object=existing.mediaObject,binding=object?.bindings[0];
@@ -58,7 +58,7 @@ export function createWorkMediaService(ports: Partial<Ports> = {}) {
    const verified=await storage.stat(reservation.object.storageKey);
    if(!verified||verified.sizeBytes!==bytes.length||stored.etag&&verified.etag!==stored.etag)throw new Error("Storage verification failed");
    await db.$transaction(async tx=>{
-    const current=await authorize(target,auth,true,tx);await lock(tx,`${current.ownerType}:${current.ownerId}`);
+    await lock(tx,`${access.ownerType}:${access.ownerId}`,target.workId);const current=await authorize(target,auth,true,tx);
     const binding=await tx.mediaBinding.findUnique({where:{id:reservation.binding.id}});
     if(!binding||binding.lifecycle==="REMOVED")throw new WorkMediaError("Ảnh đã bị gỡ trong lúc tải.",409);
     await tx.mediaObject.update({where:{id:reservation.object.id},data:{availability:"AVAILABLE",verifiedAt:new Date(),etag:verified.etag}});
@@ -80,9 +80,9 @@ export function createWorkMediaService(ports: Partial<Ports> = {}) {
   return storage.read(binding.mediaObject.storageKey);
  }
  async function remove(id:string,auth:unknown) {
-  const {target}=await targetForBinding(id);await authorize(target,auth,true,db);
+  const {target}=await targetForBinding(id);const scope=await authorize(target,auth,true,db);
   await db.$transaction(async tx=>{
-   const access=await authorize(target,auth,true,tx);await lock(tx,`${access.ownerType}:${access.ownerId}`);
+   await lock(tx,`${scope.ownerType}:${scope.ownerId}`,target.workId);const access=await authorize(target,auth,true,tx);
    const binding=await tx.mediaBinding.findUnique({where:{id}});
    if(!binding||binding.lifecycle==="REMOVED")return;
    await tx.mediaBinding.update({where:{id},data:{lifecycle:"REMOVED"}});
