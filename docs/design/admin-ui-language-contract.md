@@ -1588,3 +1588,11 @@ The main/sidebar layout has a 320px sidebar and 28px gap only when the measured 
 Order mutations, confirmations, pending/error feedback, status guards and service intake conditions remain unchanged. Watch pricing, image selection, related record preview and media flows retain their callbacks and permissions; financial masking remains in force. ServiceCard uses an opt-in flat presentation for Watch details; other callers retain their existing presentation.
 
 The browser regression check `scripts/check-admin-detail-ui.cjs` renders the actual Order and Watch detail components with synthetic action/auth/data ports. Cover widths 320–1920px, centered gutters, narrow hosts and 200% zoom, order state/pending/error guards, price error/retry drafts and payloads, inline image selection, related previews/media and restricted financial visibility. Its screenshots are fixture previews, not production records.
+
+### Acquisition detail — read before edit (2026-11-23)
+
+The existing acquisition entry opens a dialog, not a new full-page route. It uses the same AdminDetailPage frame, gutters, typography, flat sections and available-width stacking as Order and Watch. Show a read-only record first: identity/status, products, notes and a single remaining-payable focus. “Chỉnh thông tin” opens the existing editing controls within that frame. Keep payment totals explicitly labeled as recorded amounts while the editor shows its draft total separately.
+
+Editing requires the existing management and financial visibility props and a DRAFT or POSTED status. DRAFT retains item/image/quantity/notes editing; POSTED retains price-only editing. Other statuses remain read-only. Null financial values remain unavailable, never rendered as zero. Preserve the existing GET/PUT authorization, confirmation, full-currency payload, projection delivery wait, callbacks and draft retention on errors. Close/Escape and editable controls are locked while saving; keyboard focus remains in the dialog and returns to the trigger on close.
+
+Static WorkCase reachability and remaining legacy task/permission inconsistencies are recorded in `docs/reviews/work-case-usage-20261123.md`. This detail migration does not retire WorkCase, TaskItem infrastructure or change access policy.
