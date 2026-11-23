@@ -364,8 +364,8 @@ export default function WatchDetailUiProposal({
                 <h1 className={detailUi.recordTitle}>{title}</h1>
                 <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
                 <div className={detailUi.identityFooter}>
-                  {canEditMedia && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
-                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImagePlus className="h-4 w-4" aria-hidden="true"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
+                  {canEditMedia && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} title={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
+                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImagePlus className="h-4 w-4" aria-hidden="true"/>}
                   </AdminButton>}
                   {live && (<div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><SlidersHorizontal className="h-4 w-4" aria-hidden="true"/></AdminButton>
