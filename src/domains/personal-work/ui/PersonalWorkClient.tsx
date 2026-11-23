@@ -1,4 +1,6 @@
 "use client";
+
+import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
 import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -1078,6 +1080,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             )}
                           </AdminButton>
                         )}
+                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact label={`Ảnh đầu việc: ${entry.title}`} />
                       </div>
                     ))}
                   </div>
@@ -1364,6 +1367,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
               </>}
             </div>
+            {!editingItem.checklistOnly && <WorkImageAttachments key={editingItem.id} workId={editingItem.id} />}
             {!editingItem.checklistOnly && <PersonalCodexPanel item={editingItem} configuration={data.codex} />}
             {editingItem.activities.length > 0 && (
               <section className="mt-4 border-t border-slate-100 pt-4">

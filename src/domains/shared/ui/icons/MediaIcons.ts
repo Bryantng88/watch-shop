@@ -4,3 +4,5 @@
  * Photography (Camera) and publishing (Send) are separate workflow actions.
  */
 export { Images as MediaProcessingIcon, ImagePlus as InlineImageIcon } from "lucide-react";
+
+export { Paperclip as WorkAttachmentIcon } from "lucide-react";

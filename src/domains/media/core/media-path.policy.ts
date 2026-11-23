@@ -25,6 +25,11 @@ export class MediaPathPolicy {
     return normalizeKey(mediaSourceRoot(input.segment, input.purpose));
   }
 
+  workOriginal(mediaObjectId: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(mediaObjectId)) throw new Error("Invalid work media identity");
+    return `media/work/objects/${mediaObjectId}/original/image.webp`;
+  }
+
   canonicalOriginal(input: { mediaObjectId?: string; filename: string }) {
     const mediaObjectId = input.mediaObjectId || randomUUID();
     return normalizeKey(
@@ -82,7 +87,8 @@ export class MediaPathPolicy {
     const normalized = normalizeKey(key);
     return (
       /^media\/objects\/[^/]+\/(original|derivatives)\//.test(normalized) ||
-      /^media\/posts\/[^/]+\/objects\/[^/]+\/(original|derivatives)\//.test(normalized)
+      /^media\/posts\/[^/]+\/objects\/[^/]+\/(original|derivatives)\//.test(normalized) ||
+      /^media\/work\/objects\/[^/]+\/(original|derivatives)\//.test(normalized)
     );
   }
 
