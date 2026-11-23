@@ -1,6 +1,7 @@
 import { PERMISSIONS } from "@/constants/permissions";
 import { expandPermissions } from "./permission-implications";
 import { DIRECTORY_READ_PERMISSIONS } from "@/domains/contacts/shared/directory-navigation";
+import { PRODUCT_READ_PERMISSIONS } from "@/domains/shared/ui/navigation/section-navigation";
 
 export type AdminAccessPolicy = {
     anyOf: readonly string[];
@@ -226,6 +227,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 }
 
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
+    if (pathname === "/admin/products") return anyOf(...PRODUCT_READ_PERMISSIONS);
     if (pathname === "/admin/directory") return anyOf(...DIRECTORY_READ_PERMISSIONS);
     if (pathname === "/admin/ben") return publicToAuthenticatedUser();
     if (/^\/admin\/ben\/work\/[^/]+$/.test(pathname)) return anyOf(PERMISSIONS.TASK_VIEW);
