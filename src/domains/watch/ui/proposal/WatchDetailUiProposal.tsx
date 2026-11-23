@@ -368,7 +368,6 @@ export default function WatchDetailUiProposal({
               {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <Camera className="h-4 w-4"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
             </AdminButton>}
           </div>
-          <dl className={detailUi.facts}>{[["Nhà cung cấp", text(vendor.name)], ["Năm sản xuất", values.basic.yearText || "—"], ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"], ["Tình trạng", values.basic.conditionGrade || "—"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
         </header>
 
         <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection} actions={
@@ -382,7 +381,11 @@ export default function WatchDetailUiProposal({
           )
         }>
           <div className={detailUi.column}>
-            <div hidden={activeSection !== "overview"} data-watch-section="overview">
+            <div hidden={activeSection !== "overview"} data-watch-section="overview" className="space-y-6">
+            <section aria-label="Thông tin đồng hồ" className={detailUi.section}>
+              <h2 className="text-sm font-bold">Thông tin đồng hồ</h2>
+          <dl className={detailUi.facts}>{[["Nhà cung cấp", text(vendor.name)], ["Năm sản xuất", values.basic.yearText || "—"], ["Bộ máy", values.spec.calibre || values.basic.movementCalibre || "—"], ["Tình trạng", values.basic.conditionGrade || "—"]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+            </section>
             <section id="overview" className={detailUi.section}>
               <div className={detailUi.sectionHeader}>
                 <div>
