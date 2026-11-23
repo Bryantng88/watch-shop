@@ -998,7 +998,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 {editingItem.checklist.length > 0 && (
                   <div className="space-y-2">
                     {editingItem.checklist.map((entry) => (
-                      <div key={entry.id} className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100">
+                      <div key={entry.id} className="flex items-center gap-2 py-2">
                         <AdminButton iconOnly variant="contextual" density="compact"
                           type="button"
                           disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
@@ -1048,7 +1048,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           router.refresh();
                         }}/>}
                         {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
-                          <AdminButton variant="danger"
+                          <AdminButton iconOnly variant="quiet" density="compact"
                             type="button"
                             disabled={checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
                             aria-busy={checklistMutation.isPending(`delete:${entry.id}`)}
@@ -1091,7 +1091,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       placeholder="Thêm đầu việc mới..."
                       className="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                     />
-                    <AsyncActionButton variant="secondary"
+                    <AsyncActionButton variant="quiet"
                       type="button"
                       pending={checklistMutation.isPending("checklist:add")}
                       pendingLabel="Đang thêm..."
@@ -1125,7 +1125,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           },
                         });
                       }}
-                      className="rounded-lg bg-white px-4 text-sm font-semibold text-blue-700 ring-1 ring-slate-200 hover:bg-blue-50 disabled:opacity-50"
+                      className="px-2 text-sm font-medium text-slate-600 disabled:opacity-50"
                     >
                       Thêm
                     </AsyncActionButton>
