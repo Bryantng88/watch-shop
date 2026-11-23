@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/domains/work-media/**'
+      - 'src/domains/storefront/server/public-media.service*'
       - 'src/domains/personal-work/server/personal-work.service.ts'
       - 'src/domains/personal-work/ui/PersonalWorkClient.tsx'
       - 'src/domains/media/core/**'
@@ -51,6 +52,8 @@ jobs:
       - run: npx prisma db execute --file prisma/migrations/20261123110000_work_image_owners/migration.sql --schema prisma/schema.prisma
       - run: >-
           npx eslint src/domains/work-media
+          src/domains/storefront/server/public-media.service.ts
+          src/domains/storefront/server/public-media.service.test.ts
           src/domains/personal-work/server/personal-work.service.ts
           src/domains/personal-work/ui/PersonalWorkClient.tsx
           src/domains/media/core/work-media-privacy.ts
@@ -63,7 +66,7 @@ jobs:
           src/app/api/admin/personal-work/images src/app/api/media/sign/route.ts
           scripts/check-work-media-db.ts scripts/work-media-retention.ts scripts/check-work-media-ui.cjs
       - run: npx tsc --noEmit
-      - run: npx tsx --test src/domains/work-media/server/work-media.test.ts src/domains/media/application/media-binding.service.test.ts src/domains/media/application/media-ingest.service.test.ts src/domains/media/core/media-path.policy.test.ts src/domains/media/storage/verified-delete.test.ts src/domains/personal-work/server/personal-work-access.test.ts
+      - run: npx tsx --test src/domains/storefront/server/public-media.service.test.ts src/domains/work-media/server/work-media.test.ts src/domains/media/application/media-binding.service.test.ts src/domains/media/application/media-ingest.service.test.ts src/domains/media/core/media-path.policy.test.ts src/domains/media/storage/verified-delete.test.ts src/domains/personal-work/server/personal-work-access.test.ts
       - run: npx tsx scripts/check-work-media-db.ts
       - run: npm run check:admin-buttons
       - run: npm install --prefix /tmp/work-media-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
