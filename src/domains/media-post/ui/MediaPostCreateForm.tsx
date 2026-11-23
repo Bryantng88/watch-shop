@@ -1,7 +1,8 @@
 "use client";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
 import { Check, ChevronDown, ChevronUp, ImageIcon, LoaderCircle, Search, X } from "lucide-react";
 import {
@@ -67,6 +68,7 @@ export default function MediaPostCreateForm({
     filters: MediaPostThemeFilters;
   } | null>(null);
   const [creating, setCreating] = useState(false);
+  const createInFlight = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCount = Object.keys(selectedKeys).length;
@@ -114,7 +116,12 @@ export default function MediaPostCreateForm({
   }
 
   async function create() {
-    if (creating || (mode === "THEME" && !selectedCount)) return;
+    if (createInFlight.current) return;
+    if (mode === "THEME" && !selectedCount) {
+      setError("Chọn ít nhất một watch có ảnh Gallery trước khi tạo bài.");
+      return;
+    }
+    createInFlight.current = true;
     setCreating(true);
     setError(null);
     try {
@@ -137,8 +144,9 @@ export default function MediaPostCreateForm({
       });
       await onCreated(result);
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Không thể tạo Media Post.");
+      setError(uiFeedbackMessage(createError, "Không thể tạo Media Post. Vui lòng thử lại."));
     } finally {
+      createInFlight.current = false;
       setCreating(false);
     }
   }
@@ -224,7 +232,7 @@ export default function MediaPostCreateForm({
                   return (
                     <div key={watch.watchId} className={`rounded-2xl border bg-white p-3 transition ${selected ? "border-violet-300 ring-2 ring-violet-50" : "border-slate-200"}`}>
                       <div className="flex gap-3">
-                        <AdminButton variant="contextual" type="button" onClick={() => toggleWatch(watch)} className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>
+                        <AdminButton variant="contextual" type="button" onClick={() => toggleWatch(watch)} disabled={!watch.gallery.length || creating} aria-label={`Chọn ${watch.title}`} aria-pressed={selected} title={!watch.gallery.length ? "Watch chưa có ảnh Gallery để tạo bài theo chủ đề" : undefined} className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-md border ${selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white"}`}>
                           {selected ? <Check className="h-3.5 w-3.5" /> : null}
                         </AdminButton>
                         <div
@@ -301,16 +309,18 @@ export default function MediaPostCreateForm({
         <input className={`${inputClass} w-full`} value={brief} onChange={(event) => setBrief(event.target.value)} placeholder="Brief / yêu cầu nội dung (không bắt buộc)" />
       )}
 
-      {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</div> : null}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-5 py-4">
-        <span className="text-sm font-semibold text-slate-600">{mode === "THEME" ? `${selectedCount} watch đã chọn` : "Bài post tự do"}</span>
+      <div className="border-t border-slate-200 bg-white px-5 py-4">
+        {error && <p role="alert" className="mb-3 text-sm text-rose-700">{error}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+        <span role="status" aria-live="polite" className="text-sm text-slate-600">{creating ? "Đang tạo bài và sao chép ảnh Gallery…" : mode === "THEME" ? selectedCount ? `${selectedCount} watch đã chọn` : "Chọn watch có ảnh Gallery để tạo bài" : "Bài post tự do"}</span>
         <div className="flex gap-2">
-        <AdminButton variant="secondary" type="button" onClick={onCancel} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600">Hủy</AdminButton>
-        <AdminButton variant="primary" type="button" onClick={() => void create()} disabled={creating || (mode === "THEME" && !selectedCount)} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">
+        <AdminButton variant="secondary" type="button" onClick={onCancel} disabled={creating} className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600">Hủy</AdminButton>
+        <AdminButton variant="primary" type="button" onClick={() => void create()} disabled={creating} aria-busy={creating} className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45">
           {creating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
           {creating ? "Đang tạo và sao chép ảnh..." : mode === "THEME" ? `Tạo bài với ${selectedCount} watch` : "Tạo ngay"}
         </AdminButton>
+        </div>
         </div>
       </div>
       </div>
