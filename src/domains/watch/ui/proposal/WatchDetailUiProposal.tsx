@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaProcessingIcon, InlineImageIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import { AdminDetailPage, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
@@ -17,8 +19,6 @@ import {
   CircleDollarSign,
   FileText,
   ImageIcon,
-  ImagePlus,
-  SlidersHorizontal,
   Landmark,
   Loader2,
   Pencil,
@@ -365,10 +365,10 @@ export default function WatchDetailUiProposal({
                 <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
                 <div className={detailUi.identityFooter}>
                   {canEditMedia && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} title={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
-                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImagePlus className="h-4 w-4" aria-hidden="true"/>}
+                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <InlineImageIcon className="h-4 w-4" aria-hidden="true"/>}
                   </AdminButton>}
                   {live && (<div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
-                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><SlidersHorizontal className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><MediaProcessingIcon className="h-4 w-4" aria-hidden="true"/></AdminButton>
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Phiếu nhập / Buy Back" title={latestAcquisition ? "Xem phiếu nhập" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")}><ArrowLeftRight className="h-4 w-4" aria-hidden="true"/></AdminButton>
@@ -458,7 +458,7 @@ export default function WatchDetailUiProposal({
                   </div>
                   <div className={detailUi.actions}>
                     <WatchPublishAssetActions detail={detail} />
-                    <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><SlidersHorizontal className="h-4 w-4" /> Xử lý Media</AdminButton>
+                    <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><MediaProcessingIcon className="h-4 w-4" /> Xử lý Media</AdminButton>
                   </div>
                 </div>
                 <div className={detailUi.contentGrid}>

@@ -13,6 +13,7 @@ on:
       - 'src/domains/acquisition/client/AcquisitionListClient.tsx'
       - 'src/domains/acquisition/ui/edit/AcquisitionEditModal.tsx'
       - 'scripts/check-acquisition-detail-ui.cjs'
+      - 'src/domains/shared/ui/icons/MediaIcons.ts'
       - 'scripts/check-admin-detail-ui.cjs'
       - '.github/workflows/admin-detail-contract.yml'
   workflow_dispatch:
@@ -38,6 +39,15 @@ jobs:
           src/domains/shared/ui/admin-design-contract/AdminDetailWorkspace.tsx
           src/domains/shared/ui/admin-design-contract/AdminManagement.tsx
           src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts
+          src/domains/shared/ui/icons/MediaIcons.ts
+          src/domains/shared/ui/signals/operational-domain-presentation.ts
+          src/domains/shared/ui/signals/operational-stage-presentation.ts
+          src/domains/shared/ui/business/BusinessEntityPreview.tsx
+          src/domains/shared/ui/business/WatchMediaReview.tsx
+          src/domains/watch/client/workbench/WatchWorkbenchNav.tsx
+          src/domains/watch/client/workbench/WatchWorkbenchHeader.tsx
+          src/domains/watch/ui/list/WatchListRow.tsx
+          src/domains/watch/ui/list/WatchListToolBar.tsx
           scripts/check-admin-detail-ui.cjs scripts/check-acquisition-detail-ui.cjs
           src/domains/acquisition/client/AcquisitionDetailClient.tsx
           src/domains/acquisition/client/AcquisitionListClient.tsx

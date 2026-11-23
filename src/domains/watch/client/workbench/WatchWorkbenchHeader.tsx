@@ -1,10 +1,11 @@
 "use client";
 
+import { MediaProcessingIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
     BadgeDollarSign,
-    Camera,
     Check,
     ChevronRight,
     Circle,
@@ -252,7 +253,7 @@ export default function WatchWorkbenchHeader({
                             )}
                             <div className="absolute bottom-3 left-3 flex items-center gap-2">
                                 <button type="button" onClick={onOpenMediaWorkspace} disabled={openingMediaWorkspace} className="inline-flex h-8 items-center gap-2 rounded-lg bg-slate-950/90 px-3 text-[11px] font-semibold text-white backdrop-blur disabled:opacity-70">
-                                    {openingMediaWorkspace ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                                    {openingMediaWorkspace ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MediaProcessingIcon className="h-3.5 w-3.5" />}
                                     {openingMediaWorkspace ? "Đang mở..." : "Xem gallery"}
                                 </button>
                                 <span className="rounded-lg bg-slate-950/75 px-2.5 py-2 text-[10px] font-semibold text-white backdrop-blur">{imageCount} ảnh</span>
