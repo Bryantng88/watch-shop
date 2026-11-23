@@ -5,6 +5,9 @@ on:
       - 'src/domains/order/client/OrderDetailClient.tsx'
       - 'src/domains/order/ui/detail/**'
       - 'src/domains/watch/ui/proposal/WatchDetailUiProposal.tsx'
+      - 'src/domains/watch/server/detail/watch-operational-overview*'
+      - 'src/domains/watch/shared/watch-operational-overview.ts'
+      - 'src/app/(admin)/admin/watches/**/page.tsx'
       - 'src/domains/watch/ui/operations/side/ServiceCard.tsx'
       - 'src/domains/shared/ui/admin-design-contract/AdminDetail*'
       - 'src/domains/shared/ui/admin-design-contract/AdminManagement.tsx'
@@ -34,6 +37,10 @@ jobs:
           npx eslint src/domains/order/client/OrderDetailClient.tsx
           src/domains/order/ui/detail
           src/domains/watch/ui/proposal/WatchDetailUiProposal.tsx
+          src/domains/watch/server/detail/watch-operational-overview.service.ts
+          src/domains/watch/server/detail/watch-operational-overview.service.test.ts
+          src/domains/watch/shared/watch-operational-overview.ts
+          'src/app/(admin)/admin/watches/[id]/page.tsx' 
           src/domains/watch/ui/operations/side/ServiceCard.tsx
           src/domains/shared/ui/admin-design-contract/AdminDetail.tsx
           src/domains/shared/ui/admin-design-contract/AdminDetailWorkspace.tsx
@@ -53,6 +60,7 @@ jobs:
           src/domains/acquisition/client/AcquisitionListClient.tsx
           src/domains/acquisition/ui/edit/AcquisitionEditModal.tsx
       - run: npx tsc --noEmit
+      - run: npx tsx --test src/domains/watch/server/detail/watch-operational-overview.service.test.ts
       - run: npm install --prefix /tmp/detail-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/detail-browser/node_modules/.bin/playwright install --with-deps chromium
       - run: node scripts/check-admin-detail-ui.cjs
