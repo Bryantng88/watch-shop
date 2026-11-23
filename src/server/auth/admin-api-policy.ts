@@ -1,7 +1,9 @@
 import { PERMISSIONS } from "@/constants/permissions";
 import { expandPermissions } from "./permission-implications";
 import { DIRECTORY_READ_PERMISSIONS } from "@/domains/contacts/shared/directory-navigation";
-import { PRODUCT_READ_PERMISSIONS } from "@/domains/shared/ui/navigation/section-navigation";
+import { PRODUCT_READ_PERMISSIONS, REPORT_READ_PERMISSIONS, SYSTEM_READ_PERMISSIONS } from "@/domains/shared/ui/navigation/section-navigation";
+
+import { TRADING_READ_PERMISSIONS } from "@/domains/trading/shared/trading-navigation";
 
 export type AdminAccessPolicy = {
     anyOf: readonly string[];
@@ -58,6 +60,10 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 
     if (pathname === "/api/admin/analytics/internal-device" && normalizedMethod === "POST") {
         return anyOf(PERMISSIONS.REPORT_SALES_VIEW);
+    }
+
+    if (pathname === "/api/admin/acquisitions/quick-names" && (read || normalizedMethod === "POST")) {
+        return anyOf(PERMISSIONS.WATCH_ACQUISITION_CREATE);
     }
 
     if (pathname === "/api/admin/contacts") {
@@ -227,6 +233,10 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 }
 
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
+    if (pathname === "/admin/trading") return anyOf(...TRADING_READ_PERMISSIONS);
+    if (pathname === "/admin/system") return anyOf(...SYSTEM_READ_PERMISSIONS);
+    if (pathname === "/admin/reports") return anyOf(...REPORT_READ_PERMISSIONS);
+    if (pathname === "/admin/ben/media") return anyOf(PERMISSIONS.TASK_VIEW);
     if (pathname === "/admin/products") return anyOf(...PRODUCT_READ_PERMISSIONS);
     if (pathname === "/admin/directory") return anyOf(...DIRECTORY_READ_PERMISSIONS);
     if (pathname === "/admin/ben") return publicToAuthenticatedUser();
