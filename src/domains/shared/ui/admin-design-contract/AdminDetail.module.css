@@ -54,3 +54,7 @@
 .recordSurface .facts { gap: 20px 28px; margin-top: 16px; }
 .recordSurface .identityText > button { margin-top: 8px; }
 @media(max-width:639px) { .recordSurface { padding: 16px; border-radius: 8px; gap: 20px; } .workspaceHeading { margin-bottom: 20px; } }
+
+.headerIdentityText { display: flex; flex-direction: column; min-height: 112px; }
+.identityFooter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px; margin-top: auto; }
+@media(max-width:639px) { .headerIdentityText { min-height: 88px; } }

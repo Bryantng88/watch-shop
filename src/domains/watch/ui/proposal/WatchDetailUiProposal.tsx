@@ -17,6 +17,8 @@ import {
   CircleDollarSign,
   FileText,
   ImageIcon,
+  ImagePlus,
+  SlidersHorizontal,
   Landmark,
   Loader2,
   Pencil,
@@ -357,29 +359,28 @@ export default function WatchDetailUiProposal({
           <div className={detailUi.recordHeader}>
             <div className={detailUi.recordIdentity}>
               <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 88px, 112px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
-              <div className={detailUi.identityText}>
+              <div className={`${detailUi.identityText} ${detailUi.headerIdentityText}`}>
                 <div className={detailUi.tags}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(values.basic.stockState)}</span><span className="text-blue-700">{statusLabel(values.basic.saleState)}</span></div>
                 <h1 className={detailUi.recordTitle}>{title}</h1>
                 <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
-                {canEditMedia && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
-                  {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <Camera className="h-4 w-4"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
-                </AdminButton>}
+                <div className={detailUi.identityFooter}>
+                  {canEditMedia && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
+                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImagePlus className="h-4 w-4" aria-hidden="true"/>}{values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"}
+                  </AdminButton>}
+                  {live && (<div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><SlidersHorizontal className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Phiếu nhập / Buy Back" title={latestAcquisition ? "Xem phiếu nhập" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")}><ArrowLeftRight className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                  </div>)}
+                </div>
               </div>
             </div>
 
           </div>
         </header>
 
-        <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection} actions={
-          live && (
-            <div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
-              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><Camera className="h-4 w-4" aria-hidden="true"/></AdminButton>
-              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
-              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
-              <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Phiếu nhập / Buy Back" title={latestAcquisition ? "Xem phiếu nhập" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")}><ArrowLeftRight className="h-4 w-4" aria-hidden="true"/></AdminButton>
-            </div>
-          )
-        }>
+        <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection}>
           <div className={detailUi.column}>
             <div hidden={activeSection !== "overview"} data-watch-section="overview" className="space-y-6">
             <section aria-label="Thông tin đồng hồ" className={detailUi.section}>
@@ -457,7 +458,7 @@ export default function WatchDetailUiProposal({
                   </div>
                   <div className={detailUi.actions}>
                     <WatchPublishAssetActions detail={detail} />
-                    <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><Camera className="h-4 w-4" /> Xử lý Media</AdminButton>
+                    <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><SlidersHorizontal className="h-4 w-4" /> Xử lý Media</AdminButton>
                   </div>
                 </div>
                 <div className={detailUi.contentGrid}>
