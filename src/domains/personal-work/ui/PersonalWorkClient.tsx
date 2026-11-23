@@ -1,5 +1,5 @@
 "use client";
-import { AdminPageHeading } from "@/domains/shared/ui/admin-design-contract/AdminShellHeading";
+import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
@@ -28,7 +28,6 @@ import { PersonalWorkCategoryManager } from "./PersonalWorkCategoryManager";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   CalendarDays,
   Check,
@@ -46,7 +45,6 @@ import {
 import { useAppDialog } from "@/domains/shared/feedback";
 import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
-  AdminPageCanvas,
   ProgressMetric,
   AdminViewTabs,
 } from "@/domains/shared/ui/admin-design-contract";
@@ -459,13 +457,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
   return (
-    <AdminPageCanvas className="min-w-0 !px-4 !py-3 sm:!px-6 sm:!py-5">
-      {listOnly && <Link href="/admin/ben" className={`${listStyles.back} focus-visible:ring-2 focus-visible:ring-blue-300`}>← Trò chuyện với Ben</Link>}
-      <header className={listStyles.header}>
-        <AdminPageHeading className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</AdminPageHeading>
-        <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
-      </header>
-
+    <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
+      <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
+    }>
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
       <section hidden={listOnly} className={listOnly ? "hidden" : "grid gap-5 border-b border-slate-100 pb-4 xl:grid-cols-[minmax(0,1fr)_340px]"}>
@@ -902,7 +896,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className={`${listStyles.pane} bg-transparent xl:flex xl:h-[766px] xl:flex-col ${calendarOpen && !listOnly ? "xl:border-l xl:border-slate-100 xl:pl-5" : ""}`}>
-          <PersonalWorkListToolbar view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />
+          <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
@@ -1681,6 +1675,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           </form>
         </div>
       )}
-    </AdminPageCanvas>
+    </PersonalWorkWorkspace>
   );
 }

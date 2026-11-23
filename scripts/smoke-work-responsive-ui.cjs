@@ -25,8 +25,8 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     build.onResolve({ filter: /^next\/(navigation|link|image)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onResolve({ filter: /^@\/domains\/shared\/feedback$/ }, () => ({ path: 'feedback', namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'feedback' ? `const dialog={confirm:async()=>true,alert:async()=>{}};export const useAppDialog=()=>dialog;` : args.path.endsWith('navigation') ? `const params=new URLSearchParams(location.search);if(!params.has('full'))params.set('view','list');const router={refresh(){window.__refreshed=true;window.__renderFixture?.()},push(path){window.__route=path},replace(){}};export const useRouter=()=>router;export const useSearchParams=()=>params;` : args.path.endsWith('link') ? `import React from 'react';export default function Link({children,href,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}` : `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`, loader: 'tsx', resolveDir: root }));
-    build.onLoad({ filter: /\/personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
-    build.onLoad({ filter: /\/AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;`, loader: 'js' }));
+    build.onLoad({ filter: /[\\/]personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
+    build.onLoad({ filter: /[\\/]AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;`, loader: 'js' }));
   } }] });
   return { js: bundle.outputFiles.find(f => f.path.endsWith('.js')).text, css: bundle.outputFiles.find(f => f.path.endsWith('.css'))?.text || '' };
 }
@@ -106,8 +106,28 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await page.locator('[data-work-row]').first().waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-calendar-desktop.png'), fullPage: true });
-    assert.ok(await page.getByRole('combobox', { name: 'Hiển thị công việc' }).isVisible()); // Container width, not screen width.
-    await page.getByRole('combobox', { name: 'Hiển thị công việc' }).selectOption('ALL');
+    const navigation = page.getByRole('navigation', { name: 'Hiển thị công việc' });
+    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    assert.equal(await navigation.getByRole('button', { name: 'Tất cả', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.ok(await page.getByRole('separator', { name: 'Điều chỉnh độ rộng menu công việc' }).isVisible());
+    await page.getByPlaceholder('Việc cần làm...').fill('Bản nháp đang nhập');
+    await navigation.getByRole('button', { name: 'Quá hạn', exact: true }).click();
+    await row(28).waitFor(); assert.equal(await row(31).count(), 0);
+    await navigation.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+    await row(26).waitFor(); assert.equal(await row(28).count(), 0);
+    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    assert.equal(await page.getByPlaceholder('Việc cần làm...').inputValue(), 'Bản nháp đang nhập');
+    assert.equal(await page.evaluate(() => (window.__actions || []).length), 0);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const viewSelect = navigation.getByRole('combobox', { name: 'Hiển thị công việc', exact: true });
+      await viewSelect.waitFor(); await viewSelect.selectOption('OVERDUE'); await row(28).waitFor();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-' + width + '.png'), fullPage: true });
+      await viewSelect.selectOption('ALL');
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
     await row(31).getByRole('button', { name: /^Lịch CV-31:/ }).click();
     const lastSchedule = page.getByRole('group', { name: 'Lịch CV-31', exact: true }); await lastSchedule.waitFor();
     const box = await lastSchedule.boundingBox(); assert.ok(box.x >= 0 && box.y >= 0 && box.y + box.height <= 1000);
