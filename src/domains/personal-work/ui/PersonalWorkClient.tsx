@@ -680,7 +680,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       ))}
 
       <div
-        className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.8fr)]" : "grid-cols-1"}`}
+        className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(340px,0.9fr)_minmax(420px,1.1fr)]" : "grid-cols-1"}`}
       >
         {calendarOpen && !listOnly && (
           <section id="personal-google-calendar-agenda" className="order-2 min-w-0 bg-white xl:border-l xl:border-slate-100 xl:pl-5">

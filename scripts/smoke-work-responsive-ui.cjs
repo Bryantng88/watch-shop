@@ -112,6 +112,9 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-desktop.png'), fullPage: true });
     await page.getByRole('button', { name: 'Hiển thị lịch công việc', exact: true }).click();
     await page.locator('#personal-google-calendar-agenda').waitFor();
+    const calendarWidth = (await page.locator('#personal-google-calendar-agenda').boundingBox()).width;
+    const listWidth = (await page.getByRole('list', { name: 'Công việc', exact: true }).boundingBox()).width;
+    assert.ok(calendarWidth >= 420 && calendarWidth > listWidth, 'Calendar receives the wider desktop pane');
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-calendar-desktop.png'), fullPage: true });
     const navigation = page.getByRole('navigation', { name: 'Hiển thị công việc' });
     await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
