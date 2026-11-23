@@ -10,6 +10,7 @@ on:
       - 'scripts/check-profile-workspace.cjs'
       - 'scripts/smoke-admin-buttons-browser.cjs'
       - 'scripts/smoke-ti-board-preview-browser.cjs'
+      - 'scripts/smoke-media-editor-tools.cjs'
       - 'tests/browser/admin-buttons.fixture.tsx'
       - 'package*.json'
       - '.github/workflows/admin-buttons-contract.yml'
@@ -30,7 +31,7 @@ jobs:
       - run: >-
           npx eslint src/domains/shared/ui/admin-design-contract/AdminButton.tsx
           src/domains/shared/ui/admin-design-contract/AdminButtonSurface.ts
-          scripts/check-admin-buttons.mjs scripts/smoke-admin-buttons-browser.cjs scripts/smoke-ti-board-preview-browser.cjs
+          scripts/check-admin-buttons.mjs scripts/smoke-admin-buttons-browser.cjs scripts/smoke-ti-board-preview-browser.cjs scripts/smoke-media-editor-tools.cjs
           tests/browser/admin-buttons.fixture.tsx
       - run: npx prisma generate --generator client
       - run: npx tsc --noEmit
@@ -38,6 +39,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: node scripts/smoke-admin-buttons-browser.cjs
       - run: node scripts/smoke-ti-board-preview-browser.cjs
+      - run: node scripts/smoke-media-editor-tools.cjs
 
       - run: npx tailwindcss -i src/app/globals.css -o /tmp/admin-buttons-global.css --minify
       - run: node scripts/check-profile-workspace.cjs

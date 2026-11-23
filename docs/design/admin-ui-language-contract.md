@@ -1551,6 +1551,15 @@ Giữ thanh màu và nền tiêu đề theo nhóm TI (Máy, Vỏ, Kính, Dây).
 Không hiển thị hàng phân loại / cách xử lý (ví dụ “Tổng quát · Nội bộ”) trên thẻ;
 xem và chỉnh các thông tin này trong chi tiết TI. Nhãn Đơn khách vẫn hiện khi có.
 
+### Media editor action emphasis
+
+Mỗi màn xử lý media chỉ có tối đa 1–2 nút xanh làm điểm nhấn, dành cho hoàn tất
+mục và duyệt workflow. Các công cụ gen title/hook/bullet specs dùng contextual,
+không màu xanh đặc hoặc card nền nổi. Bộ chọn Brand giữ cùng đường chân và căn
+trái như các input thông tin; “Brand mới” là thao tác chữ phụ, không viền nút.
+Các thao tác chọn/tạo brand trong form phụ dùng outline. Không đổi semantics lưu,
+hoàn tất, duyệt hoặc quyền sửa để đạt mục tiêu trình bày này.
+
 ### Personal Work workspace navigation
 
 Trang Quản lý công việc đầy đủ dùng menu trái với Hôm nay, Quá hạn, Sắp tới,

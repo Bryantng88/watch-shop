@@ -149,13 +149,13 @@ export default function WatchBrandField({
                 <FieldLabel>Brand</FieldLabel>
 
                 {!creating ? (
-                    <AdminButton variant="secondary" density="compact"
+                    <AdminButton variant="contextual" density="compact"
                         type="button"
                         onClick={() => {
                             setCreating(true);
                             setOpen(false);
                         }}
-                        className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                        className="mb-1 inline-flex min-h-8 [@media(pointer:coarse)]:min-h-11 items-center gap-1 rounded text-xs font-medium text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
                     >
                         <Plus className="h-3.5 w-3.5" />
                         Brand mới
@@ -163,10 +163,12 @@ export default function WatchBrandField({
                 ) : null}
             </div>
 
-            <AdminButton variant="secondary"
+            <AdminButton variant="contextual"
                 type="button"
+                aria-label="Chọn brand"
+                aria-expanded={open}
                 onClick={() => setOpen((prev) => !prev)}
-                className="flex h-10 w-full items-center justify-between gap-2 border-0 border-b border-slate-200 bg-transparent px-0 text-left text-sm text-slate-900 outline-none transition hover:border-slate-400"
+                className="flex h-10 w-full items-center justify-between gap-2 border-0 border-b border-slate-200 bg-transparent px-0 text-left text-sm text-slate-900 outline-none transition hover:border-slate-400 focus-visible:border-blue-500 focus-visible:ring-0 [@media(pointer:coarse)]:min-h-11"
             >
                 <span className={selectedBrand ? "" : "text-slate-400"}>
                     {selectedBrand?.name ?? "Chọn brand"}
@@ -184,6 +186,7 @@ export default function WatchBrandField({
                             {suggestedName.trim()}
                         </span>
                         <Button
+                            variant="outline"
                             type="button"
                             disabled={createPending}
                             onClick={() => handleCreate(suggestedName)}
@@ -255,6 +258,7 @@ export default function WatchBrandField({
                         </div>
 
                         <Button
+                            variant="outline"
                             type="button"
                             disabled={createPending || !name.trim()}
                             onClick={() => handleCreate()}
