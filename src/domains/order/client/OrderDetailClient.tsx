@@ -90,7 +90,7 @@ export default function OrderDetailClient({ data, codexEnabled = false }: { data
   }
 
   return (
-    <AdminDetailPage grouped>
+    <AdminDetailPage grouped emphasis>
       <OrderHeader data={data} />
 
       <div className={detail.layout}>

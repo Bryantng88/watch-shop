@@ -32,7 +32,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const isBen = pathname === "/admin/ben";
-    const isWatchDetail = /^\/admin\/watches\/[^/]+$/.test(pathname);
+    const isRecordDetail = /^\/admin\/(?:watches|orders)\/[^/]+$/.test(pathname) && !pathname.endsWith("/new");
     const isBenWorkList = pathname === "/admin/personal-work" && searchParams.get("view") === "list";
     const isTechnicianWorkspace = pathname === "/admin/services/technician";
     const isBenMediaList = pathname === "/admin/ben/media";
@@ -45,7 +45,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
             {children}
             {isBen && !assistantLive && <p className="p-6">Ben chưa được bật ở môi trường này.</p>}
         </main> : (
-        <div className={`relative flex h-[100dvh] min-w-0 flex-col overflow-hidden ${isWatchDetail ? "bg-slate-50" : "bg-white"}`}>
+        <div className={`relative flex h-[100dvh] min-w-0 flex-col overflow-hidden ${isRecordDetail ? "bg-slate-50" : "bg-white"}`}>
             <AdminShellHeadingProvider enabled={!isTechnicianWorkspace}><div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <div className={isTechnicianWorkspace ? "hidden lg:block" : undefined}>
                 <AdminTopbar
@@ -60,7 +60,7 @@ export default function AdminShell({ user, children, assistantSimulation = false
                 />
                 </div>
 
-                <main className={`min-h-0 min-w-0 flex-1 overflow-y-auto ${isWatchDetail ? "bg-slate-50" : "bg-white"} ${isTechnicianWorkspace ? "w-full" : ADMIN_WORKSPACE_FRAME}`} style={isTechnicianWorkspace ? undefined : ADMIN_WORKSPACE_FRAME_STYLE}>
+                <main className={`min-h-0 min-w-0 flex-1 overflow-y-auto ${isRecordDetail ? "bg-slate-50" : "bg-white"} ${isTechnicianWorkspace ? "w-full" : ADMIN_WORKSPACE_FRAME}`} style={isTechnicianWorkspace ? undefined : ADMIN_WORKSPACE_FRAME_STYLE}>
                     {children}
                 </main>
             </div></AdminShellHeadingProvider>

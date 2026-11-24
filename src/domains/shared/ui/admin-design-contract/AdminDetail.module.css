@@ -184,10 +184,17 @@
   }
 }
 
-.orderHeaderActions { flex-shrink: 0; }
+/* Grouped records use the same surface rhythm as the Watch workspace. */
+.page[data-detail-grouped="true"] .frame,
+.page[data-detail-grouped="true"] .column,
+.page[data-detail-grouped="true"] .sidebar { gap: 20px; }
+.page[data-detail-grouped="true"] .recordHeader,
+.page[data-detail-grouped="true"] .section { box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
+.page[data-detail-grouped="true"] .recordHeader { align-items: stretch; }
+.page[data-detail-grouped="true"] .sectionHeader { align-items: center; }
 @media(min-width:1100px) {
- .orderHeaderActions { display: grid; grid-template-columns: repeat(2, 32px); gap: 8px; align-self: stretch; align-content: center; }
+ .page[data-detail-grouped="true"] .recordHeader { display: grid; grid-template-columns: minmax(0,1fr) 64px; gap: 24px; }
 }
 @media(max-width:639px) {
- .orderHeaderActions { width: 100%; justify-content: flex-start; padding-top: 12px; border-top: 1px solid var(--detail-line); }
+ .page[data-detail-grouped="true"] .headerActions { width: 100%; justify-content: flex-start; }
 }
