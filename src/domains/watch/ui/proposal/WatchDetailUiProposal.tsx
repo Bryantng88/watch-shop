@@ -4,6 +4,7 @@ import type { WatchOperationalOverview } from "@/domains/watch/shared/watch-oper
 import { MediaProcessingIcon, InlineImageIcon } from "@/domains/shared/ui/icons/MediaIcons";
 
 import { AdminDetailPage, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
+import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
 import { AdminButton, AdminAnchorAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -337,28 +338,38 @@ export default function WatchDetailUiProposal({
         </nav>
 
         <header className={detailUi.identityPanel}>
-          <div className={detailUi.recordHeader}>
+          <div className={`${detailUi.recordHeader} ${detailUi.identityLayout}`}>
             <div className={detailUi.recordIdentity}>
-              <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 104px, 168px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
+              <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 104px, 192px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}                  {canEditMedia && <AdminButton variant="secondary" className={detailUi.imageAction} iconOnly density="compact" type="button" aria-label={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} title={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
+                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <InlineImageIcon className="h-4 w-4" aria-hidden="true"/>}
+                  </AdminButton>}</div>
               <div className={`${detailUi.identityText} ${detailUi.headerIdentityText}`}>
                 <div className={`${detailUi.tags} ${detailUi.identityTags}`}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(operationalOverview?.stock || values.basic.stockState)}</span>{statusLabel(operationalOverview?.sale || values.basic.saleState) !== statusLabel(operationalOverview?.stock || values.basic.stockState) && <span className="text-blue-700">{statusLabel(operationalOverview?.sale || values.basic.saleState)}</span>}</div>
                 <h1 className={detailUi.recordTitle}>{title}</h1>
                 <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
-                <div className={detailUi.identityFooter}>
-                  {canEditMedia && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} title={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
-                    {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <InlineImageIcon className="h-4 w-4" aria-hidden="true"/>}
-                  </AdminButton>}
+                <dl className={detailUi.identityFacts}>
+                  {[
+                    ["Năm sản xuất", values.basic.yearText],
+                    ["Bộ máy", values.spec.calibre || values.basic.movementCalibre],
+                    ["Kích thước", values.spec.caseSizeMM ? `${values.spec.caseSizeMM} mm` : ""],
+                    ["Phụ kiện", [values.media.hasBox ? "Hộp" : "", values.media.hasPapers ? "Giấy tờ" : ""].filter(Boolean).join(" · ")],
+                  ].filter(([, value]) => Boolean(value)).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                </dl>
 
-                  {live && (<div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
-                    {canEditMedia && <AdminAnchorAction href={`/admin/watches/${values.productId}/edit`} density="compact" variant="quiet" iconOnly aria-label="Chỉnh thông tin" title="Chỉnh thông tin"><Pencil className="h-4 w-4" aria-hidden="true"/></AdminAnchorAction>}
-                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><MediaProcessingIcon className="h-4 w-4" aria-hidden="true"/></AdminButton>
-                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
-                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
-                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Phiếu nhập / Buy Back" title={latestAcquisition ? "Xem phiếu nhập" : "Tạo Buy Back / Trade-in"} onClick={() => openRelatedPreview("ACQUISITION", latestAcquisition, "Phiếu nhập / Buy Back")}><ArrowLeftRight className="h-4 w-4" aria-hidden="true"/></AdminButton>
-                  </div>)}
-                </div>
+
               </div>
             </div>
+                <div className={detailUi.headerActions} role="group" aria-label="Thao tác với đồng hồ">
+                  {canEditMedia && <AdminAnchorAction href={`/admin/watches/${values.productId}/edit`} density="compact" variant="quiet" iconOnly aria-label="Chỉnh thông tin" title="Chỉnh thông tin"><Pencil className="h-4 w-4" aria-hidden="true"/></AdminAnchorAction>}
+                  {live && <>
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><MediaProcessingIcon className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                    <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
+                    <AdminRowActionMenu label="Thêm thao tác" status={null} iconOnly actions={[
+                      {key:"order",label:latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng",onSelect:()=>openRelatedPreview("ORDER",latestOrder,"Order")},
+                      {key:"acquisition",label:latestAcquisition ? "Xem phiếu nhập gần nhất" : "Tạo phiếu nhập / Buy Back",onSelect:()=>openRelatedPreview("ACQUISITION",latestAcquisition,"Phiếu nhập / Buy Back")},
+                    ]}/>
+                  </>}
+                </div>
 
           </div>
         </header>

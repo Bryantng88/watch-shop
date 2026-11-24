@@ -1717,3 +1717,17 @@ separate action card. Every icon/link needs an accessible name and tooltip,
 retains its original permission and callback, and uses the shared touch target.
 Show the edit link only with the existing product-update capability. Do not add
 an independent view navigation or duplicate the same metadata in multiple cards.
+
+
+### Watch identity action rail (2026-11-24)
+
+Watch identity uses a 192px desktop image, flexible identity/facts and a narrow
+right-hand action rail with one vertical divider. Keep edit, Media and technical
+as quiet icons; Order and Acquisition use the shared More menu with keyboard,
+Escape and focus-return behavior. INLINE selection overlays its image. Retain
+all permission checks, tooltips and mutation callbacks. Mobile moves actions
+below identity and uses 104px images; intermediate hosts use 168px images.
+
+Show only populated year, calibre, size and accessory facts. Do not add the
+horizontal divider above these facts; spacing is sufficient. The rail has no
+independent card/background. The record's business sections remain visible.
