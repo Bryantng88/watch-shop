@@ -343,7 +343,7 @@ export default function WatchDetailUiProposal({
   }
 
   return (
-    <AdminDetailPage surface="record">
+    <AdminDetailPage surface="record" emphasis>
         {!live && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-violet-900">
             <Sparkles className="h-4 w-4 text-violet-600" />
@@ -361,10 +361,10 @@ export default function WatchDetailUiProposal({
             <span className="font-semibold text-slate-800">{title}</span>
         </nav>
 
-        <header>
+        <header className={detailUi.identityPanel}>
           <div className={detailUi.recordHeader}>
             <div className={detailUi.recordIdentity}>
-              <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 88px, 112px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
+              <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 104px, 168px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
               <div className={`${detailUi.identityText} ${detailUi.headerIdentityText}`}>
                 <div className={detailUi.tags}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(operationalOverview?.stock || values.basic.stockState)}</span><span className="text-blue-700">{statusLabel(operationalOverview?.sale || values.basic.saleState)}</span></div>
                 <h1 className={detailUi.recordTitle}>{title}</h1>
@@ -389,7 +389,7 @@ export default function WatchDetailUiProposal({
         <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection}>
           <div className={detailUi.column}>
             <div hidden={activeSection !== "overview"} data-watch-section="overview" className="space-y-6">
-            <section aria-label="Tình trạng đồng hồ" className={detailUi.section}>
+            <section aria-label="Tình trạng đồng hồ" className={`${detailUi.section} ${detailUi.statusStrip}`}>
               <h2 className="text-sm font-bold">Tình trạng đồng hồ</h2>
               {operationalOverview ? <dl className={detailUi.facts}>
                 <div><dt>Bán hàng</dt><dd>{operationalOverview.sale === "SOLD" ? "Đã bán" : "Chưa bán"}<p className={detailUi.metadata}>{statusLabel(operationalOverview.sale)}</p></dd></div>
@@ -398,7 +398,7 @@ export default function WatchDetailUiProposal({
                 <div><dt>Tồn kho</dt><dd>{statusLabel(operationalOverview.stock)}</dd></div>
               </dl> : <p className={detailUi.metadata}>Chưa có dữ liệu tình trạng vận hành.</p>}
             </section>
-            <section id="overview" className={detailUi.section}>
+            <section id="overview" className={`${detailUi.section} ${detailUi.financialPanel}`}>
               <div className={detailUi.sectionHeader}>
                 <div>
                   <h2 className="flex items-center gap-2 text-sm font-bold">

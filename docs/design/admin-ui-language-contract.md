@@ -1658,3 +1658,16 @@ mobile internal spacing to distinguish the record. Do not add a gray outer
 background, shadow, rounded card or nested section cards. Keep the light divider below the
 record header, flat content sections and white sidebar; only the active navigation
 entry uses the focus surface. Use spacing and section headings for hierarchy.
+
+
+### Detail emphasis recipe (2026-11-24)
+
+Watch detail opts into `AdminDetailPage emphasis`: the outer canvas stays white
+and has no enclosing record card. A light identity panel with one thin border,
+168px desktop / 104px mobile image, and grouped identity/actions anchors the page.
+Financials use a white bordered panel and blue sale-price focus, with the larger
+24px amount as the primary numeric emphasis. Operational state stays compact and
+related work stays flat; warning surfaces are reserved for actionable warnings.
+This opt-in does not change Order, Acquisition or list page surfaces. Cards here
+are intentional emphasis for identity and financial comparison, not a default
+for every section. Retain callbacks, permissions and responsive navigation.
