@@ -4,9 +4,8 @@ import type { WatchOperationalOverview } from "@/domains/watch/shared/watch-oper
 import { MediaProcessingIcon, InlineImageIcon } from "@/domains/shared/ui/icons/MediaIcons";
 
 import { AdminDetailPage, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
-import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import { AdminButton, AdminAnchorAction } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
-import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract/AdminViewTabs";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -89,18 +88,6 @@ function money(value: unknown, canView = true) {
   return canView ? `${moneyText(value, "0")} ₫` : "••••••";
 }
 
-const detailSections = [
-  { value: "overview", label: "Tổng quan" },
-  { value: "content-media", label: "Nội dung & hình ảnh" },
-  { value: "service", label: "Kỹ thuật" },
-  { value: "trade-history", label: "Lịch sử mua bán" },
-] as const;
-type DetailSection = typeof detailSections[number]["value"];
-function sectionFromHash(): DetailSection {
-  const value = window.location.hash.slice(1);
-  return detailSections.find(item => item.value === value)?.value ?? "overview";
-}
-
 export default function WatchDetailUiProposal({
   detail,
   service,
@@ -130,18 +117,6 @@ export default function WatchDetailUiProposal({
   const [savingPrice, setSavingPrice] = useState(false);
   const previewState = useBusinessEntityPreview();
   const notify = useNotify();
-  const [activeSection, setActiveSection] = useState<DetailSection>("overview");
-  useEffect(() => {
-    const sync = () => setActiveSection(sectionFromHash());
-    sync();
-    window.addEventListener("hashchange", sync);
-    window.addEventListener("popstate", sync);
-    return () => { window.removeEventListener("hashchange", sync); window.removeEventListener("popstate", sync); };
-  }, []);
-  function selectSection(value: DetailSection) {
-    if (window.location.hash !== `#${value}`) window.history.pushState(null, "", `#${value}`);
-    setActiveSection(value);
-  }
   const router = useRouter();
   const values = mapWatchDetailToFormValues(detail);
   const audienceSegment = text(detail.audienceSegment, "MEN").toUpperCase() === "WOMEN"
@@ -373,7 +348,9 @@ export default function WatchDetailUiProposal({
                   {canEditMedia && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} title={values.media.inlineImage ? "Đổi ảnh INLINE" : "Thêm ảnh INLINE"} onClick={() => setInlinePickerOpen(true)} disabled={savingInline}>
                     {savingInline ? <Loader2 className="h-4 w-4 animate-spin"/> : <InlineImageIcon className="h-4 w-4" aria-hidden="true"/>}
                   </AdminButton>}
+
                   {live && (<div className={detailUi.actions} role="group" aria-label="Thao tác với đồng hồ">
+                    {canEditMedia && <AdminAnchorAction href={`/admin/watches/${values.productId}/edit`} density="compact" variant="quiet" iconOnly aria-label="Chỉnh thông tin" title="Chỉnh thông tin"><Pencil className="h-4 w-4" aria-hidden="true"/></AdminAnchorAction>}
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Xử lý Media" title="Xử lý Media" onClick={() => setMediaOpen(true)}><MediaProcessingIcon className="h-4 w-4" aria-hidden="true"/></AdminButton>
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Service" title={latestServiceRequest ? "Xem yêu cầu kỹ thuật gần nhất" : "Tạo yêu cầu kỹ thuật"} onClick={() => openRelatedPreview("SERVICE", latestServiceRequest, "Service Request")}><Wrench className="h-4 w-4" aria-hidden="true"/></AdminButton>
                     <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label="Order" title={latestOrder ? "Xem đơn hàng gần nhất" : "Tạo đơn hàng"} onClick={() => openRelatedPreview("ORDER", latestOrder, "Order")}><ReceiptText className="h-4 w-4" aria-hidden="true"/></AdminButton>
@@ -386,50 +363,9 @@ export default function WatchDetailUiProposal({
           </div>
         </header>
 
-        <div className={detailUi.horizontalWorkspace}>
-          <nav aria-label="Chi tiết đồng hồ" className={detailUi.sectionNavigation}>
-            <AdminViewTabs label="Chọn mục chi tiết đồng hồ" items={detailSections} value={activeSection} onValueChange={selectSection} density="comfortable" />
-          </nav>
-          <div className={detailUi.column}>
-            <div hidden={activeSection !== "overview"} data-watch-section="overview" className={detailUi.overviewLayout}>
-              <div className={detailUi.operationsColumn}>
-            <section aria-label="Tình trạng đồng hồ" className={`${detailUi.section} ${detailUi.statusStrip}`}>
-              <h2 className={detailUi.illustratedHeading}><CheckCircle2 aria-hidden="true"/>Tình trạng đồng hồ</h2>
-              {operationalOverview ? <dl className={detailUi.facts}>
-                <div><dt>Bán hàng</dt><dd>{operationalOverview.sale === "SOLD" ? "Đã bán" : "Chưa bán"}<p className={detailUi.metadata}>{statusLabel(operationalOverview.sale)}</p></dd></div>
-                <div><dt>Service</dt><dd>{operationalOverview.serviceCompleted} yêu cầu đã hoàn tất<p className={detailUi.metadata}>{operationalOverview.serviceOpen} yêu cầu đang mở</p></dd></div>
-                <div><dt>Ký gửi</dt><dd>{({CONSIGNED_TO:"Đang gửi đối tác",CONSIGNED_FROM:"Đang nhận ký gửi",NONE:"Không ký gửi"} as Record<string,string>)[operationalOverview.consignment] ?? "Chưa xác định"}</dd></div>
-                <div><dt>Tồn kho</dt><dd>{statusLabel(operationalOverview.stock)}</dd></div>
-              </dl> : <p className={detailUi.metadata}>Chưa có dữ liệu tình trạng vận hành.</p>}
-            </section>
-            <section className={`${detailUi.section} ${detailUi.supportPanel} ${detailUi.attentionPanel}`}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
-                <span className={`rounded-full px-2 py-1 text-xs font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                  {attention.length ? `${attention.length} việc` : "Ổn"}
-                </span>
-              </div>
-              <div className="mt-4 space-y-2">
-                {attention.length ? attention.map(({ label, href, icon: Icon }) => (
-                  <a key={label} href={href} className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
-                    <Icon className="h-4 w-4 shrink-0 text-amber-600" /><span className="flex-1">{label}</span><ChevronRight className="h-4 w-4" />
-                  </a>
-                )) : (
-                  <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" /> Không có việc cần xử lý</div>
-                )}
-              </div>
-            </section>
-            <section aria-label="Công việc liên quan" className={`${detailUi.section} ${detailUi.supportPanel} ${detailUi.relatedPanel}`}>
-              <h2 className={detailUi.illustratedHeading}><ReceiptText aria-hidden="true"/>Công việc liên quan</h2>
-              <p className={detailUi.metadata}>Các việc được liên kết với đồng hồ hoặc hồ sơ kỹ thuật, trong phạm vi bạn được xem.</p>
-              {!operationalOverview ? <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu công việc.</p> : !operationalOverview.workVisible ? <p className="mt-4 text-sm text-slate-500">Bạn chưa có quyền xem công việc.</p> : <div className="mt-4 grid gap-6 lg:grid-cols-2">
-                {([{key:"active",label:"Đang làm",items:operationalOverview.active},{key:"completed",label:"Đã hoàn tất",items:operationalOverview.completed}]).map(group => <div key={group.label} className="min-w-0"><h3 className="text-sm font-semibold">{group.label} <span className="text-xs font-normal text-slate-500">{group.items.length}</span></h3>
-                  {group.items.length ? <ul className="mt-2 divide-y divide-slate-100">{(expandedWork[group.key] ? group.items : group.items.slice(0,5)).map(item => <li key={item.id} className="py-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><span className="min-w-0 break-words text-sm font-medium">{item.title}</span><span className="text-xs text-slate-500">{({TODO:"Chưa bắt đầu",IN_PROGRESS:"Đang xử lý",DONE:"Đã xong"} as Record<string,string>)[item.status] ?? item.status}</span></div><p className={detailUi.metadata}>{item.assignee || "Chưa có người nhận"} · {normalizeDate(item.completedAt || item.updatedAt)}</p></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">{group.label === "Đang làm" ? "Không có việc đang làm." : "Chưa có việc hoàn tất."}</p>}
-                  {group.items.length > 5 && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setExpandedWork(previous => ({...previous,[group.key]:!previous[group.key]}))}>{expandedWork[group.key] ? "Thu gọn" : `Xem tất cả ${group.items.length} việc`}</AdminButton>}
-                </div>)}
-              </div>}
-            </section>
-              </div>
+
+        <div className={detailUi.completeLayout}>
+          <div className={detailUi.completeMain}>
             <section id="overview" className={`${detailUi.section} ${detailUi.financialPanel}`}>
               <div className={detailUi.sectionHeader}>
                 <div>
@@ -489,8 +425,7 @@ export default function WatchDetailUiProposal({
                 </div>
               </div>
             </section>
-            </div>
-            <div hidden={activeSection !== "content-media"} data-watch-section="content-media">
+            <div data-watch-section="content-media">
             <section id="content-media" className="scroll-mt-24">
               <div className={`${detailUi.section} ${detailUi.mediaPanel}`}>
                 <div className={detailUi.sectionHeader}>
@@ -541,7 +476,36 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
             </div>
-            <div hidden={activeSection !== "service"} data-watch-section="service" className={detailUi.servicePanel}>
+
+          </div>
+          <aside className={detailUi.completeSide} aria-label="Vận hành đồng hồ">
+            <section aria-label="Tình trạng đồng hồ" className={`${detailUi.section} ${detailUi.statusStrip}`}>
+              <h2 className={detailUi.illustratedHeading}><CheckCircle2 aria-hidden="true"/>Tình trạng đồng hồ</h2>
+              {operationalOverview ? <dl className={detailUi.facts}>
+                <div><dt>Bán hàng</dt><dd>{operationalOverview.sale === "SOLD" ? "Đã bán" : "Chưa bán"}<p className={detailUi.metadata}>{statusLabel(operationalOverview.sale)}</p></dd></div>
+                <div><dt>Service</dt><dd>{operationalOverview.serviceCompleted} yêu cầu đã hoàn tất<p className={detailUi.metadata}>{operationalOverview.serviceOpen} yêu cầu đang mở</p></dd></div>
+                <div><dt>Ký gửi</dt><dd>{({CONSIGNED_TO:"Đang gửi đối tác",CONSIGNED_FROM:"Đang nhận ký gửi",NONE:"Không ký gửi"} as Record<string,string>)[operationalOverview.consignment] ?? "Chưa xác định"}</dd></div>
+                <div><dt>Tồn kho</dt><dd>{statusLabel(operationalOverview.stock)}</dd></div>
+              </dl> : <p className={detailUi.metadata}>Chưa có dữ liệu tình trạng vận hành.</p>}
+            </section>
+            <section className={`${detailUi.section} ${detailUi.supportPanel} ${detailUi.attentionPanel}`}>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
+                <span className={`rounded-full px-2 py-1 text-xs font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                  {attention.length ? `${attention.length} việc` : "Ổn"}
+                </span>
+              </div>
+              <div className="mt-4 space-y-2">
+                {attention.length ? attention.map(({ label, href, icon: Icon }) => (
+                  <a key={label} href={href} className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
+                    <Icon className="h-4 w-4 shrink-0 text-amber-600" /><span className="flex-1">{label}</span><ChevronRight className="h-4 w-4" />
+                  </a>
+                )) : (
+                  <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" /> Không có việc cần xử lý</div>
+                )}
+              </div>
+            </section>
+            <div data-watch-section="service" className={detailUi.servicePanel}>
             <div className={detailUi.domainIntro}><Wrench aria-hidden="true"/><div><h2>Kỹ thuật & dịch vụ</h2><p>Theo dõi yêu cầu, lỗi kỹ thuật và tiến độ xử lý.</p></div></div>
             <ServiceCard flat flatTitle="Yêu cầu dịch vụ"
               projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
@@ -553,7 +517,18 @@ export default function WatchDetailUiProposal({
             />
 
             </div>
-            <div hidden={activeSection !== "trade-history"} data-watch-section="trade-history">
+
+            <section aria-label="Công việc liên quan" className={`${detailUi.section} ${detailUi.supportPanel} ${detailUi.relatedPanel}`}>
+              <h2 className={detailUi.illustratedHeading}><ReceiptText aria-hidden="true"/>Công việc liên quan</h2>
+              <p className={detailUi.metadata}>Các việc được liên kết với đồng hồ hoặc hồ sơ kỹ thuật, trong phạm vi bạn được xem.</p>
+              {!operationalOverview ? <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu công việc.</p> : !operationalOverview.workVisible ? <p className="mt-4 text-sm text-slate-500">Bạn chưa có quyền xem công việc.</p> : <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                {([{key:"active",label:"Đang làm",items:operationalOverview.active},{key:"completed",label:"Đã hoàn tất",items:operationalOverview.completed}]).map(group => <div key={group.label} className="min-w-0"><h3 className="text-sm font-semibold">{group.label} <span className="text-xs font-normal text-slate-500">{group.items.length}</span></h3>
+                  {group.items.length ? <ul className="mt-2 divide-y divide-slate-100">{(expandedWork[group.key] ? group.items : group.items.slice(0,5)).map(item => <li key={item.id} className="py-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><span className="min-w-0 break-words text-sm font-medium">{item.title}</span><span className="text-xs text-slate-500">{({TODO:"Chưa bắt đầu",IN_PROGRESS:"Đang xử lý",DONE:"Đã xong"} as Record<string,string>)[item.status] ?? item.status}</span></div><p className={detailUi.metadata}>{item.assignee || "Chưa có người nhận"} · {normalizeDate(item.completedAt || item.updatedAt)}</p></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">{group.label === "Đang làm" ? "Không có việc đang làm." : "Chưa có việc hoàn tất."}</p>}
+                  {group.items.length > 5 && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setExpandedWork(previous => ({...previous,[group.key]:!previous[group.key]}))}>{expandedWork[group.key] ? "Thu gọn" : `Xem tất cả ${group.items.length} việc`}</AdminButton>}
+                </div>)}
+              </div>}
+            </section>
+            <div data-watch-section="trade-history">
             <section id="trade-history" className={`${detailUi.section} ${detailUi.historyPanel}`}>
               <div className="flex items-center justify-between">
                 <h2 className={detailUi.illustratedHeading}><ArrowLeftRight aria-hidden="true"/>Giao dịch đã ghi nhận</h2>
@@ -579,8 +554,7 @@ export default function WatchDetailUiProposal({
             </section>
 
             </div>
-
-          </div>
+          </aside>
         </div>
       <BusinessEntityPreviewModal
         open={previewState.open}

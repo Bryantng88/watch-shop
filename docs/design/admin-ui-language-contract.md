@@ -1700,3 +1700,20 @@ negative financial accents only when the viewer can see the amounts, a larger
 media gallery, a distinct technical introduction and transaction-type icons.
 Do not invent activity, counts, charts or placeholder business data for visual
 interest. Preserve financial masking, preview callbacks and mutation guards.
+
+
+### Watch complete-detail layout (2026-11-24)
+
+Watch detail now displays all business sections together, following the approved
+production-style layout. Remove view-switching tabs and mounted hidden panels.
+The main column holds financials, content and gallery; the supporting column
+holds state, attention, technical requests, related work and transactions. Both
+columns stack on narrow hosts. Keep section-level cards, quiet rows and the
+continuous workspace canvas.
+
+Group edit, Media, technical, order and acquisition actions as quiet icon-only
+controls in the identity footer, beside INLINE selection; do not reserve a
+separate action card. Every icon/link needs an accessible name and tooltip,
+retains its original permission and callback, and uses the shared touch target.
+Show the edit link only with the existing product-update capability. Do not add
+an independent view navigation or duplicate the same metadata in multiple cards.
