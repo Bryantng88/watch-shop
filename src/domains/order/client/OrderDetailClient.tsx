@@ -17,7 +17,7 @@ import {
   OrderTimelinePanel,
   type OrderDetailData,
 } from "@/domains/order/ui/detail";
-import { AdminDetailPage, AdminDetailNavigation, ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
+import { AdminDetailPage, ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 
 type ActionName = "post" | "verify" | "cancel" | "serviceIntake";
 
@@ -90,10 +90,9 @@ export default function OrderDetailClient({ data, codexEnabled = false }: { data
   }
 
   return (
-    <AdminDetailPage>
+    <AdminDetailPage grouped>
       <OrderHeader data={data} />
 
-      <AdminDetailNavigation entries={[{ href: "#order-items", label: "Sản phẩm / dịch vụ" }, { href: "#order-customer", label: "Khách hàng" }, { href: "#order-payment", label: "Thanh toán" }, { href: "#order-actions", label: "Thao tác" }, { href: "#order-history", label: "Lịch sử" }]} />
       <div className={detail.layout}>
         <div className={detail.column}>
           <OrderItemsPanel data={data} />

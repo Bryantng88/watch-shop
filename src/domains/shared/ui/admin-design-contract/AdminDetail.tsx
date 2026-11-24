@@ -14,7 +14,7 @@ const detailStyle = {
   "--detail-success": f.colors.success, "--detail-success-soft": f.colors.successSurface, "--detail-danger": f.colors.danger, "--detail-border": f.colors.controlBorder, "--detail-soft": f.colors.softSurface, "--detail-canvas": f.colors.canvas, "--detail-ring": f.colors.focusRing,
 } as CSSProperties;
 /** Record pages own one centered frame. Dialogs/portals are never contained. */
-export function AdminDetailPage({ children, surface = "plain", emphasis = false }: { children: ReactNode; surface?: "plain" | "record"; emphasis?: boolean }) {
+export function AdminDetailPage({ children, surface = "plain", emphasis = false, grouped = false }: { children: ReactNode; surface?: "plain" | "record"; emphasis?: boolean; grouped?: boolean }) {
   const pageRef = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const page = pageRef.current;
@@ -26,7 +26,7 @@ export function AdminDetailPage({ children, surface = "plain", emphasis = false 
     observer.observe(frame);
     return () => observer.disconnect();
   }, []);
-  return <main ref={pageRef} data-admin-detail="page" data-detail-surface={surface} data-detail-emphasis={emphasis} className={styles.page} style={detailStyle}><div data-detail-frame className={styles.frame}>{surface === "record" ? <div data-detail-record className={styles.recordSurface}>{children}</div> : children}</div></main>;
+  return <main ref={pageRef} data-admin-detail="page" data-detail-surface={surface} data-detail-emphasis={emphasis} data-detail-grouped={grouped} className={styles.page} style={detailStyle}><div data-detail-frame className={styles.frame}>{surface === "record" ? <div data-detail-record className={styles.recordSurface}>{children}</div> : children}</div></main>;
 }
 export function AdminDetailSectionHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return <AdminWorkspaceHeadingRow className={styles.sectionHeader}><div><AdminWorkspaceHeading>{title}</AdminWorkspaceHeading>{description && <p className={styles.metadata}>{description}</p>}</div>{actions && <div className={styles.actions}>{actions}</div>}</AdminWorkspaceHeadingRow>;
