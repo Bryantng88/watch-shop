@@ -458,7 +458,7 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
 
-            <section aria-label="Công việc liên quan" className={detailUi.section}>
+            <section aria-label="Công việc liên quan" className={`${detailUi.section} ${detailUi.supportPanel}`}>
               <h2 className="text-sm font-bold">Công việc liên quan</h2>
               <p className={detailUi.metadata}>Các việc được liên kết với đồng hồ hoặc hồ sơ kỹ thuật, trong phạm vi bạn được xem.</p>
               {!operationalOverview ? <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu công việc.</p> : !operationalOverview.workVisible ? <p className="mt-4 text-sm text-slate-500">Bạn chưa có quyền xem công việc.</p> : <div className="mt-4 grid gap-6 lg:grid-cols-2">
@@ -560,7 +560,7 @@ export default function WatchDetailUiProposal({
 
             </div>
             <div hidden={activeSection !== "overview"}>
-            <section className={detailUi.section}>
+            <section className={`${detailUi.section} ${detailUi.supportPanel}`}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
                 <span className={`rounded-full px-2 py-1 text-xs font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>

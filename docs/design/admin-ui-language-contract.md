@@ -1671,3 +1671,17 @@ related work stays flat; warning surfaces are reserved for actionable warnings.
 This opt-in does not change Order, Acquisition or list page surfaces. Cards here
 are intentional emphasis for identity and financial comparison, not a default
 for every section. Retain callbacks, permissions and responsive navigation.
+
+
+### Watch detail layered workspace (2026-11-24)
+
+For the approved Watch emphasis recipe, the shell working area below navigation
+uses the same soft surface continuously as the detail canvas. White identity,
+status, financial, related-work and attention panels have thin borders and a
+minimal 1px elevation. Header dividers define groups; data rows and supporting
+actions remain flat. Blue is reserved for the sale-price focus and selected
+navigation, semantic warning tones for actionable attention. Do not wrap the
+whole record in another card. This user-approved detail exception is isolated
+to `/admin/watches/[id]`; lists, edit forms, Ben, Order and Acquisition retain
+their current canvas. Keep shared typography, 12px surface radius, 20/16px panel
+spacing, accessible interactions and responsive navigation.

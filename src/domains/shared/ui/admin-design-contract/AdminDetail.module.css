@@ -60,21 +60,27 @@
 .identityFooter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px; margin-top: auto; }
 @media(max-width:639px) { .headerIdentityText { min-height: 88px; } }
 
-/* Optional detail emphasis: identity and financials anchor the page; other sections stay flat. */
-.page[data-detail-emphasis="true"] .recordSurface { padding: 0; border: 0; }
-.page[data-detail-emphasis="true"] .identityPanel { padding: 20px; border: 1px solid var(--detail-border); border-radius: 12px; background: var(--detail-soft); }
+/* Opt-in Watch workspace: continuous soft canvas and white grouped surfaces. */
+.page[data-detail-emphasis="true"] { background: var(--detail-soft); min-height: 100%; }
+.page[data-detail-emphasis="true"] .recordSurface { padding: 0; border: 0; background: transparent; gap: 20px; }
+.page[data-detail-emphasis="true"] .identityPanel,
+.page[data-detail-emphasis="true"] .statusStrip,
+.financialPanel, .supportPanel { padding: 20px; border: 1px solid var(--detail-border); border-radius: 12px; background: var(--detail-canvas); box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
 .identityPanel .recordIdentity { gap: 20px; }
 .identityPanel .recordImage { width: 168px; height: 168px; border-radius: 8px; }
 .identityPanel .headerIdentityText { min-height: 168px; justify-content: center; }
 .identityPanel .recordTitle { margin-top: 8px; }
 .identityPanel .identityFooter { margin-top: 16px; padding-top: 0; }
-.page[data-detail-emphasis="true"] .statusStrip { padding-bottom: 16px; }
 .statusStrip .facts { margin-top: 12px; gap: 12px 20px; }
-.financialPanel { padding: 20px; border: 1px solid var(--detail-border); border-radius: 12px; }
 .financialPanel .focus { border-radius: 8px; }
 .financialPanel .focusValue { font-size: 24px; line-height: 32px; }
+.financialPanel .sectionHeader { margin: -20px -20px 20px; padding: 16px 20px; border-bottom: 1px solid var(--detail-line); align-items: center; }
+.statusStrip > h2, .supportPanel > h2 { border-bottom: 1px solid var(--detail-line); padding-bottom: 12px; margin-bottom: 12px; }
+.page[data-detail-emphasis="true"] .workspace[data-wide="true"] > [data-admin-pane="sidebar"] { padding: 12px; border: 1px solid var(--detail-border); border-radius: 12px; background: var(--detail-canvas); }
+.page[data-detail-emphasis="true"] .workspaceHeading { margin-bottom: 16px; }
 @media(max-width:639px) {
- .page[data-detail-emphasis="true"] .identityPanel, .financialPanel { padding: 16px; }
+ .page[data-detail-emphasis="true"] .identityPanel, .page[data-detail-emphasis="true"] .statusStrip, .financialPanel, .supportPanel { padding: 16px; }
+ .financialPanel .sectionHeader { margin: -16px -16px 16px; padding: 12px 16px; }
  .identityPanel .recordIdentity { gap: 12px; }
  .identityPanel .recordImage { width: 104px; height: 104px; }
  .identityPanel .headerIdentityText { min-height: 104px; }
