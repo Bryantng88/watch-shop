@@ -1685,3 +1685,18 @@ whole record in another card. This user-approved detail exception is isolated
 to `/admin/watches/[id]`; lists, edit forms, Ben, Order and Acquisition retain
 their current canvas. Keep shared typography, 12px surface radius, 20/16px panel
 spacing, accessible interactions and responsive navigation.
+
+
+### Watch section navigation and visual rhythm (2026-11-24)
+
+Watch detail uses shared horizontal AdminViewTabs below identity, retaining hash
+history and mounted sections. Desktop Overview has independent columns: state,
+attention and related work on the left; financials on the right. Mobile reads
+state, attention, financials, related work. Avoid equal-height stretching or
+empty rows driven by the financial card. Group borders remain at section level.
+
+Use compact identity status labels without duplicate values, semantic positive /
+negative financial accents only when the viewer can see the amounts, a larger
+media gallery, a distinct technical introduction and transaction-type icons.
+Do not invent activity, counts, charts or placeholder business data for visual
+interest. Preserve financial masking, preview callbacks and mutation guards.

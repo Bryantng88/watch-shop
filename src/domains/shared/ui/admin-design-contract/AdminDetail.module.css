@@ -87,3 +87,39 @@
  .identityPanel .identityFooter { margin-top: 12px; }
 }
 @media(max-width:379px) { .identityPanel .recordIdentity { flex-direction: column; } .identityPanel .headerIdentityText { min-height: 0; } }
+
+.horizontalWorkspace { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.sectionNavigation { min-width: 0; padding: 4px 16px; background: var(--detail-canvas); border: 1px solid var(--detail-border); border-radius: 12px; }
+
+.overviewLayout:not([hidden]) { display: grid; grid-template-columns: minmax(0,1fr); gap: 24px; align-items: start; }
+.operationsColumn { display: contents; }
+.overviewLayout .statusStrip { order: 1; }
+.overviewLayout .attentionPanel { order: 2; }
+.overviewLayout .financialPanel { order: 3; }
+.overviewLayout .relatedPanel { order: 4; }
+.overviewLayout .statusStrip .facts { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+@media(min-width:1100px) {
+ .overviewLayout:not([hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .operationsColumn { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+ .overviewLayout .financialPanel { order: 0; }
+}
+
+/* Semantic accents distinguish identity, operational signals and section purpose. */
+.identityTags > span { padding: 4px 8px; border-radius: 6px; background: var(--detail-soft); font-weight: 500; }
+.identityTags > span:nth-child(2) { color: var(--detail-success); background: var(--detail-success-soft); }
+.identityTags > span:nth-child(3) { background: var(--detail-focus); }
+.illustratedHeading { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; font-weight: 700; }
+.illustratedHeading > svg, .page[data-detail-emphasis="true"] .sectionHeader h2 > svg { display: inline-block; width: 16px; height: 16px; color: var(--detail-link); flex-shrink: 0; }
+.positiveValue { font-weight: 600; color: var(--detail-success); }
+.negativeValue { font-weight: 600; color: var(--detail-danger); }
+.mediaPanel, .historyPanel, .servicePanel { padding: 20px; border: 1px solid var(--detail-border); border-radius: 12px; background: var(--detail-canvas); }
+.mediaPanel > .sectionHeader, .historyPanel > div:first-child { padding-bottom: 16px; border-bottom: 1px solid var(--detail-line); }
+.page[data-detail-wide="true"] .editorialGrid { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+.domainIntro { display: flex; gap: 12px; align-items: center; padding: 16px; margin-bottom: 20px; background: var(--detail-focus); border-radius: 8px; }
+.domainIntro > svg { width: 24px; height: 24px; color: var(--detail-link); }
+.domainIntro h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.domainIntro p { font-size: 12px; line-height: 16px; color: var(--detail-muted); margin-top: 4px; }
+.transactionIcon { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px; }
+.incomingTrade { color: var(--detail-link); background: var(--detail-focus); }
+.outgoingTrade { color: var(--detail-success); background: var(--detail-success-soft); }
+@media(max-width:639px) { .mediaPanel, .historyPanel, .servicePanel { padding: 16px; } }

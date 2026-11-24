@@ -11,7 +11,7 @@ const detailStyle = {
   "--detail-gap": `${f.page.splitGap}px`, "--detail-sidebar": `${f.page.detailSidebarWidth}px`,
   "--detail-text": f.colors.text, "--detail-body": f.colors.body, "--detail-muted": f.colors.muted,
   "--detail-line": f.colors.divider, "--detail-focus": f.colors.focusSurface, "--detail-link": f.colors.link,
-  "--detail-border": f.colors.controlBorder, "--detail-soft": f.colors.softSurface, "--detail-canvas": f.colors.canvas, "--detail-ring": f.colors.focusRing,
+  "--detail-success": f.colors.success, "--detail-success-soft": f.colors.successSurface, "--detail-danger": f.colors.danger, "--detail-border": f.colors.controlBorder, "--detail-soft": f.colors.softSurface, "--detail-canvas": f.colors.canvas, "--detail-ring": f.colors.focusRing,
 } as CSSProperties;
 /** Record pages own one centered frame. Dialogs/portals are never contained. */
 export function AdminDetailPage({ children, surface = "plain", emphasis = false }: { children: ReactNode; surface?: "plain" | "record"; emphasis?: boolean }) {

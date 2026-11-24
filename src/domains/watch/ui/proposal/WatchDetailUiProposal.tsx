@@ -6,7 +6,7 @@ import { MediaProcessingIcon, InlineImageIcon } from "@/domains/shared/ui/icons/
 import { AdminDetailPage, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
-import { AdminDetailWorkspace } from "@/domains/shared/ui/admin-design-contract/AdminDetailWorkspace";
+import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract/AdminViewTabs";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -366,7 +366,7 @@ export default function WatchDetailUiProposal({
             <div className={detailUi.recordIdentity}>
               <div className={`${detailUi.thumbnail} ${detailUi.recordImage}`}>{imageSrc ? <Image src={imageSrc} alt={title} fill sizes="(max-width: 639px) 104px, 168px" unoptimized className="object-cover" /> : <Camera className="h-5 w-5 text-slate-400" aria-hidden="true"/>}</div>
               <div className={`${detailUi.identityText} ${detailUi.headerIdentityText}`}>
-                <div className={detailUi.tags}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(operationalOverview?.stock || values.basic.stockState)}</span><span className="text-blue-700">{statusLabel(operationalOverview?.sale || values.basic.saleState)}</span></div>
+                <div className={`${detailUi.tags} ${detailUi.identityTags}`}><span className="text-slate-500">{values.header.sku || values.productId}</span><span className="text-emerald-700">{statusLabel(operationalOverview?.stock || values.basic.stockState)}</span>{statusLabel(operationalOverview?.sale || values.basic.saleState) !== statusLabel(operationalOverview?.stock || values.basic.stockState) && <span className="text-blue-700">{statusLabel(operationalOverview?.sale || values.basic.saleState)}</span>}</div>
                 <h1 className={detailUi.recordTitle}>{title}</h1>
                 <p className={detailUi.metadata}>{[text(brand.name, ""), values.spec.model, values.spec.referenceNumber].filter(Boolean).join(" · ") || "Chưa đủ thông tin nhận diện"} · {Math.max(values.media.galleryImages.length, images.length)} ảnh</p>
                 <div className={detailUi.identityFooter}>
@@ -386,11 +386,15 @@ export default function WatchDetailUiProposal({
           </div>
         </header>
 
-        <AdminDetailWorkspace label="Chi tiết đồng hồ" storageKey="admin:watch-detail:menu-width:v1" items={detailSections} value={activeSection} onChange={selectSection}>
+        <div className={detailUi.horizontalWorkspace}>
+          <nav aria-label="Chi tiết đồng hồ" className={detailUi.sectionNavigation}>
+            <AdminViewTabs label="Chọn mục chi tiết đồng hồ" items={detailSections} value={activeSection} onValueChange={selectSection} density="comfortable" />
+          </nav>
           <div className={detailUi.column}>
-            <div hidden={activeSection !== "overview"} data-watch-section="overview" className="space-y-6">
+            <div hidden={activeSection !== "overview"} data-watch-section="overview" className={detailUi.overviewLayout}>
+              <div className={detailUi.operationsColumn}>
             <section aria-label="Tình trạng đồng hồ" className={`${detailUi.section} ${detailUi.statusStrip}`}>
-              <h2 className="text-sm font-bold">Tình trạng đồng hồ</h2>
+              <h2 className={detailUi.illustratedHeading}><CheckCircle2 aria-hidden="true"/>Tình trạng đồng hồ</h2>
               {operationalOverview ? <dl className={detailUi.facts}>
                 <div><dt>Bán hàng</dt><dd>{operationalOverview.sale === "SOLD" ? "Đã bán" : "Chưa bán"}<p className={detailUi.metadata}>{statusLabel(operationalOverview.sale)}</p></dd></div>
                 <div><dt>Service</dt><dd>{operationalOverview.serviceCompleted} yêu cầu đã hoàn tất<p className={detailUi.metadata}>{operationalOverview.serviceOpen} yêu cầu đang mở</p></dd></div>
@@ -398,6 +402,34 @@ export default function WatchDetailUiProposal({
                 <div><dt>Tồn kho</dt><dd>{statusLabel(operationalOverview.stock)}</dd></div>
               </dl> : <p className={detailUi.metadata}>Chưa có dữ liệu tình trạng vận hành.</p>}
             </section>
+            <section className={`${detailUi.section} ${detailUi.supportPanel} ${detailUi.attentionPanel}`}>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
+                <span className={`rounded-full px-2 py-1 text-xs font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                  {attention.length ? `${attention.length} việc` : "Ổn"}
+                </span>
+              </div>
+              <div className="mt-4 space-y-2">
+                {attention.length ? attention.map(({ label, href, icon: Icon }) => (
+                  <a key={label} href={href} className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
+                    <Icon className="h-4 w-4 shrink-0 text-amber-600" /><span className="flex-1">{label}</span><ChevronRight className="h-4 w-4" />
+                  </a>
+                )) : (
+                  <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" /> Không có việc cần xử lý</div>
+                )}
+              </div>
+            </section>
+            <section aria-label="Công việc liên quan" className={`${detailUi.section} ${detailUi.supportPanel} ${detailUi.relatedPanel}`}>
+              <h2 className={detailUi.illustratedHeading}><ReceiptText aria-hidden="true"/>Công việc liên quan</h2>
+              <p className={detailUi.metadata}>Các việc được liên kết với đồng hồ hoặc hồ sơ kỹ thuật, trong phạm vi bạn được xem.</p>
+              {!operationalOverview ? <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu công việc.</p> : !operationalOverview.workVisible ? <p className="mt-4 text-sm text-slate-500">Bạn chưa có quyền xem công việc.</p> : <div className="mt-4 grid gap-6 lg:grid-cols-2">
+                {([{key:"active",label:"Đang làm",items:operationalOverview.active},{key:"completed",label:"Đã hoàn tất",items:operationalOverview.completed}]).map(group => <div key={group.label} className="min-w-0"><h3 className="text-sm font-semibold">{group.label} <span className="text-xs font-normal text-slate-500">{group.items.length}</span></h3>
+                  {group.items.length ? <ul className="mt-2 divide-y divide-slate-100">{(expandedWork[group.key] ? group.items : group.items.slice(0,5)).map(item => <li key={item.id} className="py-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><span className="min-w-0 break-words text-sm font-medium">{item.title}</span><span className="text-xs text-slate-500">{({TODO:"Chưa bắt đầu",IN_PROGRESS:"Đang xử lý",DONE:"Đã xong"} as Record<string,string>)[item.status] ?? item.status}</span></div><p className={detailUi.metadata}>{item.assignee || "Chưa có người nhận"} · {normalizeDate(item.completedAt || item.updatedAt)}</p></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">{group.label === "Đang làm" ? "Không có việc đang làm." : "Chưa có việc hoàn tất."}</p>}
+                  {group.items.length > 5 && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setExpandedWork(previous => ({...previous,[group.key]:!previous[group.key]}))}>{expandedWork[group.key] ? "Thu gọn" : `Xem tất cả ${group.items.length} việc`}</AdminButton>}
+                </div>)}
+              </div>}
+            </section>
+              </div>
             <section id="overview" className={`${detailUi.section} ${detailUi.financialPanel}`}>
               <div className={detailUi.sectionHeader}>
                 <div>
@@ -428,7 +460,7 @@ export default function WatchDetailUiProposal({
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-center justify-between gap-4 py-2.5 text-sm">
                         <dt className="text-slate-500">{label}</dt>
-                        <dd className="font-semibold text-slate-900">{value}</dd>
+                        <dd className={canViewFinancials ? (profit >= 0 ? detailUi.positiveValue : detailUi.negativeValue) : "font-semibold text-slate-900"}>{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -457,23 +489,10 @@ export default function WatchDetailUiProposal({
                 </div>
               </div>
             </section>
-
-            <section aria-label="Công việc liên quan" className={`${detailUi.section} ${detailUi.supportPanel}`}>
-              <h2 className="text-sm font-bold">Công việc liên quan</h2>
-              <p className={detailUi.metadata}>Các việc được liên kết với đồng hồ hoặc hồ sơ kỹ thuật, trong phạm vi bạn được xem.</p>
-              {!operationalOverview ? <p className="mt-4 text-sm text-slate-500">Chưa có dữ liệu công việc.</p> : !operationalOverview.workVisible ? <p className="mt-4 text-sm text-slate-500">Bạn chưa có quyền xem công việc.</p> : <div className="mt-4 grid gap-6 lg:grid-cols-2">
-                {([{key:"active",label:"Đang làm",items:operationalOverview.active},{key:"completed",label:"Đã hoàn tất",items:operationalOverview.completed}]).map(group => <div key={group.label} className="min-w-0"><h3 className="text-sm font-semibold">{group.label} <span className="text-xs font-normal text-slate-500">{group.items.length}</span></h3>
-                  {group.items.length ? <ul className="mt-2 divide-y divide-slate-100">{(expandedWork[group.key] ? group.items : group.items.slice(0,5)).map(item => <li key={item.id} className="py-3"><div className="flex flex-wrap items-baseline justify-between gap-2"><span className="min-w-0 break-words text-sm font-medium">{item.title}</span><span className="text-xs text-slate-500">{({TODO:"Chưa bắt đầu",IN_PROGRESS:"Đang xử lý",DONE:"Đã xong"} as Record<string,string>)[item.status] ?? item.status}</span></div><p className={detailUi.metadata}>{item.assignee || "Chưa có người nhận"} · {normalizeDate(item.completedAt || item.updatedAt)}</p></li>)}</ul> : <p className="mt-3 text-sm text-slate-500">{group.label === "Đang làm" ? "Không có việc đang làm." : "Chưa có việc hoàn tất."}</p>}
-                  {group.items.length > 5 && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setExpandedWork(previous => ({...previous,[group.key]:!previous[group.key]}))}>{expandedWork[group.key] ? "Thu gọn" : `Xem tất cả ${group.items.length} việc`}</AdminButton>}
-                </div>)}
-              </div>}
-            </section>
-
-
             </div>
             <div hidden={activeSection !== "content-media"} data-watch-section="content-media">
             <section id="content-media" className="scroll-mt-24">
-              <div className={detailUi.section}>
+              <div className={`${detailUi.section} ${detailUi.mediaPanel}`}>
                 <div className={detailUi.sectionHeader}>
                   <div>
                     <h2 className="flex items-center gap-2 text-sm font-bold"><FileText className="h-4 w-4 text-violet-600" /> Nội dung & hình ảnh</h2>
@@ -484,7 +503,7 @@ export default function WatchDetailUiProposal({
                     <AdminButton variant="secondary" density="compact" type="button" onClick={() => setMediaOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-violet-200 px-3 text-xs font-bold text-violet-700"><MediaProcessingIcon className="h-4 w-4" /> Xử lý Media</AdminButton>
                   </div>
                 </div>
-                <div className={detailUi.contentGrid}>
+                <div className={`${detailUi.contentGrid} ${detailUi.editorialGrid}`}>
                   <div className="min-w-0">
                     <h3 className="text-base font-semibold text-slate-950">{values.content.titleOverride || title}</h3>
                     {values.content.hookText && <p className="mt-2 text-sm font-semibold text-violet-700">{values.content.hookText}</p>}
@@ -522,7 +541,8 @@ export default function WatchDetailUiProposal({
               </div>
             </section>
             </div>
-            <div hidden={activeSection !== "service"} data-watch-section="service">
+            <div hidden={activeSection !== "service"} data-watch-section="service" className={detailUi.servicePanel}>
+            <div className={detailUi.domainIntro}><Wrench aria-hidden="true"/><div><h2>Kỹ thuật & dịch vụ</h2><p>Theo dõi yêu cầu, lỗi kỹ thuật và tiến độ xử lý.</p></div></div>
             <ServiceCard flat flatTitle="Yêu cầu dịch vụ"
               projection={service as Parameters<typeof ServiceCard>[0]["projection"]}
               productId={values.productId}
@@ -534,14 +554,14 @@ export default function WatchDetailUiProposal({
 
             </div>
             <div hidden={activeSection !== "trade-history"} data-watch-section="trade-history">
-            <section id="trade-history" className={detailUi.section}>
+            <section id="trade-history" className={`${detailUi.section} ${detailUi.historyPanel}`}>
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold">Giao dịch đã ghi nhận</h2>
+                <h2 className={detailUi.illustratedHeading}><ArrowLeftRight aria-hidden="true"/>Giao dịch đã ghi nhận</h2>
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
                   <AdminButton variant="contextual" type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
-                    <span className="mt-0.5 text-slate-500">
+                    <span className={`${detailUi.transactionIcon} ${event.type === "ACQUISITION" ? detailUi.incomingTrade : detailUi.outgoingTrade}`}>
                       {event.type === "ACQUISITION" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -559,28 +579,9 @@ export default function WatchDetailUiProposal({
             </section>
 
             </div>
-            <div hidden={activeSection !== "overview"}>
-            <section className={`${detailUi.section} ${detailUi.supportPanel}`}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-bold text-slate-950">Cần chú ý</h2>
-                <span className={`rounded-full px-2 py-1 text-xs font-bold ${attention.length ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                  {attention.length ? `${attention.length} việc` : "Ổn"}
-                </span>
-              </div>
-              <div className="mt-4 space-y-2">
-                {attention.length ? attention.map(({ label, href, icon: Icon }) => (
-                  <a key={label} href={href} className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-900">
-                    <Icon className="h-4 w-4 shrink-0 text-amber-600" /><span className="flex-1">{label}</span><ChevronRight className="h-4 w-4" />
-                  </a>
-                )) : (
-                  <div className="flex items-center gap-3 rounded-lg bg-emerald-50 p-3 text-xs font-bold text-emerald-800"><CheckCircle2 className="h-4 w-4" /> Không có việc cần xử lý</div>
-                )}
-              </div>
-            </section>
 
-            </div>
           </div>
-        </AdminDetailWorkspace>
+        </div>
       <BusinessEntityPreviewModal
         open={previewState.open}
         preview={previewState.preview}
