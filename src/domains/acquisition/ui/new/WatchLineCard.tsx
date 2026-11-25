@@ -75,7 +75,7 @@ const WatchLineCard = memo(function WatchLineCard({
             <div className="border-b border-slate-100 bg-white py-4">
                 <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="rounded-full border border-slate-200 px-3 py-1 text-sm font-medium text-slate-700">
+                        <div className="text-sm font-semibold text-slate-700">
                             Đồng hồ #{index + 1}
                         </div>
 
@@ -102,13 +102,12 @@ const WatchLineCard = memo(function WatchLineCard({
                     </div>
 
                     {canRemove ? (
-                        <AdminButton variant="danger"
+                        <AdminButton iconOnly variant="quiet" density="compact" aria-label={`Xóa đồng hồ ${index + 1}`} title="Xóa đồng hồ"
                             type="button"
                             onClick={() => onRemove(line.id)}
                             className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700"
                         >
                             <Trash2 className="h-4 w-4" />
-                            Xóa
                         </AdminButton>
                     ) : null}
                 </div>
@@ -179,13 +178,14 @@ const WatchLineCard = memo(function WatchLineCard({
                             />
 
                             {previewSrc ? (
-                                <AdminButton variant="primary"
+                                <AdminButton variant="contextual"
                                     type="button"
+                                    aria-label="Xem ảnh lớn"
                                     onClick={() => setPreviewOpen(true)}
-                                    className="absolute inset-0 flex items-end justify-center rounded-md bg-black/0 transition hover:bg-black/10"
+                                    className="absolute inset-0 flex items-end justify-center rounded-md border-0 bg-transparent p-0 transition hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-500"
                                     title="Xem ảnh lớn"
                                 >
-                                    <span className="mb-1 rounded-full bg-black/60 px-2 py-1 text-[10px] text-white">
+                                    <span className="mb-1 whitespace-nowrap rounded bg-black/60 px-1.5 py-0.5 text-[10px] leading-4 text-white">
                                         Xem lớn
                                     </span>
                                 </AdminButton>
@@ -252,6 +252,7 @@ const WatchLineCard = memo(function WatchLineCard({
                     >
                         <AdminButton iconOnly variant="secondary"
                             type="button"
+                            aria-label="Đóng ảnh lớn"
                             onClick={() => setPreviewOpen(false)}
                             className="absolute right-3 top-3 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow hover:bg-white"
                         >

@@ -129,7 +129,7 @@ export default function AcquisitionBulkImagePicker({
 
     return (
         <>
-            <AdminButton variant="secondary"
+            <AdminButton variant="quiet" density="compact"
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen(true)}
