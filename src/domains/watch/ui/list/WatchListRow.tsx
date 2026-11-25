@@ -234,7 +234,7 @@ function SaleStatusBadge({
 
     return (
         <VisualStatusSignal
-            variant="inline"
+            variant={normalized === "SOLD" ? "emphasized" : "inline"}
             label={({ READY: "Chưa bán", SOLD: "Đã bán", HOLD: "Giữ hàng", PROCESSING: "Chưa bán · Đang chuẩn bị", CONSIGNED: "Đang ký gửi", CONSIGNED_TO: "Đang ký gửi" } as Record<string, string>)[normalized] ?? (label || "Chưa rõ trạng thái bán")}
             detail={config.detail}
             tone={config.tone}
