@@ -423,7 +423,7 @@ export default function WatchContentSection({
                                         className="border-b-0"
                                     />
 
-                                    <AdminButton iconOnly variant="secondary" density="compact"
+                                    <AdminButton iconOnly variant="quiet" density="compact"
                                         type="button"
                                         onClick={() => removeBullet(index)}
                                         disabled={locked}

@@ -37,14 +37,14 @@ export default function RegenerateTitleSkuButton({
     }
 
     return (
-        <AdminButton variant="secondary"
+        <AdminButton variant="quiet"
             type="button"
             onClick={handleClick}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            title="Tao title tu spec va chi cap nhat SKU neu SKU dang trong hoac la UNK/tam."
+            title="Tạo lại tên theo thông số; chỉ đổi SKU nếu đang trống hoặc là mã UNK/tạm."
         >
             <WandSparkles className="h-4 w-4" />
-            Tao title & SKU
+            Tạo lại tên & SKU
         </AdminButton>
     );
 }

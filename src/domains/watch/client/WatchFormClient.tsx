@@ -140,12 +140,12 @@ function missingRequiredMediaWorkPartLabels(doneState: Record<MediaWorkPart, boo
 function MediaWorkDoneButton({ label, done, dirty, ready, statusUnknown, onRecheck, disabled, onSaveDraft, onComplete }: {
   label: string; done: boolean; dirty: boolean; ready: boolean; statusUnknown: boolean; onRecheck: () => void; disabled?: boolean; onSaveDraft: () => void; onComplete: () => void;
 }) {
-  if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><AdminButton variant="secondary" type="button" disabled={disabled} onClick={onRecheck} className="h-11 rounded-lg border border-slate-300 px-3 text-slate-700">Kiểm tra lại</AdminButton></div>;
+  if (statusUnknown) return <div className="flex items-center gap-2 text-xs text-amber-700"><span role="status">Chưa xác nhận được trạng thái</span><AdminButton variant="quiet" type="button" disabled={disabled} onClick={onRecheck} className="h-8 rounded-lg px-3 text-slate-700">Kiểm tra lại</AdminButton></div>;
   if (!ready) return <span role="status" className="text-xs text-slate-500">Đang tải kho ảnh…</span>;
   return <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
     <span role="status" className={done?"w-full text-xs font-medium text-emerald-700 sm:w-auto":"w-full text-xs text-slate-500 sm:w-auto"}>{done?(dirty?"Đã hoàn tất · chưa lưu":"Đã hoàn tất"):dirty?"Có thay đổi chưa lưu":"Đã lưu · chưa hoàn tất"}</span>
-    <AdminButton variant="secondary" density="compact" type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</AdminButton>
-    <AdminButton variant="primary" density="compact" type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-11 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</AdminButton>
+    <AdminButton variant="quiet" density="compact" type="button" disabled={disabled || (done && !dirty)} onClick={onSaveDraft} title={`Lưu tạm ${label}; chưa đánh dấu xong`} className="h-8 rounded-lg px-3 text-xs font-medium text-slate-700 disabled:opacity-40">Lưu tạm</AdminButton>
+    <AdminButton variant="primary" density="compact" type="button" disabled={disabled || done} onClick={onComplete} title={`Lưu và xác nhận hoàn tất ${label}`} className="h-8 rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white disabled:opacity-40">Hoàn tất mục</AdminButton>
   </div>;
 }
 

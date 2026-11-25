@@ -115,7 +115,7 @@ function HeaderImage({
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
                     onClick={() => setOpen(false)}
                 >
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet"
                         type="button"
                         onClick={() => setOpen(false)}
                         className="absolute right-5 top-5 rounded-full bg-white/95 p-2 text-slate-700 shadow-lg hover:bg-white"
@@ -217,9 +217,9 @@ export default function WatchEditHeader({
                     ) : null}
                 </div>
 
-                <div className={compact ? "flex min-w-0 flex-wrap items-center gap-2 lg:justify-end [&_button]:min-h-11" : "flex shrink-0 flex-wrap items-center justify-end gap-2"}>
+                <div className={compact ? "flex min-w-0 flex-wrap items-center gap-2 lg:justify-end" : "flex shrink-0 flex-wrap items-center justify-end gap-2"}>
                     {!hideBack ? (
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet"
                         type="button"
                         onClick={onBack}
                         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
@@ -232,7 +232,7 @@ export default function WatchEditHeader({
 
                     {productId ? (
                       <details className={compact ? "relative" : "contents"} open={compact ? undefined : true}>
-                        {compact && <AdminDisclosureSummary className="flex min-h-11 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline-blue-600">Công cụ sản phẩm</AdminDisclosureSummary>}
+                        {compact && <AdminDisclosureSummary className="flex min-h-8 cursor-pointer items-center gap-1 rounded px-2 text-xs font-medium text-slate-600 hover:bg-blue-50 focus-visible:outline-blue-600">Tạo lại tên & SKU</AdminDisclosureSummary>}
                         <RegenerateTitleSkuButton
                             values={values}
                             brands={brands}
