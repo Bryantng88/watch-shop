@@ -1186,7 +1186,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     Đã xác nhận hoàn thành. Danh sách đầu việc đã được khóa.
                   </p>
                 ) : editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
-                  <AsyncActionButton variant="primary"
+                  <AsyncActionButton variant="secondary"
                     type="button"
                     pending={completionMutation.isPending(`complete:${editingItem.id}`)}
                     pendingLabel="Đang hoàn thành..."
@@ -1269,7 +1269,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 )}
               </div>
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
-              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
+              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
                 </div>
               </details>
               <details key={editingItem.id} data-work-disclosure="settings" className="border-t border-slate-100 pt-3">
@@ -1320,7 +1320,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {editTargets.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {editTargets.map((target) => (
-                        <AdminButton variant="secondary" density="compact"
+                        <AdminButton variant="quiet" density="compact"
                           type="button"
                           key={`${target.type}:${target.id}`}
                           disabled={editingItem.access === "VIEWER"}
@@ -1382,7 +1382,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           </div>
                         )}
                       </div>
-                      <AdminButton variant="secondary"
+                      <AdminButton variant="quiet" density="compact"
                         type="button"
                         disabled={pending || !editTargetType}
                         onClick={searchEditTargets}
@@ -1396,7 +1396,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
                 {editingItem.access === "OWNER" && <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />}
                 <PersonalCodexPanel item={editingItem} configuration={data.codex} />
-                {editingItem.access === "OWNER" && <AdminButton variant="danger"
+                {editingItem.access === "OWNER" && <AdminButton variant="quiet" density="compact"
                 type="button"
                 disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
                 onClick={async () => {
@@ -1458,8 +1458,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             )}
             <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white py-3">
               <div className="ml-auto flex flex-wrap justify-end gap-2">
-                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
-                <AdminButton variant="secondary"
+                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
+                <AdminButton variant="quiet" density="compact"
                   type="button"
                   disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
                   onClick={() => setEditingItem(null)}
