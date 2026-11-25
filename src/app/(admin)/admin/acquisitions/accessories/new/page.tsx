@@ -9,7 +9,7 @@ export default async function NewAccessoryAcquisitionPage({
 }: {
   searchParams: Promise<{ type?: string }>;
 }) {
-  await requireAnyPermission([PERMISSIONS.ACCESSORY_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL]);
+  const user = await requireAnyPermission([PERMISSIONS.ACCESSORY_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL]);
   const query = await searchParams;
   const [vendors, strapColors] = await Promise.all([
     getVendorList(),
@@ -17,6 +17,7 @@ export default async function NewAccessoryAcquisitionPage({
   ]);
   return (
     <AccessoryAcquisitionEntryClient
+      canCreateWatches={Boolean(user.roles?.includes("ADMIN") || user.permissions?.includes(PERMISSIONS.WATCH_ACQUISITION_CREATE) || user.permissions?.includes(PERMISSIONS.ACQUISITION_CREATE_ALL))}
       vendors={vendors}
       strapColors={strapColors}
       initialKind={query.type === "clasp" ? "clasp" : "strap"}

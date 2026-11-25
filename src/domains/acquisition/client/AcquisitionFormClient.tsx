@@ -33,12 +33,14 @@ import type {
     AcquisitionWatchLine,
 } from "./form/acquisition-form.types";
 import { useAcquisitionQuickNames } from "./form/use-acquisition-quick-names";
+import { AcquisitionKindNavigation } from "../ui/new/AcquisitionKindNavigation";
 import WatchLineCard from "../ui/new/WatchLineCard";
 import AcquisitionCreatedDialog from "../ui/navigation/AcquisitionCreatedDialog";
 
 type Props = {
     vendors: AcquisitionFormVendor[];
     canApprove: boolean;
+    canCreateAccessories?: boolean;
 };
 
 const EMPTY_PURCHASED_WATCHES: NonNullable<AcquisitionTradeInOrder["purchasedWatches"]> = [];
@@ -302,7 +304,7 @@ function TradeInOrderField({
     );
 }
 
-export default function AcquisitionFormClient({ vendors: initialVendors, canApprove }: Props) {
+export default function AcquisitionFormClient({ vendors: initialVendors, canApprove, canCreateAccessories = false }: Props) {
     const notify = useNotify();
     const progress = useAppProgress();
     const router = useRouter();
@@ -551,9 +553,9 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
 
     return (
         <AdminDetailPage grouped emphasis>
-            <AdminPageHeader eyebrow="KHO HÀNG / PHIẾU NHẬP" title="Tạo phiếu nhập đồng hồ"
+            <AdminPageHeader showInShell eyebrow="KHO HÀNG / PHIẾU NHẬP" title="Tạo phiếu nhập đồng hồ"
                 description="Chọn vendor, thêm đồng hồ rồi lưu phiếu. Giá VND nhập theo đơn vị nghìn."
-                meta={<span className="text-sm tabular-nums text-slate-500">{validLineCount || watchLines.length} đồng hồ · <strong className="text-slate-900">{formatMoney(totalWatchCost, currency)}</strong></span>} />
+                meta={<div className="flex flex-wrap items-center gap-4"><AcquisitionKindNavigation current="watches" canSwitch={canCreateAccessories} dirty={Boolean(vendorId || notes.trim() || watchLines.some(line=>line.quickInput.trim() || line.imageKey || line.cost || line.aiHint || line.salePrice))}/><span className="text-sm tabular-nums text-slate-500">{validLineCount || watchLines.length} đồng hồ · <strong className="text-slate-900">{formatMoney(totalWatchCost, currency)}</strong></span></div>} />
             <div className="grid gap-4">
                 <div className="space-y-4">
                     <section className={detailUi.section}>

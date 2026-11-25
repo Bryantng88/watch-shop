@@ -17,8 +17,10 @@ export function AdminPageHeader({
   meta,
   className,
   variant = "default",
+  showInShell = false,
 }: {
   variant?: "default" | "workspace";
+  showInShell?: boolean;
   eyebrow?: string;
   title: string;
   description?: string;
@@ -26,7 +28,7 @@ export function AdminPageHeader({
   className?: string;
 }) {
   const shellHeading = useAdminShellHeading();
-  if (shellHeading) return meta ? <header className="flex min-w-0 flex-wrap items-center justify-end gap-3">{meta}</header> : null;
+  if (shellHeading && !showInShell) return meta ? <header className="flex min-w-0 flex-wrap items-center justify-end gap-3">{meta}</header> : null;
   return <header className={clsx("flex flex-wrap items-end justify-between gap-4", variant === "workspace" && headerStyles.workspace, className)}>
     <div>
       {eyebrow ? <p className={ADMIN_UI.eyebrow}>{eyebrow}</p> : null}

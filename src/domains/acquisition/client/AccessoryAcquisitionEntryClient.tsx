@@ -1,5 +1,6 @@
 "use client";
 
+import { AcquisitionKindNavigation } from "../ui/new/AcquisitionKindNavigation";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
 import { Link2, ShieldCheck, X } from "lucide-react";
@@ -15,20 +16,23 @@ export default function AccessoryAcquisitionEntryClient({
   strapColors: initialStrapColors = [],
   initialKind = "strap",
   onClose,
+  canCreateWatches = false,
 }: {
   vendors: AcquisitionFormVendor[];
   strapColors?: Array<{ id: string; code: string; name: string; colorHex: string | null }>;
   initialKind?: Kind;
   onClose?: () => void;
+  canCreateWatches?: boolean;
 }) {
   const [kind, setKind] = useState<Kind>(initialKind);
+  const [dirty, setDirty] = useState(false);
   const [strapColors, setStrapColors] = useState(initialStrapColors);
   useEffect(() => {
     if (strapColors.length) return;
     void listStrapColorsAction().then(setStrapColors);
   }, [strapColors.length]);
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white" onChange={()=>setDirty(true)}>
       <div className="mx-auto max-w-[1500px] px-6 pt-6">
         <section className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 py-4">
           <div>
@@ -36,10 +40,11 @@ export default function AccessoryAcquisitionEntryClient({
               Phiếu nhập phụ kiện
             </div>
             <h1 className="mt-1 text-xl font-semibold text-slate-950">
-              Chọn loại phụ kiện cần nhập
+              Tạo phiếu nhập phụ kiện
             </h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {!onClose && <AcquisitionKindNavigation current="accessories" canSwitch={canCreateWatches} dirty={dirty}/>}
             <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1">
               <AdminButton variant="contextual"
                 type="button"
