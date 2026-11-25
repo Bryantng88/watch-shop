@@ -533,6 +533,7 @@ export async function updatePersonalWorkItem(
     progressPercent?: number;
     progressMode?: TaskProgressMode;
     updateBody?: string | null;
+    updateChecklistItemId?: string | null;
   },
   auth: unknown,
   db: DB = prisma,
@@ -587,7 +588,16 @@ export async function updatePersonalWorkItem(
         ).values(),
       ]
     : null;
+  if (input.updateChecklistItemId && (event || !input.updateBody?.trim())) throw new Error("Chọn đầu việc cần kèm nội dung cập nhật cho công việc.");
   await withDbTransaction(db, async (tx) => {
+    let updateEntry: { id: string; title: string } | null = null;
+    if (input.updateChecklistItemId) {
+      await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
+      await assertPersonalWorkAccess(input.id, auth, "EDIT", tx);
+      await assertPersonalChecklistEdit(input.id, input.updateChecklistItemId, auth, tx);
+      updateEntry = await tx.taskItemChecklist.findFirst({ where: { id: input.updateChecklistItemId, taskItemId: input.id }, select: { id: true, title: true } });
+      if (!updateEntry) throw new Error("Đầu việc không còn tồn tại. Chọn lại mục cập nhật.");
+    }
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
@@ -618,9 +628,10 @@ export async function updatePersonalWorkItem(
           taskItemId: input.id,
           sourceType: "DISCUSSION",
           actorUserId: current.userId,
-          title: event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          title: updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
           body: input.updateBody?.trim() || null,
           metadataJson: {
+            ...(updateEntry ? { checklistItemId: updateEntry.id, checklistTitle: updateEntry.title } : {}),
             ...(status ? { status } : {}),
             ...(progressPercent !== undefined ? { progressPercent } : {}),
           },

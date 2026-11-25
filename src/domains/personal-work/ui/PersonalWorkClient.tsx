@@ -32,6 +32,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
+  Plus,
+  MessageSquare,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -44,10 +46,12 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
 import { useAppDialog } from "@/domains/shared/feedback";
 import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
   ProgressMetric,
+  AdminUserAvatar,
   AdminViewTabs,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
@@ -170,6 +174,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const listOnly=searchParams.get("view")==="list";
   const openedItem=useRef<string|null>(null);
   const appDialog = useAppDialog();
+  const notify = useNotify();
+  const completionMutation = useUiMutation();
   const checklistMutation = useUiMutation();
   const calendarCreateMutation = useUiMutation();
   const calendarSyncMutation = useUiMutation();
@@ -214,7 +220,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateEstimatedDays, setCalendarCreateEstimatedDays] = useState(1);
   const [calendarCreateSync, setCalendarCreateSync] = useState(true);
   const calendar = usePersonalCalendar(data);
-  const workItems = calendar.items;
+  const [completedOverrides, setCompletedOverrides] = useState<Record<string, PersonalWorkItem>>({});
+  const [recentCompletions, setRecentCompletions] = useState<Record<string, boolean>>({});
+  const completionTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => completionTimers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    setCompletedOverrides(current => {
+      const confirmed = Object.keys(current).filter(id => calendar.items.some(item => item.id === id && item.status === current[id].status));
+      if (!confirmed.length) return current;
+      const next = {...current}; confirmed.forEach(id => delete next[id]); return next;
+    });
+  }, [calendar.items]);
+  const workItems = useMemo(() => calendar.items.map(item => completedOverrides[item.id] || item), [calendar.items, completedOverrides]);
   const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
@@ -244,6 +261,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editReminder,setEditReminder]=useState<number|null>(0);
   const [editNote, setEditNote] = useState("");
   const [editUpdateBody, setEditUpdateBody] = useState("");
+  const [updateChecklistId, setUpdateChecklistId] = useState("");
+  const updateComposerRef = useRef<HTMLTextAreaElement>(null);
   const [editDomain, setEditDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [editDueAt, setEditDueAt] = useState("");
   const [editStartTime, setEditStartTime] = useState("");
@@ -257,6 +276,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [editTargetResults, setEditTargetResults] = useState<PersonalWorkTarget[]>([]);
   const [editShares, setEditShares] = useState<PersonalWorkItem["sharedWith"]>([]);
   const [newChecklistTitle, setNewChecklistTitle] = useState("");
+  const [addingChecklist, setAddingChecklist] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [scheduleExpanded, setScheduleExpanded] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [calendarCursor, setCalendarCursor] = useState(() => {
     const date = new Date();
     return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -274,7 +297,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         const event = isPersonalEvent(item.workType);
         if (view === "EVENTS") return event;
         if (view === "DONE") return !event && item.status === "DONE";
-        if (item.status === "DONE" || item.status === "CANCELLED") return false;
+        if (item.status === "DONE" || item.status === "CANCELLED") return Boolean(recentCompletions[item.id]);
         if (view === "TODAY" || view === "OVERDUE") {
           return personalDayBucket({
             dueAt: item.dueAt ? new Date(item.dueAt) : null,
@@ -286,7 +309,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         if (view === "UPCOMING") return Boolean(item.dueAt && Date.parse(item.dueAt) > todayEndMs);
         return true;
       }),
-    [workItems, domain, scope, view, todayStartMs, todayEndMs],
+    [workItems, domain, scope, view, todayStartMs, todayEndMs, recentCompletions],
   );
   const openCount = workItems.filter((item) => !isPersonalEvent(item.workType) && item.status !== "DONE").length;
   const overdue = workItems.filter(
@@ -330,6 +353,35 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       if (result.calendarSync === "FAILED") next[task.id] = task;
       else delete next[task.id];
       return next;
+    });
+  }
+
+  function completeWork(item: PersonalWorkItem, finalize = false) {
+    if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isPersonalEvent(item.workType)) return;
+    const done = item.status !== "DONE";
+    void completionMutation.run({
+      key: `complete:${item.id}`,
+      action: async () => {
+        const result = finalize ? await finalizePersonalWorkChecklistAction(item.id)
+          : await updatePersonalWorkAction({id:item.id, status:done ? "DONE" : "TODO"});
+        rememberCalendarSave(item, result);
+        return result;
+      },
+      onSuccess: result => {
+        const updated: PersonalWorkItem = {...item, status:done ? "DONE" : "TODO", progressPercent:done ? 100 : item.progressPercent,
+          completedAt:done ? new Date().toISOString() : null, ...(finalize ? {checklistLockedAt:new Date().toISOString()} : {})};
+        setCompletedOverrides(current => ({...current, [item.id]:updated}));
+        setEditingItem(current => current?.id === item.id ? {...current, ...updated} : current);
+        if (done) {
+          setRecentCompletions(current => ({...current, [item.id]:true}));
+          completionTimers.current.push(setTimeout(() => setRecentCompletions(current => {const next={...current};delete next[item.id];return next;}), 1000));
+        }
+        const message = done ? "Đã hoàn thành công việc" : "Đã mở lại công việc";
+        if (result.calendarSync === "FAILED") notify.warning({message:`${message}. Chưa đồng bộ Google Calendar.`, density:"compact"});
+        else notify.success({message, density:"compact"});
+        router.refresh();
+      },
+      errorMessage: personalWorkActionFailure,
     });
   }
 
@@ -406,12 +458,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const openTaskEdit = useCallback((item: PersonalWorkItem) => {
     setMessage(null);
     setMessageIsError(false);
+    setEditingTitle(false);
+    setScheduleExpanded(false);
+    setHistoryExpanded(false);
     setEditingItem(item);
     setEditTitle(item.title);
     setEditReminder(item.reminderMinutes === undefined ? 0 : item.reminderMinutes);
     setEditTags(item.tags.join(", "));
     setEditNote(item.note || "");
     setEditUpdateBody("");
+    setUpdateChecklistId("");
     setEditDomain(item.domain);
     setEditCategoryKey(item.category.key);
     setEditDueAt(item.dueAt ? scheduleDate(item.dueAt) : "");
@@ -428,6 +484,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditTargetResults([]);
     setEditShares(item.sharedWith);
     setNewChecklistTitle("");
+    setAddingChecklist(false);
   }, []);
   const openedWork = useRef<string | null>(null);
   useEffect(() => {
@@ -453,11 +510,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   return (
     <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
       <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
-    } tools={<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
+    } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
       <CalendarDays className="h-4 w-4" />Lịch
       {calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label={calendar.reconnectRequired ? "Lịch cần kết nối lại" : "Lịch có lỗi đồng bộ"} />}
-    </AdminButton>}>
+    </AdminButton></>}>
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
       <section hidden={listOnly} className={listOnly ? "hidden" : "border-b border-slate-100 pb-4"}>
@@ -894,14 +951,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
-          <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />
+          {listOnly && <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
                 const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
                 return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={late}
-                  scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending} onOpen={() => openTaskEdit(item)}
-                  onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : run(async () => { const result = await updatePersonalWorkAction({ id: item.id, status: item.status === "DONE" ? "TODO" : "DONE" }); rememberCalendarSave(item, result); return result; }, personalWorkSavedMessage)} />;
+                  scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending || completionMutation.isPending(`complete:${item.id}`)} completionPending={completionMutation.isPending(`complete:${item.id}`)} justCompleted={Boolean(recentCompletions[item.id])} onOpen={() => openTaskEdit(item)}
+                  onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : completeWork(item)} />;
               })
             ) : (
               <div className="flex flex-col items-center py-16 text-center">
@@ -916,7 +973,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       {editingItem && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 backdrop-blur-[1px] sm:p-4"
-          onMouseDown={() => setEditingItem(null)}
+          onMouseDown={() => {if (!pending && !completionMutation.hasPending && !checklistMutation.hasPending) setEditingItem(null);}}
         >
           <form
             role="dialog"
@@ -925,7 +982,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
-              if(editingItem.checklistOnly)return;
+              if(editingItem.checklistOnly || editingItem.access === "VIEWER" || pending || completionMutation.hasPending || checklistMutation.hasPending)return;
               const nextTitle = editTitle.trim();
               if (!nextTitle) {
                 setMessageIsError(true);
@@ -938,6 +995,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 editedSchedule = editDueAt ? personalItemScheduleInput(editDueAt, editStartTime, editEndTime, editEstimatedDays,isPersonalEvent(editWorkType)) : { dueAt: null, scheduledEndAt: null };
                 setEditScheduleError(null);
               } catch (error) {
+                setScheduleExpanded(true);
                 setEditScheduleError(error instanceof Error ? error.message : "Thời gian không hợp lệ");
                 return;
               }
@@ -956,6 +1014,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     estimatedDays: editEstimatedDays,
                     targets: editTargets,
                     updateBody: editUpdateBody,
+                    updateChecklistItemId: editUpdateBody.trim() ? updateChecklistId || null : undefined,
                   });
                   rememberCalendarSave(editingItem, result);
                   if (editingItem.access === "OWNER")
@@ -972,10 +1031,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             className="h-[100dvh] w-full max-w-2xl overflow-y-auto overscroll-contain bg-white px-4 pb-5 sm:h-auto sm:max-h-[90vh] sm:rounded-2xl sm:px-5 sm:shadow-2xl"
           >
             <div className="sticky top-0 z-10 border-b border-slate-100 bg-white pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-              <AdminButton variant="contextual" type="button" onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</AdminButton>
+              <AdminButton variant="contextual" type="button" disabled={pending || completionMutation.hasPending || checklistMutation.hasPending} onClick={() => setEditingItem(null)} className="min-h-11 text-sm font-semibold text-violet-700">← Danh sách công việc</AdminButton>
               <div>
                 <p className="font-mono text-xs text-slate-600">{personalWorkCode(editingItem.id, editingItem.personalWorkNumber, editingItem.workType)}</p>
-                <h2 id="personal-task-detail-title" className="mt-1 text-xl font-bold text-slate-950">{editingItem.title}</h2>
+                <h2 id="personal-task-detail-title" className="mt-1 text-lg font-bold leading-6 text-slate-950">
+                  {!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? <AdminButton variant="quiet" type="button" title="Sửa tên công việc" aria-label="Sửa tên công việc" onClick={() => setEditingTitle(value => !value)} className="max-w-full !p-0 text-left !text-lg !font-bold !leading-6">{editTitle || editingItem.title}</AdminButton> : editingItem.title}
+                </h2>
+                {editingTitle && <input autoFocus aria-label="Việc cần làm" value={editTitle} disabled={pending} onChange={event => setEditTitle(event.target.value)} onKeyDown={event => {if(event.key === "Enter"){event.preventDefault();setEditingTitle(false);}if(event.key === "Escape"){event.stopPropagation();setEditingTitle(false);}}} className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"/>}
+                <p className="mt-1 text-xs text-slate-500">{editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
                 {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
             </div>
@@ -983,17 +1046,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Các đầu việc</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {editingItem.checklist.filter((item) => item.isDone).length}/{editingItem.checklist.length} hoàn thành
-                    </p>
+                  <div className="flex min-w-0 items-center gap-1">
+                    <h3 className="min-w-0 text-sm font-semibold text-slate-900">Các đầu việc</h3>
+                    {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && editingItem.status !== "DONE" && editingItem.status !== "CANCELLED" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={addingChecklist ? "Ẩn thêm đầu việc" : "Thêm đầu việc"} title="Thêm đầu việc" aria-expanded={addingChecklist} onClick={()=>setAddingChecklist(value=>!value)}><Plus className="h-4 w-4"/></AdminButton>}
                   </div>
-                  {editingItem.checklist.length > 0 && <ProgressMetric
+                  {editingItem.checklist.length > 0 && <ProgressMetric appearance="quiet"
                     value={editingItem.progressPercent}
                     numerator={editingItem.checklist.filter((entry) => entry.isDone).length}
                     denominator={editingItem.checklist.length}
-                    className="max-w-[210px]"
+                    className="!w-28 shrink-0"
                     label={`Tiến độ ${editingItem.title}: ${editingItem.progressPercent}%`}
                   />}
                 </div>
@@ -1003,7 +1064,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       <div key={entry.id} className="flex items-center gap-2 py-2">
                         <AdminButton iconOnly variant="contextual" density="compact"
                           type="button"
-                          disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
+                          disabled={completionMutation.hasPending || (entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           aria-busy={checklistMutation.isPending(`toggle:${entry.id}`)}
                           aria-label={entry.isDone ? `Mở lại ${entry.title}` : `Hoàn thành ${entry.title}`}
                           onClick={() => {
@@ -1035,7 +1096,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             <Check className="h-3.5 w-3.5" />
                           )}
                         </AdminButton>
+                        {checklistMutation.phase(`toggle:${entry.id}`) === "success" && <span className="sr-only" role="status">{entry.isDone ? "Đã hoàn thành đầu việc" : "Đã mở lại đầu việc"}</span>}
                         {entry.object&&<WorkObjectThumbnail object={entry.object}/>}
+                        {!entry.sharedWith?.length && <span title={`${editingItem.owner.name || editingItem.owner.email} · Người tạo công việc, mặc định xử lý`}><AdminUserAvatar user={editingItem.owner} size="xs"/></span>}
                         <PersonalChecklistTitle title={entry.title} done={entry.isDone}
                           disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           onSave={async title=>{
@@ -1043,6 +1106,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             setEditingItem(current=>current&&current.id===editingItem.id?{...current,checklist:current.checklist.map(item=>item.id===entry.id?{...item,title}:item)}:current);
                             router.refresh();
                           }}/>
+                        {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={`Cập nhật ${entry.title}`} title="Cập nhật đầu việc" onClick={()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}><MessageSquare className="h-3.5 w-3.5"/></AdminButton>}
                         {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
                         {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
                           await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
@@ -1052,7 +1116,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
                           <AdminButton iconOnly variant="quiet" density="compact"
                             type="button"
-                            disabled={checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
+                            disabled={completionMutation.hasPending || checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
                             aria-busy={checklistMutation.isPending(`delete:${entry.id}`)}
                             aria-label={`Xóa ${entry.title}`}
                             onClick={() => {
@@ -1085,9 +1149,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     ))}
                   </div>
                 )}
-                {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && editingItem.status !== "DONE" && (
+                {addingChecklist && !editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && editingItem.status !== "DONE" && editingItem.status !== "CANCELLED" && (
                   <div className="flex gap-2">
                     <input
+                      autoFocus
+                      aria-label="Tên đầu việc mới"
+                      onKeyDown={event=>{if(event.key === "Escape"){event.preventDefault();event.stopPropagation();setAddingChecklist(false);}}}
                       value={newChecklistTitle}
                       maxLength={500}
                       onChange={(event) => setNewChecklistTitle(event.target.value)}
@@ -1120,6 +1187,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             setNewChecklistTitle(title);
                           },
                           onSuccess: (result) => {
+                            setAddingChecklist(false);
                             setEditingItem((current) => current ? {
                               ...current,
                               checklist: current.checklist.map((item) => item.id === temporaryId ? result.item : item),
@@ -1139,11 +1207,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     Đã xác nhận hoàn thành. Danh sách đầu việc đã được khóa.
                   </p>
                 ) : editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
-                  <AsyncActionButton variant="primary"
+                  <AsyncActionButton variant="secondary"
                     type="button"
-                    pending={checklistMutation.isPending("checklist:finalize")}
+                    pending={completionMutation.isPending(`complete:${editingItem.id}`)}
                     pendingLabel="Đang hoàn thành..."
-                    disabled={checklistMutation.hasPending && !checklistMutation.isPending("checklist:finalize")}
+                    disabled={checklistMutation.hasPending || pending}
                     onClick={async () => {
                       const confirmed = await appDialog.confirm({
                         title: "Xác nhận hoàn thành công việc?",
@@ -1152,16 +1220,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         tone: "success",
                       });
                       if (!confirmed) return;
-                      void checklistMutation.run({
-                        key: "checklist:finalize",
-                        action: () => finalizePersonalWorkChecklistAction(editingItem.id),
-                        successMessage: "Đã xác nhận hoàn thành và khóa danh sách đầu việc",
-                        onSuccess: result => {
-                          rememberCalendarSave(editingItem, result);
-                          setEditingItem(null);
-                          router.refresh();
-                        },
-                      });
+                      completeWork(editingItem, true);
                     }}
                     className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
@@ -1170,23 +1229,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 ) : null}
               </section>}
               {!editingItem.checklistOnly && <>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">{isPersonalEvent(editWorkType)?"Tên sự kiện":"Việc cần làm"}</span>
-                <input
-                  required
-                  value={editTitle}
-                  disabled={editingItem.access === "VIEWER"}
-                  onChange={(event) => setEditTitle(event.target.value)}
-                  className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                />
-              </label>
-              <details className="border-b border-slate-100 pb-2">
-                <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500">Thẻ công việc</AdminDisclosureSummary>
-                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
-              </details>
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-slate-600">Nội dung cập nhật</span>
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label htmlFor="personal-work-update" className="text-xs font-semibold text-slate-600">Nội dung cập nhật</label>
+                  {editingItem.checklist.length > 0 && <label className="flex min-w-0 items-center gap-1 text-xs text-slate-500">Cập nhật cho:
+                    <select aria-label="Cập nhật cho" value={updateChecklistId} disabled={editingItem.access === "VIEWER"} onChange={event=>setUpdateChecklistId(event.target.value)} className="h-8 max-w-56 rounded border-0 bg-transparent px-1 text-xs text-slate-700">
+                      <option value="">Công việc chung</option>
+                      {editingItem.checklist.map(entry=><option key={entry.id} value={entry.id}>{entry.title}</option>)}
+                    </select>
+                  </label>}
+                </div>
                 <textarea
+                  id="personal-work-update"
+                  ref={updateComposerRef}
                   value={editUpdateBody}
                   disabled={editingItem.access === "VIEWER"}
                   onChange={(event) => setEditUpdateBody(event.target.value)}
@@ -1194,33 +1249,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   placeholder="Ghi lại kết quả, vấn đề hoặc bước tiếp theo..."
                   className="w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 />
-                <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật.</span>
-              </label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
-                  <select
-                    value={editCategoryKey}
-                    disabled={editingItem.access === "VIEWER"}
-                    onChange={(event) => {
-                      setEditCategoryKey(event.target.value);
-                      const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
-                      setEditDomain(nextDomain);
-                      setEditWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
-                      setEditTargetType(domainTargets[nextDomain][0]?.type || "");
-                      setEditTargetQuery("");
-                      setEditTargetResults([]);
-                      setEditTargets([]);
-                    }}
-                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
-                  >
-                    {editCategories.map((item) => (
-                      <option key={item.key} value={item.key}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật, không tự đánh dấu hoàn thành.</span>
+              </div>
+              <details open={scheduleExpanded} onToggle={event => setScheduleExpanded(event.currentTarget.open)} data-work-disclosure="schedule" className="border-t border-slate-100 pt-3">
+                <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Lịch · {editDueAt ? `${editDueAt.split("-").reverse().join("/")}${editStartTime ? ` · ${editStartTime}` : " · Cả ngày"}` : "Chưa có lịch"}</AdminDisclosureSummary>
+                <div className="mt-3 space-y-3">
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Ngày bắt đầu</span>
                   <input
@@ -1231,15 +1264,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm"
                   />
                 </label>
-              </div>
-              {!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
-                  <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
-                    {PERSONAL_WORK_TYPES[editDomain].map(type => <option key={type.key} value={type.key}>{type.label}</option>)}
-                  </select>
-                </label>
-              )}
               <label className="flex items-center gap-2 text-xs text-slate-600">Nhắc lịch
                 <select aria-label="Nhắc lịch" disabled={editingItem.access === "VIEWER"} value={editReminder === null ? "off" : editReminder} onChange={e=>setEditReminder(e.target.value==="off"?null:Number(e.target.value))} className="h-9 rounded-lg border border-slate-200 px-2">
                   <option value="off">Không nhắc</option><option value="0">Đúng giờ</option>{[10,15,30,60].map(m=><option key={m} value={m}>Trước {m} phút</option>)}
@@ -1275,6 +1299,49 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   </label>
                 )}
               </div>
+              {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
+              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
+                </div>
+              </details>
+              <details key={editingItem.id} data-work-disclosure="settings" className="border-t border-slate-100 pt-3">
+                <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Thông tin khác · {editCategories.find(category => category.key === editCategoryKey)?.label}</AdminDisclosureSummary>
+                <div className="mt-3 space-y-3">
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Nhóm công việc</span>
+                  <select
+                    aria-label="Nhóm công việc"
+                    value={editCategoryKey}
+                    disabled={editingItem.access === "VIEWER"}
+                    onChange={(event) => {
+                      setEditCategoryKey(event.target.value);
+                      const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
+                      setEditDomain(nextDomain);
+                      setEditWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setEditTargetType(domainTargets[nextDomain][0]?.type || "");
+                      setEditTargetQuery("");
+                      setEditTargetResults([]);
+                      setEditTargets([]);
+                    }}
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+                  >
+                    {editCategories.map((item) => (
+                      <option key={item.key} value={item.key}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>              {!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
+                  <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                    {PERSONAL_WORK_TYPES[editDomain].map(type => <option key={type.key} value={type.key}>{type.label}</option>)}
+                  </select>
+                </label>
+              )}
+              <details className="border-b border-slate-100 pb-2">
+                <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500">Thẻ công việc</AdminDisclosureSummary>
+                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
+              </details>
               {domainTargets[editDomain].length > 0 && (
                 <div className="space-y-2 rounded-xl bg-slate-50 p-3">
                   <div className="flex items-center justify-between gap-3">
@@ -1284,7 +1351,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {editTargets.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {editTargets.map((target) => (
-                        <AdminButton variant="secondary" density="compact"
+                        <AdminButton variant="quiet" density="compact"
                           type="button"
                           key={`${target.type}:${target.id}`}
                           disabled={editingItem.access === "VIEWER"}
@@ -1346,7 +1413,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           </div>
                         )}
                       </div>
-                      <AdminButton variant="secondary"
+                      <AdminButton variant="quiet" density="compact"
                         type="button"
                         disabled={pending || !editTargetType}
                         onClick={searchEditTargets}
@@ -1358,17 +1425,30 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   )}
                 </div>
               )}
-              {editingItem.calendar.synced && (
-                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                  Công việc được lưu trước; hệ thống sẽ thử đồng bộ lên sự kiện Google Calendar hiện có.
-                </p>
-              )}
-              {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
-              {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
+                {editingItem.access === "OWNER" && <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />}
+                <PersonalCodexPanel item={editingItem} configuration={data.codex} />
+                {editingItem.access === "OWNER" && <AdminButton variant="quiet" density="compact"
+                type="button"
+                disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
+                onClick={async () => {
+                  const confirmed = await appDialog.confirm({title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
+                  if (!confirmed) return;
+                  run(
+                    () => deletePersonalWorkAction(editingItem.id),
+                    "Đã xóa công việc",
+                    () => setEditingItem(null),
+                  );
+                }}
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" /> Xóa
+              </AdminButton>}
+
+                </div>
+              </details>
               </>}
             </div>
             {!editingItem.checklistOnly && <WorkImageAttachments key={editingItem.id} workId={editingItem.id} />}
-            {!editingItem.checklistOnly && <PersonalCodexPanel item={editingItem} configuration={data.codex} />}
             {editingItem.activities.length > 0 && (
               <section className="mt-4 border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -1381,7 +1461,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </div>
                 <div className="max-h-36 space-y-2 overflow-y-auto pr-1">
                   {editingItem.activities
-                    .slice(0, 8)
+                    .slice(0, historyExpanded ? undefined : 2)
                     .map((activity) => (
                       <article key={activity.id} className="rounded-lg bg-slate-50 px-3 py-2">
                         <p className="text-xs font-semibold text-slate-700">{activity.title}</p>
@@ -1400,38 +1480,20 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       </article>
                     ))}
                 </div>
+                {editingItem.activities.length > 2 && <AdminButton variant="quiet" density="compact" type="button" onClick={() => setHistoryExpanded(value => !value)}>{historyExpanded ? "Thu gọn lịch sử" : `Xem thêm ${editingItem.activities.length - 2} cập nhật`}</AdminButton>}
               </section>
-            )}
-            {editingItem.access === "OWNER" && (
-              <div className="mt-4">
-                <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />
-              </div>
             )}
             {editingItem.access === "VIEWER" && !editingItem.checklistOnly && (
               <p className="mt-4 rounded-lg bg-violet-50 px-3 py-2 text-xs font-medium text-violet-700">
                 Bạn đang xem công việc được chia sẻ ở chế độ chỉ xem.
               </p>
             )}
-            <div className="mt-6 flex items-center justify-between gap-3">
-              {editingItem.access === "OWNER" ? <AdminButton variant="danger"
-                type="button"
-                disabled={pending}
-                onClick={async () => {
-                  const confirmed = await appDialog.confirm({title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
-                  if (!confirmed) return;
-                  run(
-                    () => deletePersonalWorkAction(editingItem.id),
-                    "Đã xóa công việc",
-                    () => setEditingItem(null),
-                  );
-                }}
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-              >
-                <Trash2 className="h-4 w-4" /> Xóa
-              </AdminButton> : <span />}
-              <div className="flex gap-2">
-                <AdminButton variant="secondary"
+            <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white py-3">
+              <div className="ml-auto flex flex-wrap justify-end gap-2">
+                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
+                <AdminButton variant="quiet" density="compact"
                   type="button"
+                  disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
                   onClick={() => setEditingItem(null)}
                   className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 >
@@ -1439,7 +1501,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </AdminButton>
                 {!editingItem.checklistOnly && <AdminButton variant="primary"
                   type="submit"
-                  disabled={pending || editingItem.access === "VIEWER"}
+                  disabled={pending || completionMutation.hasPending || checklistMutation.hasPending || editingItem.access === "VIEWER"}
                   className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                 >
                   {pending ? "Đang lưu..." : "Lưu thay đổi"}
