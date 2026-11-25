@@ -73,10 +73,10 @@ export function Button({
     className,
     ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: "default" | "outline" | "ghost";
+    variant?: "default" | "outline" | "ghost" | "quiet";
 }) {
     return (
-        <AdminButton variant={variant === "default" ? "primary" : variant === "ghost" ? "contextual" : "secondary"}
+        <AdminButton variant={variant === "default" ? "primary" : variant === "ghost" ? "contextual" : variant === "quiet" ? "quiet" : "secondary"}
             {...props}
             className={cx(
                 "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60",

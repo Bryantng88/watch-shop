@@ -475,7 +475,7 @@ export default function WatchBasicSection({
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="quiet"
                 onClick={fillMissingSpecsWithAI}
                 disabled={aiPending}
               >
@@ -484,10 +484,10 @@ export default function WatchBasicSection({
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="quiet"
                 onClick={() => onChange({ title: generatedTitle })}
               >
-                Apply title
+                Áp dụng tên
               </Button>
             </div>
           </div>

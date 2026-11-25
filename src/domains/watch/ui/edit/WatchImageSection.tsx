@@ -753,7 +753,7 @@ export default function WatchImageSection({
                                         {pendingCoverKey ? "Kiểm tra preview trước khi xác nhận đưa lên storefront." : "Bạn có thể đổi ảnh hoặc tiếp tục xử lý trước khi xác nhận bản mới."}
                                     </div>
                                 </div>
-                                <AdminButton variant="secondary" density="compact"
+                                <AdminButton variant="quiet" density="compact"
                                     type="button"
                                     onClick={() => setCoverPickerOpen(true)}
                                     disabled={coverPending || photoRoomPending || sharpPending}
@@ -765,7 +765,7 @@ export default function WatchImageSection({
                                     <span className="text-xs font-medium text-emerald-700">Ảnh mới đang chờ xác nhận</span>
                                 ) : null}
                                 {(pendingCoverKey || currentCoverKey) ? (
-                                    <AdminButton variant="primary" density="compact"
+                                    <AdminButton variant="quiet" density="compact"
                                         type="button"
                                         onClick={() => {
                                             setAdjustmentDialogMode("photoroom");
@@ -779,7 +779,7 @@ export default function WatchImageSection({
                                     </AdminButton>
                                 ) : null}
                                 {(pendingCoverKey || currentCoverKey) ? (
-                                    <AdminButton variant="secondary" density="compact"
+                                    <AdminButton variant="quiet" density="compact"
                                         type="button"
                                         onClick={() => {
                                             setAdjustmentDialogMode("sharp");
@@ -874,7 +874,7 @@ export default function WatchImageSection({
                                 <div className="text-sm font-semibold text-slate-900">Sharp cho Gallery</div>
                                 <div className="mt-0.5 text-xs text-slate-500">Chọn nhiều ảnh, chỉnh sáng, màu, tương phản và độ nét rồi xem preview trước khi áp dụng. Ảnh gốc vẫn được giữ trong Media Core.</div>
                             </div>
-                            <AdminButton variant="secondary" density="compact"
+                            <AdminButton variant="quiet" density="compact"
                                 type="button"
                                 onClick={() => setGalleryPhotoRoomOpen(true)}
                                 disabled={locked || galleryImages.length === 0}
@@ -936,7 +936,7 @@ export default function WatchImageSection({
                 enableRecycle={false}
                 footerHint="Chọn một ảnh Cover để đưa về màn hình Media trước khi xác nhận."
                 footerLeadingAction={currentCoverKey ? (
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet"
                         type="button"
                         onClick={() => void handleCoverReturn()}
                         disabled={coverPending}
