@@ -16,6 +16,17 @@ import {
 import { requirePermission } from "@/server/auth/requirePermission";
 import { prisma } from "@/server/db/client";
 import { getProjectionDeliveryStatus } from "@/domains/projection/server";
+import { withdrawWatchFromMedia } from "@/domains/watch/server/media-work/withdraw-watch-media.service";
+
+export async function withdrawWatchFromMediaAction(input: { productId: string; bindingId: string }) {
+  const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const result = await withdrawWatchFromMedia({ ...input, actorUserId: user.id, deferConsumers: (work) => after(work) });
+  revalidatePath("/admin/coordination/media");
+  revalidatePath("/admin/watches");
+  revalidatePath(`/admin/watches/${result.productId}`);
+  revalidatePath(`/admin/watches/${result.productId}/edit`);
+  return result;
+}
 
 export async function loadWatchMediaPoolAction(input: { productId: string }) {
   await requirePermission(PERMISSIONS.PRODUCT_UPDATE);

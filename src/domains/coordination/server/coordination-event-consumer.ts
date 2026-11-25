@@ -5,6 +5,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { dbOrTx, withDbTransaction, type DB } from "@/server/db/client";
+import { isMediaEventBeforeWithdrawal } from "@/domains/watch/server/media-work/watch-media-withdrawal-state";
 import {
   ensureTaskItemBusinessBinding,
   findTaskItemBusinessBinding,
@@ -57,6 +58,7 @@ export type CoordinationConsumerSkipReason =
   | "NO_BLUEPRINT_EVENT_BINDING"
   | "NO_EXISTING_WORKSPACE_ITEM"
   | "MEDIA_STAGE_REGRESSION_REQUIRES_EXPLICIT_ACTION"
+  | "MEDIA_INTAKE_WITHDRAWN"
   | "DUPLICATE_BLUEPRINT_EVENT_BINDING";
 
 export type CoordinationEventConsumerInput = CoordinationBusinessEvent & {
@@ -1337,6 +1339,11 @@ export async function consumeBusinessEventForCoordination(
   const route = resolution.route;
 
   if (!route) return skipped("NO_ROUTE", rawRoute);
+
+  if (isMediaFlowStageRoute({ route, targetType }) && targetType === "WATCH" &&
+      await isMediaEventBeforeWithdrawal(db, canonicalTargetId, input.createdAt)) {
+    return skipped("MEDIA_INTAKE_WITHDRAWN", route);
+  }
 
   const contextForPublishedSpace = coordinationTypeToContext(route.coordinationType);
   const publishedDeferredWorkspace =

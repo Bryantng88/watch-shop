@@ -31,6 +31,7 @@ const WATCH_MEDIA_QUEUE_SOURCE_EVENTS = [
   "watch.image.rejected",
   "watch.media.ready_for_publish",
   "watch.media.recalled",
+  "watch.media.withdrawn",
 ] as const;
 
 type ProjectionSource = "projection" | "source";
@@ -244,7 +245,6 @@ async function findMediaWorkspaceIdsForTarget(db: DB, input: ProjectionScope) {
       FROM "TaskExecution" te
       INNER JOIN "TaskItem" ti ON ti."id" = te."taskItemId"
       WHERE te."taskItemId" IS NOT NULL
-        AND te."actionType"::text <> 'CANCELLED'
         AND te."targetType"::text = ${TaskExecutionTargetType.WATCH}
         AND te."targetId" = ${targetId}
         AND ti."note" ~* ${"workTypeKey:\\s*media-processing"}

@@ -23,6 +23,7 @@ export const WATCH_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.media.asset.attached",
   "watch.media.ready_for_publish",
   "watch.media.recalled",
+  "watch.media.withdrawn",
   "watch.saleStage.posted",
   "watch.bought_back",
   "watch.service.eta.updated",

@@ -1396,6 +1396,9 @@ export async function applyQueueItemManualTransitionAction(input: {
 
   const { result, workflowProcessorResult } = await prisma.$transaction(
     async (tx) => {
+      if (bindingAccess.targetType === "WATCH") {
+        await tx.$queryRaw`SELECT "id" FROM "TaskExecution" WHERE "id" = ${bindingId} FOR UPDATE`;
+      }
       let transactionResult = await applyManualWorkflowAction(tx, {
         ...transitionInput,
       });

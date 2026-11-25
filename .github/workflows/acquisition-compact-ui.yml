@@ -7,6 +7,7 @@ on:
       - 'src/domains/watch/**'
       - 'src/domains/personal-work/**'
       - 'scripts/smoke-watch-media-ui.cjs'
+      - 'scripts/check-watch-media-withdrawal.cjs'
       - 'src/app/(admin)/admin/acquisitions/new/page.tsx'
       - 'src/domains/personal-work/ui/PersonalChecklistShare.tsx'
       - 'src/domains/shared/ui/business-list/BusinessListShell.tsx'
@@ -25,6 +26,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/check-watch-media-withdrawal.cjs
+      - run: node --import tsx --test src/domains/watch/server/media-work/watch-media-withdrawal.test.ts
       - run: node --import tsx --test src/domains/watch/server/shared/watch.mapper.test.ts src/domains/watch/shared/media-work-state.test.ts src/domains/watch/shared/media-part-values.test.ts
       - run: npx eslint src/domains/acquisition/client/AcquisitionFormClient.tsx src/domains/acquisition/client/AcquisitionListClient.tsx src/domains/acquisition/client/StrapAcquisitionFormClient.tsx src/domains/acquisition/client/ClaspAcquisitionFormClient.tsx src/domains/acquisition/client/AccessoryAcquisitionEntryClient.tsx src/domains/acquisition/ui/shared/AcquisitionMoneyInput.tsx src/domains/acquisition/ui/new/WatchLineCard.tsx src/domains/acquisition/ui/edit/AcquisitionEditModal.tsx src/domains/acquisition/ui/list/AcquisitionListTable.tsx src/domains/acquisition/ui/list/AcquisitionListToolbar.tsx src/domains/personal-work/ui/PersonalChecklistShare.tsx src/domains/shared/ui/business-list/BusinessListShell.tsx 'src/app/(admin)/admin/acquisitions/new/page.tsx'
       - run: npx tailwindcss -i src/app/globals.css -o /tmp/acquisition-ui.css --minify

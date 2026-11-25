@@ -105,6 +105,21 @@ export const WATCH_PUBLISH_AUTO_BINDING_SCOPE =
 
 export const WATCH_BUSINESS_EVENT_DEFINITIONS: WatchBusinessEventDefinition[] = [
   {
+    key: "watch.media.withdrawn",
+    label: "Watch withdrawn from media",
+    targetType: "WATCH",
+    group: "Watch Media",
+    status: "ACTIVE",
+    businessMeaning: "The Watch left the media pipeline; its files and content are retained.",
+    producer: "withdraw-watch-media.service",
+    emitPoint: "withdrawWatchFromMedia",
+    targetIdPolicy: "watch.id",
+    targetAliasPolicy: "[watch.id, productId]",
+    payloadContract: "WatchMediaWithdrawalPayload",
+    knownConsumers: ["projection", "timeline"],
+    autoBindingScope: null,
+  },
+  {
     key: "watch.created",
     label: "Watch created",
     targetType: "WATCH",

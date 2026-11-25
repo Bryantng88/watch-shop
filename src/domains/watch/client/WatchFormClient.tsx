@@ -25,6 +25,7 @@ import {
   loadWatchMediaWorkStateAction,
   markWatchMediaAssetAttachedFromWatchAction,
   saveWatchMediaWorkDraftFromWatchAction,
+  withdrawWatchFromMediaAction,
 } from "./media-work/watch-media-work.actions";
 import {
   waitForWatchMediaDelivery,
@@ -1735,8 +1736,47 @@ export default function WatchFormClient({
     </div>
   ) : null;
 
+  const withdrawFromMedia = async () => {
+    if (!workspaceBindingId || mediaSubmitPending || pending) return;
+    const accepted = await dialog.confirm({
+      title: "Bỏ watch khỏi quy trình media?",
+      message: `Watch sẽ rời hàng chụp ảnh, xử lý và xuất bản media. Ảnh, cover và nội dung đã lưu vẫn được giữ.${isDirty || coverDraftPending ? " Các chỉnh sửa chưa lưu trên màn hình này sẽ bị bỏ." : ""}`,
+      confirmText: "Bỏ khỏi quy trình", cancelText: "Giữ lại", tone: "warning",
+    });
+    if (!accepted) return;
+    setMediaSubmitPending(true);
+    try {
+      const result = await withdrawWatchFromMediaAction({ productId: values.productId, bindingId: workspaceBindingId });
+      let syncDelayed = false;
+      if (result.event) {
+        try {
+          await waitForWatchMediaDelivery(result);
+        } catch {
+          syncDelayed = true;
+        }
+      }
+      setSavedValues(valuesRef.current);
+      if (syncDelayed) notify.warning({ title: "Đã bỏ watch, danh sách đang đồng bộ", message: "Thay đổi đã lưu. Tải lại danh sách nếu watch chưa biến mất." });
+      else notify.success({ title: "Đã bỏ khỏi quy trình media", message: "Ảnh và nội dung đã lưu được giữ nguyên." });
+      notifyParentOfWorkspaceRefresh();
+      if (embedded && window.parent !== window) {
+        window.parent.postMessage({ type: "workspace-target-modal-close" }, window.location.origin);
+      } else {
+        router.push(returnTo);
+        router.refresh();
+      }
+    } catch (error) {
+      notify.error({ title: "Chưa bỏ được watch khỏi media", message: errorMessage(error, "Vui lòng thử lại.") });
+    } finally {
+      setMediaSubmitPending(false);
+    }
+  };
+
   const mediaHeaderActions = isMediaProgressContext ? (
     <>
+      <AdminButton variant="quiet" density="compact" type="button" disabled={pending || mediaSubmitPending || !workspaceBindingId} onClick={withdrawFromMedia}>
+        {mediaSubmitPending ? "Đang xử lý…" : "Bỏ khỏi quy trình media"}
+      </AdminButton>
       {isMediaWorkspaceDone ? (
         <>
           <span className="inline-flex h-10 items-center rounded-xl bg-emerald-100 px-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200">
