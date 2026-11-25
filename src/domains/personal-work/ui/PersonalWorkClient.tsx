@@ -508,11 +508,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   return (
     <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
       <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
-    } tools={<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
+    } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
       <CalendarDays className="h-4 w-4" />Lịch
       {calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label={calendar.reconnectRequired ? "Lịch cần kết nối lại" : "Lịch có lỗi đồng bộ"} />}
-    </AdminButton>}>
+    </AdminButton></>}>
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
       <section hidden={listOnly} className={listOnly ? "hidden" : "border-b border-slate-100 pb-4"}>
@@ -949,7 +949,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
-          <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />
+          {listOnly && <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
