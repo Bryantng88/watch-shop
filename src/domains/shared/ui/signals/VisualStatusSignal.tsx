@@ -40,6 +40,11 @@ const TONE_CLASSES: Record<VisualStatusTone, { icon: string; detail: string }> =
     violet: { icon: "border-violet-200 bg-violet-50 text-violet-600", detail: "text-violet-600" },
 };
 
+const EMPHASIZED_TEXT: Record<VisualStatusTone, string> = {
+    slate: "text-slate-700", blue: "text-blue-700", emerald: "text-emerald-700",
+    amber: "text-amber-800", rose: "text-rose-700", violet: "text-violet-700",
+};
+
 const ICONS = {
     image: ImageIcon,
     success: BadgeCheck,
@@ -64,7 +69,7 @@ type Props = {
     detailClassName?: string;
     singleLine?: boolean;
     iconOnly?: boolean;
-    variant?: "default" | "inline";
+    variant?: "default" | "inline" | "emphasized";
     category?: string;
 };
 
@@ -84,10 +89,11 @@ export function VisualStatusSignal({
 }: Props) {
     const Icon = ICONS[icon];
     const styles = TONE_CLASSES[tone];
-    if (variant === "inline") {
+    if (variant === "inline" || variant === "emphasized") {
+        const emphasized = variant === "emphasized";
         const titleText = [category, label, detail].filter(Boolean).join(" · ");
-        const line = <><Icon aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0", styles.detail)} strokeWidth={1.75} />{category && <span className="w-12 shrink-0 text-xs font-normal text-slate-500">{category}</span>}<span className="min-w-0 truncate text-xs font-medium leading-5 text-slate-700">{label}</span></>;
-        const lineClass = "flex min-w-0 max-w-full items-center gap-1.5 rounded text-left";
+        const line = <><Icon aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0", emphasized ? "text-current" : styles.detail)} strokeWidth={emphasized ? 2 : 1.75} />{category && <span className="w-12 shrink-0 text-xs font-normal text-slate-500">{category}</span>}<span className={cn("min-w-0 truncate text-xs leading-5", emphasized ? "font-semibold text-current" : "font-medium text-slate-700")}>{label}</span></>;
+        const lineClass = cn("flex min-w-0 max-w-full items-center gap-1.5 rounded text-left", emphasized && EMPHASIZED_TEXT[tone]);
         return onClick ? <AdminButton variant="contextual" type="button" onClick={onClick} aria-label={titleText} title={titleText} className={cn(lineClass,"hover:text-blue-700 hover:underline [@media(pointer:coarse)]:min-h-11",className)}>{line}</AdminButton> : <span title={titleText} className={cn(lineClass,className)}>{line}</span>;
     }
     const content = (
