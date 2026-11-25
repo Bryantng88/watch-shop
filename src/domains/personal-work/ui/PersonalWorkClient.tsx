@@ -349,6 +349,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   function completeWork(item: PersonalWorkItem, finalize = false) {
+    if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isPersonalEvent(item.workType)) return;
     const done = item.status !== "DONE";
     void completionMutation.run({
       key: `complete:${item.id}`,
@@ -1026,7 +1027,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? <AdminButton variant="quiet" type="button" title="Sửa tên công việc" aria-label="Sửa tên công việc" onClick={() => setEditingTitle(value => !value)} className="max-w-full !p-0 text-left !text-lg !font-bold !leading-6">{editTitle || editingItem.title}</AdminButton> : editingItem.title}
                 </h2>
                 {editingTitle && <input autoFocus aria-label="Việc cần làm" value={editTitle} disabled={pending} onChange={event => setEditTitle(event.target.value)} onKeyDown={event => {if(event.key === "Enter"){event.preventDefault();setEditingTitle(false);}if(event.key === "Escape"){event.stopPropagation();setEditingTitle(false);}}} className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"/>}
-                <p className="mt-1 text-xs text-slate-500">{editingItem.status === "DONE" ? "Đã hoàn thành" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
+                <p className="mt-1 text-xs text-slate-500">{editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
                 {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
             </div>
@@ -1462,7 +1463,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             )}
             <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white py-3">
               <div className="ml-auto flex flex-wrap justify-end gap-2">
-                {!editingItem.checklistOnly && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
+                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="secondary" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
                 <AdminButton variant="secondary"
                   type="button"
                   disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
