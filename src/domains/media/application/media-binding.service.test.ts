@@ -42,6 +42,7 @@ test("watch media conflicts with every other active watch owner", () => {
 test("binding media realigns all active bindings for its owner before upsert", async () => {
   const calls: string[] = [];
   const db = {
+    mediaObject: { findUnique: async () => ({storageKey:"media/objects/media-1/original/image.webp"}) },
     mediaBinding: {
       findUnique: async () => {
         calls.push("findUnique");
@@ -84,6 +85,7 @@ test("binding media realigns all active bindings for its owner before upsert", a
 test("binding media skips the broad owner update when metadata is already aligned", async () => {
   let updateManyCalled = false;
   const db = {
+    mediaObject: { findUnique: async () => ({storageKey:"media/objects/media-1/original/image.webp"}) },
     mediaBinding: {
       findUnique: async () => ({ id: "binding-1" }),
       findFirst: async () => null,
@@ -106,6 +108,7 @@ test("binding media skips the broad owner update when metadata is already aligne
 test("binding media rejects another watch owner even in the same segment", async () => {
   let wrote = false;
   const db = {
+    mediaObject: { findUnique: async () => ({storageKey:"media/objects/media-1/original/image.webp"}) },
     mediaBinding: {
       findUnique: async () => null,
       findFirst: async () => ({
@@ -134,6 +137,7 @@ test("binding media rejects another watch owner even in the same segment", async
 test("an existing owner can update its lifecycle while historical drift is repaired", async () => {
   let conflictChecked = false;
   const db = {
+    mediaObject: { findUnique: async () => ({storageKey:"media/objects/media-1/original/image.webp"}) },
     mediaBinding: {
       findUnique: async () => ({ id: "binding-1" }),
       findFirst: async () => {
@@ -148,4 +152,17 @@ test("an existing owner can update its lifecycle while historical drift is repai
 
   await bindMedia(input, db as never);
   assert.equal(conflictChecked, false);
+});
+
+
+test("private work media cannot be reused by a Watch even after detaching", async () => {
+  const db = {mediaObject:{findUnique:async()=>({storageKey:"media/work/objects/private/original/image.webp"})}};
+  await assert.rejects(bindMedia(input,db as never),/Private work media/);
+});
+
+
+test("work bindings cannot share a private object with another work owner", async () => {
+  const workInput={...input,ownerType:"TASK_ITEM" as MediaOwnerType,ownerId:"work-a",audienceSegment:AudienceSegment.UNISEX};
+  const db={mediaObject:{findUnique:async()=>({storageKey:"media/work/objects/private/original/image.webp"})},mediaBinding:{findUnique:async()=>null,findFirst:async(args:{where:unknown})=>{assert.equal("audienceSegment" in (args.where as object),false);return {id:"other",ownerType:"TASK_ITEM",ownerId:"work-b",audienceSegment:"UNISEX"};}}};
+  await assert.rejects(bindMedia(workInput,db as never),/another TASK_ITEM/);
 });

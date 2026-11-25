@@ -1,8 +1,10 @@
 "use client";
 
+import { MediaProcessingIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useState } from "react";
-import { ArchiveRestore, Camera, ChevronDown, Images, Watch as WatchIcon } from "lucide-react";
+import { ArchiveRestore, Camera, ChevronDown, Watch as WatchIcon } from "lucide-react";
 import {
     BusinessListPageHeader,
 } from "@/domains/shared/ui/business-list";
@@ -141,7 +143,7 @@ export default function WatchListToolbar({
                                         : "Gửi Watch đã có ảnh sang Workspace Xử lý Media"
                                 }
                             >
-                                <Images className="mt-0.5 h-4 w-4 text-slate-500" />
+                                <MediaProcessingIcon className="mt-0.5 h-4 w-4 text-slate-500" />
                                 <span>
                                     <span className="block font-semibold text-slate-900">
                                         Gửi sang WP Xử lý Media

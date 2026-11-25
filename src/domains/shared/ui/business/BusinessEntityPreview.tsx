@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaProcessingIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -110,7 +112,7 @@ function WatchDecisionPanel({
         },
         {
             key: "media",
-            icon: ImageIcon,
+            icon: MediaProcessingIcon,
             label: "Media",
             value: `${snapshot.media.galleryCount} ảnh · ${snapshot.media.hasCover ? "Có cover" : "Thiếu cover"}`,
             detail: reviewLabel(snapshot.media.reviewStatus),
@@ -202,7 +204,7 @@ function WatchDecisionPanel({
                         ) : null}
                         {reviewContext !== "MEDIA" && !preview.mediaReview ? (
                             <AdminLinkAction variant="secondary" density="compact" href={mediaHref} className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-                                <ImageIcon className="h-3.5 w-3.5" /> Xử lý media
+                                <MediaProcessingIcon className="h-3.5 w-3.5" /> Xử lý media
                             </AdminLinkAction>
                         ) : null}
                         {reviewContext !== "CONTENT" ? (

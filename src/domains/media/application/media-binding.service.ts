@@ -1,3 +1,4 @@
+import { isWorkMediaKey } from "../core/work-media-privacy";
 import {
   AudienceSegment,
   MediaBindingLifecycle,
@@ -26,7 +27,9 @@ export function conflictingMediaBindingWhere(input: BindMediaInput) {
       ownerType: input.ownerType,
       ownerId: input.ownerId,
     },
-    ...(input.ownerType === MediaOwnerType.WATCH
+    ...(["TASK_ITEM","TASK_CHECKLIST"].includes(input.ownerType)
+      ? {}
+      : input.ownerType === MediaOwnerType.WATCH
       ? { ownerType: MediaOwnerType.WATCH }
       : { audienceSegment: { not: input.audienceSegment } }),
   };
@@ -41,6 +44,9 @@ export function activeMediaBindingsForOwnerWhere(input: BindMediaInput) {
 }
 
 export async function bindMedia(input: BindMediaInput, db: DB = prisma) {
+  const object = await db.mediaObject.findUnique({where:{id:input.mediaObjectId},select:{storageKey:true}});
+  const workOwner = ["TASK_ITEM","TASK_CHECKLIST"].includes(input.ownerType);
+  if (!object || isWorkMediaKey(object.storageKey) !== workOwner) throw new Error("Private work media cannot be rebound to another media domain.");
   const ownerBindingKey = {
     mediaObjectId: input.mediaObjectId,
     ownerType: input.ownerType,

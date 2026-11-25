@@ -3,6 +3,7 @@ import { ImageRole } from "@prisma/client";
 import { mediaStorage } from "@/domains/media/storage";
 import { prisma, type DB, dbOrTx } from "@/server/db/client";
 import { normalizeKey } from "@/server/lib/storage-key";
+import { isWorkMediaKey } from "@/domains/media/core/work-media-privacy";
 import { publicWatchEligibilityWhere } from "./public-catalog.repo";
 
 export async function signPublicWatchImage(
@@ -30,7 +31,7 @@ export async function signPublicWatchImage(
   });
 
   const key = normalizeKey(image?.fileKey);
-  if (!key || /^https?:/i.test(key)) return null;
+  if (!key || /^https?:/i.test(key) || isWorkMediaKey(key)) return null;
 
   return (options?.storage ?? mediaStorage).sign(
     key,

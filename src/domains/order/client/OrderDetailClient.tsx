@@ -17,7 +17,7 @@ import {
   OrderTimelinePanel,
   type OrderDetailData,
 } from "@/domains/order/ui/detail";
-import { ADMIN_DETAIL_CONTENT_CLASS } from "@/domains/shared/ui/layout/admin-content";
+import { AdminDetailPage, ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 
 type ActionName = "post" | "verify" | "cancel" | "serviceIntake";
 
@@ -90,12 +90,11 @@ export default function OrderDetailClient({ data, codexEnabled = false }: { data
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-16 text-slate-900">
-    <div className={`${ADMIN_DETAIL_CONTENT_CLASS} max-w-[1500px] space-y-4`}>
+    <AdminDetailPage grouped emphasis>
       <OrderHeader data={data} />
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-4">
+      <div className={detail.layout}>
+        <div className={detail.column}>
           <OrderItemsPanel data={data} />
           {codexEnabled && <OrderCodexPanel orderId={data.id} />}
           <OrderCustomerPanel data={data} />
@@ -103,13 +102,12 @@ export default function OrderDetailClient({ data, codexEnabled = false }: { data
           <OrderNotesPanel data={data} />
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-[76px] xl:self-start">
+        <aside className={detail.sidebar}>
           <OrderOpsPanel data={data} busyAction={busyAction} onAction={runAction} />
           <OrderFinancialPanel data={data} />
           <OrderStatusPanel data={data} />
         </aside>
       </div>
-    </div>
-    </main>
+    </AdminDetailPage>
   );
 }

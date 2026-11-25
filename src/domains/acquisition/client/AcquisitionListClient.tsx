@@ -251,6 +251,8 @@ export default function AcquisitionListClient(props: AcquisitionListClientProps 
                 <AcquisitionEditModal
                     open={!!editAcquisitionId}
                     acquisitionId={editAcquisitionId}
+                    canManage={Boolean(props.canManage)}
+                    canViewFinancials={Boolean(props.canViewFinancials)}
                     onClose={closeEditAcquisition}
                     onUpdated={() => router.refresh()}
                 />

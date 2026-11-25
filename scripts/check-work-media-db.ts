@@ -1,0 +1,52 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import sharp from "sharp";
+import { prisma } from "../src/server/db/client";
+import { createWorkMediaService } from "../src/domains/work-media/server/work-media.service";
+import type { MediaStorage } from "../src/domains/media/storage/media-storage.port";
+import { bindMedia } from "../src/domains/media/application/media-binding.service";
+import { registerExistingMediaObject } from "../src/domains/media/application/media-ingest.service";
+const url=new URL(process.env.DATABASE_URL||"postgresql://invalid/invalid");
+if(process.env.WORK_MEDIA_TEST_DB!=="1"||!['localhost','127.0.0.1'].includes(url.hostname)||!url.pathname.endsWith('_work_media_test'))throw new Error("Use the isolated local work_media_test database only");
+(async()=>{
+ const users=[randomUUID(),randomUUID(),randomUUID(),randomUUID()],workId=randomUUID();
+ const files=new Map<string,Uint8Array>();let failWrite=false;let afterWrite:(()=>Promise<void>)|null=null;
+ const storage={write:async({key,bytes}:{key:string;bytes:Uint8Array})=>{if(failWrite)throw Error("simulated NAS failure");files.set(key,bytes);if(afterWrite)await afterWrite();return {key,sizeBytes:bytes.length,etag:"verified",contentType:"image/webp"};},stat:async(key:string)=>files.has(key)?{key,sizeBytes:files.get(key)!.length,etag:"verified",contentType:"image/webp"}:null,read:async(key:string)=>({key,bytes:files.get(key)!,etag:"verified",contentType:"image/webp",sizeBytes:files.get(key)!.length})} as MediaStorage;
+ const service=createWorkMediaService({storage,bucket:"work-media-fixture"});
+ const auth=(index:number)=>({id:users[index],permissions:["TASK_VIEW"],roles:[]});
+ const bytes=await sharp({create:{width:20,height:10,channels:3,background:"#884422"}}).jpeg().toBuffer();
+ const input=(uploadId=randomUUID())=>({uploadId,bytes,mimeType:"image/jpeg",name:"Ảnh minh chứng.jpg"});
+ let objectIds:string[]=[];
+ try{
+  for(const [index,id] of users.entries())await prisma.user.create({data:{id,email:`work-media-${id}@example.invalid`,name:`Fixture ${index}`}});
+  await prisma.taskItem.create({data:{id:workId,title:"Work image fixture",personalOwnerUserId:users[0]}});
+  await prisma.personalTaskShare.create({data:{taskItemId:workId,userId:users[1],accessLevel:"EDITOR",sharedByUserId:users[0]}});
+  await prisma.personalTaskShare.create({data:{taskItemId:workId,userId:users[2],accessLevel:"VIEWER",sharedByUserId:users[0]}});
+  const target={workId},upload=input();const first=await service.upload(target,auth(0),upload);const repeated=await service.upload(target,auth(0),upload);
+  assert.equal(first.id,repeated.id);assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:workId}})).status,"TODO");
+  const parallel=input();const twins=await Promise.all([service.upload(target,auth(0),parallel),service.upload(target,auth(0),parallel)]);assert.equal(twins[0].id,twins[1].id);
+assert.equal((await service.list(target,auth(0))).items.length,2);assert.ok((await service.read(first.id,auth(2))).bytes.length>0);
+  assert.equal((await service.list(target,auth(2))).canEdit,false);assert.doesNotMatch(JSON.stringify(await service.list(target,auth(2))),/media\/work|storageKey|bucket/);
+  await assert.rejects(service.upload(target,auth(2),input()));await assert.rejects(service.list(target,auth(3)));await assert.rejects(service.read(first.id,{...auth(3),roles:["ADMIN"]}));
+  failWrite=true;const retry=input();await assert.rejects(service.upload(target,auth(0),retry),/thử lại/);assert.equal((await service.list(target,auth(0))).items.filter(item=>item.state==="FAILED").length,1);failWrite=false;
+  const recovered=await service.upload(target,auth(0),retry);assert.equal(recovered.state,"READY");assert.equal((await service.list(target,auth(0))).items.length,3);
+  afterWrite=async()=>{await prisma.personalTaskShare.deleteMany({where:{taskItemId:workId,userId:users[1]}});afterWrite=null;};await assert.rejects(service.upload(target,auth(1),input()),/Quyền truy cập/);await assert.rejects(service.read(first.id,auth(1)));
+  const entry=await prisma.taskItemChecklist.create({data:{taskItemId:workId,title:"Shared entry"}});const sibling=await prisma.taskItemChecklist.create({data:{taskItemId:workId,title:"Private sibling"}});
+  await prisma.personalChecklistShare.create({data:{checklistItemId:entry.id,userId:users[3],accessLevel:"EDITOR",sharedByUserId:users[0]}});
+  const entryImage=await service.upload({workId,entryId:entry.id},auth(3),input());assert.equal((await service.list({workId,entryId:entry.id},auth(3))).canEdit,true);
+  await assert.rejects(service.list(target,auth(3)));await assert.rejects(service.list({workId,entryId:sibling.id},auth(3)));await assert.rejects(service.read(first.id,auth(3)));
+  await prisma.personalChecklistShare.deleteMany({where:{checklistItemId:entry.id,userId:users[3]}});await assert.rejects(service.read(entryImage.id,auth(3)));
+  const existing=await prisma.mediaBinding.findUniqueOrThrow({where:{id:first.id},include:{mediaObject:true}});
+  await assert.rejects(bindMedia({mediaObjectId:existing.mediaObjectId,ownerType:"WATCH",ownerId:"forbidden-watch",role:"GALLERY",audienceSegment:"UNISEX"}),/Private work media/);
+  await assert.rejects(registerExistingMediaObject({storageKey:existing.mediaObject.storageKey}),/Ảnh công việc/);
+  afterWrite=async()=>{await prisma.taskItem.update({where:{id:workId},data:{status:"DONE",checklistLockedAt:new Date()}});afterWrite=null;};
+  await assert.rejects(service.upload(target,auth(0),input()),/đã khóa/);assert.equal((await service.list(target,auth(0))).canEdit,false);assert.ok((await service.read(first.id,auth(0))).bytes.length>0);
+  await assert.rejects(service.remove(first.id,auth(0)),/đã khóa/);await prisma.taskItem.update({where:{id:workId},data:{status:"TODO",checklistLockedAt:null}});
+  await service.remove(first.id,auth(0));await assert.rejects(service.read(first.id,auth(0)),/đã bị gỡ/);assert.equal(files.has(existing.mediaObject.storageKey),true);await assert.rejects(service.upload(target,auth(0),upload),/đã bị gỡ/);
+  const current=(await service.list(target,auth(0))).items.length;for(let i=current;i<20;i++)await service.upload(target,auth(0),input());await assert.rejects(service.upload(target,auth(0),input()),/tối đa 20/);
+  console.log("PASS work-media database/storage flow: enum owners, auth/share isolation, revoked read, idempotency, failure/retry, closed-work race, detach retention and Watch/public-ingest isolation");
+ }finally{
+  const bindings=await prisma.mediaBinding.findMany({where:{OR:[{ownerId:workId},{ownerType:"TASK_CHECKLIST",ownerId:{in:(await prisma.taskItemChecklist.findMany({where:{taskItemId:workId},select:{id:true}})).map(entry=>entry.id)}}]},select:{mediaObjectId:true}});objectIds=bindings.map(binding=>binding.mediaObjectId);
+  await prisma.mediaOperation.deleteMany({where:{mediaObjectId:{in:objectIds}}});await prisma.mediaBinding.deleteMany({where:{mediaObjectId:{in:objectIds}}});await prisma.mediaObject.deleteMany({where:{id:{in:objectIds}}});await prisma.taskItem.deleteMany({where:{id:workId}});await prisma.user.deleteMany({where:{id:{in:users}}});await prisma.$disconnect();
+ }
+})().catch(error=>{console.error(error);process.exitCode=1;});

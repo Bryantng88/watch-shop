@@ -1,3 +1,4 @@
+import { assertNotWorkMediaKey } from "@/domains/media/core/work-media-privacy";
 import { createHash } from "node:crypto";
 
 import sharp from "sharp";
@@ -45,6 +46,7 @@ export function nasBrowserThumbnailCacheKey(input: {
 
 function validateSourceKey(value: string) {
   const key = normalizeKey(value);
+  assertNotWorkMediaKey(key);
   if (!key || !IMAGE_EXT_RE.test(key)) throw new Error("Media thumbnail key is invalid.");
   if (key === THUMBNAIL_CACHE_ROOT || key.startsWith(`${THUMBNAIL_CACHE_ROOT}/`)) {
     throw new Error("Nested media thumbnails are not allowed.");

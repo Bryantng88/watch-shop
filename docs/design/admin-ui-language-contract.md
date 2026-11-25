@@ -1573,3 +1573,161 @@ Hai pane dùng AdminWorkspaceHeading cùng hàng 40/44px. Pane nội dung có ti
 view đang chọn, số việc và công cụ lịch; form tạo nằm dưới hàng đó, không chia cột
 với kết nối Google. Danh sách là vùng chính, lịch thu gọn mặc định; khi mở, lịch và
 kết nối Google nằm chung ở pane phụ bên phải (xuống dưới trên màn hình hẹp).
+
+
+### Record detail frame — Order and Watch (2026-11-23)
+
+Order and Watch detail pages use `AdminDetailPage` and `ADMIN_UI_FOUNDATION.page.detailMaxWidth = 1440`. This is a centered, border-box maximum including 24px horizontal gutters on desktop and 16px below 640px. The surrounding canvas is white. Reuse this recipe when migrating subsequent record pages; list workspace width is unchanged.
+
+Use breadcrumb/back navigation, a compact identity and action row, section navigation, then business sections and activity. The default compact identity thumbnail is 64px; Watch uses the shared recordImage variant at 112px on desktop / 88px below 640px for easier visual identification. Record titles use 24/32 (20/28 on mobile), body 14/20 and metadata 12/16. Keep technical IDs in a disclosure rather than permanent identity chrome.
+
+Sections are flat, without enclosing card borders, shadows or decorative header icons. Use a light bottom divider and spacing to distinguish sections. Keep one meaningful financial focus surface: remaining amount for Order, current selling price for Watch. Do not repeat totals as hero metrics and sidebar cards.
+
+The main/sidebar layout has a 320px sidebar and 28px gap only when the measured detail frame is at least 1200px wide. Measure available width with ResizeObserver before paint, including narrow hosts and 200% zoom; do not use CSS containment that traps existing fixed dialogs. Stack sections in narrower frames. Long identity, item and monetary content must wrap without horizontal page overflow.
+
+Order mutations, confirmations, pending/error feedback, status guards and service intake conditions remain unchanged. Watch pricing, image selection, related record preview and media flows retain their callbacks and permissions; financial masking remains in force. ServiceCard uses an opt-in flat presentation for Watch details; other callers retain their existing presentation.
+
+The browser regression check `scripts/check-admin-detail-ui.cjs` renders the actual Order and Watch detail components with synthetic action/auth/data ports. Cover widths 320–1920px, centered gutters, narrow hosts and 200% zoom, order state/pending/error guards, price error/retry drafts and payloads, inline image selection, related previews/media and restricted financial visibility. Its screenshots are fixture previews, not production records.
+
+### Acquisition detail — read before edit (2026-11-23)
+
+The existing acquisition entry opens a dialog, not a new full-page route. It uses the same AdminDetailPage frame, gutters, typography, flat sections and available-width stacking as Order and Watch. Show a read-only record first: identity/status, products, notes and a single remaining-payable focus. “Chỉnh thông tin” opens the existing editing controls within that frame. Keep payment totals explicitly labeled as recorded amounts while the editor shows its draft total separately.
+
+Editing requires the existing management and financial visibility props and a DRAFT or POSTED status. DRAFT retains item/image/quantity/notes editing; POSTED retains price-only editing. Other statuses remain read-only. Null financial values remain unavailable, never rendered as zero. Preserve the existing GET/PUT authorization, confirmation, full-currency payload, projection delivery wait, callbacks and draft retention on errors. Close/Escape and editable controls are locked while saving; keyboard focus remains in the dialog and returns to the trigger on close.
+
+Static WorkCase reachability and remaining legacy task/permission inconsistencies are recorded in `docs/reviews/work-case-usage-20261123.md`. This detail migration does not retire WorkCase, TaskItem infrastructure or change access policy.
+
+
+### Watch compact actions (2026-11-23)
+
+Watch related actions (Media, Service, Order and Acquisition) share a labeled action group and use the existing AdminButton quiet + iconOnly appearance: no border or raised surface, 16px icons, preserved focus/hover/touch behavior, accessible names and descriptive native title tooltips. The price edit icon stays beside its section heading and uses the same appearance. Preserve permission guards and callbacks. Other action surfaces are unchanged. Watch recordImage is 112px on desktop and 88px on mobile; do not enlarge every thumbnail globally. Watch section navigation now uses the shared record workspace described below.
+
+
+### Watch detail section workspace (2026-11-23)
+
+Within the centered record frame, keep identity/INLINE image above a shared AdminDetailWorkspace. Reuse AdminWorkspaceViewNavigation, available-width split measurement and the existing drag/keyboard separator with persisted width; on narrow hosts use the shared native section selector. Share the management style tokens without adding a second page header or nested page padding.
+
+Watch sections are Tổng quan, Nội dung & hình ảnh, Kỹ thuật and Lịch sử mua bán. Show one section at a time, retaining mounted section components so local drafts and existing Service event/portal callbacks survive navigation. Tổng quan includes price/cost information and attention links; the other sections own their corresponding full-width content. Related icon actions stay in the identity header footer, to the right of the INLINE image.
+
+Section choices update only the URL hash; support direct links and Back/Forward, preserve the path/query, and honor attention links to #content-media. Existing record permissions, callbacks and modal flows remain unchanged. Do not render hidden section controls as keyboard targets. Regression checks cover section exclusivity, direct hashes/history, desktop buttons, narrow selector, separator collapse/restore and Media interaction after switching.
+
+Watch identity header contains the image, title, compact identity/status and inline-image action only. Vendor, production year, movement and condition are descriptive specifications rather than the primary operational overview fields. Use current sale/service/consignment/stock state for the overview instead.
+
+
+### Reference recipe: framed Watch record surface (2026-11-23)
+
+Watch detail is the first reference for the framed record recipe. Opt in with `AdminDetailPage surface="record"`; default plain detail consumers (Order and Acquisition) are not migrated by this change. Subsequent detail migrations should use this shared recipe after adapting their own sections and actions.
+
+- Keep the existing centered 1440px border-box frame and outer gutters: 24px desktop / 16px below 640px. The outer canvas and the simple-profile top header use foundation canvas (white), continuous with the record content. One record group contains breadcrumb, identity and detail workspace. Inside that group use 24px desktop / 16px mobile padding, no outer radius, border or shadow; do not reintroduce a tinted canvas or floating card silhouette. This inset is record content padding, not a second page container or nested card layout.
+- Identity owns the 112px / 88px INLINE image, SKU/status, 24/32 title (20/28 mobile), model metadata and INLINE action. Keep the image action immediately below its identity metadata, not isolated at the far screen edge. Do not put the four business facts back in the identity header.
+- The shared detail workspace uses the existing 220px menu default, available-width measurement and persisted drag/keyboard resize. Desktop navigation has a subtle softSurface region with 12px padding and 8px radius, not another bordered card. Narrow hosts retain the native selector. Preserve the separator and its focus/drag behavior; do not add layout containment around dialogs.
+- Every content pane has one selected-section heading (16/24 semibold). Record-wide quiet icon actions belong to the identity footer, immediately right of the INLINE image and aligned with its bottom edge when text fits; section-specific actions such as price editing stay with their section heading. Subsections use 14/20 headings and simple spacing/light row or bottom dividers. This creates hierarchy without restoring a box around every section. Section bodies stay white.
+- Overview order: operational state, price/profit with cost breakdown, related active/completed work, actionable attention. Use two balanced financial columns on wide frames, stack them on narrow frames, align money values and retain permission masking. One blue selling-price focus is enough. Facts use the existing two/four-column responsive definition-list layout. Technical notes about projections, implementation names or how the UI checklist works do not belong in product copy.
+- Content, Service and Trade History get the full content pane. Use a distinct subsection label such as Yêu cầu dịch vụ or Giao dịch đã ghi nhận instead of repeating the selected-section heading. All sections remain mounted; hashes/history, draft values, callbacks and permission guards are unchanged.
+
+Reference verification uses the real Watch detail with synthetic data, desktop/mobile screenshots, 320–1920px layout checks, narrow hosts/200% zoom, identity/action alignment, record-surface colors and the existing mutation/preview regression checks. Screenshots demonstrate layout, not live production data.
+
+Watch identity footer groups the INLINE picker action and the related Media/Service/Order/Acquisition icons below identity metadata, to the right of the image. Use shared headerIdentityText/identityFooter classes to bottom-align on desktop and wrap naturally on narrow hosts. Media processing uses the shared MediaProcessingIcon (Images), while INLINE selection uses ImagePlus; never use the same camera glyph for both actions. Keep accessible names, tooltips, permission guards and callbacks. Do not reserve a separate content-pane row for these record actions.
+
+The Watch identity footer INLINE picker is also quiet + iconOnly (ImagePlus), with a dynamic Đổi/Thêm ảnh INLINE accessible name and matching title tooltip. Keep the visible toolbar consistently icon-only; labels remain available to assistive technology and on hover.
+
+
+### Semantic Media icon mapping (2026-11-23)
+
+The single source of truth is `src/domains/shared/ui/icons/MediaIcons.ts`. Import MediaProcessingIcon for the Media domain, MEDIA_PROCESSING stage and actions opening/sending work into the Media workspace. It resolves to Images, the existing Media domain/toolbar glyph. This includes Watch detail/list/workbench, business previews and media-review actions; do not pick Camera, ImagePlus or SlidersHorizontal independently at an entry point. Use InlineImageIcon (ImagePlus) only for selecting/replacing the INLINE identity image. Photography keeps Camera; publishing keeps Send. A photo placeholder, gallery-status signal or image-library control is not automatically a Media-processing action. Preserve action labels/tooltips, pending indicators, permissions, callbacks and icon sizing when adopting the mapping.
+
+
+### Watch overview: operational state and related work (2026-11-23)
+
+Overview prioritizes current business state over catalog specifications. Replace the old vendor/year/calibre/condition fact row with current sale state, completed/open service requests, active consignment direction and stock state. Use the authoritative Product status and Watch saleStage/stockStage. SOLD takes priority for sold/current-consignment display; do not infer a sale from a historical order or consignment from a historical acquisition. Count completed service requests in COMPLETED/DELIVERED once each, excluding canceled and unfinished requests; label them as completed requests rather than physical repairs.
+
+Show operational state first in Overview, then financials, related active/completed work groups and attention. Render at most five rows per group initially with an in-place expand/collapse action. Show title, status, assigned name and completed/updated date. Linkage comes from explicit WATCH (Watch ID or Product ID), SERVICE_REQUEST/TECHNICAL_ISSUE executions or the parent task's watch/service/issue/WorkCase relation. Include legacy business tasks only if they have no child TaskItems to avoid duplication. Exclude canceled work; do not send access notes, parent ownership data or hidden work counts to the browser.
+
+The server requires the existing TASK_VIEW capability (or Admin) before querying work and reuses authorizeTaskItemDetail, personalWorkViewAccessWhere and buildAccessWhere. Product visibility alone never grants task visibility. Personal work remains subject to its owner/share policy even for an admin viewer. No schema, mutation or permission-policy changes. Missing overview data, no task permission, empty active/completed groups and zero completed service each have distinct truthful labels; do not turn a read failure into an empty success. Header sale/stock labels use the same authoritative snapshot when available.
+
+### Work image attachments
+
+Personal Work and checklist images use the shared WorkImageAttachments component and WorkAttachmentIcon. Keep whole-work media out of checklist-only projections. Show an explicit Thêm ảnh action, private thumbnails, read-only state, pending/error/retry and confirmed remove; file choice/upload saves independently of text-form Save. Images do not imply work completion or media review/publication. Canonical storage, access and lifecycle rules are in `docs/design/work-image-attachments.md`. Never use generic Media sign URLs or the Next optimizer for private work images.
+
+
+### Record details use the shared canvas (2026-11-23)
+
+`AdminDetailPage surface="record"` uses the same white admin canvas as list pages.
+Use one thin control-border outline with square corners and 24px desktop / 16px
+mobile internal spacing to distinguish the record. Do not add a gray outer
+background, shadow, rounded card or nested section cards. Keep the light divider below the
+record header, flat content sections and white sidebar; only the active navigation
+entry uses the focus surface. Use spacing and section headings for hierarchy.
+
+
+### Detail emphasis recipe (2026-11-24)
+
+Watch detail opts into `AdminDetailPage emphasis`: the outer canvas stays white
+and has no enclosing record card. A light identity panel with one thin border,
+168px desktop / 104px mobile image, and grouped identity/actions anchors the page.
+Financials use a white bordered panel and blue sale-price focus, with the larger
+24px amount as the primary numeric emphasis. Operational state stays compact and
+related work stays flat; warning surfaces are reserved for actionable warnings.
+This opt-in does not change Order, Acquisition or list page surfaces. Cards here
+are intentional emphasis for identity and financial comparison, not a default
+for every section. Retain callbacks, permissions and responsive navigation.
+
+
+### Watch detail layered workspace (2026-11-24)
+
+For the approved Watch emphasis recipe, the shell working area below navigation
+uses the same soft surface continuously as the detail canvas. White identity,
+status, financial, related-work and attention panels have thin borders and a
+minimal 1px elevation. Header dividers define groups; data rows and supporting
+actions remain flat. Blue is reserved for the sale-price focus and selected
+navigation, semantic warning tones for actionable attention. Do not wrap the
+whole record in another card. This user-approved detail exception is isolated
+to `/admin/watches/[id]`; lists, edit forms, Ben, Order and Acquisition retain
+their current canvas. Keep shared typography, 12px surface radius, 20/16px panel
+spacing, accessible interactions and responsive navigation.
+
+
+### Watch section navigation and visual rhythm (2026-11-24)
+
+Watch detail uses shared horizontal AdminViewTabs below identity, retaining hash
+history and mounted sections. Desktop Overview has independent columns: state,
+attention and related work on the left; financials on the right. Mobile reads
+state, attention, financials, related work. Avoid equal-height stretching or
+empty rows driven by the financial card. Group borders remain at section level.
+
+Use compact identity status labels without duplicate values, semantic positive /
+negative financial accents only when the viewer can see the amounts, a larger
+media gallery, a distinct technical introduction and transaction-type icons.
+Do not invent activity, counts, charts or placeholder business data for visual
+interest. Preserve financial masking, preview callbacks and mutation guards.
+
+
+### Watch complete-detail layout (2026-11-24)
+
+Watch detail now displays all business sections together, following the approved
+production-style layout. Remove view-switching tabs and mounted hidden panels.
+The main column holds financials, content and gallery; the supporting column
+holds state, attention, technical requests, related work and transactions. Both
+columns stack on narrow hosts. Keep section-level cards, quiet rows and the
+continuous workspace canvas.
+
+Group edit, Media, technical, order and acquisition actions as quiet icon-only
+controls in the identity footer, beside INLINE selection; do not reserve a
+separate action card. Every icon/link needs an accessible name and tooltip,
+retains its original permission and callback, and uses the shared touch target.
+Show the edit link only with the existing product-update capability. Do not add
+an independent view navigation or duplicate the same metadata in multiple cards.
+
+
+### Watch identity action rail (2026-11-24)
+
+Watch identity uses a 192px desktop image, flexible identity/facts and a narrow
+right-hand action rail with one vertical divider. Keep edit, Media and technical
+as quiet icons; Order and Acquisition use the shared More menu with keyboard,
+Escape and focus-return behavior. INLINE selection overlays its image. Retain
+all permission checks, tooltips and mutation callbacks. Mobile moves actions
+below identity and uses 104px images; intermediate hosts use 168px images.
+
+Show only populated year, calibre, size and accessory facts. Do not add the
+horizontal divider above these facts; spacing is sufficient. The rail has no
+independent card/background. The record's business sections remain visible.

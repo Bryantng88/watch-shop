@@ -1,3 +1,4 @@
+import { assertNotWorkMediaKey } from "@/domains/media/core/work-media-privacy";
 import { createHash } from "node:crypto";
 import { MediaObjectAvailability } from "@prisma/client";
 import { prisma, type DB } from "@/server/db/client";
@@ -57,6 +58,7 @@ export async function registerExistingMediaObject(input: {
   derivativeRecipeHash?: string | null;
 }, db: DB = prisma) {
   const storageKey = normalizeKey(input.storageKey);
+  assertNotWorkMediaKey(storageKey);
   const metadata = await mediaStorage.stat(storageKey);
   if (!metadata) throw new Error(`Media object does not exist on NAS: ${storageKey}`);
 
