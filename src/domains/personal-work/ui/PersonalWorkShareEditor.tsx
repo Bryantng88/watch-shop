@@ -70,7 +70,7 @@ export function PersonalWorkShareEditor({ users, shares, onChange, disabled }: P
                 <option value="VIEWER">Chỉ xem</option>
                 <option value="EDITOR">Có thể sửa</option>
               </select>
-              <AdminButton variant="secondary"
+              <AdminButton iconOnly variant="quiet" density="compact"
                 type="button"
                 disabled={disabled}
                 onClick={() => onChange(shares.filter((item) => item.user.id !== share.user.id))}

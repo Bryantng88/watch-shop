@@ -1,3 +1,4 @@
+import { isWorkMediaKey } from "@/domains/media/core/work-media-privacy";
 // src/app/api/media/sign/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,6 +12,7 @@ export async function GET(req: NextRequest) {
     try {
         const key = String(req.nextUrl.searchParams.get("key") || "").trim();
         const asJson = req.nextUrl.searchParams.get("format") === "json";
+        if (isWorkMediaKey(key)) return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
 
         if (!key) {
             return NextResponse.json(
@@ -49,6 +51,7 @@ export async function HEAD(req: NextRequest) {
     try {
         const key = String(req.nextUrl.searchParams.get("key") || "").trim();
         if (!key) return new NextResponse(null, { status: 400 });
+        if (isWorkMediaKey(key)) return new NextResponse(null, { status: 404, headers: { "Cache-Control": "no-store" } });
         const media = await mediaStorage.stat(key);
         if (!media) return new NextResponse(null, { status: 404 });
         return new NextResponse(null, {

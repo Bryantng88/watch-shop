@@ -62,7 +62,7 @@ export async function assertPersonalWorkAccess(
   db: DB = prisma,
 ) {
   const userId = getAuthUserId(auth);
-  if (!userId) throw new Error("Không xác định được người dùng");
+  if (!userId) throw Object.assign(new Error("Không xác định được người dùng"), { status: 403 });
   const item = await db.taskItem.findFirst({
     where: { id: taskItemId, ...personalWorkScopeWhere },
     select: {
@@ -81,13 +81,13 @@ export async function assertPersonalWorkAccess(
       personalShares: { where: { userId }, select: { accessLevel: true }, take: 1 },
     },
   });
-  if (!item) throw new Error("Không tìm thấy công việc cá nhân");
+  if (!item) throw Object.assign(new Error("Không tìm thấy công việc cá nhân"), { status: 403 });
   const owned = isPersonalWorkOwner(item, userId);
   const sharedAccess = item.personalShares[0]?.accessLevel;
-  if (required === "OWNER" && !owned) throw new Error("Chỉ chủ sở hữu mới có thể thực hiện thao tác này");
+  if (required === "OWNER" && !owned) throw Object.assign(new Error("Chỉ chủ sở hữu mới có thể thực hiện thao tác này"), { status: 403 });
   if (required === "EDIT" && !owned && sharedAccess !== PersonalTaskShareAccess.EDITOR)
-    throw new Error("Bạn chỉ có quyền xem công việc này");
-  if (required === "VIEW" && !owned && !sharedAccess) throw new Error("Bạn không có quyền truy cập công việc này");
+    throw Object.assign(new Error("Bạn chỉ có quyền xem công việc này"), { status: 403 });
+  if (required === "VIEW" && !owned && !sharedAccess) throw Object.assign(new Error("Bạn không có quyền truy cập công việc này"), { status: 403 });
   return {
     ...item,
     userId,
@@ -533,6 +533,7 @@ export async function updatePersonalWorkItem(
     progressPercent?: number;
     progressMode?: TaskProgressMode;
     updateBody?: string | null;
+    updateChecklistItemId?: string | null;
   },
   auth: unknown,
   db: DB = prisma,
@@ -587,7 +588,16 @@ export async function updatePersonalWorkItem(
         ).values(),
       ]
     : null;
+  if (input.updateChecklistItemId && (event || !input.updateBody?.trim())) throw new Error("Chọn đầu việc cần kèm nội dung cập nhật cho công việc.");
   await withDbTransaction(db, async (tx) => {
+    let updateEntry: { id: string; title: string } | null = null;
+    if (input.updateChecklistItemId) {
+      await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
+      await assertPersonalWorkAccess(input.id, auth, "EDIT", tx);
+      await assertPersonalChecklistEdit(input.id, input.updateChecklistItemId, auth, tx);
+      updateEntry = await tx.taskItemChecklist.findFirst({ where: { id: input.updateChecklistItemId, taskItemId: input.id }, select: { id: true, title: true } });
+      if (!updateEntry) throw new Error("Đầu việc không còn tồn tại. Chọn lại mục cập nhật.");
+    }
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
@@ -618,9 +628,10 @@ export async function updatePersonalWorkItem(
           taskItemId: input.id,
           sourceType: "DISCUSSION",
           actorUserId: current.userId,
-          title: event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          title: updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
           body: input.updateBody?.trim() || null,
           metadataJson: {
+            ...(updateEntry ? { checklistItemId: updateEntry.id, checklistTitle: updateEntry.title } : {}),
             ...(status ? { status } : {}),
             ...(progressPercent !== undefined ? { progressPercent } : {}),
           },
@@ -738,14 +749,19 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
   });
 }
 
-async function assertPersonalChecklistEdit(taskItemId:string,checklistItemId:string,auth:unknown,db:DB=prisma) {
+export async function assertPersonalChecklistAccess(taskItemId:string,checklistItemId:string,auth:unknown,required:"VIEW"|"EDIT"="VIEW",db:DB=prisma) {
   const userId=getAuthUserId(auth);
-  if(!userId)throw new Error("Không xác định được người dùng");
+  if(!userId)throw Object.assign(new Error("Không xác định được người dùng"), { status: 403 });
   const item=await db.taskItem.findFirst({where:{id:taskItemId,...personalWorkScopeWhere},include:{task:true,personalShares:{where:{userId}},checklists:{where:{id:checklistItemId},include:{personalShares:{where:{userId}}}}}});
-  if(!item || !item.checklists.length)throw new Error("Không tìm thấy đầu việc");
-  const allowed=isPersonalWorkOwner(item,userId)||item.personalShares.some(s=>s.accessLevel==="EDITOR")||item.checklists[0].personalShares.some(s=>s.accessLevel==="EDITOR");
-  if(!allowed)throw new Error("Bạn không có quyền cập nhật đầu việc này");
-  return {...item,userId};
+  if(!item || !item.checklists.length)throw Object.assign(new Error("Không tìm thấy đầu việc"), { status: 403 });
+  const canEdit=isPersonalWorkOwner(item,userId)||item.personalShares.some(s=>s.accessLevel==="EDITOR")||item.checklists[0].personalShares.some(s=>s.accessLevel==="EDITOR");
+  const allowed=required === "EDIT" ? canEdit : isPersonalWorkOwner(item,userId)||item.personalShares.length>0||item.checklists[0].personalShares.length>0;
+  if(!allowed)throw Object.assign(new Error("Bạn không có quyền cập nhật đầu việc này"), { status: 403 });
+  return {...item,userId,canEdit};
+}
+
+async function assertPersonalChecklistEdit(taskItemId:string,checklistItemId:string,auth:unknown,db:DB=prisma) {
+  return assertPersonalChecklistAccess(taskItemId,checklistItemId,auth,"EDIT",db);
 }
 
 export async function replacePersonalChecklistShares(taskItemId:string,checklistItemId:string,shares:ShareInput[],auth:unknown) {

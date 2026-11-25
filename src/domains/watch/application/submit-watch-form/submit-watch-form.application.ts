@@ -421,8 +421,13 @@ export async function submitWatchFormApplication(
     if (!productId) {
         throw new Error("Thiếu productId khi lưu watch.");
     }
+    const workspacePart = values.saveIntent === "MEDIA_WORKSPACE" ? values.mediaWorkspacePart : undefined;
+    if (workspacePart && !["profile","content","image"].includes(workspacePart)) throw new Error("Cover được lưu qua thao tác xác nhận ảnh riêng.");
+    const writeProfile = !workspacePart || workspacePart === "profile";
+    const writeContent = !workspacePart || workspacePart === "content";
+    const writeImages = !workspacePart || workspacePart === "image";
     const goldWeightGrams = String(values.spec.goldWeightGrams ?? "").trim();
-    if (goldWeightGrams && (!Number.isFinite(Number(goldWeightGrams)) || Number(goldWeightGrams) < 0)) {
+    if (writeProfile && goldWeightGrams && (!Number.isFinite(Number(goldWeightGrams)) || Number(goldWeightGrams) < 0)) {
         throw new Error("Trọng lượng vàng phải là số không âm.");
     }
     const current = await prisma.watch.findUnique({
@@ -447,14 +452,14 @@ export async function submitWatchFormApplication(
         throw new Error("Không tìm thấy watch.");
     }
 
-    const nextTitle = textOrUndefined(values.basic.title) ?? current.product.title;
+    const nextTitle = writeProfile ? textOrUndefined(values.basic.title) ?? current.product.title : current.product.title;
     const storefrontSlug = resolveWatchStorefrontSlug({
         title: nextTitle,
         productId,
         currentSlug: current.product.slug,
         publishedAt: current.product.publishedAt,
     });
-    const nextHookText = syncStorefrontProductUrl(values.content.hookText, storefrontSlug);
+    const nextHookText = writeContent ? syncStorefrontProductUrl(values.content.hookText, storefrontSlug) : current.watchContent?.hookText || "";
 
     const beforeContent = buildContentSnapshot({
         titleOverride: current.watchContent?.titleOverride,
@@ -485,7 +490,7 @@ export async function submitWatchFormApplication(
     const isMediaWorkspaceSave = saveIntent === "MEDIA_WORKSPACE";
 
     const afterContent =
-        saveIntent === "SUBMIT_IMAGE"
+        (!writeContent || saveIntent === "SUBMIT_IMAGE")
             ? beforeContent
             : buildContentSnapshot({ ...values.content, hookText: nextHookText });
     const beforeImageKeys = normalizeImageKeys(
@@ -509,10 +514,10 @@ export async function submitWatchFormApplication(
     // pool, not a transfer that consumes or deletes the source originals.
     const remainingPoolImages = mediaChanges.pool;
     const contentChanged = !sameJson(mediaContentValues(beforeContent), mediaContentValues(afterContent));
-    const imagesChanged = saveIntent === "SUBMIT_CONTENT"
+    const imagesChanged = !writeImages || saveIntent === "SUBMIT_CONTENT"
         ? false
         : mediaChanges.galleryChanged;
-    const poolChanged = mediaChanges.poolChanged;
+    const poolChanged = writeImages && mediaChanges.poolChanged;
 
     const contentReviewStatus = String(
         current.reviewStates.find((item: any) => item.targetType === "CONTENT")
@@ -544,25 +549,27 @@ export async function submitWatchFormApplication(
     }
 
     await prisma.$transaction(async (tx) => {
-        const brand = values.basic.brandId
+        const brand = writeProfile && values.basic.brandId
             ? await tx.brand.findUnique({
                 where: { id: values.basic.brandId },
                 select: { id: true, name: true },
             })
             : null;
 
-        if (values.basic.brandId && !brand) {
+        if (writeProfile && values.basic.brandId && !brand) {
             throw new Error("Brand không hợp lệ.");
         }
 
-        const safeSku = await resolveSubmittedWatchSku(tx, {
+        const safeSku = writeProfile ? await resolveSubmittedWatchSku(tx, {
             productId,
             submittedSku: values.header.sku,
             currentBrandId: current.product.brandId ?? null,
             nextBrandId: values.basic.brandId || null,
             brandName: brand?.name ?? values.spec.specBrand ?? null,
-        });
+        }) : current.product.sku;
 
+        let postTargetsResult = {changed:false,postTargetIds:[] as string[]};
+        if (writeProfile) {
         await tx.product.update({
             where: { id: productId },
             data: {
@@ -581,7 +588,7 @@ export async function submitWatchFormApplication(
             },
         });
 
-        const postTargetsResult = await syncProductPostTargets(tx, {
+        postTargetsResult = await syncProductPostTargets(tx, {
             productId,
             postTargetIds: values.basic.postTargetIds ?? [],
         });
@@ -608,6 +615,7 @@ export async function submitWatchFormApplication(
             },
         });
 
+        }
         const specData = {
             brand: brand?.name ?? null,
             model: values.spec.model || null,
@@ -678,7 +686,7 @@ export async function submitWatchFormApplication(
             conditionGrade: values.basic.conditionGrade,
             complicationNames: values.spec.complicationNames,
         });
-        const specChanged = !sameJson(beforeSpec, afterSpec);
+        const specChanged = writeProfile && !sameJson(beforeSpec, afterSpec);
 
         const beforeProfile = mediaProfileValues({
             basic: {...current, title: current.product.title, brandId: current.product.brandId, vendorId: current.product.vendorId, categoryId: current.product.categoryId},
@@ -686,7 +694,8 @@ export async function submitWatchFormApplication(
             sku: current.product.sku,
         });
         const afterProfile = mediaProfileValues({basic: {...values.basic, title: nextTitle, postTargetIds: []}, spec: {...specData, complicationNames: values.spec.complicationNames}, sku: safeSku});
-        const profileChanged = postTargetsResult.changed || !sameJson(beforeProfile, afterProfile);
+        const profileChanged = writeProfile && (postTargetsResult.changed || !sameJson(beforeProfile, afterProfile));
+        if (writeProfile) {
         await tx.watchSpecV2.upsert({
             where: { watchId: current.id },
             create: { watchId: current.id, ...specData },
@@ -716,6 +725,8 @@ export async function submitWatchFormApplication(
             },
         });
 
+        }
+        if (writeContent) {
         await tx.watchContent.upsert({
             where: { watchId: current.id },
             create: {
@@ -736,6 +747,7 @@ export async function submitWatchFormApplication(
             } as any,
         });
 
+        }
         if(profileChanged || contentChanged)await saveWatchMediaWorkDraftFromWatch({productId,actorUserId:context.userId,parts:{...(profileChanged?{profile:false}:{}),...(contentChanged?{content:false}:{})},note:"Nội dung đã thay đổi; lưu bản nháp và cần xác nhận hoàn tất lại."},tx);
         if (contentChanged) {
             await emitWatchContentModifiedEvent(tx, {
@@ -780,8 +792,8 @@ export async function submitWatchFormApplication(
         });
     }
 
-    let normalizedGalleryImages = requestedGalleryImages;
-    let normalizedPoolImages = remainingPoolImages;
+    let normalizedGalleryImages = writeImages ? requestedGalleryImages : current.product.productImage.map(image=>({key:image.fileKey,sortOrder:image.sortOrder}));
+    let normalizedPoolImages = writeImages ? remainingPoolImages : beforePoolKeys.map(key=>({key}));
 
     if (poolChanged && !imagesChanged) {
         // Existing final Gallery assets must not be re-ingested or demoted to
@@ -867,7 +879,7 @@ export async function submitWatchFormApplication(
         );
     }
 
-    const pricingResult = context.canEditPrice
+    const pricingResult = context.canEditPrice && writeProfile
         ? await prisma.$transaction(async (tx) => {
             const result = await updateWatchPricingWithDiff(productId, {
                 salePrice: values.pricing.salePrice,

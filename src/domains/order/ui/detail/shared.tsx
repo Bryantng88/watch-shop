@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminDetailSection, ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import type { ReactNode } from "react";
 import { Badge } from "@/domains/shared/ui/badge/Badge";
 import { cx, fmtDate, fmtMoney } from "@/domains/order/ui/order-ui.helpers";
@@ -7,35 +8,10 @@ import { getOrderInventoryEffect, getOrderStatusLabel } from "@/domains/order/sh
 
 export { cx, fmtDate, fmtMoney };
 
-export function SectionCard({
-  icon,
-  title,
-  subtitle,
-  children,
-  actions,
-}: {
-  icon: ReactNode;
-  title: string;
-  subtitle?: string;
-  children: ReactNode;
-  defaultOpen?: boolean;
-  actions?: ReactNode;
+export function SectionCard({ id, title, subtitle, children, actions }: {
+  id?: string; icon: ReactNode; title: string; subtitle?: string; children: ReactNode; defaultOpen?: boolean; actions?: ReactNode;
 }) {
-  return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="text-violet-600">{icon}</span>
-          <div className="min-w-0">
-            <h2 className="text-sm font-bold text-slate-950">{title}</h2>
-            {subtitle ? <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p> : null}
-          </div>
-        </div>
-        {actions}
-      </header>
-      <div className="p-5">{children}</div>
-    </section>
-  );
+  return <AdminDetailSection id={id} title={title} description={subtitle} actions={actions}>{children}</AdminDetailSection>;
 }
 
 export type OrderDetailItem = {
@@ -150,8 +126,8 @@ export function OrderStateBadge({ status }: { status?: string | null }) {
 export function DetailText({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) {
   return (
     <div className="space-y-1.5">
-      <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-400">{label}</div>
-      <div className={cx("text-sm leading-6 text-slate-900", mono && "font-mono text-[13px]")}>{value || "-"}</div>
+      <div className={detail.metadata}>{label}</div>
+      <div className={cx("text-sm leading-6 text-slate-900", mono && "break-all")}>{value || "-"}</div>
     </div>
   );
 }

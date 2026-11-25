@@ -14,7 +14,7 @@ import Money from './src/domains/acquisition/ui/shared/AcquisitionMoneyInput';
 import {PersonalChecklistShare} from './src/domains/personal-work/ui/PersonalChecklistShare';
 const vi={id:'vi',name:'Vi',email:'vi@example.invalid'};
 function App(){const [shares,setShares]=useState([]);const [money,setMoney]=useState(2500000);const mode=new URLSearchParams(location.search).get('mode');
-if(mode==='edit')return <Edit open acquisitionId="fixture" onClose={()=>{}}/>;
+if(mode==='edit')return <Edit open acquisitionId="fixture" canManage canViewFinancials onClose={()=>{}}/>;
 if(mode==='money')return <><Money label="Số tiền" value={money} currency={new URLSearchParams(location.search).get('currency')||'VND'} onChange={v=>{setMoney(v);window.__amount=v}}/><button>Rời ô</button></>;
 if(mode==='share')return <div style={{display:'flex',justifyContent:'flex-end',padding:32}}><PersonalChecklistShare users={[vi]} shares={shares} onSave={async next=>{window.__calls=(window.__calls||0)+1;await new Promise(r=>setTimeout(r,50));if(window.__fail)throw new Error('Không lưu được');window.__shares=next;setShares(next)}}/></div>;
 return <Form vendors={[{id:'vendor',name:'Vendor mẫu'}]} canApprove={false}/>;}
@@ -93,6 +93,7 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     await page.getByRole('button',{name:'Lưu phiếu nhập',exact:true}).click();await page.getByText('Đã lưu phiếu mẫu').waitFor();
     assert.equal(created.items[0].quickInput,'Tên mình vừa sửa');assert.equal(created.items[0].cost,1500000);assert.equal(created.items[1].imageKey,'media/men/inline/replaced.jpg');assert.equal(created.items[2].quickInput,'Seiko 5 7009 Automatic');
     await page.goto(origin + '/?mode=edit');
+    await page.getByRole('button', { name: 'Chỉnh thông tin', exact: true }).click();
     const editCost = page.getByRole('textbox', { name: 'Giá nhập Seiko mẫu', exact: true });
     await editCost.waitFor(); assert.equal(await editCost.inputValue(), '2500');
     await Promise.all([page.waitForResponse(response => response.url().endsWith('/fixture/edit') && response.request().method() === 'PUT'), page.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click()]);

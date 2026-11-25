@@ -829,6 +829,7 @@ export default function WatchBasicSection({
               </div>
               <div className="mt-3 flex justify-end">
                 <Button
+                  variant="outline"
                   type="button"
                   onClick={installSelectedStrap}
                   disabled={!selectedStrapId || installingStrap}

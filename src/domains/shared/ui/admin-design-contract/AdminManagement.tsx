@@ -8,8 +8,7 @@ import { ADMIN_PRIMARY_ACTION, ADMIN_PRIMARY_ACTION_STYLE } from "./AdminPrimary
 import styles from "./AdminManagement.module.css";
 export { styles as ADMIN_MANAGEMENT };
 
-export function AdminManagementPage({ title, eyebrow, description, actions, children }: { title: string; eyebrow?: string; description?: string; actions?: ReactNode; children: ReactNode }) {
-  const variables = {
+export const ADMIN_MANAGEMENT_STYLE = {
     "--am-font": f.fontFamily, "--am-success": f.colors.success, "--am-text": f.colors.text, "--am-body": f.colors.body, "--am-muted": f.colors.muted,
     "--am-line": f.colors.divider, "--am-border": f.colors.controlBorder, "--am-soft": f.colors.softSurface,
     "--am-ring": f.colors.focusRing, "--am-primary": f.colors.primary, "--am-hover": f.colors.primaryHover,
@@ -18,7 +17,9 @@ export function AdminManagementPage({ title, eyebrow, description, actions, chil
     "--am-radius": `${f.radius.control}px`, "--am-control": `${f.controls.height}px`,
     "--am-touch": `${f.controls.touchMinHeight}px`, "--am-section": `${f.spacing.section}px`,
   } as CSSProperties;
-  return <div style={variables}>
+
+export function AdminManagementPage({ title, eyebrow, description, actions, children }: { title: string; eyebrow?: string; description?: string; actions?: ReactNode; children: ReactNode }) {
+  return <div style={ADMIN_MANAGEMENT_STYLE}>
     <AdminPageCanvas className={styles.page}><div className={styles.flow}>
       <AdminPageHeader variant="workspace" title={title} eyebrow={eyebrow} description={description} meta={actions} />
       {children}

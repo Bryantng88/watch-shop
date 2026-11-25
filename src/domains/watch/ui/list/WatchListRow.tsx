@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaProcessingIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -10,7 +12,6 @@ import {
     Hammer,
     HandCoins,
     ImageIcon,
-    ImagePlus,
     CopyX,
     Pencil,
     RotateCcw,
@@ -234,7 +235,7 @@ function SaleStatusBadge({
 
     return (
         <VisualStatusSignal
-            variant="inline"
+            variant={normalized === "SOLD" ? "emphasized" : "inline"}
             label={({ READY: "Chưa bán", SOLD: "Đã bán", HOLD: "Giữ hàng", PROCESSING: "Chưa bán · Đang chuẩn bị", CONSIGNED: "Đang ký gửi", CONSIGNED_TO: "Đang ký gửi" } as Record<string, string>)[normalized] ?? (label || "Chưa rõ trạng thái bán")}
             detail={config.detail}
             tone={config.tone}
@@ -502,7 +503,7 @@ export default function WatchListRow({
         onMedia && {
             key: "media-space",
             label: "Xử lý nhanh Media",
-            icon: <ImagePlus className="h-4 w-4" />,
+            icon: <MediaProcessingIcon className="h-4 w-4" />,
             onClick: onMedia,
             disabled: mediaSubmitting,
         },

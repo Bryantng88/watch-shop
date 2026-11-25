@@ -266,7 +266,7 @@ export default function WatchContentSection({
                     />
                 ) : null}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-indigo-50/60 p-4 ring-1 ring-inset ring-indigo-100">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 py-3">
                     <div>
                         <div className="text-sm font-semibold text-slate-900">
                             Gen nhanh nội dung bán hàng
@@ -279,28 +279,31 @@ export default function WatchContentSection({
 
                     <div className="flex flex-wrap gap-2">
                         <Button
+                            variant="ghost"
                             type="button"
                             disabled={locked}
                             onClick={handleGenerateTitle}
-                            className="shrink-0"
+                            className="shrink-0 [@media(pointer:coarse)]:min-h-11"
                         >
                             <WandSparkles className="mr-2 h-4 w-4" />
                             Gen title
                         </Button>
                         <Button
+                            variant="ghost"
                             type="button"
                             disabled={locked}
                             onClick={handleGenerateHook}
-                            className="shrink-0"
+                            className="shrink-0 [@media(pointer:coarse)]:min-h-11"
                         >
                             <WandSparkles className="mr-2 h-4 w-4" />
                             Gen hook
                         </Button>
                         <Button
+                            variant="ghost"
                             type="button"
                             disabled={locked}
                             onClick={handleGenerateBullets}
-                            className="shrink-0"
+                            className="shrink-0 [@media(pointer:coarse)]:min-h-11"
                         >
                             <WandSparkles className="mr-2 h-4 w-4" />
                             Gen bullet specs
@@ -389,11 +392,11 @@ export default function WatchContentSection({
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <FieldLabel>Bullet specs</FieldLabel>
 
-                        <AdminButton variant="quiet" density="compact"
+                        <AdminButton variant="contextual" density="compact"
                             type="button"
                             onClick={addBullet}
                             disabled={locked}
-                            className="text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="min-h-8 text-xs font-medium text-indigo-600 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:min-h-11"
                         >
                             + Thêm bullet
                         </AdminButton>

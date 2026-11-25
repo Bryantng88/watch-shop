@@ -18,9 +18,10 @@ type ToastItem = {
     title?: string;
     message: string;
     duration: number;
+    density?: "compact";
 };
 
-export type NotifyInput = string | { title?: string; message?: string; duration?: number };
+export type NotifyInput = string | { title?: string; message?: string; duration?: number; density?: "compact" };
 
 type NotifyApi = {
     success: (input: NotifyInput) => void;
@@ -44,10 +45,11 @@ const ToastContext = createContext<NotifyApi | null>(null);
 
 function normalizeInput(input: NotifyInput) {
     if (typeof input === "string") {
-        return { message: input, duration: DEFAULT_DURATION };
+        return { message: input, duration: DEFAULT_DURATION, density: undefined };
     }
 
     return {
+        density: input.density,
         title: input.title,
         message: input.message ?? input.title ?? "",
         duration: input.duration ?? DEFAULT_DURATION,
@@ -93,7 +95,7 @@ function ToastCard({ item, onClose }: { item: ToastItem; onClose: (id: string) =
 
     return (
         <div
-            className={`pointer-events-auto rounded-xl border px-4 py-3 shadow-lg backdrop-blur transition ${styles.wrap}`}
+            className={`pointer-events-auto border transition ${item.density === "compact" ? "rounded-lg px-3 py-2 shadow-sm" : "rounded-xl px-4 py-3 shadow-lg backdrop-blur"} ${styles.wrap}`}
             role="status"
             aria-live="polite"
         >
@@ -105,7 +107,7 @@ function ToastCard({ item, onClose }: { item: ToastItem; onClose: (id: string) =
                     <div className={`text-sm leading-5 ${styles.text}`}>{item.message}</div>
                 </div>
 
-                <AdminButton variant="secondary"
+                <AdminButton variant={item.density === "compact" ? "quiet" : "secondary"} iconOnly={item.density === "compact"} density={item.density === "compact" ? "compact" : undefined}
                     type="button"
                     onClick={() => onClose(item.id)}
                     className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-black/5 hover:text-slate-700"
@@ -132,6 +134,7 @@ export function AppToastProvider({ children }: { children: React.ReactNode }) {
             const item: ToastItem = {
                 id,
                 kind,
+                density: normalized.density,
                 title: normalized.title,
                 message: normalized.message,
                 duration: normalized.duration,

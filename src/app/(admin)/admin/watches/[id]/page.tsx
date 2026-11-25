@@ -1,3 +1,5 @@
+import { prisma } from "@/server/db/client";
+import { getWatchOperationalOverview } from "@/domains/watch/server/detail/watch-operational-overview.service";
 import { notFound } from "next/navigation";
 import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
@@ -158,6 +160,11 @@ export default async function WatchDetailPage({
         ]);
 
     if (!detail) notFound();
+    const operationalOverview = await getWatchOperationalOverview(prisma, id, {
+        id: user.id,
+        permissions: normalizeAuthValues(user.permissions),
+        roles: normalizeAuthValues(user.roles),
+    }, serviceProjection);
     const mayViewCost = canViewCost(user);
     const mayEditPrice = canEditPrice(user);
     const safeDetail = mayViewCost ? detail : scrubSensitivePrice(detail);
@@ -168,6 +175,7 @@ export default async function WatchDetailPage({
     return (
         <WatchDetailUiProposal
             detail={serialize(safeDetail)}
+            operationalOverview={operationalOverview ?? undefined}
             service={serialize(serviceProjection)}
             tradeHistory={serialize(safeTradeHistory)}
             canViewFinancials={mayViewCost}

@@ -52,7 +52,7 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
   }
 
   return <span ref={root} className="relative shrink-0">
-    <AdminButton iconOnly variant="secondary" density="compact" ref={trigger} type="button" aria-label="Chia sẻ đầu việc" aria-expanded={open} aria-haspopup="dialog"
+    <AdminButton iconOnly variant="quiet" density="compact" ref={trigger} type="button" aria-label="Chia sẻ đầu việc" aria-expanded={open} aria-haspopup="dialog"
       title={shares.length ? shares.map(s => s.user.name || s.user.email).join(", ") : "Chia sẻ đầu việc"}
       onClick={() => { if (!busy) { setDraft(shares); setError(""); setOpen(!open); } }}
       className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md hover:bg-slate-100 ${shares.length ? "text-violet-600" : "text-slate-400"}`}>
@@ -68,7 +68,7 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
           <option value="">+ Chia sẻ đầu việc</option>
           {users.filter(u => !draft.some(s => s.user.id === u.id)).map(u => <option key={u.id} value={u.id}>{u.name || u.email}</option>)}
         </select>
-        <AdminButton iconOnly variant="secondary" density="compact" type="button" disabled={busy} aria-label="Đóng chia sẻ đầu việc" onClick={() => { setOpen(false); trigger.current?.focus(); }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-slate-50">
+        <AdminButton iconOnly variant="quiet" density="compact" type="button" disabled={busy} aria-label="Đóng chia sẻ đầu việc" onClick={() => { setOpen(false); trigger.current?.focus(); }} className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-slate-50">
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
         </AdminButton>
       </span>
@@ -81,7 +81,7 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
             className="h-8 max-w-28 rounded-md bg-transparent text-xs text-slate-500 outline-none focus:ring-2 focus:ring-slate-200">
             <option value="VIEWER">Chỉ xem</option><option value="EDITOR">Cập nhật</option>
           </select>
-          <AdminButton iconOnly variant="secondary" density="compact" type="button" disabled={busy} aria-label={`Bỏ chia sẻ đầu việc với ${name}`} onClick={() => void save(draft.filter(s => s.user.id !== share.user.id))}
+          <AdminButton iconOnly variant="quiet" density="compact" type="button" disabled={busy} aria-label={`Bỏ chia sẻ đầu việc với ${name}`} onClick={() => void save(draft.filter(s => s.user.id !== share.user.id))}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-600"><X className="h-3 w-3" /></AdminButton>
         </span>;
       })}</span>}

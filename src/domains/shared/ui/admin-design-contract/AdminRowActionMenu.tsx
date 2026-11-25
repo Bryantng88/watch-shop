@@ -27,11 +27,16 @@ export function AdminRowActionMenu({ label, status, actions, disabled = false, t
       const gutter = F.floating.viewportGutter;
       setPosition({ left: Math.max(gutter, Math.min(rect.right - panel.offsetWidth, innerWidth - panel.offsetWidth - gutter)), top: Math.max(gutter, Math.min(rect.bottom + F.floating.popoverGap, innerHeight - panel.offsetHeight - gutter)) });
     }
-    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
     const outside = (event: PointerEvent | FocusEvent) => {
       if (event.target instanceof Node && !trigger.current?.contains(event.target) && !menu.current?.contains(event.target)) setOpen(false);
     };
-    const scroll = (event: Event) => { if (!(event.target instanceof Node) || !menu.current?.contains(event.target)) setOpen(false); };
+    const scroll = (event: Event) => {
+      if (event.target instanceof Node && menu.current?.contains(event.target)) return;
+      const current = trigger.current?.getBoundingClientRect();
+      // A queued auto-scroll event can arrive after opening; close only if the anchor moved.
+      if (event.type === "resize" || !rect || !current || Math.abs(current.top - rect.top) > 1 || Math.abs(current.left - rect.left) > 1) setOpen(false);
+    };
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setOpen(false); trigger.current?.focus(); } };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("focusin", outside);

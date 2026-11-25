@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Real-component browser fixture and isolated synthetic action ports. */
 // Production PersonalWorkClient with synthetic work and stubbed server actions only.
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -5,10 +6,10 @@ const http = require('node:http');
 const path = require('node:path');
 const esbuild = require('./lib/admin-fixture-esbuild.cjs');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
-async function buildFixture() {
+async function buildFixture({ realFeedback = false } = {}) {
   const root = path.resolve(__dirname, '..');
   const photo='data:image/jpeg;base64,'+(await fs.readFile(path.join(root,'public/temp_watch.jpg'))).toString('base64');
-  const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {PersonalWorkClient} from './src/domains/personal-work/ui/PersonalWorkClient';import {checklistOnlyWork} from './src/domains/personal-work/shared/checklist-share-projection';
+  const entry = `import React from 'react';import {createRoot} from 'react-dom/client';import {PersonalWorkClient} from './src/domains/personal-work/ui/PersonalWorkClient';import {AppToastProvider} from './src/domains/shared/feedback/AppToastProvider';import {checklistOnlyWork} from './src/domains/personal-work/shared/checklist-share-projection';
 const workObject={type:'WATCH',id:'watch-fixture',label:'Seiko Diver',secondary:'SEI-001',href:'/admin/watches/product-fixture',imageUrl:${JSON.stringify(photo)}};
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok'}).format(new Date());const yesterday=new Date(Date.parse(today+'T00:00:00Z')-86400000).toISOString().slice(0,10);const now=Date.now();
 const sampleAvatar='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#dce7ed"/><path d="M7 80c0-23 13-34 33-34s33 11 33 34" fill="#334155"/><ellipse cx="40" cy="32" rx="18" ry="23" fill="#e6b493"/><path d="M21 31C15 4 62 0 59 31l-10-9-18 2z" fill="#302b2a"/><path d="M34 43q6 4 12 0" fill="none" stroke="#9b6452" stroke-width="2"/></svg>');
@@ -20,21 +21,22 @@ const data={currentUserId:'long',availableUsers:[vi,nam,hoa],categories:[general
 data.items.push(checklistOnlyWork({...data.items[0],id:'shared',personalWorkNumber:40,title:'Đầu việc được chia sẻ chỉ xem',owner:vi},[{id:'visible-step',title:'Đầu việc của bạn',isDone:false,access:new URLSearchParams(location.search).has('entryEditor')?'EDITOR':'VIEWER'}]));
 if(new URLSearchParams(location.search).has('calendarFault'))Object.assign(data.calendar,{configured:true,connected:true,accountEmail:'fixture@example.invalid'});
 if(new URLSearchParams(location.search).has('fullShare'))data.items.push({...data.items[0],id:'shared-full',personalWorkNumber:41,title:'Theo dõi khách hàng được chia sẻ',owner:vi,access:'VIEWER',assignedToMe:false,checklistOnly:false,checklist:[],sharedWith:[]});
-window.__fixture=data;const root=createRoot(document.getElementById('root'));window.__renderFixture=()=>root.render(<PersonalWorkClient data={window.__fixture}/>);window.__renderFixture();`;
+window.__fixture=data;const root=createRoot(document.getElementById('root'));window.__renderFixture=()=>root.render(<AppToastProvider><PersonalWorkClient data={window.__fixture}/></AppToastProvider>);window.__renderFixture();`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, outfile: '/tmp/work-responsive/app.js', bundle: true, platform: 'browser', jsx: 'automatic', write: false, define: { 'process.env.NODE_ENV': '"production"' }, plugins: [{ name: 'fixture', setup(build) {
     build.onResolve({ filter: /^next\/(navigation|link|image)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onResolve({ filter: /^@\/domains\/shared\/feedback$/ }, () => ({ path: 'feedback', namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'feedback' ? `const dialog={confirm:async()=>true,alert:async()=>{}};export const useAppDialog=()=>dialog;` : args.path.endsWith('navigation') ? `const params=new URLSearchParams(location.search);if(!params.has('full'))params.set('view','list');const router={refresh(){window.__refreshed=true;window.__renderFixture?.()},push(path){window.__route=path},replace(){}};export const useRouter=()=>router;export const useSearchParams=()=>params;` : args.path.endsWith('link') ? `import React from 'react';export default function Link({children,href,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}` : `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`, loader: 'tsx', resolveDir: root }));
-    build.onLoad({ filter: /\/personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
-    build.onLoad({ filter: /\/AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;`, loader: 'js' }));
+    build.onLoad({ filter: /[\\/]personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if(input?.status||'${m[1]}'==='finalizePersonalWorkChecklistAction'){await new Promise(resolve=>setTimeout(resolve,window.__completionDelay||150));if(window.__completionError)throw new Error('Không thể hoàn thành công việc. Vui lòng thử lại.');}if('${m[1]}'==='updatePersonalWorkAction'&&window.__saveError)throw Object.assign(new Error('An error occurred in the Server Components render.'),{digest:'synthetic'});if('${m[1]}'==='updatePersonalWorkAction'&&input?.id&&window.__fixture){window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.id?{...item,...input}:item)}}if('${m[1]}'==='finalizePersonalWorkChecklistAction')window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input?{...item,status:'DONE',checklistLockedAt:new Date().toISOString()}:item)};if('${m[1]}'==='togglePersonalWorkChecklistItemAction')window.__fixture={...window.__fixture,items:window.__fixture.items.map(item=>item.id===input.taskItemId?{...item,checklist:item.checklist.map(entry=>entry.id===input.checklistItemId?{...entry,isDone:input.isDone}:entry)}:item)};if('${m[1]}'==='updatePersonalWorkAction'||'${m[1]}'==='finalizePersonalWorkChecklistAction')return {ok:true,calendarSync:window.__calendarStatus||'NOT_LINKED'};return [];}`).join('\n'), loader: 'js' }; });
+    if(!realFeedback)build.onLoad({ filter: /[\\/]AppToastProvider\.tsx$/ }, () => ({ contents: `const notify={success(){},warning(){},error(x){window.__toastError=x}};export const useNotify=()=>notify;export const AppToastProvider=({children})=>children;`, loader: 'js' }));
   } }] });
   return { js: bundle.outputFiles.find(f => f.path.endsWith('.js')).text, css: bundle.outputFiles.find(f => f.path.endsWith('.css'))?.text || '' };
 }
-(async () => {
+module.exports = { buildFixture };
+if (require.main === module) (async () => {
   const built = await buildFixture();
   if (process.env.WORK_RESPONSIVE_EXPORT) { await fs.writeFile(process.env.WORK_RESPONSIVE_EXPORT + '.js', built.js); await fs.writeFile(process.env.WORK_RESPONSIVE_EXPORT + '.css', built.css); return; }
   const css = (process.env.WORK_RESPONSIVE_CSS ? await fs.readFile(process.env.WORK_RESPONSIVE_CSS, 'utf8') : '') + '\n' + built.css;
-  const server = http.createServer((req, res) => { if (req.url === '/app.js') { res.setHeader('content-type', 'text/javascript'); res.end(built.js); } else { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}\nbody{margin:0;font-family:Arial,sans-serif}</style><div id="root"></div><script src="/app.js"></script>`); } });
+  const server = http.createServer((req, res) => { if (req.url.startsWith('/api/admin/personal-work/images')) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({items:[],canEdit:false,limit:20})); return; } if (req.url === '/app.js') { res.setHeader('content-type', 'text/javascript'); res.end(built.js); } else { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}\nbody{margin:0;font-family:Arial,sans-serif}</style><div id="root"></div><script src="/app.js"></script>`); } });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox'] });
@@ -99,15 +101,48 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     await row(28).getByRole('button', { name: /^Mở CV-28:/ }).click();
     await page.getByRole('button', { name: 'Hủy', exact: true }).waitFor();
     assert.ok(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count());
+    assert.equal(await page.getByRole('dialog').getByText('Ghi chú', {exact:true}).count(), 0);
+    assert.equal(await page.getByRole('button', {name:'← Danh sách công việc', exact:true}).getAttribute('data-admin-button'), 'contextual');
+    assert.equal(await page.getByRole('dialog').getByPlaceholder('Ví dụ: báo cáo, codex (ngăn cách bằng dấu phẩy)').isVisible().catch(()=>false), false);
+
     assert.equal((await page.evaluate(() => window.__actions)).filter(a => a.name === 'updatePersonalWorkAction').length, 1); // Opening never mutates work.
     await page.getByRole('button', { name: 'Hủy', exact: true }).click();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(origin + '/?full=1');
     await page.locator('[data-work-row]').first().waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    assert.equal(await page.locator('#personal-google-calendar-agenda').count(), 1);
+    const leftHeading = await page.getByRole('navigation', { name: 'Hiển thị công việc' }).getByRole('heading').boundingBox();
+    const contentHeading = await page.getByRole('heading', { name: 'Hôm nay', exact: true }).boundingBox();
+    assert.ok(Math.abs(leftHeading.y - contentHeading.y) <= 1, 'Pane headings align');
+    if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-desktop.png'), fullPage: true });
+    await page.locator('#personal-google-calendar-agenda').waitFor();
+    const calendarWidth = (await page.locator('#personal-google-calendar-agenda').boundingBox()).width;
+    const listWidth = (await page.getByRole('list', { name: 'Công việc', exact: true }).boundingBox()).width;
+    assert.ok(calendarWidth >= 420 && calendarWidth > listWidth, 'Calendar receives the wider desktop pane');
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-calendar-desktop.png'), fullPage: true });
-    assert.ok(await page.getByRole('combobox', { name: 'Hiển thị công việc' }).isVisible()); // Container width, not screen width.
-    await page.getByRole('combobox', { name: 'Hiển thị công việc' }).selectOption('ALL');
+    const navigation = page.getByRole('navigation', { name: 'Hiển thị công việc' });
+    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    assert.equal(await navigation.getByRole('button', { name: 'Tất cả', exact: true }).getAttribute('aria-pressed'), 'true');
+    assert.ok(await page.getByRole('separator', { name: 'Điều chỉnh độ rộng menu công việc' }).isVisible());
+    await page.getByPlaceholder('Việc cần làm...').fill('Bản nháp đang nhập');
+    await navigation.getByRole('button', { name: 'Quá hạn', exact: true }).click();
+    await row(28).waitFor(); assert.equal(await row(31).count(), 0);
+    await navigation.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+    await row(26).waitFor(); assert.equal(await row(28).count(), 0);
+    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    assert.equal(await page.getByPlaceholder('Việc cần làm...').inputValue(), 'Bản nháp đang nhập');
+    assert.equal(await page.evaluate(() => (window.__actions || []).length), 0);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      const viewSelect = navigation.getByRole('combobox', { name: 'Hiển thị công việc', exact: true });
+      await viewSelect.waitFor(); await viewSelect.selectOption('OVERDUE'); await row(28).waitFor();
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-workspace-' + width + '.png'), fullPage: true });
+      await viewSelect.selectOption('ALL');
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
     await row(31).getByRole('button', { name: /^Lịch CV-31:/ }).click();
     const lastSchedule = page.getByRole('group', { name: 'Lịch CV-31', exact: true }); await lastSchedule.waitFor();
     const box = await lastSchedule.boundingBox(); assert.ok(box.x >= 0 && box.y >= 0 && box.y + box.height <= 1000);
@@ -149,6 +184,7 @@ window.__fixture=data;const root=createRoot(document.getElementById('root'));win
     assert.equal(saveCalls.filter(a=>a.name==='updatePersonalWorkAction').length,1);
     assert.equal(saveCalls.filter(a=>a.name==='syncPersonalWorkCalendarAction').length,1);
     assert.equal(saveCalls.find(a=>a.name==='updatePersonalWorkAction').input.updateBody,'500.000');
+    assert.equal(saveCalls.find(a=>a.name==='updatePersonalWorkAction').input.note, 'Ghi chú đầy đủ của công việc mẫu');
     await phone.goto(origin+'/?view=list&item=item-23');
     await phone.getByRole('dialog').waitFor();
     await phone.evaluate(()=>{window.__saveError=true});

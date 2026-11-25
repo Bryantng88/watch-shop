@@ -1,5 +1,6 @@
 "use client";
 
+import { ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import Image from "next/image";
 import { ImageIcon, PackageCheck } from "lucide-react";
 import {
@@ -16,14 +17,14 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
   const items = data.items ?? [];
 
   return (
-    <SectionCard
+    <SectionCard id="order-items"
       icon={<PackageCheck className="h-5 w-5" />}
       title="Sản phẩm / dịch vụ"
       subtitle={`${items.length} dòng trong đơn`}
     >
       {items.length ? (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="grid grid-cols-[minmax(0,1fr)_110px_140px] gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+        <div className="min-w-0">
+          <div className={detail.itemHead}>
             <div>Sản phẩm</div>
             <div className="text-right">Số lượng</div>
             <div className="text-right">Thành tiền</div>
@@ -38,12 +39,12 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
               return (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[minmax(0,1fr)_110px_140px] items-center gap-3 px-4 py-3 transition hover:bg-slate-50/70"
+                  className={detail.itemRow}
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                       {imageSrc ? (
-                        <Image src={imageSrc} alt={item.title} width={56} height={56} unoptimized className="h-full w-full object-cover" />
+                        <Image src={imageSrc} alt={item.title} width={48} height={48} unoptimized className="h-full w-full object-cover" />
                       ) : (
                         <ImageIcon className="h-5 w-5 text-slate-400" />
                       )}
@@ -55,13 +56,13 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
                           {item.kind || "PRODUCT"}
                         </span>
                         {item.variantId ? (
-                          <span className="truncate font-mono text-[11px] text-slate-400">
+                          <span className="truncate text-xs text-slate-400">
                             {item.variantId}
                           </span>
                         ) : null}
                       </div>
 
-                      <div className="mt-1 truncate text-sm font-semibold text-slate-950">
+                      <div className={detail.itemName}>
                         {item.title}
                       </div>
 
@@ -73,7 +74,7 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
                       </div>
 
                       {item.customerItemNote ? (
-                        <div className="mt-2 line-clamp-2 rounded-lg bg-slate-50 px-3 py-1.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200/70">
+                        <div className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-600">
                           {item.customerItemNote}
                         </div>
                       ) : null}

@@ -198,3 +198,16 @@ export function mergeLoadedMediaPool(
     ? { ...current, media: { ...current.media, poolImages: pool } }
     : current;
 }
+
+/** A section save cannot persist drafts or advance completion baselines in other tabs. */
+export function mediaWorkspacePartValues(current: WatchFormValues, saved: WatchFormValues, part: MediaWorkPart): WatchFormValues {
+  return {
+    ...saved,
+    ...(part === "profile" ? {basic:current.basic,spec:current.spec,header:current.header,pricing:current.pricing,specStatus:current.specStatus} : {}),
+    ...(part === "content" ? {content:current.content} : {}),
+    media: {...saved.media,
+      ...(part === "image" ? {poolImages:current.media.poolImages,galleryImages:current.media.galleryImages,imageCount:current.media.imageCount} : {}),
+      ...(part === "cover" ? {coverImage:current.media.coverImage} : {})},
+    saveIntent:"MEDIA_WORKSPACE",mediaWorkspacePart:part,
+  };
+}

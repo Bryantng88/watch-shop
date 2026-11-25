@@ -26,3 +26,7 @@
 @container work-list (min-width: 440px) { .track { width: 28px; } .code { max-width: 64px; } .percent { display: inline; } .meta { gap: 9px; } .row { gap: 8px; } }
 @container work-list (min-width: 600px) { .updateLabel { display: inline; } }
 @media (max-width: 639px) { .header { grid-template-columns: minmax(0,1fr); gap: 6px; } .summary { font-size: 12px; } }
+
+.toolbar[data-views-hidden="true"] { justify-content: flex-end; }
+
+.toolbar[data-inline="true"] { min-height: 0; padding: 0; justify-content: flex-end; }

@@ -1,3 +1,4 @@
+import { assertNotWorkMediaKey } from "@/domains/media/core/work-media-privacy";
 // src/domains/media/server/nas-media.service.ts
 
 import type { StoredMediaListItem } from "@/domains/media/storage";
@@ -163,6 +164,7 @@ export async function signMediaUrl(input: {
     expiresIn?: number;
 }) {
     const key = normalizeKey(input.key);
+    assertNotWorkMediaKey(key);
 
     if (!key) {
         throw new Error("Thiếu key.");
@@ -181,7 +183,9 @@ export async function moveMediaFile(input: {
     toKey: string;
 }) {
     const fromKey = normalizeKey(input.fromKey);
+    assertNotWorkMediaKey(fromKey);
     const toKey = normalizeKey(input.toKey);
+    assertNotWorkMediaKey(toKey);
 
     if (!fromKey) {
         throw new Error("Thiếu fromKey.");

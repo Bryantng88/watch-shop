@@ -8,11 +8,11 @@ export function PersonalWorkUpdateHint({text,time,labelClassName}:{text:string;t
   const close = useCallback(()=>setOpen(false),[]);
   useEffect(()=>{if(!open)return;const close=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))setOpen(false);};document.addEventListener("pointerdown",close);return()=>document.removeEventListener("pointerdown",close);},[open]);
   return <span ref={root} className="relative inline-flex shrink-0" onMouseLeave={()=>setOpen(false)}>
-    <AdminButton variant="secondary" density="compact" ref={trigger} type="button" aria-label={`Có cập nhật: ${text}`} aria-describedby={open?id:undefined}
+    <AdminButton variant="contextual" density="compact" ref={trigger} type="button" aria-label={`Có cập nhật: ${text}`} aria-describedby={open?id:undefined}
       onPointerEnter={e=>{if(e.pointerType==="mouse")setOpen(true);}}
       onFocus={e=>{if(e.currentTarget.matches(":focus-visible"))setOpen(true);}}
       onBlur={()=>setOpen(false)} onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();setOpen(false);}}}
-      onClick={()=>setOpen(v=>!v)} className="inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium text-blue-700 hover:bg-blue-50">
+      onClick={()=>setOpen(v=>!v)} className="inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded px-1 py-0.5 text-[10px] font-medium text-blue-700 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11">
       <History className="h-3 w-3"/><span className={labelClassName || "hidden sm:inline"}>Có cập nhật</span>
     </AdminButton>
     {open&&<PersonalWorkFloatingPanel anchor={trigger.current} onClose={close} id={id} role="tooltip" className="pointer-events-none rounded bg-slate-900 px-2 py-1.5 text-left text-white shadow-sm">

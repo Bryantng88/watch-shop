@@ -38,11 +38,12 @@ export const ADMIN_UI_FOUNDATION = {
   },
   radius: { mark: 2, badge: 6, control: 8, surface: 12, floating: 16, pill: 9999 },
   navigationProfiles: {
-    simple: { background: '#f8fafc', text: '#334155', muted: '#64748b', active: '#1d4ed8', hover: '#eff6ff', border: '#e2e8f0', scheme: 'light' },
+    simple: { background: '#ffffff', text: '#334155', muted: '#64748b', active: '#1d4ed8', hover: '#eff6ff', border: '#e2e8f0', scheme: 'light' },
     dark: { background: '#11191f', text: '#e2e8f0', muted: '#a8b5c4', active: '#93c5fd', hover: '#1e3044', border: '#334155', scheme: 'dark' },
   },
   border: { hairline: 1, selectedUnderline: 2, focusRing: 2, focusOffset: 2 },
   page: {
+    detailMaxWidth: 1440,
     workspaceMaxWidth: 2240,
     desktopOuterGutter: 24,
     desktopPaddingX: 24, desktopPaddingY: 20, mobilePaddingX: 16, mobilePaddingY: 12,
