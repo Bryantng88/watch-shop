@@ -3,7 +3,7 @@ import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButt
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, Check, Clock3, ExternalLink, Info, Share2 } from "lucide-react";
+import { AlertTriangle, CalendarDays, Check, Clock3, ExternalLink, Info, Loader2, Share2 } from "lucide-react";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 import { personalCategoryStyle, type PersonalWorkItem } from "../shared/personal-work.types";
 import { isPersonalEvent, personalEventTiming } from "../shared/personal-event";
@@ -14,8 +14,9 @@ import { PersonalWorkUpdateHint } from "./PersonalWorkUpdateHint";
 import styles from "./PersonalWorkList.module.css";
 import { PersonalWorkFloatingPanel } from "./PersonalWorkFloatingPanel";
 
-export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, pending, onOpen, onComplete }: {
+export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, pending, completionPending = false, justCompleted = false, onOpen, onComplete }: {
   item: PersonalWorkItem; now: Date; showDate: boolean; late: boolean; scheduleLabel: string; pending: boolean;
+  completionPending?: boolean; justCompleted?: boolean;
   onOpen: () => void; onComplete: () => void;
 }) {
   const event = isPersonalEvent(item.workType), timed = personalEventTiming(item).timed;
@@ -32,8 +33,9 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
   const compactDate = dayStamp ? `${dayStamp.slice(8,10)}/${dayStamp.slice(5,7)}` : "";
   const rowObject=item.targets.find(target=>target.imageUrl)||item.targets[0];
   const fullSchedule = `${late ? "Quá hạn · " : ""}${scheduleLabel}${item.estimatedDays > 1 ? ` · ${item.estimatedDays} ngày` : ""}`;
-  return <div ref={root} role="listitem" data-work-row={item.id} className={styles.row} onClick={e => { if (!(e.target as HTMLElement).closest("button,a,input,select,textarea")) onOpen(); }}>
-    {event ? <span title="Sự kiện không cần hoàn thành" aria-label="Sự kiện không cần hoàn thành" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><CalendarDays className="h-4 w-4" /></span> : <AdminButton iconOnly variant="contextual" density="compact" type="button" aria-label={`Đánh dấu hoàn thành ${code}`} disabled={pending || item.access === "VIEWER"} onClick={onComplete} className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-blue-300 ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}><Check className="h-3.5 w-3.5" /></AdminButton>}
+  return <div ref={root} role="listitem" data-work-row={item.id} className={`${styles.row} ${justCompleted ? "rounded-lg bg-emerald-50/70 transition-colors motion-reduce:transition-none" : ""}`} onClick={e => { if (!(e.target as HTMLElement).closest("button,a,input,select,textarea")) onOpen(); }}>
+    {event ? <span title="Sự kiện không cần hoàn thành" aria-label="Sự kiện không cần hoàn thành" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><CalendarDays className="h-4 w-4" /></span> : <AdminButton iconOnly variant="contextual" density="compact" type="button" aria-label={`${item.status === "DONE" ? "Mở lại" : "Đánh dấu hoàn thành"} ${code}`} aria-busy={completionPending} disabled={pending || item.access === "VIEWER"} onClick={onComplete} className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-blue-300 ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}>{completionPending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 motion-reduce:animate-none" /> : <Check className="h-3.5 w-3.5" />}</AdminButton>}
+    {justCompleted && <span role="status" className="sr-only">Đã hoàn thành {item.title}</span>}
     {rowObject&&<WorkObjectThumbnail object={rowObject}/>}
     <div className={styles.body}>
       <div data-work-headline className={styles.headline}>

@@ -9,6 +9,8 @@ on:
       - 'src/domains/shared/ui/admin-design-contract/**'
       - 'src/app/globals.css'
       - 'scripts/smoke-work-responsive-ui.cjs'
+      - 'scripts/check-work-modal-feedback.cjs'
+      - 'src/domains/shared/feedback/AppToastProvider.tsx'
       - 'scripts/smoke-admin-view-tabs.cjs'
       - 'public/ben-sw.js'
       - 'tests/pwa/ben-service-worker.test.mjs'
@@ -27,17 +29,22 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx prisma generate --generator client
+      - run: npx tsc --noEmit
       - run: node --import tsx --test src/domains/personal-work/server/google-calendar-error.test.ts src/domains/personal-work/server/google-event-edit.test.ts
       - run: node --test tests/pwa/ben-service-worker.test.mjs
       - run: node --import tsx --test src/server/auth/login-destination.test.ts
       - run: npx eslint src/domains/shared/ui/admin-design-contract/AdminViewTabs.tsx src/domains/personal-work/ui/PersonalWorkClient.tsx src/domains/personal-work/ui/PersonalWorkListRow.tsx src/domains/personal-work/ui/PersonalWorkListToolbar.tsx src/domains/personal-work/ui/PersonalWorkFloatingPanel.tsx src/domains/personal-work/ui/PersonalWorkUpdateHint.tsx
+      - run: npx eslint src/domains/shared/feedback/AppToastProvider.tsx scripts/check-work-modal-feedback.cjs scripts/smoke-work-responsive-ui.cjs
       - run: npx tailwindcss -i src/app/globals.css -o /tmp/work-responsive.css --minify
       - run: npm install --prefix /tmp/work-responsive-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/work-responsive-browser/node_modules/.bin/playwright install --with-deps chromium
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright WORK_RESPONSIVE_CSS=/tmp/work-responsive.css node scripts/smoke-work-responsive-ui.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright WORK_RESPONSIVE_CSS=/tmp/work-responsive.css node scripts/smoke-admin-view-tabs.cjs
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-modal-feedback.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: shared-admin-tabs-preview
           path: /tmp/admin-view-tabs/*.png
+

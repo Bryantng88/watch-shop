@@ -1573,3 +1573,25 @@ Hai pane dùng AdminWorkspaceHeading cùng hàng 40/44px. Pane nội dung có ti
 view đang chọn, số việc và công cụ lịch; form tạo nằm dưới hàng đó, không chia cột
 với kết nối Google. Danh sách là vùng chính, lịch thu gọn mặc định; khi mở, lịch và
 kết nối Google nằm chung ở pane phụ bên phải (xuống dưới trên màn hình hẹp).
+
+### Compact personal work detail and completion feedback (2026-11-25)
+
+Personal Work opens as a read-first detail: identity/status/assignee, checklist and
+update composer. Edit the title through its header action; do not repeat it as a
+permanent text field. Keep schedule/reminder/Google actions in a closed-by-default
+Lịch disclosure and classification, tags, business links, sharing and Codex settings
+in Thông tin khác. Preserve values while disclosures close. A schedule validation
+error opens its own section. Show two recent activities initially, with in-place
+history expansion. Do not show a successful Google synchronization banner merely
+because an event was linked earlier; retain real failure/retry feedback.
+
+Completion uses useUiMutation and the shared AppToastProvider. Pending is shown at
+the initiating row/button and blocks duplicate submissions; do not mark complete
+before the server confirms. Success uses the opt-in compact toast (density compact)
+and the confirmed check state. Keep a confirmed row visible for one second before
+removing it from an unfinished-work filter; respect reduced motion. Failure retains
+the previous state and allows retry. Checklist entries announce their own outcome
+without an extra success toast per entry. Whole-checklist finalization retains its
+existing confirmation and server guards. Events and viewer/checklist-only scopes
+must not gain whole-work completion permissions. The compact toast option retains
+the existing appearance of other callers.
