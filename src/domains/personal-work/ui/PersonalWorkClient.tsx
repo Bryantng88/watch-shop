@@ -1035,17 +1035,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Các đầu việc</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {editingItem.checklist.filter((item) => item.isDone).length}/{editingItem.checklist.length} hoàn thành
-                    </p>
-                  </div>
-                  {editingItem.checklist.length > 0 && <ProgressMetric
+                  <h3 className="min-w-0 text-sm font-semibold text-slate-900">Các đầu việc</h3>
+                  {editingItem.checklist.length > 0 && <ProgressMetric appearance="quiet"
                     value={editingItem.progressPercent}
                     numerator={editingItem.checklist.filter((entry) => entry.isDone).length}
                     denominator={editingItem.checklist.length}
-                    className="max-w-[210px]"
+                    className="!w-28 shrink-0"
                     label={`Tiến độ ${editingItem.title}: ${editingItem.progressPercent}%`}
                   />}
                 </div>
