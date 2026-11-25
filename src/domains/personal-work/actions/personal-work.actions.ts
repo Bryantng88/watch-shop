@@ -105,6 +105,7 @@ export async function updatePersonalWorkAction(input: {
   tags?: string[];
   targets?: PersonalWorkTarget[];
   updateBody?: string | null;
+  updateChecklistItemId?: string | null;
 }) {
   const user = await auth();
   for (const target of input.targets || []) await requirePermission(targetPermission[target.type]);
