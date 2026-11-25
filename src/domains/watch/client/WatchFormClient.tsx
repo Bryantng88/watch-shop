@@ -2,7 +2,7 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { currentMediaEditor, registerMediaEditor, type MediaDraft, type MediaEditor } from "@/domains/ai-assistant/media-editor";
-import { confirmMediaParts, effectiveMediaParts, invalidateChangedMediaParts, mergeLoadedMediaPool, mediaPartSaveSnapshot, mergeWatchSaveReceipt } from "../shared/media-work-state";
+import { mediaWorkspacePartValues, confirmMediaParts, effectiveMediaParts, invalidateChangedMediaParts, mergeLoadedMediaPool, mediaPartSaveSnapshot, mergeWatchSaveReceipt } from "../shared/media-work-state";
 import BenContentPreview from "../ui/edit/BenContentPreview";
 import { suggestWatchSpecWithOpenAIAction } from "./form/watch-ai-spec.actions";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -559,10 +559,7 @@ export default function WatchFormClient({
 
     const nextDone = complete || mediaWorkDone[part];
     mediaSaveInFlight.current = true;
-    const submitValues: WatchFormValues = {
-      ...buildSubmitValues(),
-      saveIntent: "MEDIA_WORKSPACE",
-    };
+    const submitValues = mediaWorkspacePartValues(buildSubmitValues(), savedValues, part);
     const partLabel =
       MEDIA_WORK_PARTS.find((item) => item.key === part)?.label ?? part;
 
@@ -610,7 +607,7 @@ export default function WatchFormClient({
       };
       setMediaWorkDone(confirmed);
       setMediaStatusUnknown(false);
-      setCompletionValues(previous => confirmMediaParts(previous, persisted, confirmed));
+      setCompletionValues(previous => confirmMediaParts(previous, persisted, {profile:false,content:false,image:false,cover:false,[part]:confirmed[part]}));
 
       notify.success({
         title: `Đã lưu ${partLabel}`,
@@ -620,7 +617,7 @@ export default function WatchFormClient({
       try {
         const confirmed = await loadWatchMediaWorkStateAction({productId: submitValues.productId, bindingId: workspaceBindingId});
         setMediaWorkDone(confirmed);
-        if (persistedForAttempt) setCompletionValues(previous => confirmMediaParts(previous, persistedForAttempt!, confirmed));
+        if (persistedForAttempt) setCompletionValues(previous => confirmMediaParts(previous, persistedForAttempt!, {profile:false,content:false,image:false,cover:false,[part]:confirmed[part]}));
         setMediaStatusUnknown(false);
         if (persistedForAttempt && confirmed[part] === nextDone) {
           notify.success({title: `Đã lưu ${partLabel}`, message: "Đã kiểm tra lại và xác nhận trạng thái lưu trên hệ thống."});

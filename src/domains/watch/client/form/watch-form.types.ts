@@ -10,6 +10,7 @@ export type WatchFormValues = {
     watchId: string;
     productId: string;
     saveIntent?: "NORMAL" | "SUBMIT_CONTENT" | "SUBMIT_IMAGE" | "MEDIA_WORKSPACE";
+    mediaWorkspacePart?: "profile" | "content" | "image" | "cover";
     specStatus?: "PENDING" | "PARTIAL" | "READY" | "FAILED" | string | null;
     contentReviewStatus?: string | null;
     contentReviewNote?: string | null;

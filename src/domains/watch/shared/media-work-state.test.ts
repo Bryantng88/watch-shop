@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mapWatchDetailToFormValues } from "../client/form/watch-form.mapper";
 import {
+  mediaWorkspacePartValues,
   confirmMediaParts,
   effectiveMediaParts,
   invalidateChangedMediaParts,
@@ -194,4 +195,31 @@ test("Cover/pool reconciliation keeps Gallery complete while still tracking unsa
     "canonical-gallery.jpg",
   );
   assert.equal(invalidateChangedMediaParts(complete, saved, draft).image, true);
+});
+
+
+test("completing another tab never submits unrelated drafts or rebases their completion", () => {
+  const saved = base();
+  saved.content.body = "Confirmed content";
+  const draft = structuredClone(saved);
+  draft.basic.title = "Unrelated title draft";
+  draft.content.body = "Unrelated content draft";
+  draft.media.galleryImages = [{key:"new-gallery.jpg"}];
+  const submitted = mediaWorkspacePartValues(draft, saved, "image");
+  assert.equal(submitted.basic.title, saved.basic.title);
+  assert.equal(submitted.content.body, saved.content.body);
+  assert.equal(submitted.media.galleryImages[0].key, "new-gallery.jpg");
+  assert.equal(submitted.mediaWorkspacePart, "image");
+  const receipt = mergeWatchSaveReceipt(draft, submitted, {});
+  assert.equal(receipt.current.basic.title, draft.basic.title);
+  assert.equal(receipt.current.content.body, draft.content.body);
+  const confirmed = confirmMediaParts(saved, receipt.saved, {profile:false,content:false,image:true,cover:false});
+  assert.equal(confirmed.basic.title, saved.basic.title);
+  assert.equal(confirmed.content.body, saved.content.body);
+  assert.equal(effectiveMediaParts(complete, receipt.current, confirmed).profile, false);
+  assert.equal(effectiveMediaParts(complete, receipt.current, confirmed).content, false);
+  const contentOnly = mediaWorkspacePartValues(draft, saved, "content");
+  assert.equal(contentOnly.basic.title, saved.basic.title);
+  assert.equal(contentOnly.content.body, draft.content.body);
+  assert.deepEqual(contentOnly.media.galleryImages, saved.media.galleryImages);
 });
