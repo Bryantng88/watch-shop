@@ -2,7 +2,8 @@
 
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
-import { AdminPageCanvas, AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
+import { AdminPageHeader } from "@/domains/shared/ui/admin-design-contract";
+import { AdminDetailPage, AdminDetailSectionHeader, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import { useRouter } from "next/navigation";
 import {
     Box,
@@ -75,31 +76,8 @@ function mergeVendors(
     );
 }
 
-function SectionHeader({
-    icon,
-    title,
-    description,
-    actions,
-}: {
-    icon: ReactNode;
-    title: string;
-    description: string;
-    actions?: ReactNode;
-}) {
-    return (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 py-3">
-            <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center text-slate-500">
-                    {icon}
-                </div>
-                <div className="min-w-0">
-                    <div className="text-base font-semibold text-slate-950">{title}</div>
-                    <div className="sr-only">{description}</div>
-                </div>
-            </div>
-            {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-        </div>
-    );
+function SectionHeader({title,description,actions}: {icon: ReactNode;title:string;description:string;actions?:ReactNode}) {
+    return <AdminDetailSectionHeader title={title} description={description} actions={actions}/>;
 }
 
 const VendorQuickField = memo(function VendorQuickField({
@@ -158,7 +136,7 @@ const VendorQuickField = memo(function VendorQuickField({
                     Vendor <span className="text-rose-500">*</span>
                 </label>
                 {!creating ? (
-                    <AdminButton variant="secondary" density="compact"
+                    <AdminButton variant="quiet" density="compact"
                         type="button"
                         disabled={disabled}
                         onClick={() => setCreating(true)}
@@ -227,7 +205,7 @@ const VendorQuickField = memo(function VendorQuickField({
                         >
                             {pending ? "Dang them" : "Them"}
                         </AdminButton>
-                        <AdminButton iconOnly variant="secondary"
+                        <AdminButton iconOnly variant="quiet"
                             type="button"
                             disabled={pending}
                             onClick={() => {
@@ -296,7 +274,7 @@ function TradeInOrderField({
                             {value.customerName} · {value.customerPhone || "Chưa có SĐT"} · {value.status}
                         </div>
                     </div>
-                    <AdminButton variant="secondary" density="compact" type="button" disabled={disabled} onClick={() => { onChange(null); setQuery(""); }} className="rounded-md border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">
+                    <AdminButton variant="quiet" density="compact" type="button" disabled={disabled} onClick={() => { onChange(null); setQuery(""); }} className="rounded-md border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700">
                         Chọn lại
                     </AdminButton>
                 </div>
@@ -572,20 +550,20 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
     }
 
     return (
-        <AdminPageCanvas className="pb-24">
+        <AdminDetailPage grouped emphasis>
             <AdminPageHeader eyebrow="KHO HÀNG / PHIẾU NHẬP" title="Tạo phiếu nhập đồng hồ"
                 description="Chọn vendor, thêm đồng hồ rồi lưu phiếu. Giá VND nhập theo đơn vị nghìn."
                 meta={<span className="text-sm tabular-nums text-slate-500">{validLineCount || watchLines.length} đồng hồ · <strong className="text-slate-900">{formatMoney(totalWatchCost, currency)}</strong></span>} />
             <div className="grid gap-4">
                 <div className="space-y-4">
-                    <section className="bg-white">
+                    <section className={detailUi.section}>
                         <SectionHeader
                             icon={<Box className="h-5 w-5" />}
                             title="Thông tin phiếu"
-                            description="Vendor, thoi gian tiep nhan, loai phieu va ghi chu chung."
+                            description="Nhà cung cấp, ngày nhập và loại phiếu."
                         />
 
-                        <div className="grid grid-cols-1 gap-4 py-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-3">
                             {type === "TRADE_IN" ? (
                                 <TradeInOrderField
                                     value={tradeInOrder}
@@ -655,7 +633,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                 </label>
                                 <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
                                     {(["MEN", "WOMEN"] as const).map((segment) => (
-                                        <AdminButton variant="secondary"
+                                        <AdminButton variant="quiet"
                                             key={segment}
                                             type="button"
                                             disabled={submitting || quickNames.busy}
@@ -709,25 +687,25 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                         </details>
                     </section>
 
-                    <section className="bg-white">
+                    <section className={detailUi.section}>
                         <SectionHeader
                             icon={<PackagePlus className="h-5 w-5" />}
                             title="Danh sách đồng hồ"
-                            description="Chon nhieu anh tu NAS, he thong se do vao cac dong dang trong truoc roi moi them dong moi."
+                            description="Chọn ảnh từ NAS hoặc thêm từng đồng hồ. Giá VND nhập theo đơn vị nghìn."
                             actions={
                                 <>
-                                    <AdminButton variant="secondary" type="button" onClick={() => void quickNames.generate()} disabled={submitting || quickNames.busy || !quickNames.count}
+                                    <AdminButton variant="quiet" type="button" onClick={() => void quickNames.generate()} disabled={submitting || quickNames.busy || !quickNames.count}
                                         className="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-medium text-slate-800 disabled:opacity-40">
                                         {quickNames.busy ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
                                         {quickNames.busy ? "Codex đang đọc ảnh…" : "Codex gợi ý tên"}
                                     </AdminButton>
-                                    {quickNames.busy && <AdminButton variant="secondary" density="compact" type="button" onClick={quickNames.stop} className="min-h-10 px-2 text-xs text-slate-600 underline">Dừng chờ</AdminButton>}
+                                    {quickNames.busy && <AdminButton variant="quiet" density="compact" type="button" onClick={quickNames.stop} className="min-h-10 px-2 text-xs text-slate-600 underline">Dừng chờ</AdminButton>}
                                     <AcquisitionBulkImagePicker
                                         onImport={importPreparedImages}
                                         disabled={submitting || quickNames.busy}
                                         audienceSegment={audienceSegment}
                                     />
-                                    <AdminButton variant="secondary"
+                                    <AdminButton variant="quiet"
                                         type="button"
                                         onClick={addWatchLine}
                                         disabled={submitting || quickNames.busy}
@@ -768,7 +746,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
 
             <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
                 <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
-                    <AdminButton variant="secondary"
+                    <AdminButton variant="quiet"
                         type="button"
                         disabled={submitting || quickNames.busy}
                         onClick={() => router.push("/admin/acquisitions")}
@@ -829,6 +807,6 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                     }
                 }}
             />
-        </AdminPageCanvas>
+        </AdminDetailPage>
     );
 }

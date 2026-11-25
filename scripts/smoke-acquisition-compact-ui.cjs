@@ -34,7 +34,7 @@ createRoot(document.getElementById('root')).render(<App/>);`;
       build.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'navigation', namespace: 'fixture' }));
       build.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `export const useRouter=()=>({push(){},refresh(){}});` }));
       build.onLoad({ filter: /\.(tsx?|jsx?)$/ }, args => {
-        const key = Object.keys(mocks).find(name => args.path.endsWith('/' + name + '.tsx') || args.path.endsWith('/' + name + '.ts'));
+        const key = Object.keys(mocks).find(name => args.path.replaceAll('\\','/').endsWith('/' + name + '.tsx') || args.path.replaceAll('\\','/').endsWith('/' + name + '.ts'));
         if (key) return { contents: mocks[key], loader: 'tsx' };
       });
     } }] });
@@ -72,6 +72,7 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     assert.equal(created.items[0].cost, 2500000); assert.equal(created.items[0].salePrice, 3200000);
     await page.goto(origin + '/?mode=quick');
     await page.getByRole('button',{name:'Chọn nhiều ảnh',exact:true}).click();
+    const imagePreview=page.getByRole('button',{name:'Xem ảnh lớn',exact:true}).first();assert.equal(await imagePreview.getAttribute('data-admin-button'),'contextual');assert.equal(await imagePreview.evaluate(el=>getComputedStyle(el).backgroundColor),'rgba(0, 0, 0, 0)');assert.equal(await imagePreview.locator('span').evaluate(el=>getComputedStyle(el).whiteSpace),'nowrap');await imagePreview.click();await page.getByAltText('Preview đồng hồ #1',{exact:true}).waitFor();await page.getByRole('button',{name:'Đóng ảnh lớn',exact:true}).click();
     const names=[1,2,3].map(n=>page.getByRole('textbox',{name:'Tên đồng hồ '+n,exact:true}));
     const initialRenders=await page.evaluate(()=>window.__pickerRenders);
     await names[0].pressSequentially('Seiko tự động',{delay:0});
