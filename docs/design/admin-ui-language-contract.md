@@ -1753,3 +1753,17 @@ below identity and uses 104px images; intermediate hosts use 168px images.
 Show only populated year, calibre, size and accessory facts. Do not add the
 horizontal divider above these facts; spacing is sufficient. The rail has no
 independent card/background. The record's business sections remain visible.
+
+
+### Checklist rows with images on mobile (2026-11-25)
+
+Personal Work checklist rows reserve a checkbox column and a flexible, min-width-zero
+content column. Keep the object/assignee and title together; business/share/delete
+controls wrap below the title, and entry images occupy their own full-width row.
+Never place an attachment gallery or a repeated long image label in the same
+non-wrapping flex line as the title. Use the short visible “Ảnh đầu việc” trigger
+while retaining the full entry title in its accessible name. On phones, the title
+editor input takes its own line and save/cancel controls wrap below; desktop keeps
+the inline editor. Preserve completion, rename, share and media permissions/callbacks.
+Regression coverage includes 320–430px phones, desktop, larger fonts, expanded
+images, owner/editor/viewer controls and title editing.
