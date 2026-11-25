@@ -282,6 +282,7 @@ async function findActivePhotoshootWatchIds(db: DB, watchIds: string[]) {
     where: {
       targetType: TaskExecutionTargetType.WATCH,
       targetId: { in: watchIds },
+      actionType: { not: "CANCELLED" },
       taskItem: {
         status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
         note: {
@@ -412,7 +413,7 @@ export async function requestWatchPhotoshoot(
       {
         watch: toWatchEventSnapshot(watch),
         actorUserId: input.actorUserId ?? null,
-        sourceId: `photoshoot:${watch.id}`,
+        sourceId: `photoshoot:${watch.id}:${new Date().toISOString()}`,
         note: input.note ?? null,
       },
       {
@@ -450,7 +451,7 @@ export async function completeWatchPhotoshootFromQueueItem(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,
@@ -569,7 +570,7 @@ export async function markWatchMediaAssetAttachedFromQueueItem(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,
@@ -778,6 +779,7 @@ export async function markWatchMediaAssetAttachedFromWatch(
     where: {
       targetType: TaskExecutionTargetType.WATCH,
       targetId: watch.id,
+      actionType: { not: "CANCELLED" },
       taskItem: {
         status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
         note: {
@@ -863,7 +865,7 @@ async function saveMediaProgressLocked(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,
@@ -984,7 +986,7 @@ export async function getWatchMediaWorkProgressFromQueueItem(
   if (!bindingId) return null;
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       targetType: true,
       metadataJson: true,
@@ -1022,6 +1024,7 @@ export async function getActiveWatchMediaWorkspace(
     where: {
       targetType: TaskExecutionTargetType.WATCH,
       targetId: watch.id,
+      actionType: { not: "CANCELLED" },
       taskItem: {
         status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
         note: {
@@ -1144,6 +1147,7 @@ export async function saveWatchMediaWorkDraftFromWatch(
     where: {
       targetType: TaskExecutionTargetType.WATCH,
       targetId: watch.id,
+      actionType: { not: "CANCELLED" },
       taskItem: {
         status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
         note: {
@@ -1190,7 +1194,7 @@ export async function requestWatchMediaReshootFromQueueItem(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,
@@ -1357,7 +1361,7 @@ export async function completeWatchMediaProcessingFromQueueItem(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,
@@ -1511,7 +1515,7 @@ export async function recallWatchMediaFromPublishQueueItem(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,
@@ -1635,7 +1639,7 @@ export async function completeWatchPublishFromQueueItem(
     return { ok: false, skipped: true, reason: "MISSING_BINDING_ID" };
 
   const binding = await db.taskExecution.findUnique({
-    where: { id: bindingId },
+    where: { id: bindingId, actionType: { not: "CANCELLED" } },
     select: {
       id: true,
       targetType: true,

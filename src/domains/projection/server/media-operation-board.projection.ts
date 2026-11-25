@@ -42,6 +42,7 @@ const MEDIA_OPERATION_BOARD_EVENTS = [
   "watch.image.rejected",
   "watch.media.ready_for_publish",
   "watch.media.recalled",
+  "watch.media.withdrawn",
   "watch.publish.assets.downloaded",
   "watch.saleStage.posted",
   "watch.sold",
@@ -212,7 +213,12 @@ export async function buildMediaOperationBoardRow(
   });
   if (!watch) return null;
   if (!binding?.taskItemId || !binding.taskId) {
-    if (watch.isContentDownloaded && watch.isImageDownloaded) {
+    const retired = await client.taskExecution.findMany({
+      where: { targetType: TaskExecutionTargetType.WATCH, targetId: watch.id, actionType: TaskExecutionActionType.CANCELLED },
+      select: { metadataJson: true },
+    });
+    const withdrawn = retired.some((row) => Boolean(asRecord(row.metadataJson).mediaWithdrawal));
+    if (!withdrawn && watch.isContentDownloaded && watch.isImageDownloaded) {
       const data: MediaOperationBoardProjection = {
         id: watch.id,
         targetType: "WATCH",

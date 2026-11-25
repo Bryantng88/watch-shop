@@ -10,5 +10,5 @@ export default async function NewWatchAcquisitionPage() {
   const canApprove = permissions.includes(PERMISSIONS.WATCH_ACQUISITION_APPROVE)
     || permissions.includes(PERMISSIONS.ACQUISITION_APPROVE_ALL)
     || user.roles?.includes("ADMIN");
-  return <div className="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6"><AcquisitionFormClient vendors={vendors} canApprove={canApprove} /></div>;
+  return <AcquisitionFormClient vendors={vendors} canApprove={canApprove} canCreateAccessories={Boolean(user.roles?.includes("ADMIN") || permissions.includes(PERMISSIONS.ACCESSORY_ACQUISITION_CREATE) || permissions.includes(PERMISSIONS.ACQUISITION_CREATE_ALL))} />;
 }

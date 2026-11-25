@@ -2,6 +2,7 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../ui/shared/AcquisitionMoneyInput";
+import { AdminDetailSectionHeader, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -341,7 +342,7 @@ export default function StrapAcquisitionFormClient({
   return (
     <form
       onSubmit={submit}
-      className="mx-auto max-w-[1500px] space-y-4 p-6 pb-28"
+      className={embedded ? "min-w-0 space-y-4 pb-28" : "mx-auto max-w-[1450px] space-y-4 p-6 pb-28"}
     >
       {!embedded ? (
         <header className="border-b border-slate-100 py-4">
@@ -358,12 +359,13 @@ export default function StrapAcquisitionFormClient({
           </div>
         </header>
       ) : null}
-      <section className="border-b border-slate-100 bg-white py-4">
+      <section className={detailUi.section}>
+        <AdminDetailSectionHeader title="Thông tin phiếu" description="Nhà cung cấp và ghi chú cho cả phiếu."/>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium">Nhà cung cấp</label>
-              <AdminButton variant="secondary" density="compact"
+              <AdminButton variant="quiet" density="compact"
                 type="button"
                 onClick={() => setAddingVendor(true)}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-violet-700"
@@ -428,23 +430,15 @@ export default function StrapAcquisitionFormClient({
           </label>
         </div>
       </section>
-      <section className="bg-white">
-        <div className="flex items-center justify-between border-b p-5">
-          <div>
-            <h2 className="font-semibold">Danh sách dây</h2>
-            <p className="text-sm text-slate-500">
-              Chính hãng cần brand; loại da và bề mặt chỉ áp dụng cho dây da.
-            </p>
-          </div>
-          <AdminButton variant="secondary"
+      <section className={detailUi.section}>
+        <AdminDetailSectionHeader title="Danh sách dây" description="Chính hãng cần brand; loại da và bề mặt chỉ áp dụng cho dây da." actions={<AdminButton variant="secondary"
             type="button"
             onClick={() => setLines((current) => [...current, newLine()])}
             className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
           >
             <Plus className="h-4 w-4" /> Thêm dòng
-          </AdminButton>
-        </div>
-        <div className="space-y-4 p-5">
+          </AdminButton>}/>
+        <div className="space-y-4">
           {lines.map((line) => (
             <div
               key={line.id}

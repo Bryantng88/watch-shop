@@ -489,7 +489,7 @@ export async function updateQueueItemWorkflowState(
   metadata?: Prisma.JsonObject | null,
 ) {
   let binding = await findBusinessBindingById(db, bindingId);
-  if (!binding) throw new Error(`BusinessBinding "${bindingId}" was not found.`);
+  if (!binding || binding.actionType === "CANCELLED") throw new Error(`BusinessBinding "${bindingId}" was not found.`);
 
   let runtime = getQueueItemWorkflowState(binding);
   if (!runtime) {
@@ -545,7 +545,7 @@ export async function applyEventTriggerToQueueItem(
   }
 
   const binding = await findBusinessBindingById(db, bindingId);
-  if (!binding) {
+  if (!binding || binding.actionType === "CANCELLED") {
     return {
       applied: false,
       bindingId,
@@ -747,7 +747,7 @@ export async function listAvailableManualTransitions(
   bindingId: string,
 ): Promise<QueueItemManualTransitionDTO[]> {
   const binding = await findBusinessBindingById(db, bindingId);
-  if (!binding) return [];
+  if (!binding || binding.actionType === "CANCELLED") return [];
 
   const runtime = getQueueItemWorkflowState(binding);
   if (!runtime) return [];
@@ -763,7 +763,7 @@ export async function listAvailableManualActions(
   itemId: string,
 ): Promise<QueueItemManualTransitionDTO[]> {
   const binding = await findBusinessBindingById(db, itemId);
-  if (!binding) return [];
+  if (!binding || binding.actionType === "CANCELLED") return [];
 
   const runtime = getQueueItemWorkflowState(binding);
   if (!runtime) return [];
@@ -807,7 +807,7 @@ export async function applyManualTriggerToQueueItem(
   }
 
   const binding = await findBusinessBindingById(db, bindingId);
-  if (!binding) {
+  if (!binding || binding.actionType === "CANCELLED") {
     return { applied: false, bindingId, reason: "BINDING_NOT_FOUND" };
   }
 
@@ -946,7 +946,7 @@ export async function resolveManualTriggerToQueueItem(
   }
 
   const binding = await findBusinessBindingById(db, bindingId);
-  if (!binding) {
+  if (!binding || binding.actionType === "CANCELLED") {
     return { applied: false, bindingId, reason: "BINDING_NOT_FOUND" };
   }
 

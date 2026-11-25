@@ -9,20 +9,24 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright')
   const root = path.resolve(__dirname, '..');
   const entry = `import React,{useState} from 'react';import {createRoot} from 'react-dom/client';
 import Form from './src/domains/acquisition/client/AcquisitionFormClient';
+import Accessories from './src/domains/acquisition/client/AccessoryAcquisitionEntryClient';
+import {AdminShellHeadingProvider} from './src/domains/shared/ui/admin-design-contract/AdminShellHeading';
 import Edit from './src/domains/acquisition/ui/edit/AcquisitionEditModal';
 import Money from './src/domains/acquisition/ui/shared/AcquisitionMoneyInput';
 import {PersonalChecklistShare} from './src/domains/personal-work/ui/PersonalChecklistShare';
 const vi={id:'vi',name:'Vi',email:'vi@example.invalid'};
 function App(){const [shares,setShares]=useState([]);const [money,setMoney]=useState(2500000);const mode=new URLSearchParams(location.search).get('mode');
+if(location.pathname.includes('/accessories/'))return <AdminShellHeadingProvider><Accessories vendors={[]} strapColors={[{id:'black',code:'BLACK',name:'Black',colorHex:'#000000'}]} canCreateWatches/></AdminShellHeadingProvider>;
 if(mode==='edit')return <Edit open acquisitionId="fixture" canManage canViewFinancials onClose={()=>{}}/>;
 if(mode==='money')return <><Money label="Số tiền" value={money} currency={new URLSearchParams(location.search).get('currency')||'VND'} onChange={v=>{setMoney(v);window.__amount=v}}/><button>Rời ô</button></>;
 if(mode==='share')return <div style={{display:'flex',justifyContent:'flex-end',padding:32}}><PersonalChecklistShare users={[vi]} shares={shares} onSave={async next=>{window.__calls=(window.__calls||0)+1;await new Promise(r=>setTimeout(r,50));if(window.__fail)throw new Error('Không lưu được');window.__shares=next;setShares(next)}}/></div>;
-return <Form vendors={[{id:'vendor',name:'Vendor mẫu'}]} canApprove={false}/>;}
+return <AdminShellHeadingProvider><Form vendors={[{id:'vendor',name:'Vendor mẫu'}]} canApprove={false} canCreateAccessories/></AdminShellHeadingProvider>;}
 createRoot(document.getElementById('root')).render(<App/>);`;
   const mocks = {
     AppToastProvider: `const notify={success(){},warning(x){window.__warning=x},error(x){window.__error=x}};export const useNotify=()=>notify;`,
     AppProgressProvider: `const progress={show(){},hide(){},update(){}};export const useAppProgress=()=>progress;`,
-    AppDialogProvider: `const dialog={confirm:async()=>true};export const useAppDialog=()=>dialog;`,
+    AppDialogProvider: `const dialog={confirm:async(input)=>window.__interactivePreview?window.confirm(input.message):window.__confirmKindChange!==false};export const useAppDialog=()=>dialog;`,
+    'strap.actions': `export const listStrapColorsAction=async()=>[];export const createQuickStrapColorAction=async()=>({id:'black',code:'BLACK',name:'Black',colorHex:'#000000'});`,
     'vendor.actions': `export const createQuickVendor=async()=>({id:'new',name:'New'});`,
     'operation-delivery.client': `export const waitForOperationProjectionDeliveries=async()=>{};`,
     MediaPickerInline: `export default function Picker({value,onChange}){window.__pickerRenders=(window.__pickerRenders||0)+1;window.__pickers=window.__pickers||{};window.__pickers[value]=onChange;return <button type="button" aria-label="Chọn ảnh">Ảnh</button>;}`,
@@ -32,7 +36,7 @@ createRoot(document.getElementById('root')).render(<App/>);`;
   const bundle = await esbuild.build({ stdin: { contents: entry, loader: 'tsx', resolveDir: root }, bundle: true, platform: 'browser', jsx: 'automatic', write: false,
     define: { 'process.env.NODE_ENV': '"production"' }, plugins: [{ name: 'fixture', setup(build) {
       build.onResolve({ filter: /^next\/navigation$/ }, () => ({ path: 'navigation', namespace: 'fixture' }));
-      build.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `export const useRouter=()=>({push(){},refresh(){}});` }));
+      build.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `export const useRouter=()=>({push(path){window.__route=path;if(window.__interactivePreview)location.href=path},refresh(){}});` }));
       build.onLoad({ filter: /\.(tsx?|jsx?)$/ }, args => {
         const key = Object.keys(mocks).find(name => args.path.replaceAll('\\','/').endsWith('/' + name + '.tsx') || args.path.replaceAll('\\','/').endsWith('/' + name + '.ts'));
         if (key) return { contents: mocks[key], loader: 'tsx' };
@@ -52,6 +56,8 @@ createRoot(document.getElementById('root')).render(<App/>);`;
     const errors = [];
     page.on('pageerror', e => {errors.push(e.message);console.error(e.message)});
     let created, edited;
+    await page.goto(origin);await page.getByRole('heading',{name:'Tạo phiếu nhập đồng hồ',exact:true}).waitFor();assert.equal(await page.getByRole('heading',{level:1}).count(),1);const kindNav=page.getByRole('navigation',{name:'Loại sản phẩm nhập',exact:true});assert.equal(await kindNav.getByRole('link',{name:'Đồng hồ',exact:true}).getAttribute('aria-current'),'page');await page.getByPlaceholder('VD: Seiko 5 7009 Automatic').first().fill('Draft watch');await page.evaluate(()=>window.__confirmKindChange=false);await kindNav.getByRole('link',{name:'Phụ kiện',exact:true}).click();assert.equal(await page.getByPlaceholder('VD: Seiko 5 7009 Automatic').first().inputValue(),'Draft watch');assert.equal(await page.evaluate(()=>window.__route),undefined);await page.evaluate(()=>window.__confirmKindChange=true);await kindNav.getByRole('link',{name:'Phụ kiện',exact:true}).click();assert.equal(await page.evaluate(()=>window.__route),'/admin/acquisitions/accessories/new');
+
     await page.route('**/api/admin/acquisitions/inline-submit', async route => { created = route.request().postDataJSON(); await route.fulfill({ json: { id: 'fixture' } }); });
     const detail = { id: 'fixture', refNo: 'PN-MẪU', status: 'DRAFT', audienceSegment: 'MEN', vendorName: 'Vendor mẫu', currency: 'VND', notes: '', totalAmount: 2500000, paidAmount: 0, unpaidAmount: 2500000,
       items: [{ id: 'watch', productType: 'WATCH', title: 'Seiko mẫu', quantity: 1, unitCost: 2500000, aiHint: '', imageKey: null, imageUrl: null }] };

@@ -20,4 +20,5 @@ export const ACQUISITION_LIST_PROJECTION_SOURCE_EVENTS = [
   "watch.media.asset.attached",
   "watch.media.ready_for_publish",
   "watch.media.recalled",
+  "watch.media.withdrawn",
 ] as const;

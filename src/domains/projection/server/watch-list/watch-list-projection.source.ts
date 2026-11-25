@@ -161,6 +161,7 @@ async function loadMediaStatesByWatchId(
     where: {
       targetType: TaskExecutionTargetType.WATCH,
       targetId: { in: watchIds },
+      actionType: { not: "CANCELLED" },
       taskItemId: { not: null },
     },
     select: {
