@@ -1,4 +1,6 @@
 "use client";
+
+import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
 import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -1142,6 +1144,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             )}
                           </AdminButton>
                         )}
+                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact label={`Ảnh đầu việc: ${entry.title}`} />
                       </div>
                     ))}
                   </div>
@@ -1445,6 +1448,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </details>
               </>}
             </div>
+            {!editingItem.checklistOnly && <WorkImageAttachments key={editingItem.id} workId={editingItem.id} />}
             {editingItem.activities.length > 0 && (
               <section className="mt-4 border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">

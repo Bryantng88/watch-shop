@@ -18,6 +18,8 @@ export const MEDIA_ROLES = [
 export type MediaRole = (typeof MEDIA_ROLES)[number];
 
 export type MediaOwnerType =
+  | "TASK_ITEM"
+  | "TASK_CHECKLIST"
   | "WATCH"
   | "MEDIA_POST"
   | "ACQUISITION"

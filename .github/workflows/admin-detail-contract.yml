@@ -1,0 +1,79 @@
+name: Admin detail contract
+on:
+  pull_request:
+    paths:
+      - 'src/domains/order/client/OrderDetailClient.tsx'
+      - 'src/domains/order/ui/detail/**'
+      - 'src/domains/watch/ui/proposal/WatchDetailUiProposal.tsx'
+      - 'src/domains/watch/server/detail/watch-operational-overview*'
+      - 'src/domains/watch/shared/watch-operational-overview.ts'
+      - 'src/app/(admin)/admin/watches/**/page.tsx'
+      - 'src/domains/watch/ui/operations/side/ServiceCard.tsx'
+      - 'src/domains/shared/ui/admin-design-contract/AdminDetail*'
+      - 'src/domains/shared/ui/admin-design-contract/AdminManagement.tsx'
+      - 'src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts'
+      - 'src/domains/acquisition/client/AcquisitionDetailClient.tsx'
+      - 'src/domains/acquisition/client/AcquisitionListClient.tsx'
+      - 'src/domains/acquisition/ui/edit/AcquisitionEditModal.tsx'
+      - 'scripts/check-acquisition-detail-ui.cjs'
+      - 'src/domains/shared/ui/icons/MediaIcons.ts'
+      - 'scripts/check-admin-detail-ui.cjs'
+      - '.github/workflows/admin-detail-contract.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  details:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: >-
+          npx eslint src/domains/order/client/OrderDetailClient.tsx
+          src/domains/order/ui/detail
+          src/domains/watch/ui/proposal/WatchDetailUiProposal.tsx
+          src/domains/watch/server/detail/watch-operational-overview.service.ts
+          src/domains/watch/server/detail/watch-operational-overview.service.test.ts
+          src/domains/watch/shared/watch-operational-overview.ts
+          'src/app/(admin)/admin/watches/[id]/page.tsx' 
+          src/domains/watch/ui/operations/side/ServiceCard.tsx
+          src/domains/shared/ui/admin-design-contract/AdminDetail.tsx
+          src/domains/shared/ui/admin-design-contract/AdminDetailWorkspace.tsx
+          src/domains/shared/ui/admin-design-contract/AdminManagement.tsx
+          src/domains/shared/ui/admin-design-contract/admin-ui.foundation.ts
+          src/domains/shared/ui/icons/MediaIcons.ts
+          src/domains/shared/ui/signals/operational-domain-presentation.ts
+          src/domains/shared/ui/signals/operational-stage-presentation.ts
+          src/domains/shared/ui/business/BusinessEntityPreview.tsx
+          src/domains/shared/ui/business/WatchMediaReview.tsx
+          src/domains/watch/client/workbench/WatchWorkbenchNav.tsx
+          src/domains/watch/client/workbench/WatchWorkbenchHeader.tsx
+          src/domains/watch/ui/list/WatchListRow.tsx
+          src/domains/watch/ui/list/WatchListToolBar.tsx
+          scripts/check-admin-detail-ui.cjs scripts/check-acquisition-detail-ui.cjs
+          src/domains/acquisition/client/AcquisitionDetailClient.tsx
+          src/domains/acquisition/client/AcquisitionListClient.tsx
+          src/domains/acquisition/ui/edit/AcquisitionEditModal.tsx
+      - run: npx tsc --noEmit
+      - run: npx tsx --test src/domains/watch/server/detail/watch-operational-overview.service.test.ts
+      - run: npm install --prefix /tmp/detail-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/detail-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-admin-detail-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/detail-browser/node_modules/playwright
+          DETAIL_SCREENSHOT_DIR: ${{ runner.temp }}/admin-detail
+      - run: node scripts/check-acquisition-detail-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/detail-browser/node_modules/playwright
+          DETAIL_SCREENSHOT_DIR: ${{ runner.temp }}/admin-detail
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-detail-preview
+          path: ${{ runner.temp }}/admin-detail
+          if-no-files-found: ignore

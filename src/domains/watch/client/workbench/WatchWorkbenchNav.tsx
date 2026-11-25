@@ -1,7 +1,9 @@
 "use client";
 
+import { MediaProcessingIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import Link from "next/link";
-import { Camera, Loader2, ReceiptText, Save, ShoppingBag, Wrench } from "lucide-react";
+import { Loader2, ReceiptText, Save, ShoppingBag, Wrench } from "lucide-react";
 import { operationButtonClass } from "@/domains/watch/ui/operations/shared/OperationShell";
 import { cx } from "./workbench-utils";
 import type { WatchWorkbenchSection } from "./types";
@@ -52,7 +54,7 @@ export default function WatchWorkbenchNav({
 
             <div className="flex shrink-0 items-center gap-2">
                 <button type="button" onClick={onOpenMediaWorkspace} disabled={openingMediaWorkspace} className={operationButtonClass({ variant: "primary", size: "sm", className: "text-xs disabled:opacity-60" })}>
-                    {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                    {openingMediaWorkspace ? <Loader2 className="h-4 w-4 animate-spin" /> : <MediaProcessingIcon className="h-4 w-4" />}
                     Xử lý Media
                 </button>
                 <a href="#service" className={operationButtonClass({ variant: "softBlue", size: "sm", className: "text-xs" })}><Wrench className="h-4 w-4" /> Service</a>

@@ -3272,6 +3272,8 @@ enum MediaObjectAvailability {
 }
 
 enum MediaOwnerType {
+  TASK_ITEM
+  TASK_CHECKLIST
   WATCH
   MEDIA_POST
   ACQUISITION

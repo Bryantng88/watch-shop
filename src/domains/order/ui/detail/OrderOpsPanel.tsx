@@ -23,7 +23,7 @@ export default function OrderOpsPanel({
   const busy = busyAction != null;
 
   return (
-    <SectionCard icon={<Send className="h-5 w-5" />} title="Thao tác" subtitle="Action vận hành order">
+    <SectionCard id="order-actions" icon={<Send className="h-5 w-5" />} title="Thao tác" subtitle="Xử lý đơn hàng">
       <div className="space-y-3">
         <Button type="button" className="w-full justify-center" disabled={!canPost || busy} onClick={() => onAction("post")}>
           <CheckCircle2 className="mr-2 h-4 w-4" />

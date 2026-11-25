@@ -1,0 +1,83 @@
+name: Work image attachments
+on:
+  pull_request:
+    paths:
+      - 'src/domains/work-media/**'
+      - 'src/domains/storefront/server/public-media.service*'
+      - 'src/domains/personal-work/server/personal-work.service.ts'
+      - 'src/domains/personal-work/ui/PersonalWorkClient.tsx'
+      - 'src/domains/media/core/**'
+      - 'src/domains/media/application/media-binding.service*'
+      - 'src/domains/media/application/media-ingest.service.ts'
+      - 'src/domains/media/server/nas-media*'
+      - 'src/app/api/admin/personal-work/images/**'
+      - 'src/app/api/media/sign/route.ts'
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/20261123110000_work_image_owners/**'
+      - 'scripts/check-work-media*'
+      - 'scripts/work-media-retention.ts'
+      - '.github/workflows/work-image-attachments.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  work-media:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: watch_work_media_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d watch_work_media_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/watch_work_media_test
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:5432/watch_work_media_test
+      WORK_MEDIA_TEST_DB: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma generate --generator client
+      - run: npx prisma db push --skip-generate
+      - run: npx prisma db execute --file prisma/migrations/20261123110000_work_image_owners/migration.sql --schema prisma/schema.prisma
+      - run: >-
+          npx eslint src/domains/work-media
+          src/domains/storefront/server/public-media.service.ts
+          src/domains/storefront/server/public-media.service.test.ts
+          src/domains/personal-work/server/personal-work.service.ts
+          src/domains/personal-work/ui/PersonalWorkClient.tsx
+          src/domains/media/core/work-media-privacy.ts
+          src/domains/media/core/media-path.policy.ts
+          src/domains/media/application/media-binding.service.ts
+          src/domains/media/application/media-binding.service.test.ts
+          src/domains/media/application/media-ingest.service.ts
+          src/domains/media/server/nas-media.service.ts
+          src/domains/media/server/nas-media-thumbnail.service.ts
+          src/app/api/admin/personal-work/images src/app/api/media/sign/route.ts
+          scripts/check-work-media-db.ts scripts/work-media-retention.ts scripts/check-work-media-ui.cjs
+      - run: npx tsc --noEmit
+      - run: npx tsx --test src/domains/storefront/server/public-media.service.test.ts src/domains/work-media/server/work-media.test.ts src/domains/media/application/media-binding.service.test.ts src/domains/media/application/media-ingest.service.test.ts src/domains/media/core/media-path.policy.test.ts src/domains/media/storage/verified-delete.test.ts src/domains/personal-work/server/personal-work-access.test.ts
+      - run: npx tsx scripts/check-work-media-db.ts
+      - run: npm run check:admin-buttons
+      - run: npm install --prefix /tmp/work-media-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/work-media-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-work-media-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/work-media-browser/node_modules/playwright
+          WORK_MEDIA_SCREENSHOTS: ${{ runner.temp }}/work-media
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: work-image-preview
+          path: ${{ runner.temp }}/work-media
+          if-no-files-found: ignore

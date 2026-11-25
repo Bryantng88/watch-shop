@@ -1,4 +1,5 @@
 "use client";
+import { ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 
 import { CreditCard } from "lucide-react";
 import { fmtMoney, orderTotal, SectionCard, toNumber, type OrderDetailData } from "./shared";
@@ -21,19 +22,19 @@ export default function OrderFinancialPanel({ data }: { data: OrderDetailData })
   const remaining = Math.max(total - paid, 0);
 
   return (
-    <SectionCard icon={<CreditCard className="h-5 w-5" />} title="Thanh toán" subtitle="Tổng tiền và khoản đã nhận">
+    <SectionCard id="order-payment" icon={<CreditCard className="h-5 w-5" />} title="Thanh toán" subtitle="Tổng tiền và khoản đã nhận">
       <div className="space-y-4">
-        <div className="space-y-3 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200/70">
+        <div className="space-y-3">
           <Row label="Tạm tính" value={fmtMoney(total, currency)} />
           <Row label="Cọc yêu cầu" value={fmtMoney(depositRequired, currency)} />
           <Row label="Đã nhận" value={fmtMoney(paid, currency)} />
           <Row label="Cọc còn thiếu" value={fmtMoney(depositGap, currency)} />
         </div>
 
-        <div className="rounded-xl bg-slate-950 p-5 text-white">
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">Còn phải thu</div>
-          <div className="mt-2 text-2xl font-bold tracking-tight">{fmtMoney(remaining, currency)}</div>
-          <div className="mt-2 text-sm leading-6 text-white/60">
+        <div className={detail.focus}>
+          <div className={detail.focusLabel}>Còn phải thu</div>
+          <div className={detail.focusValue}>{fmtMoney(remaining, currency)}</div>
+          <div className={detail.metadata}>
             Số tiền còn lại cần xử lý để hoàn tất tài chính của order.
           </div>
         </div>

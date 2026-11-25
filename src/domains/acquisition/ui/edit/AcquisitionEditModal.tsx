@@ -2,8 +2,8 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
-import { useEffect, useMemo, useState } from "react";
-import { Box, ImageIcon, Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { ImageIcon, Loader2, Plus, Save, Trash2 } from "lucide-react";
 
 import MediaPickerInline from "@/components/media/MediaPickerInline";
 import { useAppDialog } from "@/domains/shared/feedback/AppDialogProvider";
@@ -14,40 +14,16 @@ import AcquisitionBulkImagePicker from "@/domains/acquisition/ui/new/Acquisition
 import type { AcquisitionPreparedImage } from "@/domains/acquisition/client/form/acquisition-form.types";
 import { waitForOperationProjectionDeliveries } from "@/domains/coordination/ui/operation-delivery.client";
 
-type EditItem = {
-    id: string;
-    productId?: string | null;
-    linkedWatchSku?: string | null;
-    linkedWatchTitle?: string | null;
-    title: string;
-    quantity: number;
-    productType: "WATCH" | "WATCH_STRAP" | "WATCH_CLASP";
-    sourceOrderItemId?: string | null;
-    unitCost: number | "";
-    imageKey: string | null;
-    imageUrl: string | null;
-    aiHint: string;
-};
-
-type Detail = {
-    id: string;
-    refNo?: string | null;
-    status: string;
-    audienceSegment: "MEN" | "WOMEN";
-    vendorName?: string | null;
-    currency: string;
-    notes: string;
-    totalAmount: number;
-    paidAmount: number;
-    unpaidAmount: number;
-    items: EditItem[];
-};
+import AcquisitionDetailClient, { type AcquisitionDetail as Detail, type AcquisitionDetailItem as EditItem } from "@/domains/acquisition/client/AcquisitionDetailClient";
+import { AdminDetailSection, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 
 type Props = {
     open: boolean;
     acquisitionId: string | null;
     onClose: () => void;
     onUpdated?: () => void;
+    canManage?: boolean;
+    canViewFinancials?: boolean;
 };
 
 function uid() {
@@ -79,11 +55,13 @@ function createEmptyItem(): EditItem {
     };
 }
 
-export default function AcquisitionEditModal({ open, acquisitionId, onClose, onUpdated }: Props) {
+export default function AcquisitionEditModal({ open, acquisitionId, onClose, onUpdated, canManage = false, canViewFinancials = false }: Props) {
     const notify = useNotify();
     const dialog = useAppDialog();
     const progress = useAppProgress();
 
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const [editing, setEditing] = useState(false);
     const [detail, setDetail] = useState<Detail | null>(null);
     const [items, setItems] = useState<EditItem[]>([]);
     const [notes, setNotes] = useState("");
@@ -105,6 +83,8 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
 
         async function load() {
             setLoading(true);
+            setDetail(null);
+            setEditing(false);
             try {
                 const res = await fetch(`/api/admin/acquisitions/${acquisitionId}/edit`, {
                     cache: "no-store",
@@ -132,6 +112,13 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
             mounted = false;
         };
     }, [open, acquisitionId]);
+
+    useEffect(() => {
+        if (!open) return;
+        const previous = document.activeElement as HTMLElement | null;
+        const frame = requestAnimationFrame(() => dialogRef.current?.focus());
+        return () => { cancelAnimationFrame(frame); previous?.focus(); };
+    }, [open]);
 
     if (!open) return null;
 
@@ -184,7 +171,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
     }
 
     async function submit() {
-        if (!detail || !acquisitionId) return;
+        if (!detail || !acquisitionId || submitting || !canManage || !canViewFinancials || (!draft && !posted)) return;
 
         const validItems = items.filter(
             (item) =>
@@ -267,65 +254,22 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
     }
 
     return (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/40 p-4">
-            <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-white">
-                                <Box className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h2 className="text-lg font-semibold text-slate-950">
-                                    Chỉnh sửa phiếu nhập {detail?.refNo || ""}
-                                </h2>
-                                <p className="text-sm text-slate-500">
-                                    {posted
-                                        ? "POSTED: chỉ chỉnh giá nhập, payment được đồng bộ tự động."
-                                        : "DRAFT: thêm/xóa watch, đổi ảnh, chỉnh giá nhập và ghi chú."}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <AdminButton iconOnly variant="quiet"
-                        type="button"
-                        onClick={onClose}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                    >
-                        <X className="h-5 w-5" />
-                    </AdminButton>
-                </div>
-
-                {loading ? (
-                    <div className="flex min-h-[420px] items-center justify-center gap-3 text-sm text-slate-500">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Đang tải dữ liệu...
-                    </div>
-                ) : (
-                    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                            {[
-                                ["Trạng thái", detail?.status || "-"],
-                                ["Vendor", detail?.vendorName || "-"],
-                                ["Tổng mới", fmtMoney(total, currency)],
-                                ["Payment", `${fmtMoney(detail?.paidAmount, currency)} paid · ${fmtMoney(detail?.unpaidAmount, currency)} unpaid`],
-                            ].map(([label, value]) => (
-                                <div key={label} className="min-w-0 py-2">
-                                    <div className="text-xs font-medium text-slate-400">{label}</div>
-                                    <div className="mt-1 truncate text-sm font-semibold text-slate-900">{value}</div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="mt-5">
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-                                <div>
-                                    <div className="text-base font-semibold text-slate-950">Danh sách watch</div>
-                                    <div className="text-sm text-slate-500">
-                                        {posted ? "Khóa ảnh/tên/số dòng vì phiếu đã POSTED." : "Có thể thêm/bớt watch và đổi ảnh khi còn DRAFT."}
-                                    </div>
-                                </div>
+        <div className="fixed inset-0 z-[90] bg-slate-950/40 p-0 sm:p-4">
+            <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="acquisition-detail-title" tabIndex={-1} onKeyDown={event => {
+                if (!event.currentTarget.contains(event.target as Node)) return;
+                if (event.key === "Escape" && !submitting) { event.stopPropagation(); onClose(); }
+                if (event.key !== "Tab") return;
+                const nodes = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),select:not(:disabled),summary,[tabindex="0"]')).filter(node => node.getClientRects().length > 0);
+                const first = nodes[0], last = nodes[nodes.length - 1];
+                if (!first) { event.preventDefault(); return; }
+                if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last.focus(); }
+                else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+            }} className="mx-auto h-full w-full max-w-[1440px] overflow-y-auto bg-white outline-none sm:rounded-xl">
+                {loading || !detail ? <div role="status" className="flex min-h-[300px] items-center justify-center gap-3"><h1 id="acquisition-detail-title" className="sr-only">Phiếu nhập</h1><Loader2 className="h-5 w-5 animate-spin"/>Đang tải phiếu nhập...</div> :
+                    <AcquisitionDetailClient detail={detail} canManage={canManage} canViewFinancials={canViewFinancials} editing={editing} pending={submitting} onEdit={() => setEditing(true)} onClose={onClose}
+                        actions={<><AdminButton variant="secondary" disabled={submitting} onClick={() => setEditing(false)}>Xem phiếu</AdminButton><AdminButton disabled={submitting} onClick={submit}>{submitting ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>}Lưu thay đổi</AdminButton></>}>
+                        <AdminDetailSection id="acquisition-items" title="Sản phẩm" description={posted ? "Phiếu đã nhập kho: chỉ có thể chỉnh giá nhập." : "Có thể thêm, xóa sản phẩm và đổi ảnh khi còn nháp."}>
+                            <div className="mb-4 flex flex-wrap justify-end gap-3">
 
                                 {draft ? (
                                     <div className="flex items-center gap-2">
@@ -334,7 +278,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                             disabled={submitting}
                                             audienceSegment={detail?.audienceSegment ?? "MEN"}
                                         />
-                                        <Button type="button" variant="outline" onClick={addItem}>
+                                        <Button type="button" variant="outline" onClick={addItem} disabled={submitting}>
                                             <Plus className="mr-2 h-4 w-4" />
                                             Thêm watch
                                         </Button>
@@ -354,7 +298,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                     </span>
                                                     {item.linkedWatchSku ? (
                                                         <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                                                            Linked {item.linkedWatchSku}
+                                                            {item.linkedWatchSku}
                                                         </span>
                                                     ) : null}
                                                 </div>
@@ -362,6 +306,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                 {draft ? (
                                                     <AdminButton variant="danger"
                                                         type="button"
+                                                        disabled={submitting}
                                                         onClick={() => removeItem(item.id)}
                                                         className="inline-flex items-center gap-1 text-sm text-rose-600 hover:text-rose-700"
                                                     >
@@ -371,7 +316,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                 ) : null}
                                             </div>
 
-                                            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[80px_minmax(0,1fr)_80px_190px] lg:items-start">
+                                            <div className="grid grid-cols-1 gap-3 2xl:grid-cols-[64px_minmax(0,1fr)_80px_160px] 2xl:items-start">
                                                 <div>
                                                     <FieldLabel>Ảnh</FieldLabel>
                                                     {draft ? (
@@ -383,16 +328,16 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                                                     imageUrl: key ? `/api/media/sign?key=${encodeURIComponent(key)}` : null,
                                                                 })
                                                             }
-                                                            pending={false}
+                                                            pending={submitting}
                                                             disabled={submitting}
                                                             profile="inline"
                                                             compact
-                                                            className="h-[72px] w-[72px] rounded-xl"
+                                                            className="h-16 w-16 rounded-xl"
                                                         />
                                                     ) : src ? (
-                                                        <img src={src} alt="watch" className="h-[72px] w-[72px] rounded-xl border border-slate-200 object-cover" />
+                                                        <img src={src} alt="watch" className="h-16 w-16 rounded-xl border border-slate-200 object-cover" />
                                                     ) : (
-                                                        <div className="flex h-[72px] w-[72px] items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-300">
+                                                        <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-300">
                                                             <ImageIcon className="h-5 w-5" />
                                                         </div>
                                                     )}
@@ -439,7 +384,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
 
                                                 <div>
                                                     <FieldLabel>Giá nhập</FieldLabel>
-                                                    <AcquisitionMoneyInput label={`Giá nhập ${item.title || "sản phẩm"}`} value={item.unitCost} currency={currency}
+                                                    <AcquisitionMoneyInput label={`Giá nhập ${item.title || "sản phẩm"}`} value={item.unitCost ?? ""} currency={currency}
                                                         onChange={value => updateItem(item.id, { unitCost: value })} disabled={submitting} />
                                                 </div>
 
@@ -448,31 +393,18 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                                     );
                                 })}
                             </div>
-                        </div>
+                        </AdminDetailSection>
 
                         {draft ? (
-                            <div className="mt-5 border-t border-slate-100 pt-4">
+                            <div id="acquisition-notes" className={detailUi.section}>
                                 <FieldLabel>Ghi chú</FieldLabel>
-                                <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
+                                <Textarea disabled={submitting} value={notes} onChange={(event) => setNotes(event.target.value)} />
                             </div>
                         ) : null}
-                    </div>
-                )}
 
-                <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-                    <div className="text-sm text-slate-500">
-                        Tổng sau chỉnh sửa: <b className="text-slate-950">{fmtMoney(total, currency)}</b>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-                            Đóng
-                        </Button>
-                        <Button type="button" onClick={submit} disabled={loading || submitting}>
-                            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Lưu thay đổi
-                        </Button>
-                    </div>
-                </div>
+                        <p className={detailUi.metadata}>Tổng sau chỉnh sửa: <b>{fmtMoney(total, currency)}</b></p>
+                    </AcquisitionDetailClient>
+                }
             </div>
         </div>
     );

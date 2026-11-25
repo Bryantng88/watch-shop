@@ -1,5 +1,6 @@
+import { MediaProcessingIcon } from "../icons/MediaIcons";
 import type { VisualStatusTone } from "./VisualStatusSignal";
-import { Camera, CheckCircle2, CircleDot, CirclePlay, LoaderCircle, Search, Send, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Camera, CheckCircle2, CircleDot, CirclePlay, LoaderCircle, Search, Send, type LucideIcon } from "lucide-react";
 
 export type OperationalStageSignal =
   | "queued"
@@ -50,7 +51,7 @@ export function operationalStagePresentation(value?: string | null) {
 export function operationalStageIcon(value?: string | null): LucideIcon {
   const stage = normalize(value);
   if (stage === "PHOTOGRAPHY") return Camera;
-  if (stage === "MEDIA_PROCESSING") return SlidersHorizontal;
+  if (stage === "MEDIA_PROCESSING") return MediaProcessingIcon;
   if (["PUBLISH", "READY_TO_PUBLISH", "READY_TO_POST"].includes(stage)) return Send;
   if (stage === "INSPECT") return Search;
   if (stage === "READY") return CirclePlay;

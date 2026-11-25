@@ -1,5 +1,7 @@
 "use client";
 
+import { MediaProcessingIcon } from "@/domains/shared/ui/icons/MediaIcons";
+
 import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -10,7 +12,6 @@ import {
     Hammer,
     HandCoins,
     ImageIcon,
-    ImagePlus,
     CopyX,
     Pencil,
     RotateCcw,
@@ -502,7 +503,7 @@ export default function WatchListRow({
         onMedia && {
             key: "media-space",
             label: "Xử lý nhanh Media",
-            icon: <ImagePlus className="h-4 w-4" />,
+            icon: <MediaProcessingIcon className="h-4 w-4" />,
             onClick: onMedia,
             disabled: mediaSubmitting,
         },
