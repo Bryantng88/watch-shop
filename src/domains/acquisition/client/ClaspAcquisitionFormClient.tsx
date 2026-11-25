@@ -2,6 +2,7 @@
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../ui/shared/AcquisitionMoneyInput";
+import { AdminDetailSectionHeader, ADMIN_DETAIL as detailUi } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -174,7 +175,7 @@ export default function ClaspAcquisitionFormClient({
   return (
     <form
       onSubmit={submit}
-      className="mx-auto max-w-[1450px] space-y-4 p-6 pb-28"
+      className={embedded ? "min-w-0 space-y-4 pb-28" : "mx-auto max-w-[1450px] space-y-4 p-6 pb-28"}
     >
       {!embedded ? (
         <header className="border-b border-slate-100 py-4">
@@ -191,12 +192,13 @@ export default function ClaspAcquisitionFormClient({
           </div>
         </header>
       ) : null}
-      <section className="border-b border-slate-100 bg-white py-4">
+      <section className={detailUi.section}>
+        <AdminDetailSectionHeader title="Thông tin phiếu" description="Nhà cung cấp và ghi chú cho cả phiếu."/>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <div className="mb-2 flex justify-between">
               <label className="text-sm font-medium">Nhà cung cấp</label>
-              <AdminButton variant="secondary" density="compact"
+              <AdminButton variant="quiet" density="compact"
                 type="button"
                 onClick={() => setAdding(true)}
                 className="text-xs font-semibold text-violet-700"
@@ -254,23 +256,15 @@ export default function ClaspAcquisitionFormClient({
           </label>
         </div>
       </section>
-      <section className="bg-white">
-        <div className="flex justify-between border-b p-5">
-          <div>
-            <h2 className="font-semibold">Danh sách khóa</h2>
-            <p className="text-sm text-slate-500">
-              Mỗi dòng là một SKU khóa độc lập.
-            </p>
-          </div>
-          <AdminButton variant="secondary"
+      <section className={detailUi.section}>
+        <AdminDetailSectionHeader title="Danh sách khóa" description="Mỗi dòng là một SKU khóa độc lập." actions={<AdminButton variant="secondary"
             type="button"
             onClick={() => setLines((rows) => [...rows, fresh()])}
             className="inline-flex items-center gap-2 rounded-md border px-3 text-sm"
           >
             <Plus className="h-4 w-4" /> Thêm dòng
-          </AdminButton>
-        </div>
-        <div className="space-y-4 p-5">
+          </AdminButton>}/>
+        <div className="space-y-4">
           {lines.map((line, index) => (
             <article
               key={line.id}
