@@ -241,7 +241,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   const existing = await prisma.$transaction(async tx=>{
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
     if(!await tx.taskItem.findFirst({where:{id:taskItemId,...personalWorkEditAccessWhere(userId)},select:{id:true}}))throw new Error("Công việc đã thay đổi hoặc đã gộp; hãy tải lại.");
-    return tx.personalTaskCalendarLink.upsert({where:{userId_taskItemId:{userId,taskItemId}},update:{},create:{userId,taskItemId,connectionId:auth.connection.id,calendarId:auth.connection.calendarId,eventId:googleTaskEventId(userId,taskItemId,auth.connection.calendarId)}});
+    return tx.personalTaskCalendarLink.upsert({where:{userId_taskItemId:{userId,taskItemId}},update:{},create:{userId,taskItemId,connectionId:auth.connection.id,calendarId:auth.connection.calendarId,eventId:googleTaskEventId(userId,taskItemId,auth.connection.calendarId),syncHash:"RESERVATION"}});
   });
   const startDate = bangkokDateKey(item.dueAt || new Date());
   const estimatedDays = Math.max(1, Math.min(365, item.estimatedDays || 1));
@@ -261,7 +261,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   if (existing?.syncHash === syncHash) return existing;
   const endpoint = `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
   const response = await writeGoogleTaskEvent({
-    existingId: existing?.eventId,
+    existingId: existing.syncHash === "RESERVATION" ? undefined : existing.eventId,
     stableId: googleTaskEventId(userId, item.id, auth.connection.calendarId),
     taskItemId: item.id,
     payload,

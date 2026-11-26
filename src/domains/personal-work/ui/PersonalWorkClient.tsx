@@ -1049,7 +1049,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </div>
             </div>
             <div className="mt-5 space-y-4">
-              {!!editingItem.mergeSources?.length&&!editingItem.checklistOnly&&<details className="text-xs text-slate-500"><summary className="cursor-pointer">Gộp từ {editingItem.mergeSources.length} công việc</summary><ul className="mt-2 space-y-1">{editingItem.mergeSources.map(source=><li key={source.id}>{source.title}</li>)}</ul><p className="mt-2">Lịch sử nguồn giữ nguyên bên dưới. Việc nguồn không được tính thêm vào báo cáo hoàn thành.</p></details>}
+              {!!editingItem.mergeSources?.length&&!editingItem.checklistOnly&&<details className="text-xs text-slate-500"><AdminDisclosureSummary className="cursor-pointer">Gộp từ {editingItem.mergeSources.length} công việc</AdminDisclosureSummary><ul className="mt-2 space-y-1">{editingItem.mergeSources.map(source=><li key={source.id}>{source.title}</li>)}</ul><p className="mt-2">Lịch sử nguồn giữ nguyên bên dưới. Việc nguồn không được tính thêm vào báo cáo hoàn thành.</p></details>}
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">
