@@ -8,8 +8,9 @@ import { previewMediaMerge, mergeMediaWork } from "../src/domains/personal-work/
 import { personalWorkViewAccessWhere } from "../src/domains/personal-work/server/personal-work-access";
 async function main(){
   const url=new URL(process.env.DATABASE_URL||"");
-  assert.equal(url.hostname,"watch-shop-staging-db");
-  assert.match(url.pathname,/^\/watch_shop_merge_rehearsal_[a-z0-9_]+$/);
+  const ci=process.env.MEDIA_MERGE_REHEARSAL_CI==="1"&&url.hostname==="127.0.0.1"&&url.pathname==="/personal_codex_test";
+  assert.ok(ci||url.hostname==="watch-shop-staging-db"&&/^\/watch_shop_merge_rehearsal_[a-z0-9_]+$/.test(url.pathname),"Rehearsal DB guard");
+  await prisma.role.upsert({where:{name:"ADMIN"},create:{name:"ADMIN"},update:{}});
   const owner=await prisma.user.create({data:{email:`merge-${randomUUID()}@example.invalid`,name:"Merge rehearsal",roles:{connect:{name:"ADMIN"}}}});
   const recipient=await prisma.user.create({data:{email:`merge-recipient-${randomUUID()}@example.invalid`,name:"Recipient"}});
   const auth={userId:owner.id};
@@ -25,6 +26,9 @@ async function main(){
   const image=sampleBinding?await prisma.mediaBinding.create({data:{mediaObjectId:sampleBinding.mediaObjectId,ownerType:"TASK_ITEM",ownerId:a.id,role:sampleBinding.role,audienceSegment:sampleBinding.audienceSegment,lifecycle:"ATTACHED"}}):null;
   const entry=await prisma.taskItemChecklist.findFirstOrThrow({where:{taskItemId:a.id,isDone:false}});
   await prisma.personalChecklistShare.create({data:{checklistItemId:entry.id,userId:recipient.id,accessLevel:"EDITOR",sharedByUserId:owner.id}});
+  const history=await prisma.taskItemActivity.create({data:{taskItemId:a.id,sourceType:"DISCUSSION",title:"Source history",actorUserId:owner.id,replies:{create:{actorUserId:owner.id,body:"Original reply"}}}});
+  const pendingPush=await prisma.workPushDelivery.create({data:{notificationKey:randomUUID(),taskItemId:a.id,checklistItemId:entry.id,userId:recipient.id,kind:"ASSIGNED",route:"/admin/personal-work?item="+a.id,endpoint:"https://example.invalid/synthetic",subscriptionVersion:new Date()}});
+  const pendingReminder=await prisma.workPushDelivery.create({data:{notificationKey:randomUUID(),taskItemId:a.id,userId:owner.id,kind:"REMINDER",route:"/admin/personal-work?item="+a.id,endpoint:"https://example.invalid/synthetic",subscriptionVersion:new Date()}});
   const oldEntries=await prisma.taskItemChecklist.findMany({where:{taskItemId:{in:[a.id,b.id]}},orderBy:{id:"asc"}});
   const preview=await previewMediaMerge({ids:[a.id,b.id]},auth);
   await prisma.taskItemChecklist.update({where:{id:entry.id},data:{title:"Changed after preview"}});
@@ -33,8 +37,13 @@ async function main(){
   const fresh=await previewMediaMerge({ids:[a.id,b.id]},auth);
   await assert.rejects(previewMediaMerge({ids:[a.id,b.id]},{userId:recipient.id}));
   const command={ids:[a.id,b.id],revision:fresh.revision,title:"Merged rehearsal",requestKey:randomUUID()};
-  const result=await mergeMediaWork(command,auth);
+  const [result,duplicate]=await Promise.all([mergeMediaWork(command,auth),mergeMediaWork(command,auth)]);
+  assert.equal(result.id,duplicate.id);
   assert.equal((await mergeMediaWork(command,auth)).id,result.id);
+  assert.equal((await prisma.taskItemActivity.findUniqueOrThrow({where:{id:history.id}})).taskItemId,result.id);
+  assert.equal(await prisma.taskItemActivityReply.count({where:{activityId:history.id}}),1);
+  const queued=await prisma.workPushDelivery.findUniqueOrThrow({where:{id:pendingPush.id}});assert.equal(queued.taskItemId,result.id);assert.equal(queued.deliveredAt,null);
+  assert.ok((await prisma.workPushDelivery.findUniqueOrThrow({where:{id:pendingReminder.id}})).deliveredAt);
   if(image)assert.equal((await prisma.mediaBinding.findUniqueOrThrow({where:{id:image.id}})).ownerId,result.id);
   await assert.rejects(addPersonalWorkChecklistItem(a.id,"Stale tab",auth));
   await assert.rejects(updatePersonalWorkItem({id:a.id,title:"Stale edit"},auth));
@@ -51,7 +60,7 @@ async function main(){
   await prisma.taskItemChecklist.updateMany({where:{taskItemId:result.id},data:{isDone:true,doneAt:new Date()}});
   await finalizePersonalWorkChecklist(result.id,auth);
   assert.equal(await prisma.taskItem.count({where:{personalOwnerUserId:owner.id,mergedIntoTaskItemId:null,status:"DONE"}}),1);
-  const watch=await prisma.watch.findFirstOrThrow({select:{productId:true}});
+  const watch=await prisma.watch.create({data:{product:{create:{title:"Synthetic merge Watch",type:"WATCH"}}},select:{productId:true}});
   const request={requestKey:randomUUID(),productId:watch.productId,assigneeUserId:owner.id,day:"2030-01-01",part:"image",request:"Merge rehearsal"};
   const d1=await addDailyMediaWork(owner.id,request),d2=await addDailyMediaWork(owner.id,{...request,requestKey:randomUUID(),day:"2030-01-02"});
   const dailyPreview=await previewMediaMerge({ids:[d1.taskItemId,d2.taskItemId]},auth);

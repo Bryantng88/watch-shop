@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
+import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
+import { workRoute } from "@/domains/notification/server/work-push-policy";
 import { prisma, type DB } from "@/server/db/client";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
@@ -7,16 +9,19 @@ import { createPersonalWorkItem } from "./personal-work.service";
 import { mediaChecklistContext } from "../shared/media-daily";
 import { MediaMergeError, mediaMergeCommand, mediaMergeSelection, validateMediaMerge, type MediaMergePreview } from "../shared/media-merge";
 const hash=(value:unknown)=>createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const include = {personalShares:{orderBy:{id:"asc" as const}},checklists:{orderBy:{id:"asc" as const},include:{personalShares:{orderBy:{id:"asc" as const}}}},calendarLinks:true,codexRuns:{where:{status:{in:["QUEUED","RUNNING"] as ("QUEUED"|"RUNNING")[]}}},activities:{orderBy:{id:"asc" as const},select:{id:true,updatedAt:true}},executions:{orderBy:{id:"asc" as const}}} satisfies Prisma.TaskItemInclude;
+const include = {personalShares:{orderBy:{id:"asc" as const}},checklists:{orderBy:{id:"asc" as const},include:{personalShares:{orderBy:{id:"asc" as const}}}},calendarLinks:true,codexRuns:true,activities:{orderBy:{id:"asc" as const},select:{id:true,updatedAt:true}},executions:{orderBy:{id:"asc" as const}}} satisfies Prisma.TaskItemInclude;
 async function load(db:DB,ids:string[],userId:string){
   const rows=await db.taskItem.findMany({where:{id:{in:ids},personalOwnerUserId:userId},include,orderBy:{id:"asc"}});
   if(rows.length!==ids.length)throw new MediaMergeError("Không tìm thấy đủ công việc do bạn sở hữu. Hãy tải lại danh sách.");
-  validateMediaMerge(rows.map(row=>({id:row.id,title:row.title,ownerId:row.personalOwnerUserId,assigneeId:row.assignedToUserId,status:row.status,locked:!!row.checklistLockedAt,categoryId:row.personalCategoryId,workType:row.workTypeId,shares:row.personalShares.map(s=>s.userId+":"+s.accessLevel),entries:row.checklists.map(e=>({id:e.id,isDone:e.isDone,media:!!mediaChecklistContext(e.note)})),calendar:!!row.calendarLinks.length,running:!!row.codexRuns.length,merged:!!row.mergedIntoTaskItemId})),userId);
+  if(rows.some(row=>row.taskId))throw new MediaMergeError("Chỉ gộp việc media cá nhân độc lập; không gộp mục thuộc quy trình nghiệp vụ khác.");
+  validateMediaMerge(rows.map(row=>({id:row.id,title:row.title,ownerId:row.personalOwnerUserId,assigneeId:row.assignedToUserId,status:row.status,locked:!!row.checklistLockedAt,categoryId:row.personalCategoryId,workType:row.workTypeId,shares:row.personalShares.map(s=>s.userId+":"+s.accessLevel),entries:row.checklists.map(e=>({id:e.id,isDone:e.isDone,media:!!mediaChecklistContext(e.note)})),calendar:!!row.calendarLinks.length,running:row.codexRuns.some(run=>["QUEUED","RUNNING"].includes(run.status)),merged:!!row.mergedIntoTaskItemId})),userId);
+  const tagged=await hydrateTaskItemsWithTagsRepo(db,rows);
+  if(tagged.some(row=>row.tags.some(tag=>tag.name.trim().toLowerCase()==="codex")))throw new MediaMergeError("Có việc còn gắn tag Codex. Bỏ tag và kết thúc tác vụ nền trước khi gộp.");
   const images=await db.mediaBinding.findMany({where:{ownerType:"TASK_ITEM",ownerId:{in:ids},lifecycle:{in:["DRAFT","ATTACHED"]}},orderBy:{id:"asc"}});
   if(images.some(i=>i.lifecycle==="DRAFT"))throw new MediaMergeError("Có ảnh đang tải. Chờ tải xong rồi gộp.");
   if(images.length>20)throw new MediaMergeError("Tổng ảnh công việc vượt giới hạn 20 ảnh; cần sắp xếp lại trước khi gộp.");
   if(new Set(images.map(i=>i.mediaObjectId+":"+i.role)).size!==images.length)throw new MediaMergeError("Các việc có ảnh đính kèm trùng nhau; cần xử lý ảnh trùng trước khi gộp.");
-  const revision=hash({rows,images});
+  const revision=hash({rows,images,tags:tagged.map(row=>({id:row.id,tags:row.tags.map(tag=>tag.name).sort()}))});
   const total=rows.reduce((n,r)=>n+r.checklists.length,0),done=rows.reduce((n,r)=>n+r.checklists.filter(e=>e.isDone).length,0);
   const products=new Set(rows.flatMap(r=>r.checklists.map(e=>mediaChecklistContext(e.note)!.productId)));
   const preview:MediaMergePreview={revision,suggestedTitle:`Xử lý media · ${products.size} đồng hồ`,sources:rows.map(r=>({id:r.id,title:r.title,total:r.checklists.length,done:r.checklists.filter(e=>e.isDone).length})),total,done,warnings:["Việc nguồn sẽ ẩn khỏi mọi danh sách và lịch; chỉ việc chung được tính trong báo cáo công việc.","Giữ toàn bộ đầu việc đã xong/chưa xong, người được chia sẻ, lịch sử và ảnh; không loại các đầu việc trùng tên hoặc cùng Watch.","Không thể tự tách lại sau khi gộp. Liên kết cũ sẽ mở việc chung.",...(new Set(rows.map(r=>r.dueAt?.toISOString()||"")).size>1?["Các hạn khác nhau: việc chung dùng hạn sớm nhất. Hạn cũ được giữ trong dấu vết gộp."]:[])]};
@@ -32,7 +37,7 @@ export async function mergeMediaWork(raw:unknown,auth:unknown){
   mediaMergeSelection.parse({ids:input.ids});
   if(!userId)throw new MediaMergeError("Không xác định được người dùng.");
   const id="media-merged-"+hash([userId,input.requestKey]).slice(0,40),commandHash=hash({...input,ids:[...input.ids].sort()});
-  return runBusinessEventTransaction(async(tx,delivery)=>{
+  for(let attempt=0;;attempt++){try{return await runBusinessEventTransaction(async(tx,delivery)=>{
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id},0))`;
     const existing=await tx.taskItem.findUnique({where:{id}});
     if(existing){if(existing.personalOwnerUserId!==userId||(existing.mergeReceipt as Prisma.JsonObject)?.commandHash!==commandHash)throw new MediaMergeError("Mã lần gộp đã được dùng cho yêu cầu khác.");return {id,created:false};}
@@ -50,6 +55,9 @@ export async function mergeMediaWork(raw:unknown,auth:unknown){
       for(const entry of [...source.checklists].sort((a,b)=>a.sortOrder-b.sortOrder||a.id.localeCompare(b.id)))await tx.taskItemChecklist.update({where:{id:entry.id},data:{taskItemId:id,mergedFromTaskItemId:entry.mergedFromTaskItemId||source.id,sortOrder:sortOrder++}});
       await tx.taskItemActivity.updateMany({where:{taskItemId:source.id},data:{taskItemId:id}});
       await tx.taskExecution.updateMany({where:{taskItemId:source.id},data:{taskItemId:id}});
+      await tx.personalCodexRun.updateMany({where:{taskItemId:source.id},data:{taskItemId:id}});
+      await tx.workPushDelivery.updateMany({where:{taskItemId:source.id,deliveredAt:null,kind:"REMINDER"},data:{deliveredAt:new Date()}});
+      await tx.workPushDelivery.updateMany({where:{taskItemId:source.id,deliveredAt:null},data:{taskItemId:id,route:workRoute(id,true)}});
       await tx.taskItem.update({where:{id:source.id},data:{mergedIntoTaskItemId:id}});
       await tx.taskItemActivity.create({data:{taskItemId:source.id,sourceType:"SYSTEM",title:"Đã gộp công việc",actorUserId:userId,metadataJson:{mergedIntoTaskItemId:id}}});
     }
@@ -57,5 +65,8 @@ export async function mergeMediaWork(raw:unknown,auth:unknown){
     for(const image of images)await tx.mediaBinding.update({where:{id:image.id},data:{ownerId:id}});
     await tx.taskItemActivity.create({data:{taskItemId:id,sourceType:"SYSTEM",title:`Gộp ${rows.length} công việc media`,body:`Giữ ${preview.total} đầu việc, ${preview.done} đã hoàn thành. Báo cáo công việc tính một việc chung.`,actorUserId:userId,metadataJson:{source:"PERSONAL_MEDIA_MERGE",sourceIds:rows.map(r=>r.id),total:preview.total,done:preview.done}}});
     return {id:target.id,created:true};
-  },{isolationLevel:"Serializable",timeout:30000,allowNoEvents:true});
+  },{isolationLevel:"Serializable",timeout:30000,allowNoEvents:true});}catch(error){
+    if(attempt<2&&error instanceof Prisma.PrismaClientKnownRequestError&&(["P2034","P2002"].includes(error.code)||error.code==="P2010"&&["40001","40P01"].includes(String(error.meta?.code))))continue;
+    throw error;
+  }}
 }

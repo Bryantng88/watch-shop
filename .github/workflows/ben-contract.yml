@@ -18,6 +18,7 @@ on:
       - 'src/app/api/internal/ben-code/**'
       - 'ops/codex-worker/**'
       - 'scripts/smoke-ben-*.ts'
+      - 'scripts/check-media-merge-rehearsal.ts'
       - 'tests/**'
       - 'public/ben*'
       - 'public/ben/**'
@@ -89,6 +90,7 @@ jobs:
       - run: timeout 120s node --import tsx scripts/smoke-ben-order-services.ts
       - run: timeout 120s node --import tsx scripts/smoke-acquisition-quick-names.ts
       - run: timeout 120s node --import tsx scripts/smoke-watch-media-daily.ts
+      - run: MEDIA_MERGE_REHEARSAL_CI=1 timeout 120s node --import tsx scripts/check-media-merge-rehearsal.ts
       - run: npm run build
   remembered-login-browser:
     runs-on: ubuntu-24.04
