@@ -6,6 +6,13 @@ import { PersonalWorkClient } from "@/domains/personal-work/ui/PersonalWorkClien
 export const dynamic = "force-dynamic";
 
 export default async function PersonalWorkPage() {
+  const start = performance.now();
   const user = await requirePermission(PERMISSIONS.TASK_VIEW);
-  return <PersonalWorkClient data={await getPersonalWorkPageData(user)} />;
+  const authorized = performance.now();
+  const data = await getPersonalWorkPageData(user);
+  console.info("[personal-work-timing]", JSON.stringify({
+    authMs: Math.round(authorized - start),
+    dataMs: Math.round(performance.now() - authorized),
+  }));
+  return <PersonalWorkClient data={data} />;
 }
