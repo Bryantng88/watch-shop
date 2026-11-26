@@ -3,7 +3,7 @@ import type {PersonalWorkItem,PersonalWorkChecklistItem} from "./personal-work.t
 export function checklistOnlyWork(item:PersonalWorkItem,entries:PersonalWorkChecklistItem[],updatedAt?:string):PersonalWorkItem {
   const done=entries.filter(e=>e.isDone).length;
   return {...item,checklistOnly:true,access:"VIEWER",assignedToMe:false,assignee:null,
-    note:null,tags:[],targets:[],activities:[],sharedWith:[],codexRun:null,codexRuns:[],
+    note:null,tags:[],targets:[],activities:[],sharedWith:[],codexRun:null,codexRuns:[],mergeSources:[],
     category:{key:"GENERAL",label:"Đầu việc",color:"#7c3aed",domain:"GENERAL",isDefault:true},domain:"GENERAL",workType:"REMINDER",
     updatedAt:updatedAt??item.createdAt,progressMode:"CHECKLIST",progressPercent:entries.length?Math.round(done/entries.length*100):0,
     checklist:entries.map(entry=>({...entry,sharedWith:[]})),

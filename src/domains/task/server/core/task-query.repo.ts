@@ -386,6 +386,7 @@ export async function listTaskItemsRepo(
   const pageSize = Math.min(100, Math.max(10, Number(input.filters.pageSize || 25)));
 
   const where: Prisma.TaskItemWhereInput = {
+    mergedIntoTaskItemId: null,
     AND: [
       buildTaskItemAccessWhere(
         input.userId,

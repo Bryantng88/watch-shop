@@ -1,5 +1,6 @@
 "use client";
 
+import { PersonalMediaMerge } from "./PersonalMediaMerge";
 import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
@@ -510,7 +511,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     });
   }
 
-  useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
+  useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(data.mergedWorkRedirects?.[requestedItem]||requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit,data.mergedWorkRedirects]);
   return (
     <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
       <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
@@ -956,6 +957,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
         <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
           {listOnly && <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}
+          <div className="flex justify-end"><PersonalMediaMerge items={calendar.items} onMerged={id=>{const url=new URL(window.location.href);url.searchParams.set("item",id);router.replace(url.pathname+url.search);router.refresh();}}/></div>
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
@@ -1047,6 +1049,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </div>
             </div>
             <div className="mt-5 space-y-4">
+              {!!editingItem.mergeSources?.length&&!editingItem.checklistOnly&&<details className="text-xs text-slate-500"><summary className="cursor-pointer">Gộp từ {editingItem.mergeSources.length} công việc</summary><ul className="mt-2 space-y-1">{editingItem.mergeSources.map(source=><li key={source.id}>{source.title}</li>)}</ul><p className="mt-2">Lịch sử nguồn giữ nguyên bên dưới. Việc nguồn không được tính thêm vào báo cáo hoàn thành.</p></details>}
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">

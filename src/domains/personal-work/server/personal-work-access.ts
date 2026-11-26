@@ -1,6 +1,7 @@
 import { AppTagOwnerType, PersonalTaskShareAccess, type Prisma } from "@prisma/client";
 
 export const personalWorkScopeWhere: Prisma.TaskItemWhereInput = {
+  mergedIntoTaskItemId: null,
   OR: [{ personalOwnerUserId: { not: null } }, { task: { kind: "PERSONAL" } }],
 };
 

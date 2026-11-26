@@ -22,7 +22,7 @@ export async function mediaDailyAssignees(userId:string) {
 }
 export async function addDailyMediaWork(userId:string,raw:unknown, options?:{deferConsumers?:(work:()=>Promise<void>)=>void}) {
   const input=mediaDailyRequestSchema.parse(raw);
-  const parentId='media-daily-'+digest(input.assigneeUserId+':'+input.day);
+  let parentId='media-daily-'+digest(input.assigneeUserId+':'+input.day);
   const entryId='media-entry-'+digest(userId+':'+input.requestKey);
   const requestHash=digest(JSON.stringify(input));
   for(let attempt=0;;attempt++) {
@@ -31,6 +31,12 @@ export async function addDailyMediaWork(userId:string,raw:unknown, options?:{def
       if(input.assigneeUserId!==userId && !user.canAssign)throw Error('Bạn không có quyền giao việc cho người khác.');
       await actor(tx,input.assigneeUserId);
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${parentId},0))`;
+      for(let depth=0;depth<50;depth++){
+        const redirected=await tx.taskItem.findUnique({where:{id:parentId},select:{mergedIntoTaskItemId:true}});
+        if(!redirected?.mergedIntoTaskItemId)break;
+        parentId=redirected.mergedIntoTaskItemId;
+        if(depth===49)throw Error('Chuỗi gộp công việc không hợp lệ.');
+      }
       const previous=await tx.taskItemChecklist.findUnique({where:{id:entryId}});
       const receipt=await tx.taskItemActivity.findUnique({where:{id:entryId}});
       if(receipt && !previous)throw Error('Đầu việc của yêu cầu này đã được xóa; hãy tạo yêu cầu mới nếu cần.');

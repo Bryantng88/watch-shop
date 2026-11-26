@@ -53,7 +53,7 @@ export async function dailyMediaWorkForProducts(
         {
           taskItem: {
             status: { in: ["TODO", "IN_PROGRESS"] },
-            id: { startsWith: "media-daily-" },
+            mergedIntoTaskItemId: null,
           },
         },
         {

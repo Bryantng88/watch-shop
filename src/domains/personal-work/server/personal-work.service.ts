@@ -244,6 +244,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
+        mergedSources:{select:{id:true,title:true}},
         assignedToUser: { select: { id: true, name: true } },
         personalCategory: true,
         codexRuns: { orderBy: { createdAt: "desc" }, take: 5, select: publicRunSelect },
@@ -301,6 +302,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       const result: PersonalWorkItem = {
+        mergeSources:item.mergedSources,
         id: item.id,
         personalWorkNumber: item.personalWorkNumber,
         assignedToMe: item.assignedToUserId === userId,
@@ -372,7 +374,22 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       loadError: null,
     },
   };
-  return {...data,items:await hydratePersonalWorkObjects(prisma,userId,data.items)};
+  const visibleOriginIds=items.flatMap(row=>row.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).flatMap(e=>e.mergedFromTaskItemId?[e.mergedFromTaskItemId]:[]));
+  const merged=await prisma.taskItem.findMany({where:{mergedIntoTaskItemId:{not:null},OR:[{personalOwnerUserId:userId},{personalShares:{some:{userId}}},{id:{in:visibleOriginIds}}]},select:{id:true,mergedIntoTaskItemId:true}});
+  for(let depth=0;depth<50;depth++){
+    const loaded=new Set(merged.map(row=>row.id));
+    const missing=[...new Set(merged.flatMap(row=>row.mergedIntoTaskItemId&&!loaded.has(row.mergedIntoTaskItemId)?[row.mergedIntoTaskItemId]:[]))];
+    if(!missing.length)break;
+    const ancestors=await prisma.taskItem.findMany({where:{id:{in:missing},mergedIntoTaskItemId:{not:null}},select:{id:true,mergedIntoTaskItemId:true}});
+    if(!ancestors.length)break;merged.push(...ancestors);
+  }
+  const edges=new Map(merged.map(row=>[row.id,row.mergedIntoTaskItemId!]));
+  const visible=new Set(data.items.filter(row=>!row.checklistOnly).map(row=>row.id));
+  const partialSources=new Set(items.flatMap(row=>row.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).flatMap(e=>e.mergedFromTaskItemId?[e.mergedFromTaskItemId]:[])));
+  for(const id of [...partialSources]){let root=id;const seen=new Set<string>();while(edges.has(root)&&!seen.has(root)){seen.add(root);partialSources.add(root);root=edges.get(root)!;}}
+  const redirects:Record<string,string>={};
+  for(const row of merged){let root=row.id;const seen=new Set<string>();while(edges.has(root)&&!seen.has(root)){seen.add(root);root=edges.get(root)!;}if(visible.has(root)||partialSources.has(row.id))redirects[row.id]=root;}
+  return {...data,mergedWorkRedirects:redirects,items:await hydratePersonalWorkObjects(prisma,userId,data.items)};
 }
 
 export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma, identity?: { systemId?: string; actorUserId?: string; assignedToUserId?: string; eventTargets?: PersonalWorkTarget[]; onEvent?: (event:RecordedBusinessEvent)=>void; deferConsumers?: (work:()=>Promise<void>)=>void }): Promise<import("@prisma/client").TaskItem> {
@@ -590,6 +607,8 @@ export async function updatePersonalWorkItem(
     : null;
   if (input.updateChecklistItemId && (event || !input.updateBody?.trim())) throw new Error("Chọn đầu việc cần kèm nội dung cập nhật cho công việc.");
   await withDbTransaction(db, async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
+    await assertPersonalWorkAccess(input.id, auth, "EDIT", tx);
     let updateEntry: { id: string; title: string } | null = null;
     if (input.updateChecklistItemId) {
       await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
@@ -734,6 +753,8 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
   if (!normalizedTitle) throw new Error("Vui lòng nhập tên đầu việc");
   if (normalizedTitle.length > 500) throw new Error("Tên đầu việc không được vượt quá 500 ký tự");
   return runBusinessEventTransaction(async (tx,delivery) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
     const last = await tx.taskItemChecklist.findFirst({
       where: { taskItemId },
       orderBy: { sortOrder: "desc" },
@@ -824,6 +845,8 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
     const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
     if (!entry) throw new Error("Không tìm thấy đầu việc");
     const result = await tx.taskItemChecklist.deleteMany({ where: { id: checklistItemId, taskItemId } });
@@ -837,6 +860,8 @@ export async function finalizePersonalWorkChecklist(taskItemId: string, auth: un
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
     const [total, done] = await Promise.all([
       tx.taskItemChecklist.count({ where: { taskItemId } }),
       tx.taskItemChecklist.count({ where: { taskItemId, isDone: true } }),
@@ -881,6 +906,7 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
   if (users.length !== unique.size) throw new Error("Có người nhận không còn hoạt động hoặc không tồn tại");
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    await assertPersonalWorkAccess(taskItemId, auth, "OWNER", tx);
     const previous = await tx.personalTaskShare.findMany({where:{taskItemId},select:{userId:true}});
     const item = await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId}});
     await tx.personalTaskShare.deleteMany({ where: { taskItemId } });

@@ -1,0 +1,47 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { prisma } from "../src/server/db/client";
+import { createPersonalWorkItem, getPersonalWorkPageData, finalizePersonalWorkChecklist } from "../src/domains/personal-work/server/personal-work.service";
+import { previewMediaMerge, mergeMediaWork } from "../src/domains/personal-work/server/media-merge.service";
+import { personalWorkViewAccessWhere } from "../src/domains/personal-work/server/personal-work-access";
+async function main(){
+  const url=new URL(process.env.DATABASE_URL||"");
+  assert.equal(url.hostname,"watch-shop-staging-db");
+  assert.match(url.pathname,/^\/watch_shop_merge_rehearsal_[a-z0-9_]+$/);
+  const owner=await prisma.user.create({data:{email:`merge-${randomUUID()}@example.invalid`,name:"Merge rehearsal",roles:{connect:{name:"ADMIN"}}}});
+  const recipient=await prisma.user.create({data:{email:`merge-recipient-${randomUUID()}@example.invalid`,name:"Recipient"}});
+  const auth={userId:owner.id};
+  const make=async()=>{
+    const row=await createPersonalWorkItem({title:"Media rehearsal",domain:"WATCHSHOP",tags:["Media"]},auth);
+    const doneAt=new Date("2026-11-20T01:00:00Z");
+    for(const done of [true,false])await prisma.taskItemChecklist.create({data:{taskItemId:row.id,title:"Media entry",isDone:done,doneAt:done?doneAt:null,note:JSON.stringify({source:"WATCH_MEDIA_DAILY",productId:"synthetic-watch",watchTitle:"Synthetic",sku:null,part:"image",request:"test"})}});
+    await prisma.taskItem.update({where:{id:row.id},data:{progressMode:"CHECKLIST",progressPercent:50}});
+    return row;
+  };
+  const [a,b]=await Promise.all([make(),make()]);
+  const entry=await prisma.taskItemChecklist.findFirstOrThrow({where:{taskItemId:a.id,isDone:false}});
+  await prisma.personalChecklistShare.create({data:{checklistItemId:entry.id,userId:recipient.id,accessLevel:"EDITOR",sharedByUserId:owner.id}});
+  const oldEntries=await prisma.taskItemChecklist.findMany({where:{taskItemId:{in:[a.id,b.id]}},orderBy:{id:"asc"}});
+  const preview=await previewMediaMerge({ids:[a.id,b.id]},auth);
+  await prisma.taskItemChecklist.update({where:{id:entry.id},data:{title:"Changed after preview"}});
+  await assert.rejects(mergeMediaWork({ids:[a.id,b.id],revision:preview.revision,title:"Merged",requestKey:randomUUID()},auth),/thay đổi/);
+  assert.equal(await prisma.taskItem.count({where:{id:{in:[a.id,b.id]},mergedIntoTaskItemId:null}}),2);
+  const fresh=await previewMediaMerge({ids:[a.id,b.id]},auth);
+  await assert.rejects(previewMediaMerge({ids:[a.id,b.id]},{userId:recipient.id}));
+  const command={ids:[a.id,b.id],revision:fresh.revision,title:"Merged rehearsal",requestKey:randomUUID()};
+  const result=await mergeMediaWork(command,auth);
+  assert.equal((await mergeMediaWork(command,auth)).id,result.id);
+  const next=await prisma.taskItemChecklist.findMany({where:{taskItemId:result.id},orderBy:{id:"asc"}});
+  assert.deepEqual(next.map(e=>e.id),oldEntries.map(e=>e.id));
+  assert.deepEqual(next.map(e=>e.doneAt),oldEntries.map(e=>e.doneAt));
+  assert.equal(await prisma.taskItem.count({where:{id:{in:[a.id,b.id]},...personalWorkViewAccessWhere(owner.id)}}),0);
+  const partial=await getPersonalWorkPageData({userId:recipient.id});
+  const visible=partial.items.find(i=>i.id===result.id)!;
+  assert.equal(visible.checklistOnly,true);assert.deepEqual(visible.checklist.map(e=>e.id),[entry.id]);assert.equal(visible.mergeSources?.length,0);
+  const full=await getPersonalWorkPageData(auth);assert.equal(full.mergedWorkRedirects?.[a.id],result.id);
+  await prisma.taskItemChecklist.updateMany({where:{taskItemId:result.id},data:{isDone:true,doneAt:new Date()}});
+  await finalizePersonalWorkChecklist(result.id,auth);
+  assert.equal(await prisma.taskItem.count({where:{personalOwnerUserId:owner.id,mergedIntoTaskItemId:null,status:"DONE"}}),1);
+  console.log("PASS: transaction/stale preview/idempotency/IDs/doneAt/partial sharing/old links/one completion count");
+}
+main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());
