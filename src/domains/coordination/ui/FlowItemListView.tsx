@@ -6,6 +6,7 @@ import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-d
 import { submitOperationalBlueprintActionAction } from "@/domains/task/client/operational-action.client";
 import { WatchMediaWorkBadge } from "@/domains/watch/ui/edit/WatchMediaWorkBadge";
 import { useMediaDailyState } from "@/domains/watch/client/media-work/use-media-daily-state";
+import { WithdrawMediaSelectionButton } from "./WithdrawMediaSelectionButton";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -290,7 +291,9 @@ export default function FlowItemListView({
   const mediaTriggers = useRef(new Map<string, () => void>());
   const progress = useAppProgress();
   const transitionFeedback = useManualTransitionFeedback();
-  const [isActionPending, startActionTransition] = useTransition();
+  const [transitionPending, startActionTransition] = useTransition();
+  const [withdrawPending, setWithdrawPending] = useState(false);
+  const isActionPending = transitionPending || withdrawPending;
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [purchaseRequestItem, setPurchaseRequestItem] = useState<CoordinationFlowListItemDTO | null>(null);
@@ -1017,6 +1020,12 @@ export default function FlowItemListView({
       {selectedItems.length ? (
         <div className={isCompact ? styles.bulkBar : "flex flex-wrap items-center gap-3 border-b border-violet-100 bg-violet-50 px-5 py-3"}>
           <span className={isCompact ? "text-sm font-semibold text-slate-700" : "text-sm font-semibold text-violet-900"}>Đã chọn {selectedItems.length} công việc</span>
+          {isMedia && <WithdrawMediaSelectionButton items={selectedItems} disabled={transitionPending} onPendingChange={setWithdrawPending} onError={setActionError} onReload={onReloadRequested}
+            onWithdrawn={ids => {
+              setOptimisticallyMovedIds(current => [...current, ...ids]);
+              setSelectedIds(current => current.filter(id => !ids.includes(id)));
+              onItemsMovedFromStage?.({ itemIds: ids, fromStageKey: activeStage });
+            }}/>}
           {selectedPaymentItems.length ? (
             <AdminButton variant="primary" density="compact"
               type="button"
@@ -1038,7 +1047,7 @@ export default function FlowItemListView({
               {pendingActionId === "BULK" ? "Đang xử lý..." : manualTransitionActionLabel(transition)}
             </AdminButton>
           ))}
-          {!commonActions.length && !selectedPaymentItems.length ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
+          {!commonActions.length && !selectedPaymentItems.length && !(isMedia && selectedItems.every(item => item.targetType === "WATCH")) ? <span className="text-xs text-violet-600">Các item đã chọn không có action chung.</span> : null}
           <AdminButton variant="quiet" density="compact" type="button" onClick={() => setSelectedIds([])} className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900">Bỏ chọn</AdminButton>
         </div>
       ) : null}
