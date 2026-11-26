@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import WatchFormClient from "@/domains/watch/client/WatchFormClient";
+import { RetiredMediaWorkspace } from "@/domains/watch/ui/edit/RetiredMediaWorkspace";
 import {
     getWatchEditDetail,
     getWatchMediaEditDetail,
@@ -161,6 +162,7 @@ export default async function WatchEditPage({
         ]);
 
     if (!detail) notFound();
+    if (workspaceBindingId && !mediaWorkspaceContext) return <RetiredMediaWorkspace/>;
     const compactCurrentOptions = buildMediaEditOptions(detail);
     const editOptions = isEmbeddedMediaMode
         ? {

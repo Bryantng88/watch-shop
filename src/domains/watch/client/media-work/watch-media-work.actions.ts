@@ -18,13 +18,23 @@ import { prisma } from "@/server/db/client";
 import { getProjectionDeliveryStatus } from "@/domains/projection/server";
 import { withdrawWatchFromMedia } from "@/domains/watch/server/media-work/withdraw-watch-media.service";
 
+export async function withdrawMediaQueueWatchAction(input: { bindingId: string }) {
+  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  const binding = await prisma.taskExecution.findUnique({ where: { id: input.bindingId, targetType: "WATCH" }, select: { targetId: true } });
+  if (!binding) throw new Error("Không tìm thấy watch trong quy trình media.");
+  const watch = await prisma.watch.findUnique({ where: { id: binding.targetId }, select: { productId: true } });
+  if (!watch) throw new Error("Không tìm thấy watch.");
+  return withdrawWatchFromMediaAction({ productId: watch.productId, bindingId: input.bindingId });
+}
+
 export async function withdrawWatchFromMediaAction(input: { productId: string; bindingId: string }) {
   const user = await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
   const result = await withdrawWatchFromMedia({ ...input, actorUserId: user.id, deferConsumers: (work) => after(work) });
   revalidatePath("/admin/coordination/media");
   revalidatePath("/admin/watches");
   revalidatePath(`/admin/watches/${result.productId}`);
-  revalidatePath(`/admin/watches/${result.productId}/edit`);
+  // Let the open editor finish waiting for the read models, then close itself.
+  // Revalidating its binding URL here races with that close after retirement.
   return result;
 }
 
