@@ -9,7 +9,22 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
  const toolbar=`<aside style="padding:10px 16px;background:#f8fafc;font:12px Arial;color:#475569">Bản thử · dữ liệu giả lập, không ghi vào hệ thống thật. <a href="?view=list&item=item-23">Mở việc có đầu việc</a> · <a href="?view=list&item=item-29">Mở việc thường</a> · <a href="?view=list">Danh sách</a> · <button onclick="window.__completionError=!window.__completionError;this.textContent=window.__completionError?'Đang giả lập lỗi':'Giả lập lỗi hoàn thành'">Giả lập lỗi hoàn thành</button></aside>`;
  const html=`<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0;font-family:Arial,sans-serif}</style></head><body>${toolbar}<div id="root"></div><script>${built.js.replace(/<\/script/gi,'<\\/script')}</script></body></html>`;
  if(process.env.WORK_MODAL_HTML)await fs.writeFile(process.env.WORK_MODAL_HTML,html);
- const server=http.createServer((req,res)=>{if(req.url.startsWith('/api/admin/personal-work/images')){res.setHeader('content-type','application/json');res.end(JSON.stringify({items:[],canEdit:false,limit:20}));return;}res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html;charset=utf-8');res.end(req.url==='/app.js'?built.js:`<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0;font-family:Arial,sans-serif}</style></head><body>${process.env.WORK_MODAL_PREVIEW?toolbar:''}<div id="root"></div><script src="/app.js"></script></body></html>`)});
+ const previewImages=[],previewFiles=new Map();
+ const server=http.createServer(async(req,res)=>{
+  if(req.url.startsWith('/api/admin/personal-work/images')){
+   const previewFile=previewFiles.get(new URL(req.url,'http://fixture').pathname);
+   if(req.method==='GET'&&previewFile){res.setHeader('content-type',previewFile.type);res.end(previewFile.bytes);return;}
+   res.setHeader('content-type','application/json');
+   if(process.env.WORK_MODAL_PREVIEW&&req.method==='POST'){
+    const chunks=[];for await(const chunk of req)chunks.push(chunk);
+    const form=await new Response(Buffer.concat(chunks),{headers:{'content-type':req.headers['content-type']}}).formData();
+    const file=form.get('file');
+    if(file&&typeof file.arrayBuffer==='function'){const id=String(form.get('uploadId')),url='/api/admin/personal-work/images/'+id;previewFiles.set(url,{type:file.type,bytes:Buffer.from(await file.arrayBuffer())});previewImages.push({id,name:file.name,state:'READY',url});}
+   }
+   if(process.env.WORK_MODAL_PREVIEW&&req.method==='DELETE'){const id=req.url.split('/').pop();const index=previewImages.findIndex(item=>item.id===id);if(index>=0)previewImages.splice(index,1);}
+   res.end(JSON.stringify({items:previewImages,canEdit:Boolean(process.env.WORK_MODAL_PREVIEW),limit:20}));return;
+  }
+  res.setHeader('content-type',req.url==='/app.js'?'text/javascript':'text/html;charset=utf-8');res.end(req.url==='/app.js'?built.js:`<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0;font-family:Arial,sans-serif}</style></head><body>${process.env.WORK_MODAL_PREVIEW?toolbar:''}<div id="root"></div><script src="/app.js"></script></body></html>`)});
  await new Promise(resolve=>server.listen(process.env.WORK_MODAL_PREVIEW?Number(process.env.PORT||4075):0,'0.0.0.0',resolve));
  const origin='http://127.0.0.1:'+server.address().port;
  if(process.env.WORK_MODAL_PREVIEW){console.log(`Work modal interactive preview listening on ${server.address().port}; synthetic data/actions only`);return;}

@@ -32,16 +32,24 @@
 .toolbar[data-inline="true"] { min-height: 0; padding: 0; justify-content: flex-end; }
 
 .checklistRows { container: checklist-rows / inline-size; }
-.checklistRow { display: grid; grid-template-columns: 32px minmax(0,1fr); align-items: center; column-gap: 8px; row-gap: 0; min-width: 0; padding: 4px 0; }
-.checklistRow > button { grid-column: 1; grid-row: 1 / 3; align-self: center; }
-.checklistContent { grid-column: 2 / -1; grid-row: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.checklistMeta { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 140px; color: #64748b; font-size: 12px; line-height: 16px; }
+.checklistRow { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; column-gap: 4px; row-gap: 0; min-width: 0; padding: 2px 0; }
+.checklistRow > button { grid-column: 1; grid-row: 1; align-self: center; }
+.checklistContent { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.checklistRow:has([data-checklist-thumbnail]) { grid-template-columns: 32px 36px minmax(0,1fr) auto; }
+.checklistThumbnail { grid-column: 2; grid-row: 1; align-self: center; display: flex; }
+.checklistRow:has([data-checklist-thumbnail]) .checklistContent { grid-column: 3; }
+.checklistRow:has([data-checklist-thumbnail]) .checklistSecondary { grid-column: 4; }
+.checklistRow:has([data-checklist-thumbnail]) .checklistActions { grid-column: 4; }
+.checklistMeta { display: flex; align-items: center; gap: 4px; min-width: 0; max-width: 140px; color: #64748b; font-size: 11px; line-height: 14px; }
+.checklistMeta span[aria-label] { width: 16px; height: 16px; font-size: 7px; }
 .checklistMeta > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.checklistSecondary { grid-column: 2; grid-row: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-width: 0; }
-.checklistActions { display: flex; align-items: center; gap: 0; min-width: 0; margin-left: auto; }
+.checklistMeta[data-shared="true"] { max-width: none; overflow: visible; }
+.checklistMeta[data-shared="true"] > span { width: auto; height: auto; overflow: visible; }
+.checklistMeta[data-shared="true"] > span > span { width: 16px; min-width: 16px; height: 16px; font-size: 8px; }
+.checklistSecondary { grid-column: 3; grid-row: 1; display: flex; align-items: center; gap: 2px; }
+.checklistActions { grid-column: 3; grid-row: 1; align-self: center; display: flex; align-items: center; gap: 0; min-width: 0; }
 .checklistActions:empty { display: none; }
-.checklistTools { display: flex; flex-wrap: wrap; align-items: center; gap: 0 4px; min-width: 0; }
-.checklistTools:has([data-checklist-images] [aria-expanded="true"]) { flex-basis: 100%; }
-.checklistTools > [data-checklist-images] { display: block; }
-.checklistTools > [data-checklist-images] > section { display: flex; flex-wrap: wrap; align-items: center; }
-.checklistTools > [data-checklist-images]:has([aria-expanded="true"]) { flex-basis: 100%; }
+.checklistTools > button > svg { width: 12px !important; height: 12px !important; }
+.checklistTools { display: flex; align-items: center; gap: 0; min-width: 0; }
+
+@container checklist-rows (max-width: 400px) { .checklistMeta { max-width: 16px; overflow: hidden; } }

@@ -1,6 +1,7 @@
 "use client";
 
 import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
+import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
 import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 
@@ -33,7 +34,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Plus,
-  MessageSquare,
   Check,
   ChevronDown,
   MoreHorizontal,
@@ -53,6 +53,7 @@ import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
   ProgressMetric,
   AdminUserAvatar,
+  AdminUserAvatarStack,
   AdminViewTabs,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
@@ -1094,7 +1095,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           }}
                           className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md after:absolute after:-inset-1.5 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                         >
-                          <span aria-hidden="true" className={`flex h-[18px] w-[18px] items-center justify-center rounded border transition-colors ${entry.isDone ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-transparent group-hover:border-blue-400"}`}>
+                          <span aria-hidden="true" className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${entry.isDone ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-transparent group-hover:border-blue-400"}`}>
                           {checklistMutation.isPending(`toggle:${entry.id}`) ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
                           ) : (
@@ -1112,29 +1113,26 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             router.refresh();
                           }}/>
                         </div>
+                        {entry.object?.type === "WATCH" && <span data-checklist-thumbnail className={listStyles.checklistThumbnail}><WorkObjectThumbnail object={entry.object} size={36}/></span>}
                         <div className={listStyles.checklistSecondary}>
                           <div className={listStyles.checklistTools}>
-                            <div data-checklist-meta className={listStyles.checklistMeta}>
-                          {!entry.sharedWith?.length ? <><AdminUserAvatar user={editingItem.owner} size="xs"/><span>{editingItem.owner.name || editingItem.owner.email}</span></> : <span className="flex items-center gap-1" title="Đã chia sẻ">{entry.sharedWith.slice(0,3).map(share=><AdminUserAvatar key={share.user.id} user={share.user} size="xs"/>)}<span>{entry.sharedWith.length} người</span></span>}
+                            <div data-checklist-meta data-shared={Boolean(entry.sharedWith?.length)} className={listStyles.checklistMeta}>
+                          {!entry.sharedWith?.length ? <><AdminUserAvatar user={editingItem.owner} size="xs"/><span>{editingItem.owner.name || editingItem.owner.email}</span></> : <AdminUserAvatarStack users={entry.sharedWith.map(share=>share.user)} max={2} size="xs"/>}
                         </div>
-                            <div data-checklist-images className="contents">
-                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact inline label={`Ảnh đầu việc: ${entry.title}`} triggerLabel="Ảnh đầu việc" />
-                        </div>
-                            {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
+                            {editingItem.access === "OWNER" && <PersonalChecklistShare showCount={false} users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
                           await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
                           setEditingItem(current=>current?{...current,checklist:current.checklist.map(e=>e.id===entry.id?{...e,sharedWith:shares}:e)}:current);
                           router.refresh();
                         }}/>}
                           </div>
                           <div data-checklist-actions className={listStyles.checklistActions}>
-                        {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={`Cập nhật ${entry.title}`} title="Cập nhật đầu việc" onClick={()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}><MessageSquare className="h-3.5 w-3.5"/></AdminButton>}
-                        {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
-                        {!entry.mediaContext && entry.object && <a href={entry.object.href} className="shrink-0 text-xs text-blue-700" title={entry.object.label}>Xem liên kết</a>}
-
-                        {!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt && <AdminRowActionMenu
+                        {(entry.mediaContext || entry.object || (!editingItem.checklistOnly && editingItem.access !== "VIEWER") || (!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt)) && <AdminRowActionMenu
                           label={`Thêm thao tác cho ${entry.title}`} status={null} iconOnly layer="dialogPopover" triggerIcon={<MoreHorizontal className="h-4 w-4"/>}
                           disabled={completionMutation.hasPending || checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
                           actions={[
+                            ...(!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? [{key:"update",label:`Cập nhật ${entry.title}`,onSelect:()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}] : []),
+                            ...(entry.mediaContext ? [{key:"media",label:"Mở media",onSelect:()=>router.push(entry.mediaContext!.href)}] : entry.object ? [{key:"record",label:"Xem liên kết",onSelect:()=>router.push(entry.object!.href)}] : []),
+                            ...(!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt ? [
                             {key:"edit",label:`Sửa ${entry.title}`,disabled:editingItem.status==="DONE"||editingItem.status==="CANCELLED",onSelect:()=>setEditingChecklistTitleId(entry.id)},
                             {key:"delete",label:`Xóa ${entry.title}`,onSelect:()=>{
                               const snapshot=editingItem;
@@ -1145,6 +1143,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                 rollback:previous=>setEditingItem(previous),onSuccess:()=>router.refresh(),
                               });
                             }},
+                            ] : []),
                           ]}/>}
 
                           </div>

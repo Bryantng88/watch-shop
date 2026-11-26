@@ -100,8 +100,10 @@ if (require.main === module) (async () => {
     const action = await page.evaluate(() => window.__actions.find(a => a.name === 'updatePersonalWorkAction')); assert.deepEqual(action.input, { id: 'item-29', status: 'DONE' });
     await row(28).getByRole('button', { name: /^Mở CV-28:/ }).click();
     await page.getByRole('button', { name: 'Hủy', exact: true }).waitFor();
-    assert.equal(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count(), 0);
-    assert.equal(await page.getByRole('dialog').getByRole('link', {name:'Mở media',exact:true}).getAttribute('href'), '/admin/watches/product-fixture/edit?mode=media&focus=image');
+    assert.equal(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count(), 1);
+    await page.getByRole('dialog').getByRole('button', {name:'Thêm thao tác cho Đầu việc 1',exact:true}).click();
+    await page.getByRole('menuitem', {name:'Mở media',exact:true}).click();
+    assert.equal(await page.evaluate(()=>window.__route), '/admin/watches/product-fixture/edit?mode=media&focus=image');
     assert.equal(await page.getByRole('dialog').getByText('Ghi chú', {exact:true}).count(), 0);
     assert.equal(await page.getByRole('button', {name:'← Danh sách công việc', exact:true}).getAttribute('data-admin-button'), 'contextual');
     assert.equal(await page.getByRole('dialog').getByPlaceholder('Ví dụ: báo cáo, codex (ngăn cách bằng dấu phẩy)').isVisible().catch(()=>false), false);
