@@ -30,3 +30,14 @@
 .toolbar[data-views-hidden="true"] { justify-content: flex-end; }
 
 .toolbar[data-inline="true"] { min-height: 0; padding: 0; justify-content: flex-end; }
+
+.checklistRows { container: checklist-rows / inline-size; }
+.checklistRow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 4px 8px; min-width: 0; padding: 6px 0; }
+.checklistContent { grid-column: 2 / -1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.checklistActions { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; min-width: 0; }
+.checklistActions:empty { display: none; }
+@container checklist-rows (min-width: 500px) {
+ .checklistRow { grid-template-columns: 24px minmax(0, 1fr) auto auto; }
+ .checklistContent { grid-column: 2; }
+ .checklistActions { grid-column: 3; }
+}

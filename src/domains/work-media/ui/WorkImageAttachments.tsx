@@ -9,7 +9,7 @@ import { WORK_IMAGE_MAX_BYTES, workImagesUrl, type WorkImages, type WorkMediaTar
 
 type Upload={id:string;file:File};
 /** URLs point only at the owner-authorized endpoint, never at NAS/sign links. */
-export function WorkImageAttachments({workId,entryId,compact=false,label="Ảnh công việc",triggerLabel}:WorkMediaTarget&{compact?:boolean;label?:string;triggerLabel?:string}){
+export function WorkImageAttachments({workId,entryId,compact=false,inline=false,label="Ảnh công việc",triggerLabel}:WorkMediaTarget&{compact?:boolean;inline?:boolean;label?:string;triggerLabel?:string}){
  const dialog=useAppDialog(),input=useRef<HTMLInputElement>(null),version=useRef(0);
  const [open,setOpen]=useState(!compact),[data,setData]=useState<WorkImages|null>(null),[loading,setLoading]=useState(false),[pending,setPending]=useState(false),[error,setError]=useState(""),[retry,setRetry]=useState<Upload[]|null>(null);
  const endpoint=workImagesUrl({workId,entryId});
@@ -39,12 +39,13 @@ export function WorkImageAttachments({workId,entryId,compact=false,label="Ảnh 
   if(!await dialog.confirm({title:"Gỡ ảnh khỏi công việc?",message:"Ảnh được gỡ khỏi công việc này và giữ trong thời gian lưu trữ trước khi dọn file.",confirmText:"Gỡ ảnh",cancelText:"Giữ lại",tone:"danger"}))return;
   setPending(true);try{const response=await fetch(`/api/admin/personal-work/images/${id}`,{method:"DELETE"});const result=await response.json();if(!response.ok)throw Error(result.error||"Không gỡ được ảnh.");await load();}catch(failure){setError(failure instanceof Error?failure.message:"Không gỡ được ảnh.");}finally{setPending(false);}
  }
- return <section aria-label={label} className={compact?"basis-full w-full min-w-0":"mt-4 min-w-0 border-t border-slate-100 pt-4"}>
-  <div className="flex flex-wrap items-center justify-between gap-2">
-   {compact?<AdminButton variant="quiet" density="compact" type="button" className="min-w-0 max-w-full text-left" aria-label={`${label}${data?` (${data.items.length})`:""}`} aria-expanded={open} disabled={pending} onClick={()=>setOpen(value=>!value)}><WorkAttachmentIcon className="h-4 w-4 shrink-0"/><span className="min-w-0 break-words">{triggerLabel || label}</span>{data&&<span className="shrink-0">({data.items.length})</span>}</AdminButton>:<h3 className="text-sm font-semibold">{label}{data?` · ${data.items.length}/${data.limit}`:""}</h3>}
-   {open&&data?.canEdit&&<AdminButton variant="quiet" density="compact" type="button" disabled={pending||data.items.length>=data.limit} onClick={()=>input.current?.click()}>{pending?<Loader2 className="h-4 w-4 animate-spin"/>:<WorkAttachmentIcon className="h-4 w-4"/>}Thêm ảnh</AdminButton>}
+ return <section aria-label={label} className={inline?"contents":compact?"basis-full w-full min-w-0":"mt-4 min-w-0 border-t border-slate-100 pt-4"}>
+  <div className={inline?"contents":"flex flex-wrap items-center justify-between gap-2"}>
+   {compact?<AdminButton variant="quiet" density="compact" iconOnly={inline} type="button" title={label} className="min-w-0 max-w-full text-left" aria-label={`${label}${data?` (${data.items.length})`:""}`} aria-expanded={open} disabled={pending} onClick={()=>setOpen(value=>!value)}><WorkAttachmentIcon className="h-4 w-4 shrink-0"/>{!inline&&<span className="min-w-0 break-words">{triggerLabel || label}</span>}{data&&<span className="shrink-0">({data.items.length})</span>}</AdminButton>:<h3 className="text-sm font-semibold">{label}{data?` · ${data.items.length}/${data.limit}`:""}</h3>}
+   {!inline&&open&&data?.canEdit&&<AdminButton variant="quiet" density="compact" type="button" disabled={pending||data.items.length>=data.limit} onClick={()=>input.current?.click()}>{pending?<Loader2 className="h-4 w-4 animate-spin"/>:<WorkAttachmentIcon className="h-4 w-4"/>}Thêm ảnh</AdminButton>}
   </div>
-  {open&&<div className="mt-2 space-y-2">
+  {open&&<div className={inline?"col-start-2 -col-end-1 min-w-0 space-y-2 py-2":"mt-2 space-y-2"}>
+   {inline&&data?.canEdit&&<AdminButton variant="quiet" density="compact" type="button" disabled={pending||data.items.length>=data.limit} onClick={()=>input.current?.click()}><WorkAttachmentIcon className="h-4 w-4"/>Thêm ảnh</AdminButton>}
    <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" aria-label={`Thêm ${label}`} disabled={pending||!data?.canEdit} onChange={event=>{
     const files=Array.from(event.target.files||[]);event.target.value="";
     if(!files.length)return;

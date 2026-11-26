@@ -29,11 +29,13 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
    await page.setViewportSize({width,height:900});await open();
    const dialog=page.getByRole('dialog'),row=dialog.locator('[data-work-checklist-row]').first(),title=row.getByText(titles[0],{exact:true});
    const titleBox=await title.boundingBox();assert.ok(titleBox.width>=100,`title compressed at ${width}: ${titleBox.width}`);assert.ok(titleBox.height<=60,`short title wraps into single-character lines at ${width}`);
-   const actions=await row.locator('[data-checklist-actions]').boundingBox(),content=await row.locator('[data-checklist-content]').boundingBox(),images=await row.locator('[data-checklist-images]').boundingBox();
-   assert.ok(actions.y>=content.y+content.height-1,`actions crowd the title at ${width}`);assert.ok(images.y>=actions.y+actions.height-1,`images crowd actions at ${width}`);
+   const actions=await row.locator('[data-checklist-actions]').boundingBox(),content=await row.locator('[data-checklist-content]').boundingBox(),images=await row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]}`,exact:true}).boundingBox();
+   const wide=await row.evaluate(el=>el.parentElement.clientWidth>=500);
+   if(wide){assert.ok(Math.abs(actions.y-content.y)<24,`wide checklist actions should stay inline at ${width}`);}else{assert.ok(actions.y>=content.y+content.height-1,`actions crowd the title at ${width}`);}
+   assert.ok(Math.abs(images.y-actions.y)<24,`attachment trigger should share action row at ${width}`);
    assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`dialog overflows ${width}`);
    assert.ok(await dialog.locator('[data-work-checklist-row]').evaluateAll(rows=>rows.every(row=>row.scrollWidth<=row.clientWidth+1)),`checklist overflows ${width}`);
-   const gallery=row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]}`,exact:true});assert.equal((await gallery.innerText()).trim(),'Ảnh đầu việc');await gallery.click();
+   const gallery=row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]}`,exact:true});assert.equal((await gallery.innerText()).trim(),'');await gallery.click();
    await row.getByRole('img',{name:'Ảnh bố trí bảng hiệu.jpg',exact:true}).waitFor();assert.ok(await row.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`expanded gallery overflows ${width}`);
    await row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]} (1)`,exact:true}).click();await row.getByRole('img',{name:'Ảnh bố trí bảng hiệu.jpg',exact:true}).waitFor({state:'hidden'});
   }

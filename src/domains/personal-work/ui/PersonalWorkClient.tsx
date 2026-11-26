@@ -1059,9 +1059,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />}
                 </div>
                 {editingItem.checklist.length > 0 && (
-                  <div className="space-y-2">
+                  <div className={`space-y-2 ${listStyles.checklistRows}`}>
                     {editingItem.checklist.map((entry) => (
-                      <div key={entry.id} data-work-checklist-row={entry.id} className="grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-start gap-x-2 gap-y-2 py-2">
+                      <div key={entry.id} data-work-checklist-row={entry.id} className={listStyles.checklistRow}>
                         <AdminButton iconOnly variant="contextual" density="compact"
                           type="button"
                           disabled={completionMutation.hasPending || (entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
@@ -1097,7 +1097,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           )}
                         </AdminButton>
                         {checklistMutation.phase(`toggle:${entry.id}`) === "success" && <span className="sr-only" role="status">{entry.isDone ? "Đã hoàn thành đầu việc" : "Đã mở lại đầu việc"}</span>}
-                        <div data-checklist-content className="flex min-w-0 items-start gap-2">
+                        <div data-checklist-content className={listStyles.checklistContent}>
                         {entry.object&&<WorkObjectThumbnail object={entry.object}/>} 
                         {!entry.sharedWith?.length && <span className="shrink-0" title={`${editingItem.owner.name || editingItem.owner.email} · Người tạo công việc, mặc định xử lý`}><AdminUserAvatar user={editingItem.owner} size="xs"/></span>}
                         <PersonalChecklistTitle title={entry.title} done={entry.isDone}
@@ -1108,7 +1108,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             router.refresh();
                           }}/>
                         </div>
-                        <div data-checklist-actions className="col-start-2 flex min-w-0 flex-wrap items-center gap-1.5 empty:hidden">
+                        <div data-checklist-actions className={listStyles.checklistActions}>
                         {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={`Cập nhật ${entry.title}`} title="Cập nhật đầu việc" onClick={()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}><MessageSquare className="h-3.5 w-3.5"/></AdminButton>}
                         {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
                         {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
@@ -1148,8 +1148,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           </AdminButton>
                         )}
                         </div>
-                        <div data-checklist-images className="col-start-2 min-w-0">
-                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact label={`Ảnh đầu việc: ${entry.title}`} triggerLabel="Ảnh đầu việc" />
+                        <div data-checklist-images className="contents">
+                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact inline label={`Ảnh đầu việc: ${entry.title}`} triggerLabel="Ảnh đầu việc" />
                         </div>
                       </div>
                     ))}
