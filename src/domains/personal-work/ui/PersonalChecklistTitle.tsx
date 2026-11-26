@@ -1,9 +1,12 @@
 "use client";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 import {Check, Pencil, X, Loader2} from "lucide-react";
-export function PersonalChecklistTitle({title,done,disabled,onSave}:{title:string;done:boolean;disabled:boolean;onSave:(title:string)=>Promise<void>}) {
-  const [editing,setEditing]=useState(false),[draft,setDraft]=useState(title),[saving,setSaving]=useState(false),[error,setError]=useState("");
+export function PersonalChecklistTitle({title,done,disabled,onSave,editing:controlledEditing,onEditingChange,hideEditButton=false}:{title:string;done:boolean;disabled:boolean;onSave:(title:string)=>Promise<void>;editing?:boolean;onEditingChange?:(editing:boolean)=>void;hideEditButton?:boolean}) {
+  const [localEditing,setLocalEditing]=useState(false),[draft,setDraft]=useState(title),[saving,setSaving]=useState(false),[error,setError]=useState("");
+  const editing=controlledEditing??localEditing;
+  const setEditing=(value:boolean)=>{setLocalEditing(value);onEditingChange?.(value);};
+  useEffect(()=>{if(controlledEditing){setDraft(title);setError("");}},[controlledEditing,title]);
   async function save(){
     if (!draft.trim() || saving) return;
     if(draft.trim()===title){setEditing(false);return;}
@@ -12,7 +15,7 @@ export function PersonalChecklistTitle({title,done,disabled,onSave}:{title:strin
   }
   if(!editing)return <span className="flex min-w-0 flex-1 items-center gap-1.5">
     <span className={`min-w-0 flex-1 break-words text-sm ${done?"text-slate-400 line-through":"text-slate-700"}`}>{title}</span>
-    {!disabled&&<AdminButton iconOnly variant="quiet" density="compact" type="button" aria-label={`Sửa ${title}`} title="Sửa đầu việc" onClick={()=>{setDraft(title);setError("");setEditing(true);}} className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-700"><Pencil className="h-3.5 w-3.5"/></AdminButton>}
+    {!disabled&&!hideEditButton&&<AdminButton iconOnly variant="quiet" density="compact" type="button" aria-label={`Sửa ${title}`} title="Sửa đầu việc" onClick={()=>{setDraft(title);setError("");setEditing(true);}} className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-700"><Pencil className="h-3.5 w-3.5"/></AdminButton>}
   </span>;
   return <span className="min-w-0 flex-1">
     <span className="flex min-w-0 flex-wrap items-center gap-1">

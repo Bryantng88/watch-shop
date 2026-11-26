@@ -1,11 +1,11 @@
 "use client";
 
 import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
+import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
 import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
-import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import {PersonalWorkListRow} from "./PersonalWorkListRow";
 import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
 import listStyles from "./PersonalWorkList.module.css";
@@ -36,6 +36,7 @@ import {
   MessageSquare,
   Check,
   ChevronDown,
+  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -235,6 +236,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
+  const [editingChecklistTitleId, setEditingChecklistTitleId] = useState<string | null>(null);
+  useEffect(()=>setEditingChecklistTitleId(null),[editingItem?.id]);
   const editingItemId = editingItem?.id;
   const editCategories = editingItem?.access === "OWNER"
     ? data.categories
@@ -1059,13 +1062,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   />}
                 </div>
                 {editingItem.checklist.length > 0 && (
-                  <div className={`space-y-2 ${listStyles.checklistRows}`}>
+                  <div className={`space-y-1 ${listStyles.checklistRows}`}>
                     {editingItem.checklist.map((entry) => (
                       <div key={entry.id} data-work-checklist-row={entry.id} className={listStyles.checklistRow}>
                         <AdminButton iconOnly variant="contextual" density="compact"
                           type="button"
                           disabled={completionMutation.hasPending || (entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           aria-busy={checklistMutation.isPending(`toggle:${entry.id}`)}
+                          aria-pressed={entry.isDone}
                           aria-label={entry.isDone ? `Mở lại ${entry.title}` : `Hoàn thành ${entry.title}`}
                           onClick={() => {
                             const snapshot = editingItem;
@@ -1088,19 +1092,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                               onSuccess: () => router.refresh(),
                             });
                           }}
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${entry.isDone ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 text-transparent"} disabled:cursor-default`}
+                          className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md after:absolute after:-inset-1.5 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                         >
+                          <span aria-hidden="true" className={`flex h-[18px] w-[18px] items-center justify-center rounded border transition-colors ${entry.isDone ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-transparent group-hover:border-blue-400"}`}>
                           {checklistMutation.isPending(`toggle:${entry.id}`) ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
                           ) : (
                             <Check className="h-3.5 w-3.5" />
                           )}
+                          </span>
                         </AdminButton>
                         {checklistMutation.phase(`toggle:${entry.id}`) === "success" && <span className="sr-only" role="status">{entry.isDone ? "Đã hoàn thành đầu việc" : "Đã mở lại đầu việc"}</span>}
                         <div data-checklist-content className={listStyles.checklistContent}>
-                        {entry.object&&<WorkObjectThumbnail object={entry.object}/>} 
-                        {!entry.sharedWith?.length && <span className="shrink-0" title={`${editingItem.owner.name || editingItem.owner.email} · Người tạo công việc, mặc định xử lý`}><AdminUserAvatar user={editingItem.owner} size="xs"/></span>}
-                        <PersonalChecklistTitle title={entry.title} done={entry.isDone}
+                        <PersonalChecklistTitle title={entry.title} done={entry.isDone} hideEditButton editing={editingChecklistTitleId===entry.id} onEditingChange={editing=>setEditingChecklistTitleId(editing?entry.id:null)}
                           disabled={(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") || Boolean(editingItem.checklistLockedAt) || editingItem.status === "DONE" || editingItem.status === "CANCELLED" || checklistMutation.isPending(`toggle:${entry.id}`) || checklistMutation.isPending(`delete:${entry.id}`)}
                           onSave={async title=>{
                             await renamePersonalWorkChecklistItemAction({taskItemId:editingItem.id,checklistItemId:entry.id,title});
@@ -1108,48 +1112,42 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             router.refresh();
                           }}/>
                         </div>
-                        <div data-checklist-actions className={listStyles.checklistActions}>
-                        {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={`Cập nhật ${entry.title}`} title="Cập nhật đầu việc" onClick={()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}><MessageSquare className="h-3.5 w-3.5"/></AdminButton>}
-                        {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
-                        {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
+                        <div className={listStyles.checklistSecondary}>
+                          <div className={listStyles.checklistTools}>
+                            <div data-checklist-meta className={listStyles.checklistMeta}>
+                          {!entry.sharedWith?.length ? <><AdminUserAvatar user={editingItem.owner} size="xs"/><span>{editingItem.owner.name || editingItem.owner.email}</span></> : <span className="flex items-center gap-1" title="Đã chia sẻ">{entry.sharedWith.slice(0,3).map(share=><AdminUserAvatar key={share.user.id} user={share.user} size="xs"/>)}<span>{entry.sharedWith.length} người</span></span>}
+                        </div>
+                            <div data-checklist-images className="contents">
+                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact inline label={`Ảnh đầu việc: ${entry.title}`} triggerLabel="Ảnh đầu việc" />
+                        </div>
+                            {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
                           await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
                           setEditingItem(current=>current?{...current,checklist:current.checklist.map(e=>e.id===entry.id?{...e,sharedWith:shares}:e)}:current);
                           router.refresh();
                         }}/>}
-                        {!editingItem.checklistLockedAt && editingItem.access !== "VIEWER" && (
-                          <AdminButton iconOnly variant="quiet" density="compact"
-                            type="button"
-                            disabled={completionMutation.hasPending || checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
-                            aria-busy={checklistMutation.isPending(`delete:${entry.id}`)}
-                            aria-label={`Xóa ${entry.title}`}
-                            onClick={() => {
-                              const snapshot = editingItem;
+                          </div>
+                          <div data-checklist-actions className={listStyles.checklistActions}>
+                        {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={`Cập nhật ${entry.title}`} title="Cập nhật đầu việc" onClick={()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}><MessageSquare className="h-3.5 w-3.5"/></AdminButton>}
+                        {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
+                        {!entry.mediaContext && entry.object && <a href={entry.object.href} className="shrink-0 text-xs text-blue-700" title={entry.object.label}>Xem liên kết</a>}
+
+                        {!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt && <AdminRowActionMenu
+                          label={`Thêm thao tác cho ${entry.title}`} status={null} iconOnly layer="dialogPopover" triggerIcon={<MoreHorizontal className="h-4 w-4"/>}
+                          disabled={completionMutation.hasPending || checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
+                          actions={[
+                            {key:"edit",label:`Sửa ${entry.title}`,disabled:editingItem.status==="DONE"||editingItem.status==="CANCELLED",onSelect:()=>setEditingChecklistTitleId(entry.id)},
+                            {key:"delete",label:`Xóa ${entry.title}`,onSelect:()=>{
+                              const snapshot=editingItem;
                               void checklistMutation.run({
-                                key: `delete:${entry.id}`,
-                                optimistic: () => {
-                                  setOptimisticChecklist(editingItem.checklist.filter((item) => item.id !== entry.id));
-                                  return snapshot;
-                                },
-                                action: () => deletePersonalWorkChecklistItemAction({
-                                  taskItemId: editingItem.id,
-                                  checklistItemId: entry.id,
-                                }),
-                                rollback: (previous) => setEditingItem(previous),
-                                onSuccess: () => router.refresh(),
+                                key:`delete:${entry.id}`,
+                                optimistic:()=>{setOptimisticChecklist(editingItem.checklist.filter(item=>item.id!==entry.id));return snapshot;},
+                                action:()=>deletePersonalWorkChecklistItemAction({taskItemId:editingItem.id,checklistItemId:entry.id}),
+                                rollback:previous=>setEditingItem(previous),onSuccess:()=>router.refresh(),
                               });
-                            }}
-                            className="rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50"
-                          >
-                            {checklistMutation.isPending(`delete:${entry.id}`) ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </AdminButton>
-                        )}
-                        </div>
-                        <div data-checklist-images className="contents">
-                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact inline label={`Ảnh đầu việc: ${entry.title}`} triggerLabel="Ảnh đầu việc" />
+                            }},
+                          ]}/>}
+
+                          </div>
                         </div>
                       </div>
                     ))}
