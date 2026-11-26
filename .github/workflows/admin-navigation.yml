@@ -1,0 +1,43 @@
+name: Admin navigation
+on:
+  pull_request:
+    paths:
+      - 'src/app/(admin)/admin/_client/AdmidSideBar.tsx'
+      - 'src/app/(admin)/admin/_client/AdminActiveLink.tsx'
+      - 'src/app/(admin)/admin/loading.tsx'
+      - 'src/domains/shared/ui/admin-design-contract/AdminNavigationLoading*'
+      - 'src/domains/shared/ui/navigation/section-navigation.ts'
+      - 'src/domains/trading/shared/trading-navigation.ts'
+      - 'scripts/check-admin-navigation.cjs'
+      - 'scripts/check-section-workspaces.cjs'
+      - '.github/workflows/admin-navigation.yml'
+permissions:
+  contents: read
+jobs:
+  navigation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --generator client
+      - run: npx tsc --noEmit
+      - run: >-
+          npx eslint 'src/app/(admin)/admin/_client/AdmidSideBar.tsx'
+          'src/app/(admin)/admin/loading.tsx'
+          src/domains/shared/ui/admin-design-contract/AdminNavigationLoading.tsx
+          scripts/check-admin-navigation.cjs scripts/check-section-workspaces.cjs
+      - run: npx tailwindcss -i src/app/globals.css -o /tmp/admin-navigation.css --minify
+      - run: npm install --prefix /tmp/admin-navigation-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/admin-navigation-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-admin-navigation.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/admin-navigation-browser/node_modules/playwright
+      - run: node scripts/check-section-workspaces.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/admin-navigation-browser/node_modules/playwright
+          SECTION_UI_CSS: /tmp/admin-navigation.css
