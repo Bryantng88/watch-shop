@@ -12,6 +12,8 @@ on:
       - 'scripts/check-work-modal-feedback.cjs'
       - 'scripts/check-work-checklist-mobile.cjs'
       - 'scripts/check-media-merge-ui.cjs'
+      - 'scripts/check-continuous-work-ui.cjs'
+      - 'src/domains/personal-work/shared/continuous-work*'
       - 'src/domains/personal-work/shared/media-merge*'
       - 'src/domains/personal-work/server/media-merge*'
       - 'src/domains/work-media/ui/**'
@@ -37,7 +39,7 @@ jobs:
       - run: npx prisma generate --generator client
       - run: npx tsc --noEmit
       - run: node --import tsx --test src/domains/personal-work/server/google-calendar-error.test.ts src/domains/personal-work/server/google-event-edit.test.ts
-      - run: node --import tsx --test src/domains/personal-work/shared/media-merge.test.ts
+      - run: node --import tsx --test src/domains/personal-work/shared/media-merge.test.ts src/domains/personal-work/shared/continuous-work.test.ts
       - run: node --test tests/pwa/ben-service-worker.test.mjs
       - run: node --import tsx --test src/server/auth/login-destination.test.ts
       - run: npx eslint src/domains/shared/ui/admin-design-contract/AdminViewTabs.tsx src/domains/personal-work/ui/PersonalWorkClient.tsx src/domains/personal-work/ui/PersonalWorkListRow.tsx src/domains/personal-work/ui/PersonalWorkListToolbar.tsx src/domains/personal-work/ui/PersonalWorkFloatingPanel.tsx src/domains/personal-work/ui/PersonalWorkUpdateHint.tsx
@@ -51,6 +53,7 @@ jobs:
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-modal-feedback.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-checklist-mobile.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-media-merge-ui.cjs
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-continuous-work-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

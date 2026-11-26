@@ -1,3 +1,4 @@
+import { isContinuousWork, assertContinuousSchedule, assertContinuousUpdate } from "../shared/continuous-work";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import type { RecordedBusinessEvent } from "@/domains/event/server/business-event.service";
 import { recordPersonalWorkCreated, recordPersonalChecklistCreated } from "./personal-work-events";
@@ -103,7 +104,7 @@ function normalizeWorkType(value: unknown, domain: PersonalWorkDomain) {
   const key = String(value || "")
     .trim()
     .toUpperCase();
-  if (key === "EVENT") return key;
+  if (key === "EVENT" || isContinuousWork(key)) return key;
   return PERSONAL_WORK_TYPES[domain].some(item => item.key === key) ? key : null;
 }
 
@@ -399,10 +400,11 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   const title = input.title.trim();
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
   if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
+  if(isContinuousWork(input.workType))assertContinuousSchedule(input);
   const schedule = validatePersonalSchedule(input.dueAt, input.scheduledEndAt);
   const category = await resolvePersonalCategory(userId, input.categoryKey || normalizePersonalDomain(input.domain));
   const domain = category.domain;
-  const workType = isPersonalEvent(input.workType) ? "EVENT" : category.id ? null : normalizeWorkType(input.workType, domain);
+  const workType = isPersonalEvent(input.workType) ? "EVENT" : isContinuousWork(input.workType) ? "CONTINUOUS" : category.id ? null : normalizeWorkType(input.workType, domain);
   if (isPersonalEvent(workType) && !schedule.dueAt) throw new Error("Sự kiện cần ngày diễn ra");
   if (isPersonalEvent(workType) && input.tags?.some(t=>t.trim().toLowerCase()==="codex")) throw new Error("Sự kiện không gửi cho Codex thực hiện");
   const resolvedTargets = await Promise.all(
@@ -422,11 +424,13 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
         reminderMinutes: input.reminderMinutes,
         title, note: input.note?.trim() || null,
         personalOwnerUserId: userId, assignedToUserId: identity?.assignedToUserId??userId,
+        ...(isContinuousWork(workType)?{status:TaskStatus.IN_PROGRESS,startedAt:new Date(),reminderMinutes:null}:{}),
         priority: input.priority || "MEDIUM", workTypeId: workType,
         personalCategoryId: category.id, dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt,
         estimatedDays: schedule.estimatedDays ?? Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
       },
     });
+    if(isContinuousWork(workType))await tx.taskItemActivity.create({data:{taskItemId:item.id,sourceType:"SYSTEM",actorUserId:identity?.actorUserId??userId,title:"Bắt đầu duy trì",body:"Một việc liên tục, không hạn chót và không sinh bản sao hằng ngày.",metadataJson:{source:"CONTINUOUS_WORK"}}});
     await setTargetTagsRepo(tx, {
       ...personalWorkTagOwner(item),
       targetType: AppTagTargetType.TASK_ITEM,
@@ -557,6 +561,7 @@ export async function updatePersonalWorkItem(
 ) {
   if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
+  assertContinuousUpdate(current.workTypeId,input,current.access==="OWNER");
   if(current.id.startsWith("media-daily-")) {
     const receipt=await db.taskItemActivity.findFirst({where:{taskItemId:current.id,metadataJson:{path:["source"],equals:"WATCH_MEDIA_DAILY"}},orderBy:{createdAt:"asc"},select:{metadataJson:true}});
     const day=(receipt?.metadataJson as Prisma.JsonObject|null)?.day;
@@ -623,7 +628,7 @@ export async function updatePersonalWorkItem(
       ...(input.reminderMinutes !== undefined ? {reminderMinutes:input.reminderMinutes} : {}),
       ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
       ...(category ? { personalCategoryId: category.id } : {}),
-      ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
+      ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : isContinuousWork(current.workTypeId) ? "CONTINUOUS" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
       ...(estimatedDays !== undefined ? { estimatedDays } : {}),
@@ -647,7 +652,7 @@ export async function updatePersonalWorkItem(
           taskItemId: input.id,
           sourceType: "DISCUSSION",
           actorUserId: current.userId,
-          title: updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          title: isContinuousWork(current.workTypeId)&&status==="CANCELLED"?"Dừng duy trì":isContinuousWork(current.workTypeId)&&status==="IN_PROGRESS"&&current.status==="CANCELLED"?"Tiếp tục duy trì":updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
           body: input.updateBody?.trim() || null,
           metadataJson: {
             ...(updateEntry ? { checklistItemId: updateEntry.id, checklistTitle: updateEntry.title } : {}),
@@ -858,6 +863,7 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
 
 export async function finalizePersonalWorkChecklist(taskItemId: string, auth: unknown) {
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
+  if(isContinuousWork(current.workTypeId))throw Error("Việc duy trì không có thao tác hoàn thành.");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;

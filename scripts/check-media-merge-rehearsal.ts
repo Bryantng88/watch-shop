@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../src/server/db/client";
-import { createPersonalWorkItem, getPersonalWorkPageData, finalizePersonalWorkChecklist, addPersonalWorkChecklistItem, updatePersonalWorkItem } from "../src/domains/personal-work/server/personal-work.service";
+import { createPersonalWorkItem, getPersonalWorkPageData, finalizePersonalWorkChecklist, addPersonalWorkChecklistItem, setPersonalWorkChecklistItemDone, updatePersonalWorkItem } from "../src/domains/personal-work/server/personal-work.service";
+import { syncPersonalTaskToGoogle } from "../src/domains/personal-work/server/google-calendar.service";
+import { personalWorkToday } from "../src/domains/ai-assistant/server/personal-work-today";
 import { addDailyMediaWork } from "../src/domains/personal-work/server/media-daily.service";
 import { dailyMediaWorkForProducts } from "../src/domains/personal-work/server/media-daily-read.service";
 import { previewMediaMerge, mergeMediaWork } from "../src/domains/personal-work/server/media-merge.service";
@@ -60,6 +62,24 @@ async function main(){
   await prisma.taskItemChecklist.updateMany({where:{taskItemId:result.id},data:{isDone:true,doneAt:new Date()}});
   await finalizePersonalWorkChecklist(result.id,auth);
   assert.equal(await prisma.taskItem.count({where:{personalOwnerUserId:owner.id,mergedIntoTaskItemId:null,status:"DONE"}}),1);
+  const continuous=await createPersonalWorkItem({title:"Synthetic ongoing",domain:"GENERAL",workType:"CONTINUOUS",reminderMinutes:null},auth);
+  assert.equal(continuous.status,"IN_PROGRESS");assert.equal(continuous.dueAt,null);
+  await assert.rejects(updatePersonalWorkItem({id:continuous.id,status:"DONE"},auth),/duy trì/);
+  await assert.rejects(updatePersonalWorkItem({id:continuous.id,dueAt:new Date().toISOString()},auth),/duy trì/);
+  await assert.rejects(finalizePersonalWorkChecklist(continuous.id,auth),/duy trì/);
+  await assert.rejects(syncPersonalTaskToGoogle(owner.id,continuous.id),/duy trì/);
+  await assert.rejects(prisma.taskItem.update({where:{id:continuous.id},data:{status:"DONE",isDone:true,completedAt:new Date()}}));
+  await prisma.personalTaskShare.create({data:{taskItemId:continuous.id,userId:recipient.id,accessLevel:"EDITOR",sharedByUserId:owner.id}});
+  await assert.rejects(updatePersonalWorkItem({id:continuous.id,status:"CANCELLED"},{userId:recipient.id}),/chủ sở hữu/);
+  const child=await addPersonalWorkChecklistItem(continuous.id,"One-time subtask",auth);
+  await setPersonalWorkChecklistItemDone(continuous.id,child.id,true,auth);
+  assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:continuous.id}})).status,"IN_PROGRESS");
+  await updatePersonalWorkItem({id:continuous.id,categoryKey:"WATCHSHOP",workType:"CONTINUOUS",updateBody:"Ongoing update"},auth);
+  assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:continuous.id}})).workTypeId,"CONTINUOUS");
+  const ongoingSummary=await personalWorkToday(prisma,owner.id);assert.equal(ongoingSummary.continuousCount,1);assert.equal(ongoingSummary.unscheduledCount,0);
+  await updatePersonalWorkItem({id:continuous.id,status:"CANCELLED"},auth);
+  assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:continuous.id}})).completedAt,null);
+  assert.equal((await prisma.taskItemChecklist.findUniqueOrThrow({where:{id:child.id}})).isDone,true);
   const watch=await prisma.watch.create({data:{product:{create:{title:"Synthetic merge Watch",type:"WATCH"}}},select:{productId:true}});
   const request={requestKey:randomUUID(),productId:watch.productId,assigneeUserId:owner.id,day:"2030-01-01",part:"image",request:"Merge rehearsal"};
   const d1=await addDailyMediaWork(owner.id,request),d2=await addDailyMediaWork(owner.id,{...request,requestKey:randomUUID(),day:"2030-01-02"});
@@ -72,6 +92,6 @@ async function main(){
   const nextMerge=await mergeMediaWork({ids:[daily.id,c.id],revision:again.revision,title:"Merged again",requestKey:randomUUID()},auth);
   assert.equal((await addDailyMediaWork(owner.id,request)).taskItemId,nextMerge.id);
   const after=await getPersonalWorkPageData(auth);assert.equal(after.mergedWorkRedirects?.[d1.taskItemId],nextMerge.id);
-  console.log("PASS: transaction/stale preview/idempotency/IDs/doneAt/partial sharing/old links/one completion count/stale writes/images/daily replay and append/merge chains");
+  console.log("PASS: media merge concurrency/history/access/reporting/chains; continuous lifecycle/DB guard/sharing/subtasks/summary/stop");
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());

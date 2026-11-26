@@ -1,4 +1,5 @@
 import { isPersonalEvent, personalEventBounds } from "./personal-event";
+import { isContinuousWork } from "./continuous-work";
 
 const DAY = 86400000,
   OFFSET = 7 * 3600000;
@@ -12,7 +13,8 @@ export function personalDayBucket(
   item: PersonalWorkSchedule,
   start: number,
   end: number,
-): "TODAY" | "OVERDUE" | "UNSCHEDULED" | "OTHER" {
+): "TODAY" | "OVERDUE" | "UNSCHEDULED" | "OTHER" | "CONTINUOUS" {
+  if(isContinuousWork(item.workTypeId))return "CONTINUOUS";
   const event = isPersonalEvent(item.workTypeId);
   if (!item.dueAt) return event ? "OTHER" : "UNSCHEDULED";
   const bounds = event

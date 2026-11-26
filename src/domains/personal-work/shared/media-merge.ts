@@ -12,6 +12,7 @@ export function validateMediaMerge(rows:MediaMergeCandidate[],ownerId:string) {
     if(row.assigneeId&&row.assigneeId!==ownerId)throw new MediaMergeError("Người thực hiện khác chủ sở hữu. Hãy thống nhất người phụ trách trước khi gộp.");
     if(row.merged||!["TODO","IN_PROGRESS"].includes(row.status)||row.locked)throw new MediaMergeError("Chỉ gộp công việc chưa hoàn tất, chưa hủy và chưa bị gộp.");
     if(!row.entries.length||row.entries.some(e=>!e.media))throw new MediaMergeError(`“${row.title}” không thuần media Watch. Cùng nhóm WatchShop chưa đủ để gộp; mọi đầu việc phải có ngữ cảnh media.`);
+    if(row.workType==="CONTINUOUS")throw new MediaMergeError("Việc duy trì không gộp như công việc có điểm kết thúc.");
     if(row.workType==="EVENT")throw new MediaMergeError("Không gộp sự kiện.");
     if(row.calendar)throw new MediaMergeError("Có việc đã liên kết Google Calendar. Hãy bỏ liên kết lịch trước khi gộp để tránh lịch cũ bị trùng.");
     if(row.running)throw new MediaMergeError("Có việc đang chờ hoặc đang chạy Codex. Hãy xử lý tác vụ nền trước khi gộp.");

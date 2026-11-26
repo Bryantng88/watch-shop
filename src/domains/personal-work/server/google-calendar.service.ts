@@ -1,3 +1,4 @@
+import { isContinuousWork } from "../shared/continuous-work";
 import { GoogleCalendarConnectionError, calendarRefreshFailure } from "./google-calendar-error";
 import {personalEventTiming} from "../shared/personal-event";
 import { googleCalendarReadiness, requireGoogleCalendarRedirectUri } from "./google-calendar-config";
@@ -235,6 +236,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
     include: { task: { select: { id: true, title: true } } },
   });
   if (!item) throw new Error("Không tìm thấy công việc cá nhân");
+  if(isContinuousWork(item.workTypeId))throw Error("Việc duy trì nằm trong dải riêng của lịch nội bộ, không đồng bộ thành sự kiện Google.");
   const auth = await accessToken(userId);
   // Reserve the link under the same parent lock used by merge, before writing Google.
   // A concurrent merge either sees this reservation and refuses, or wins and blocks sync.

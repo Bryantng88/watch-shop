@@ -62,7 +62,7 @@ export async function queryOpenOperationStageStatistics(db: DB, input: { now: Da
         WHEN i."dueAt" AT TIME ZONE 'UTC' < ${input.todayEnd} THEN 'personal-today'
         ELSE 'personal-upcoming' END, i."updatedAt" AT TIME ZONE 'UTC'
       FROM "TaskItem" i LEFT JOIN "Task" t ON t.id = i."taskId"
-      WHERE i."mergedIntoTaskItemId" IS NULL AND (i."personalOwnerUserId" IS NOT NULL OR t.kind = 'PERSONAL') AND i.status NOT IN ('DONE', 'CANCELLED')
+      WHERE i."mergedIntoTaskItemId" IS NULL AND i."workTypeId" IS DISTINCT FROM 'CONTINUOUS' AND (i."personalOwnerUserId" IS NOT NULL OR t.kind = 'PERSONAL') AND i.status NOT IN ('DONE', 'CANCELLED')
         AND ${input.userId}::text IS NOT NULL
         AND (i."personalOwnerUserId" = ${input.userId} OR (t.kind = 'PERSONAL' AND (t."createdByUserId" = ${input.userId} OR t."assignedToUserId" = ${input.userId}))
           OR EXISTS (SELECT 1 FROM "PersonalTaskShare" s WHERE s."taskItemId" = i.id AND s."userId" = ${input.userId}))

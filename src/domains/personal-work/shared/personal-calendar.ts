@@ -1,4 +1,5 @@
 import {personalEventTiming} from "./personal-event";
+import { isContinuousWork } from "./continuous-work";
 import type {
   PersonalCalendarEvent,
   PersonalWorkItem,
@@ -27,7 +28,7 @@ export function buildPersonalCalendarEvents(
   return [
     ...external,
     ...items
-      .filter((item) => item.dueAt && item.status !== "CANCELLED")
+      .filter((item) => !isContinuousWork(item.workType) && item.dueAt && item.status !== "CANCELLED")
       .map((item) => {
         const original = linked.get(item.id);
         const timing=personalEventTiming(item);

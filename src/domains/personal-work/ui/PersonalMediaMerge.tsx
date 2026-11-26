@@ -9,7 +9,7 @@ export function PersonalMediaMerge({items,onMerged}:{items:PersonalWorkItem[];on
   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null);
   const [open,setOpen]=useState(false),[ids,setIds]=useState<string[]>([]),[preview,setPreview]=useState<MediaMergePreview|null>(null),[title,setTitle]=useState(""),[error,setError]=useState(""),[pending,setPending]=useState(false);
   const request=useRef("");
-  const candidates=items.filter(item=>item.access==="OWNER"&&!item.checklistOnly&&["TODO","IN_PROGRESS"].includes(item.status));
+  const candidates=items.filter(item=>item.workType!=="CONTINUOUS"&&item.access==="OWNER"&&!item.checklistOnly&&["TODO","IN_PROGRESS"].includes(item.status));
   useEffect(()=>{if(open)dialog.current?.showModal();else dialog.current?.close();},[open]);
   const close=()=>{if(pending)return;setOpen(false);trigger.current?.focus();};
   return <>

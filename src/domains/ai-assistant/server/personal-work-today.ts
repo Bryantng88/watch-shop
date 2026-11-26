@@ -20,7 +20,8 @@ export async function personalWorkToday(
   const day = businessDay(null, now),
     today: Schedule[] = [],
     overdue: Schedule[] = [];
-  let overdueCount = 0,
+  let continuousCount = 0,
+    overdueCount = 0,
     unscheduledCount = 0,
     scanned = 0,
     cursor: string | undefined,
@@ -52,7 +53,8 @@ export async function personalWorkToday(
         day.start.getTime(),
         day.end.getTime(),
       );
-      if (bucket === "TODAY") today.push(row);
+      if(bucket==="CONTINUOUS")continuousCount++;
+      else if (bucket === "TODAY") today.push(row);
       else if (bucket === "OVERDUE") {
         overdueCount++;
         overdue.push(row);
@@ -95,6 +97,7 @@ export async function personalWorkToday(
     timeZone: day.timeZone,
     observedAt: now.toISOString(),
     todayCount: today.length,
+    continuousCount,
     overdueCount,
     unscheduledCount,
     countsExact: !partial,

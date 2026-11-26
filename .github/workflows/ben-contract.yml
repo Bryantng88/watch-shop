@@ -90,6 +90,7 @@ jobs:
       - run: timeout 120s node --import tsx scripts/smoke-ben-order-services.ts
       - run: timeout 120s node --import tsx scripts/smoke-acquisition-quick-names.ts
       - run: timeout 120s node --import tsx scripts/smoke-watch-media-daily.ts
+      - run: npx prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261126110000_continuous_personal_work/migration.sql
       - run: MEDIA_MERGE_REHEARSAL_CI=1 timeout 120s node --import tsx scripts/check-media-merge-rehearsal.ts
       - run: npm run build
   remembered-login-browser:

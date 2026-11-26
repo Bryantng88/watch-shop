@@ -55,6 +55,7 @@ export async function getOperationsDashboardApplication(input: { canAssignPurcha
     input.userId ? prisma.taskItem.findMany({
       where: {
         ...personalWorkViewAccessWhere(input.userId),
+        OR:[{workTypeId:null},{workTypeId:{not:"CONTINUOUS"}}],
         status: { notIn: ["DONE", "CANCELLED"] },
       },
       select: { dueAt: true, status: true, workTypeId: true },

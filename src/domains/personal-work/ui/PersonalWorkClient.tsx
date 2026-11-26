@@ -1,4 +1,5 @@
 "use client";
+import { isContinuousWork } from "../shared/continuous-work";
 
 import { PersonalMediaMerge } from "./PersonalMediaMerge";
 import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
@@ -34,6 +35,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
+  Infinity as InfinityIcon,
   Plus,
   Check,
   ChevronDown,
@@ -201,6 +203,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [newDomain, setNewDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [workType, setWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
   const creatingEvent = isPersonalEvent(workType);
+  const creatingContinuous = isContinuousWork(workType);
   const [targetType, setTargetType] = useState<PersonalWorkTargetType | "">("");
   const [targetQuery, setTargetQuery] = useState("");
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
@@ -299,6 +302,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe && !item.checklistOnly) return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
+        if(isContinuousWork(item.workType))return item.status!=="CANCELLED"&&(view==="TODAY"||view==="ALL");
         const event = isPersonalEvent(item.workType);
         if (view === "EVENTS") return event;
         if (view === "DONE") return !event && item.status === "DONE";
@@ -313,13 +317,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         }
         if (view === "UPCOMING") return Boolean(item.dueAt && Date.parse(item.dueAt) > todayEndMs);
         return true;
-      }),
+      }).sort((a,b)=>Number(isContinuousWork(b.workType))-Number(isContinuousWork(a.workType))),
     [workItems, domain, scope, view, todayStartMs, todayEndMs, recentCompletions],
   );
-  const openCount = workItems.filter((item) => !isPersonalEvent(item.workType) && item.status !== "DONE").length;
+  const openCount = workItems.filter((item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE").length;
   const overdue = workItems.filter(
-    (item) => !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
+    (item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
   ).length;
+  const continuousItems=workItems.filter(item=>isContinuousWork(item.workType)&&item.status!=="CANCELLED"&&(scope!=="MINE"||item.access==="OWNER"||item.assignedToMe)&&(scope!=="SHARED"||item.access!=="OWNER")&&(domain==="ALL"||item.category.key===domain));
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
   const visibleCalendarEvents = useMemo(() => buildPersonalCalendarEvents(workItems, calendar.events), [workItems, calendar.events]);
   const eventsByDay = useMemo(() => groupCalendarEvents(visibleCalendarEvents, calendarDays.map(localDayKey)), [visibleCalendarEvents, calendarDays]);
@@ -362,7 +367,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   function completeWork(item: PersonalWorkItem, finalize = false) {
-    if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isPersonalEvent(item.workType)) return;
+    if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isContinuousWork(item.workType) || isPersonalEvent(item.workType)) return;
     const done = item.status !== "DONE";
     void completionMutation.run({
       key: `complete:${item.id}`,
@@ -392,7 +397,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
   function changeDomain(nextDomain: PersonalWorkDomain) {
     setNewDomain(nextDomain);
-    setWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0]?.key || "");
+    setWorkType(previous=>isContinuousWork(previous)?"CONTINUOUS":isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0]?.key || "");
     setTargetType(domainTargets[nextDomain][0]?.type || "");
     setTargetQuery("");
     setTargetResults([]);
@@ -514,7 +519,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(data.mergedWorkRedirects?.[requestedItem]||requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit,data.mergedWorkRedirects]);
   return (
     <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
-      <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
+      <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{continuousItems.length>0&&<span>{continuousItems.length} duy trì</span>}{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
     } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
       <CalendarDays className="h-4 w-4" />Lịch
@@ -537,16 +542,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               async () => {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
-                  reminderMinutes,
+                  reminderMinutes:creatingContinuous?null:reminderMinutes,
                   tags: parsePersonalWorkTags(newTags),
                   domain: creatingEvent ? "GENERAL" : newDomain,
                   categoryKey: creatingEvent ? "GENERAL" : newCategoryKey,
                   workType,
                   targets: creatingEvent ? [] : selectedTargets,
-                  ...(dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
-                  estimatedDays,
+                  ...(!creatingContinuous&&dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
+                  estimatedDays:creatingContinuous?1:estimatedDays,
                 });
-                if (data.calendar.connected) syncCreatedCalendarTask({id:created.id,title:nextTitle});
+                if (data.calendar.connected&&!creatingContinuous) syncCreatedCalendarTask({id:created.id,title:nextTitle});
               },
               isPersonalEvent(workType) ? "Đã thêm sự kiện" : "Đã thêm công việc",
               () => {
@@ -562,18 +567,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         >
           <AdminViewTabs
             label="Kiểu mục"
-            value={creatingEvent ? "EVENT" : "TASK"}
-            items={[{ value: "TASK", label: "Công việc" }, { value: "EVENT", label: "Sự kiện" }]}
-            onValueChange={value => setWorkType(value === "EVENT" ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
-            className="mb-2 max-w-48"
+            value={creatingContinuous?"CONTINUOUS":creatingEvent ? "EVENT" : "TASK"}
+            items={[{ value: "TASK", label: "Công việc" }, { value: "EVENT", label: "Sự kiện" },{value:"CONTINUOUS",label:"Duy trì"}]}
+            onValueChange={value => setWorkType(value === "CONTINUOUS"?"CONTINUOUS":value === "EVENT" ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
+            className="mb-2 max-w-sm"
           />
           <div className={createStyles.toolbar}>
             <input
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              aria-label={creatingEvent ? "Tên sự kiện" : "Tên công việc"}
-              placeholder={creatingEvent?"Tên sự kiện...":"Việc cần làm..."}
+              aria-label={creatingContinuous?"Tên việc duy trì":creatingEvent ? "Tên sự kiện" : "Tên công việc"}
+              placeholder={creatingContinuous?"Việc cần duy trì...":creatingEvent?"Tên sự kiện...":"Việc cần làm..."}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             {!creatingEvent && (
@@ -590,6 +595,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               ))}
             </select>
             )}
+            {!creatingContinuous&&<>
             <input
               type="date"
               aria-label="Ngày dự kiến"
@@ -600,18 +606,19 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             />
 
             <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
+            </>}
             <AdminButton variant="primary"
               type="submit"
               disabled={pending}
               className="h-11 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             >
-              {creatingEvent?"Thêm sự kiện":"Thêm việc"}
+              {creatingContinuous?"Thêm việc duy trì":creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </AdminButton>
           </div>
           <details className="mt-2 text-sm">
             <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</AdminDisclosureSummary>
             <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
-              <label className="flex items-center gap-2 text-xs text-slate-600">
+              {!creatingContinuous&&<><label className="flex items-center gap-2 text-xs text-slate-600">
                 Số ngày dự kiến
                 <input type="number" min={1} max={365} value={estimatedDays}
                   onChange={event => setEstimatedDays(Number(event.target.value) || 1)}
@@ -623,10 +630,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {[10,15,30,60].map(m=><option key={m} value={m}>Trước {m} phút</option>)}
                 </select>
               </label>
-              <PersonalWorkTagsField allowCodex={!creatingEvent} value={newTags} onChange={setNewTags} configuration={data.codex} />
+              </>}<PersonalWorkTagsField allowCodex={!creatingEvent&&!creatingContinuous} value={newTags} onChange={setNewTags} configuration={data.codex} />
             </div>
           </details>
-          {!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
+          {!isContinuousWork(workType)&&!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Loại công việc</span>
@@ -801,6 +808,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
           )}
         </aside>
+            {continuousItems.length>0&&<section aria-label="Việc duy trì" className="border-b border-slate-100 px-5 py-2"><h3 className="flex items-center gap-1 text-xs font-semibold text-slate-700"><InfinityIcon className="h-3.5 w-3.5"/>Việc duy trì · {continuousItems.length}</h3><p className="text-[11px] text-slate-500">Đang duy trì, không phụ thuộc ngày/tháng đang xem.</p><div className="flex max-h-28 flex-wrap gap-x-2 overflow-y-auto">{continuousItems.map(item=><AdminButton key={item.id} variant="quiet" density="compact" type="button" onClick={()=>openTaskEdit(item)} className="max-w-full text-xs"><span className="truncate">{item.title}</span></AdminButton>)}</div></section>}
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
                 <p className="mt-0.5 text-xs text-slate-500">
@@ -961,7 +969,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
-                const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
+                const late = !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
                 return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={late}
                   scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending || completionMutation.isPending(`complete:${item.id}`)} completionPending={completionMutation.isPending(`complete:${item.id}`)} justCompleted={Boolean(recentCompletions[item.id])} onOpen={() => openTaskEdit(item)}
                   onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : completeWork(item)} />;
@@ -1044,12 +1052,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? <AdminButton variant="quiet" type="button" title="Sửa tên công việc" aria-label="Sửa tên công việc" onClick={() => setEditingTitle(value => !value)} className="max-w-full !p-0 text-left !text-lg !font-bold !leading-6">{editTitle || editingItem.title}</AdminButton> : editingItem.title}
                 </h2>
                 {editingTitle && <input autoFocus aria-label="Việc cần làm" value={editTitle} disabled={pending} onChange={event => setEditTitle(event.target.value)} onKeyDown={event => {if(event.key === "Enter"){event.preventDefault();setEditingTitle(false);}if(event.key === "Escape"){event.stopPropagation();setEditingTitle(false);}}} className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"/>}
-                <p className="mt-1 text-xs text-slate-500">{editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
+                <p className="mt-1 text-xs text-slate-500">{isContinuousWork(editingItem.workType)?"Đang duy trì":editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
                 {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
             </div>
             <div className="mt-5 space-y-4">
               {!!editingItem.mergeSources?.length&&!editingItem.checklistOnly&&<details className="text-xs text-slate-500"><AdminDisclosureSummary className="cursor-pointer">Gộp từ {editingItem.mergeSources.length} công việc</AdminDisclosureSummary><ul className="mt-2 space-y-1">{editingItem.mergeSources.map(source=><li key={source.id}>{source.title}</li>)}</ul><p className="mt-2">Lịch sử nguồn giữ nguyên bên dưới. Việc nguồn không được tính thêm vào báo cáo hoàn thành.</p></details>}
+              {isContinuousWork(editingItem.workType)&&<p className="text-xs text-slate-500">Không có hạn chót hoặc xác nhận hoàn thành hằng ngày. Giữ một việc duy nhất và ghi nhận các cập nhật tại đây.</p>}
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">
@@ -1212,7 +1221,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
                     Đã xác nhận hoàn thành. Danh sách đầu việc đã được khóa.
                   </p>
-                ) : editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
+                ) : !isContinuousWork(editingItem.workType) && editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
                   <AsyncActionButton variant="secondary"
                     type="button"
                     pending={completionMutation.isPending(`complete:${editingItem.id}`)}
@@ -1257,7 +1266,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 />
                 <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật, không tự đánh dấu hoàn thành.</span>
               </div>
-              <details open={scheduleExpanded} onToggle={event => setScheduleExpanded(event.currentTarget.open)} data-work-disclosure="schedule" className="border-t border-slate-100 pt-3">
+              {!isContinuousWork(editWorkType)&&<details open={scheduleExpanded} onToggle={event => setScheduleExpanded(event.currentTarget.open)} data-work-disclosure="schedule" className="border-t border-slate-100 pt-3">
                 <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Lịch · {editDueAt ? `${editDueAt.split("-").reverse().join("/")}${editStartTime ? ` · ${editStartTime}` : " · Cả ngày"}` : "Chưa có lịch"}</AdminDisclosureSummary>
                 <div className="mt-3 space-y-3">
                 <label className="block space-y-1.5">
@@ -1308,7 +1317,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
               {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
                 </div>
-              </details>
+              </details>}
               <details key={editingItem.id} data-work-disclosure="settings" className="border-t border-slate-100 pt-3">
                 <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Thông tin khác · {editCategories.find(category => category.key === editCategoryKey)?.label}</AdminDisclosureSummary>
                 <div className="mt-3 space-y-3">
@@ -1322,7 +1331,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       setEditCategoryKey(event.target.value);
                       const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setEditDomain(nextDomain);
-                      setEditWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setEditWorkType(previous=>isContinuousWork(previous)?"CONTINUOUS":isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
                       setEditTargetType(domainTargets[nextDomain][0]?.type || "");
                       setEditTargetQuery("");
                       setEditTargetResults([]);
@@ -1336,7 +1345,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       </option>
                     ))}
                   </select>
-                </label>              {!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
+                </label>              {!isContinuousWork(editWorkType)&&!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
                   <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
@@ -1346,7 +1355,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
               <details className="border-b border-slate-100 pb-2">
                 <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500">Thẻ công việc</AdminDisclosureSummary>
-                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
+                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isContinuousWork(editWorkType)&&!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
               </details>
               {domainTargets[editDomain].length > 0 && (
                 <div className="space-y-2 rounded-xl bg-slate-50 p-3">
@@ -1432,22 +1441,22 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </div>
               )}
                 {editingItem.access === "OWNER" && <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />}
-                <PersonalCodexPanel item={editingItem} configuration={data.codex} />
+                {!isContinuousWork(editingItem.workType)&&<PersonalCodexPanel item={editingItem} configuration={data.codex} />}
                 {editingItem.access === "OWNER" && <AdminButton variant="quiet" density="compact"
                 type="button"
                 disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
                 onClick={async () => {
-                  const confirmed = await appDialog.confirm({title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
+                  const confirmed = await appDialog.confirm(isContinuousWork(editingItem.workType)?{title:"Dừng duy trì?",message:"Việc sẽ rời danh sách đang duy trì. Lịch sử và cập nhật được giữ, không tính là hoàn thành công việc.",confirmText:"Dừng duy trì",tone:"danger"}:{title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
                   if (!confirmed) return;
                   run(
                     () => deletePersonalWorkAction(editingItem.id),
-                    "Đã xóa công việc",
+                    isContinuousWork(editingItem.workType)?"Đã dừng duy trì":"Đã xóa công việc",
                     () => setEditingItem(null),
                   );
                 }}
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
               >
-                <Trash2 className="h-4 w-4" /> Xóa
+                <Trash2 className="h-4 w-4" /> {isContinuousWork(editingItem.workType)?"Dừng duy trì":"Xóa"}
               </AdminButton>}
 
                 </div>
@@ -1496,7 +1505,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             )}
             <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white py-3">
               <div className="ml-auto flex flex-wrap justify-end gap-2">
-                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
+                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isContinuousWork(editingItem.workType) && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
                 <AdminButton variant="quiet" density="compact"
                   type="button"
                   disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
@@ -1640,7 +1649,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       const nextDomain = data.categories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setCalendarCategoryKey(event.target.value);
                       setCalendarCreateDomain(nextDomain);
-                      setCalendarWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setCalendarWorkType(previous=>isContinuousWork(previous)?"CONTINUOUS":isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
                     }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
