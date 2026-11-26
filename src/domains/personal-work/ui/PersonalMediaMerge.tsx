@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { Merge } from "lucide-react";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract";
 import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { previewPersonalMediaMergeAction, mergePersonalMediaWorkAction } from "../actions/personal-work.actions";
@@ -13,7 +14,7 @@ export function PersonalMediaMerge({items,onMerged}:{items:PersonalWorkItem[];on
   useEffect(()=>{if(open)dialog.current?.showModal();else dialog.current?.close();},[open]);
   const close=()=>{if(pending)return;setOpen(false);trigger.current?.focus();};
   return <>
-    <AdminButton ref={trigger} variant="quiet" density="compact" type="button" onClick={()=>{setIds([]);setPreview(null);setError("");setOpen(true);request.current=crypto.randomUUID();}}>Gộp media</AdminButton>
+    <AdminButton ref={trigger} variant="quiet" density="compact" type="button" onClick={()=>{setIds([]);setPreview(null);setError("");setOpen(true);request.current=crypto.randomUUID();}}><Merge className="h-4 w-4" />Gộp media</AdminButton>
     <dialog ref={dialog} aria-labelledby="media-merge-title" onCancel={event=>{event.preventDefault();close();}} onClose={()=>setOpen(false)} style={{zIndex:F.layers.dialog}} className="m-auto w-[calc(100%-24px)] max-w-xl rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-xl backdrop:bg-slate-950/30">
       <h2 id="media-merge-title" className="text-lg font-semibold text-slate-950">Gộp công việc media</h2>
       <p className="my-2 text-xs text-slate-500">Chỉ gộp việc media Watch chưa hoàn tất, cùng chủ sở hữu và quyền chia sẻ. Cùng nhãn WatchShop chưa đủ điều kiện.</p>
