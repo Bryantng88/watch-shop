@@ -1091,6 +1091,13 @@ export async function getWatchMediaWorkspaceContext(
     ),
   );
   if (!binding) {
+    if (requestedBindingId) {
+      const retired = await db.taskExecution.findUnique({
+        where: { id: requestedBindingId, targetType: TaskExecutionTargetType.WATCH, targetId: watch.id, actionType: "CANCELLED" },
+        select: { taskItem: { select: { note: true } } },
+      });
+      if (retired && /workTypeKey:\s*(media-processing|publish|photography|photoshoot)\b/i.test(retired.taskItem?.note ?? "")) return null;
+    }
     if(requestedBindingId)throw new Error("Liên kết workspace không thuộc đúng watch hoặc không còn hợp lệ.");
     return null;
   }

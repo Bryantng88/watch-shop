@@ -4,6 +4,23 @@ import type { DB } from "@/server/db/client";
 import { buildMediaOperationBoardRow } from "@/domains/projection/server/media-operation-board.projection";
 import { listProjectionBuildersForEvent } from "@/domains/projection/server/projection.registry";
 import { applyManualTriggerToQueueItem, listAvailableManualTransitions } from "@/domains/task/server/business-binding-workflow.service";
+import { getWatchMediaWorkspaceContext } from "./watch-media-work.service";
+
+test("reloading the withdrawn Watch editor resolves safely without accepting another Watch's binding", async () => {
+  const db = {
+    watch: { findUnique: async () => ({ id: "watch" }) },
+    taskExecution: {
+      findMany: async () => [],
+      findUnique: async ({ where }: { where: { targetId: string; id: string; actionType: string } }) => {
+        assert.equal(where.targetId, "watch");
+        assert.equal(where.actionType, "CANCELLED");
+        return where.id === "retired" ? { taskItem: { note: "workTypeKey: media-processing" } } : null;
+      },
+    },
+  } as unknown as DB;
+  assert.equal(await getWatchMediaWorkspaceContext("product", db, "retired"), null);
+  await assert.rejects(getWatchMediaWorkspaceContext("product", db, "other-watch-binding"), /workspace/);
+});
 
 test("withdrawal refreshes board, queue, Watch list and acquisition list", () => {
   const builders = listProjectionBuildersForEvent({ eventKey: "watch.media.withdrawn", targetType: "WATCH" }).map(builder => builder.key);
