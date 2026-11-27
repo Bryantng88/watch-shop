@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { scheduleDate } from "../src/domains/personal-work/shared/personal-work-schedule";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../src/server/db/client";
 import { createPersonalWorkItem, getPersonalWorkPageData, finalizePersonalWorkChecklist, addPersonalWorkChecklistItem, setPersonalWorkChecklistItemDone, updatePersonalWorkItem } from "../src/domains/personal-work/server/personal-work.service";
@@ -17,7 +18,7 @@ async function main(){
   const recipient=await prisma.user.create({data:{email:`merge-recipient-${randomUUID()}@example.invalid`,name:"Recipient"}});
   const auth={userId:owner.id};
   const make=async()=>{
-    const row=await createPersonalWorkItem({title:"Media rehearsal",domain:"WATCHSHOP",workType:"GENERAL_TASK",tags:["Media"]},auth);
+    const row=await createPersonalWorkItem({title:"Media rehearsal",dueAt:"2020-01-01T16:59:59.999Z",domain:"WATCHSHOP",workType:"GENERAL_TASK",tags:["Media"]},auth);
     const doneAt=new Date("2026-11-20T01:00:00Z");
     for(const done of [true,false])await prisma.taskItemChecklist.create({data:{taskItemId:row.id,title:"Media entry",isDone:done,doneAt:done?doneAt:null,note:JSON.stringify({source:"WATCH_MEDIA_DAILY",productId:"synthetic-watch",watchTitle:"Synthetic",sku:null,part:"image",request:"test"})}});
     await prisma.taskItem.update({where:{id:row.id},data:{progressMode:"CHECKLIST",progressPercent:50}});
@@ -39,8 +40,13 @@ async function main(){
   const fresh=await previewMediaMerge({ids:[a.id,b.id]},auth);
   await assert.rejects(previewMediaMerge({ids:[a.id,b.id]},{userId:recipient.id}));
   const command={ids:[a.id,b.id],revision:fresh.revision,title:"Merged rehearsal",requestKey:randomUUID()};
+  const todayBefore=scheduleDate(new Date());
   const [result,duplicate]=await Promise.all([mergeMediaWork(command,auth),mergeMediaWork(command,auth)]);
   assert.equal(result.id,duplicate.id);
+  const merged=await prisma.taskItem.findUniqueOrThrow({where:{id:result.id}});
+  assert.ok([todayBefore,scheduleDate(new Date())].includes(scheduleDate(merged.dueAt!)));
+  assert.equal(merged.scheduledEndAt,null);
+  assert.equal((merged.mergeReceipt as {sources:{dueAt:string}[]}).sources[0].dueAt,"2020-01-01T16:59:59.999Z");
   assert.equal((await mergeMediaWork(command,auth)).id,result.id);
   assert.equal((await prisma.taskItemActivity.findUniqueOrThrow({where:{id:history.id}})).taskItemId,result.id);
   assert.equal(await prisma.taskItemActivityReply.count({where:{activityId:history.id}}),1);
@@ -89,7 +95,8 @@ async function main(){
   const appended=await addDailyMediaWork(owner.id,{...request,requestKey:randomUUID()});assert.equal(appended.taskItemId,daily.id);
   const summary=await dailyMediaWorkForProducts(prisma,owner.id,[watch.productId]);assert.equal(summary.get(watch.productId)?.count,3);
   const c=await make(),again=await previewMediaMerge({ids:[daily.id,c.id]},auth);
-  const nextMerge=await mergeMediaWork({ids:[daily.id,c.id],revision:again.revision,title:"Merged again",requestKey:randomUUID()},auth);
+  const nextMerge=await mergeMediaWork({ids:[daily.id,c.id],revision:again.revision,title:"Merged again",date:"2026-12-03",requestKey:randomUUID()},auth);
+  assert.equal((await prisma.taskItem.findUniqueOrThrow({where:{id:nextMerge.id}})).dueAt?.toISOString(),"2026-12-03T16:59:59.999Z");
   assert.equal((await addDailyMediaWork(owner.id,request)).taskItemId,nextMerge.id);
   const after=await getPersonalWorkPageData(auth);assert.equal(after.mergedWorkRedirects?.[d1.taskItemId],nextMerge.id);
   console.log("PASS: media merge concurrency/history/access/reporting/chains; continuous lifecycle/DB guard/sharing/subtasks/summary/stop");

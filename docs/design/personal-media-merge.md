@@ -24,7 +24,9 @@ Checklist IDs, doneAt, shares, notes/Watch contexts remain. Activities and repli
 retain IDs, actors and occurredAt; work image bindings and executions follow the
 new parent. Original parents retain their state/note and merge pointer; an audit
 receipt records actor, time, sources, deadlines, priorities and entry membership.
-The earliest deadline and highest priority win. Duplicate work image bindings,
+The new parent defaults to today in Vietnam when no date is selected; an explicit
+merge date takes precedence. Its date-only schedule lasts through end of that day.
+Source deadlines remain in the audit receipt; the highest priority wins. Duplicate work image bindings,
 pending uploads and more than 20 work-level images block instead of dropping data.
 
 Merged parents are excluded by the shared personal-work scope, generic task list,

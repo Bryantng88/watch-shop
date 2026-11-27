@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateMediaMerge, mediaMergeSelection, type MediaMergeCandidate } from "./media-merge";
+import { validateMediaMerge, mediaMergeSelection, mediaMergeSchedule, type MediaMergeCandidate } from "./media-merge";
+test("merged work defaults to today's whole day in Vietnam, including UTC date boundaries",()=>{
+  assert.equal(mediaMergeSchedule(undefined,new Date("2026-11-26T18:00:00Z")).dueAt,"2026-11-27T16:59:59.999Z");
+  assert.equal(mediaMergeSchedule(null,new Date("2026-11-26T16:59:59Z")).dueAt,"2026-11-26T16:59:59.999Z");
+  assert.equal(mediaMergeSchedule("2026-12-03").dueAt,"2026-12-03T16:59:59.999Z");
+  assert.equal(mediaMergeSchedule("2026-12-03").scheduledEndAt,null);
+  assert.throws(()=>mediaMergeSchedule("2026-02-30"));
+});
 const candidate=(id:string):MediaMergeCandidate=>({id,title:"Media",ownerId:"owner",status:"TODO",locked:false,categoryId:null,workType:"GENERAL_TASK",shares:["vi:EDITOR"],entries:[{id:id+"-done",isDone:true,media:true},{id:id+"-open",isDone:false,media:true}],calendar:false,running:false,merged:false});
 test("media merge preserves eligibility of mixed completed/open entries",()=>assert.doesNotThrow(()=>validateMediaMerge([candidate("a"),candidate("b")],"owner")));
 for(const [name,patch] of Object.entries({"other owner":{ownerId:"other"},"viewer widening":{shares:["vi:VIEWER"]},"finished source":{status:"DONE"},"locked source":{locked:true},"merged source":{merged:true},"calendar":{calendar:true},"worker":{running:true},"different category":{categoryId:"custom"},"different kind":{workType:"EVENT"},"non-media entry":{entries:[{id:"bad",isDone:false,media:false}]}}))test(`reject ${name}`,()=>assert.throws(()=>validateMediaMerge([candidate("a"),{...candidate("b"),...patch}],"owner")));

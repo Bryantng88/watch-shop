@@ -9,12 +9,13 @@ import type { MediaMergePreview } from "../shared/media-merge";
 export function PersonalMediaMerge({items,onMerged}:{items:PersonalWorkItem[];onMerged:(id:string)=>void}){
   const dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null);
   const [open,setOpen]=useState(false),[ids,setIds]=useState<string[]>([]),[preview,setPreview]=useState<MediaMergePreview|null>(null),[title,setTitle]=useState(""),[error,setError]=useState(""),[pending,setPending]=useState(false);
+  const [date,setDate]=useState("");
   const request=useRef("");
   const candidates=items.filter(item=>item.workType!=="CONTINUOUS"&&item.access==="OWNER"&&!item.checklistOnly&&["TODO","IN_PROGRESS"].includes(item.status));
   useEffect(()=>{if(open)dialog.current?.showModal();else dialog.current?.close();},[open]);
   const close=()=>{if(pending)return;setOpen(false);trigger.current?.focus();};
   return <>
-    <AdminButton ref={trigger} variant="quiet" density="compact" type="button" onClick={()=>{setIds([]);setPreview(null);setError("");setOpen(true);request.current=crypto.randomUUID();}}><Layers2 className="h-4 w-4" />Gộp công việc</AdminButton>
+    <AdminButton ref={trigger} variant="quiet" density="compact" type="button" onClick={()=>{setIds([]);setDate("");setPreview(null);setError("");setOpen(true);request.current=crypto.randomUUID();}}><Layers2 className="h-4 w-4" />Gộp công việc</AdminButton>
     <dialog ref={dialog} aria-labelledby="media-merge-title" onCancel={event=>{event.preventDefault();close();}} onClose={()=>setOpen(false)} style={{zIndex:F.layers.dialog}} className="m-auto w-[calc(100%-24px)] max-w-xl rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700 shadow-xl backdrop:bg-slate-950/30">
       <h2 id="media-merge-title" className="text-lg font-semibold text-slate-950">Gộp công việc</h2>
       <p className="my-2 text-xs text-slate-500">Chỉ gộp việc media Watch chưa hoàn tất, cùng chủ sở hữu và quyền chia sẻ. Cùng nhãn WatchShop chưa đủ điều kiện.</p>
@@ -24,6 +25,7 @@ export function PersonalMediaMerge({items,onMerged}:{items:PersonalWorkItem[];on
         {!candidates.length&&<p className="py-4">Không có việc do bạn sở hữu đang mở.</p>}
       </div>:<div className="my-3 max-h-[55dvh] space-y-3 overflow-y-auto">
         <label className="block text-xs font-medium">Tên công việc chung<input disabled={pending} maxLength={300} value={title} onChange={event=>setTitle(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-slate-200 px-3 text-sm"/></label>
+        <label className="block text-xs font-medium">Ngày thực hiện<input type="date" disabled={pending} value={date} onChange={event=>setDate(event.target.value)} className="mt-1 h-10 w-full rounded-md border border-slate-200 px-3 text-sm"/><span className="mt-1 block font-normal text-slate-500">Để trống: hôm nay (giờ Việt Nam).</span></label>
         <p className="font-medium">{preview.sources.length} việc → 1 việc · {preview.total} đầu việc ({preview.done} đã xong, {preview.total-preview.done} đang mở)</p>
         <ul className="space-y-1 text-xs text-slate-500">{preview.sources.map(source=><li key={source.id}>{source.title} · {source.done}/{source.total}</li>)}</ul>
         <ul className="space-y-2 rounded-md bg-amber-50 p-3 text-xs text-amber-900">{preview.warnings.map(warning=><li key={warning}>{warning}</li>)}</ul>
@@ -35,7 +37,7 @@ export function PersonalMediaMerge({items,onMerged}:{items:PersonalWorkItem[];on
           if(pending)return;setPending(true);setError("");
           try{
             if(!preview){const result=await previewPersonalMediaMergeAction({ids});if(!result.ok){setError(result.error);return;}setPreview(result.preview);setTitle(result.preview.suggestedTitle);}
-            else{const result=await mergePersonalMediaWorkAction({ids,title,revision:preview.revision,requestKey:request.current});if(!result.ok){setError(result.error);return;}setOpen(false);onMerged(result.id);}
+            else{const result=await mergePersonalMediaWorkAction({ids,title,date:date||undefined,revision:preview.revision,requestKey:request.current});if(!result.ok){setError(result.error);return;}setOpen(false);onMerged(result.id);}
           }catch{setError("Không thể kết nối. Hãy thử lại; yêu cầu gộp được bảo vệ chống lặp.");}finally{setPending(false);}
         }}>{pending?"Đang xử lý…":preview?`Gộp ${preview.sources.length} việc thành 1`:"Xem trước"}</AdminButton>
       </div>

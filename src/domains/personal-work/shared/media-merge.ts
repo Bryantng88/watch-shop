@@ -1,8 +1,16 @@
 import { z } from "zod";
+import { calendarScheduleInput, scheduleDate } from "./personal-work-schedule";
+const mergeDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>{
+  const parsed=new Date(value+"T00:00:00Z");
+  return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===value&&value>="1900-01-01"&&value<="2200-12-31";
+},"Ngày gộp không hợp lệ.");
+export function mediaMergeSchedule(date?:string|null,now=new Date()){
+  return calendarScheduleInput(date ? mergeDate.parse(date) : scheduleDate(now),"","",1);
+}
 export class MediaMergeError extends Error {}
 export const mediaMergeSelection = z.object({ ids:z.array(z.string().min(1).max(160)).min(2).max(30) }).strict()
   .refine(input=>new Set(input.ids).size===input.ids.length,"Không chọn trùng công việc.");
-export const mediaMergeCommand = z.object({ids:z.array(z.string().min(1).max(160)).min(2).max(30),title:z.string().trim().min(1).max(300),revision:z.string().regex(/^[a-f0-9]{64}$/),requestKey:z.string().uuid()}).strict();
+export const mediaMergeCommand = z.object({ids:z.array(z.string().min(1).max(160)).min(2).max(30),title:z.string().trim().min(1).max(300),revision:z.string().regex(/^[a-f0-9]{64}$/),requestKey:z.string().uuid(),date:mergeDate.nullable().optional()}).strict();
 export type MediaMergePreview = {revision:string; suggestedTitle:string; sources:{id:string;title:string;total:number;done:number}[];total:number;done:number;warnings:string[]};
 export type MediaMergeCandidate = {id:string;title:string;ownerId:string|null;assigneeId?:string|null;status:string;locked:boolean;categoryId:string|null;workType:string|null;shares:string[];entries:{id:string;isDone:boolean;media:boolean}[];calendar:boolean;running:boolean;merged:boolean};
 export function validateMediaMerge(rows:MediaMergeCandidate[],ownerId:string) {
