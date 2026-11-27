@@ -18,9 +18,9 @@ import {
     ContactRound,
 } from "lucide-react";
 
-import { TRADING_READ_PERMISSIONS, TRADING_ROUTES } from "@/domains/trading/shared/trading-navigation";
+import { TRADING_READ_PERMISSIONS, TRADING_ROUTES, tradingEntries } from "@/domains/trading/shared/trading-navigation";
 
-import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries, SYSTEM_READ_PERMISSIONS, SYSTEM_ROUTES } from "@/domains/shared/ui/navigation/section-navigation";
+import { PRODUCT_READ_PERMISSIONS, PRODUCT_ROUTES, productEntries, REPORT_READ_PERMISSIONS, REPORT_ROUTES, reportEntries, SYSTEM_READ_PERMISSIONS, SYSTEM_ROUTES } from "@/domains/shared/ui/navigation/section-navigation";
 
 import ActiveLink from "./AdminActiveLink";
 import { usePathname } from "next/navigation";
@@ -81,7 +81,13 @@ function canAccess(user: Props["user"], item: NavItem): boolean {
 }
 
 function buildAllowedNav(user: Props["user"]) {
-    return NAV.filter(item => canAccess(user, item) && (item.href !== "/admin/reports" || reportEntries(user).length > 0));
+    return NAV.filter(item => canAccess(user, item) && (item.href !== "/admin/reports" || reportEntries(user).length > 0)).map(item => {
+        // These section entry routes only authorize and redirect. Use the same
+        // permission-filtered destination directly to avoid a second route read.
+        const destination = item.href === "/admin/products" ? productEntries(user)[0]?.href
+            : item.href === "/admin/trading" ? tradingEntries(user)[0]?.href : undefined;
+        return destination ? {...item, href: destination} : item;
+    });
 }
 
 /** Same permission/route catalog as the former sidebar. */

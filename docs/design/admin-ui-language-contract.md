@@ -1768,3 +1768,18 @@ image section below the update composer, without per-entry attachment triggers.
 Do not delete or migrate existing attachment data as part of this UI change.
 Phone title editors wrap save/cancel beneath the input. Regression coverage includes
 320–430px phones, desktop, larger fonts, owner/editor/viewer, rename and completion.
+
+### Navigation loading and canonical section entry (2026-11-26)
+
+The main Product and Trading navigation links go directly to the first permitted
+child returned by productEntries/tradingEntries. Keep labels, permission filtering,
+activePaths and the mobile selector aligned; retain the old section entry routes
+for bookmarks and external links. Do not add duplicate server/client permission rules.
+
+Admin route changes share AdminNavigationLoading through the admin loading boundary.
+Keep navigation available while content streams. Use a static, accessible loading
+status and neutral placeholders, without fake records/counts, overlays or new data
+requests. Respect reduced motion. Do not force full prefetch of dynamic admin pages
+or cache private queries to make navigation appear fast. Loading feedback is distinct
+from a confirmed reduction in server query time.
+
