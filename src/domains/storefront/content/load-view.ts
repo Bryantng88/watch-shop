@@ -3,7 +3,7 @@ export async function loadHomeView(preview = false) {
   const content = await readHome(preview);
   const [images, watches, journal] = await Promise.all([
     resolveImages("home", "HOME", content, preview),
-    selectedWatches(content.featured.productIds, true),
+    selectedWatches(content.featured.productIds, true, content.featured.images),
     content.journal.articleId
       ? getArticle(content.journal.articleId, preview)
       : Promise.resolve(null),
@@ -20,3 +20,4 @@ export async function loadHomeView(preview = false) {
       : null,
   };
 }
+

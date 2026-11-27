@@ -21,7 +21,7 @@ import {
   homeImageGuidance,
   safeLink,
 } from "./contract";
-import { ContentConflict, readHome, resolveImages, saveContent } from "./service";
+import { ContentConflict, readHome, resolveImages, saveContent, selectedWatches } from "./service";
 import { GET as publicImage } from "@/app/api/public/storefront/media/[id]/[slot]/route";
 
 const restores: Array<() => void> = [];
@@ -259,4 +259,47 @@ test("home can publish a theme change with automatic hero and optional photos; e
  patch(prisma.product,"count",async()=>0);written=undefined;
  await assert.rejects(saveContent({id:"home",revision:4,action:"publish",scope:"home",content:draft},"tester"),/danh mục chưa có ảnh tự động/);
  assert.equal(written,undefined);
+});
+
+test("featured image framing is optional for legacy homes and bounded", () => {
+  const home=defaultHome();
+  assert.equal(homeSchema.safeParse(home).success,true);
+  home.featured.images={p1:{imageId:"gallery-1",focalX:30,focalY:70,zoom:1.4}};
+  assert.equal(homeSchema.safeParse(home).success,true);
+  home.featured.images.p1.zoom=3;
+  assert.equal(homeSchema.safeParse(home).success,false);
+  home.featured.images.p1.zoom=1;home.featured.images.p1.focalX=-1;
+  assert.equal(homeSchema.safeParse(home).success,false);
+});
+test("publishing rechecks selected gallery ownership and visibility",async()=>{
+ const home=defaultHome();home.sections=home.sections.map(s=>({...s,enabled:false}));home.featured.productIds=["p1"];
+ home.featured.images={p1:{imageId:"gallery-1",focalX:20,focalY:60,zoom:1.2}};
+ patch(prisma,"$transaction",async(callback:unknown)=>(callback as (tx:typeof prisma)=>Promise<unknown>)(prisma));
+ patch(prisma,"$executeRaw",async()=>1);
+ patch(prisma.storefrontDocument,"findUnique",async()=>({id:"home",kind:"HOME",revision:1,draft:home,published:home}));
+ patch(prisma.product,"count",async()=>1);
+ let written=false;patch(prisma.storefrontDocument,"update",async()=>{written=true;return {}});
+ patch(prisma.productImage,"findFirst",async(args:{where:Record<string,unknown>})=>{
+  assert.equal(args.where.id,"gallery-1");assert.equal(args.where.productId,"p1");assert.equal(args.where.isForStorefront,true);assert.deepEqual(args.where.role,{in:["COVER","GALLERY"]});return null;
+ });
+ await assert.rejects(saveContent({id:"home",revision:1,action:"publish",content:home},"tester"),/không còn công khai/);
+ assert.equal(written,false);
+ patch(prisma.productImage,"findFirst",async()=>({id:"gallery-1"}));
+ await saveContent({id:"home",revision:1,action:"publish",content:home},"tester");assert.equal(written,true);
+ home.featured.images={other:{imageId:"gallery-1",focalX:50,focalY:50,zoom:1}};
+ await assert.rejects(saveContent({id:"home",revision:1,action:"publish",content:home},"tester"),/phải thuộc đồng hồ đã chọn/);
+});
+
+
+test("homepage image lookup preserves cover and hover and falls back when selection is revoked",async()=>{
+ patch(prisma.product,"findMany",async()=>[{id:"p1",slug:"test-watch",title:"Watch",priceVisibility:"HIDE",status:"AVAILABLE",updatedAt:new Date(),brand:null,watch:{saleStage:"READY",stockStage:"IN_STOCK",isCollectible:false},productImage:[{id:"cover",role:"COVER",alt:"Cover",width:100,height:100},{id:"hover",role:"GALLERY",alt:"Gallery",width:100,height:100}]}]);
+ patch(prisma.productImage,"findMany",async(args:{where:Record<string,unknown>})=>{
+  assert.deepEqual(args.where.productId,{in:["p1"]});assert.equal(args.where.isForStorefront,true);assert.deepEqual(args.where.role,{in:["COVER","GALLERY"]});
+  return [{id:"selected",productId:"p1",alt:"Homepage",width:100,height:100}];
+ });
+ const settings={p1:{imageId:"selected",focalX:30,focalY:60,zoom:1.2}};
+ const [card]=await selectedWatches(["p1"],false,settings);
+ assert.ok(card.image.url.endsWith("/cover"));assert.ok(card.hoverImage?.url.endsWith("/hover"));assert.ok(card.featuredImage?.url.endsWith("/selected"));
+ patch(prisma.productImage,"findMany",async()=>[]);
+ const [fallback]=await selectedWatches(["p1"],false,settings);assert.equal(fallback.featuredImage,undefined);assert.ok(fallback.image.url.endsWith("/cover"));
 });
