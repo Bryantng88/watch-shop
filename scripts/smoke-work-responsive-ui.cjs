@@ -163,7 +163,7 @@ if (require.main === module) (async () => {
     for (const id of ['item-23', 'shared']) {
       await phone.goto(origin + '/?view=list&item=' + id);
       await phone.getByRole('dialog').waitFor();
-      assert.equal(await phone.getByRole('dialog').getByRole('heading', { level: 2 }).innerText(), id === 'shared' ? 'Đầu việc được chia sẻ chỉ xem' : 'Tính tiền phí dịch vụ đồng hồ của An, Nam');
+      assert.equal(await phone.getByRole('dialog').getByRole('heading', { level: 2 }).innerText(), id === 'shared' ? 'Đầu việc được chia sẻ' : 'Tính tiền phí dịch vụ đồng hồ của An, Nam');
 
       await phone.getByRole('button', { name: '← Danh sách công việc', exact: true }).tap();
     }
