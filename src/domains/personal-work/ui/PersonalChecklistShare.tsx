@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { Share2, X, Loader2 } from "lucide-react";
 import type { PersonalWorkShare, PersonalWorkUser } from "../shared/personal-work.types";
 
-export function PersonalChecklistShare({ users, shares, onSave }: {
+export function PersonalChecklistShare({ users, shares, onSave, showCount = true }: {
   users: PersonalWorkUser[];
   shares: PersonalWorkShare[];
+  showCount?: boolean;
   onSave: (shares: PersonalWorkShare[]) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +57,7 @@ export function PersonalChecklistShare({ users, shares, onSave }: {
       title={shares.length ? shares.map(s => s.user.name || s.user.email).join(", ") : "Chia sẻ đầu việc"}
       onClick={() => { if (!busy) { setDraft(shares); setError(""); setOpen(!open); } }}
       className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md hover:bg-slate-100 ${shares.length ? "text-violet-600" : "text-slate-400"}`}>
-      <Share2 className="h-3.5 w-3.5" />{shares.length > 0 && <span className="text-xs">{shares.length}</span>}
+      <Share2 className="h-3.5 w-3.5" />{showCount && shares.length > 0 && <span className="text-xs">{shares.length}</span>}
     </AdminButton>
     {open && <span role="dialog" aria-label="Chia sẻ đầu việc" aria-busy={busy}
       className="absolute right-0 top-full z-40 mt-1 block w-64 max-w-[80vw] rounded-lg border border-slate-200 bg-white p-2 shadow-lg">

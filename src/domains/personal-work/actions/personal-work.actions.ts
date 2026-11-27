@@ -1,6 +1,8 @@
 "use server";
 
 import { prisma } from "@/server/db/client";
+import { MediaMergeError } from "../shared/media-merge";
+import { previewMediaMerge, mergeMediaWork } from "../server/media-merge.service";
 import { hydrateTaskItemsWithTagsRepo } from "@/domains/task/server/tag/task-tag.repo";
 import { codexExecutionReadiness } from "../server/codex/codex-config";
 import { requestPersonalCodexRun, cancelPersonalCodexRun } from "../server/codex/personal-codex.service";
@@ -47,6 +49,17 @@ export async function deletePersonalWorkCategoryAction(input: {key:string;replac
 
 async function auth() {
   return requirePermission(PERMISSIONS.TASK_VIEW);
+}
+export async function previewPersonalMediaMergeAction(input:unknown) {
+  const user=await auth();
+  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  try{return {ok:true as const,preview:await previewMediaMerge(input,user)};}catch(error){return {ok:false as const,error:error instanceof MediaMergeError?error.message:"Không thể xem trước. Hãy tải lại danh sách và chọn từ 2 đến 30 việc."};}
+}
+export async function mergePersonalMediaWorkAction(input:unknown) {
+  const user=await auth();
+  await requirePermission(PERMISSIONS.PRODUCT_UPDATE);
+  try{const result=await mergeMediaWork(input,user);refresh();return {ok:true as const,...result};}
+  catch(error){return {ok:false as const,error:error instanceof MediaMergeError?error.message:"Chưa thể xác nhận kết quả gộp. Hãy tải lại danh sách trước khi thử lại; không tạo yêu cầu gộp khác."};}
 }
 function refresh() {
   revalidatePath("/admin/personal-work");

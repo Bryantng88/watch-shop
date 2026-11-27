@@ -1,3 +1,4 @@
+import { isContinuousWork, assertContinuousSchedule, assertContinuousUpdate } from "../shared/continuous-work";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import type { RecordedBusinessEvent } from "@/domains/event/server/business-event.service";
 import { recordPersonalWorkCreated, recordPersonalChecklistCreated } from "./personal-work-events";
@@ -103,7 +104,7 @@ function normalizeWorkType(value: unknown, domain: PersonalWorkDomain) {
   const key = String(value || "")
     .trim()
     .toUpperCase();
-  if (key === "EVENT") return key;
+  if (key === "EVENT" || isContinuousWork(key)) return key;
   return PERSONAL_WORK_TYPES[domain].some(item => item.key === key) ? key : null;
 }
 
@@ -244,6 +245,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         status: { not: TaskStatus.CANCELLED },
       },
       include: {
+        mergedSources:{select:{id:true,title:true}},
         assignedToUser: { select: { id: true, name: true } },
         personalCategory: true,
         codexRuns: { orderBy: { createdAt: "desc" }, take: 5, select: publicRunSelect },
@@ -301,6 +303,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       const result: PersonalWorkItem = {
+        mergeSources:item.mergedSources,
         id: item.id,
         personalWorkNumber: item.personalWorkNumber,
         assignedToMe: item.assignedToUserId === userId,
@@ -372,7 +375,22 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       loadError: null,
     },
   };
-  return {...data,items:await hydratePersonalWorkObjects(prisma,userId,data.items)};
+  const visibleOriginIds=items.flatMap(row=>row.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).flatMap(e=>e.mergedFromTaskItemId?[e.mergedFromTaskItemId]:[]));
+  const merged=await prisma.taskItem.findMany({where:{mergedIntoTaskItemId:{not:null},OR:[{personalOwnerUserId:userId},{personalShares:{some:{userId}}},{id:{in:visibleOriginIds}}]},select:{id:true,mergedIntoTaskItemId:true}});
+  for(let depth=0;depth<50;depth++){
+    const loaded=new Set(merged.map(row=>row.id));
+    const missing=[...new Set(merged.flatMap(row=>row.mergedIntoTaskItemId&&!loaded.has(row.mergedIntoTaskItemId)?[row.mergedIntoTaskItemId]:[]))];
+    if(!missing.length)break;
+    const ancestors=await prisma.taskItem.findMany({where:{id:{in:missing},mergedIntoTaskItemId:{not:null}},select:{id:true,mergedIntoTaskItemId:true}});
+    if(!ancestors.length)break;merged.push(...ancestors);
+  }
+  const edges=new Map(merged.map(row=>[row.id,row.mergedIntoTaskItemId!]));
+  const visible=new Set(data.items.filter(row=>!row.checklistOnly).map(row=>row.id));
+  const partialSources=new Set(items.flatMap(row=>row.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).flatMap(e=>e.mergedFromTaskItemId?[e.mergedFromTaskItemId]:[])));
+  for(const id of [...partialSources]){let root=id;const seen=new Set<string>();while(edges.has(root)&&!seen.has(root)){seen.add(root);partialSources.add(root);root=edges.get(root)!;}}
+  const redirects:Record<string,string>={};
+  for(const row of merged){let root=row.id;const seen=new Set<string>();while(edges.has(root)&&!seen.has(root)){seen.add(root);root=edges.get(root)!;}if(visible.has(root)||partialSources.has(row.id))redirects[row.id]=root;}
+  return {...data,mergedWorkRedirects:redirects,items:await hydratePersonalWorkObjects(prisma,userId,data.items)};
 }
 
 export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma, identity?: { systemId?: string; actorUserId?: string; assignedToUserId?: string; eventTargets?: PersonalWorkTarget[]; onEvent?: (event:RecordedBusinessEvent)=>void; deferConsumers?: (work:()=>Promise<void>)=>void }): Promise<import("@prisma/client").TaskItem> {
@@ -382,10 +400,11 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
   const title = input.title.trim();
   if (!title) throw new Error("Vui lòng nhập nội dung công việc");
   if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
+  if(isContinuousWork(input.workType))assertContinuousSchedule(input);
   const schedule = validatePersonalSchedule(input.dueAt, input.scheduledEndAt);
   const category = await resolvePersonalCategory(userId, input.categoryKey || normalizePersonalDomain(input.domain));
   const domain = category.domain;
-  const workType = isPersonalEvent(input.workType) ? "EVENT" : category.id ? null : normalizeWorkType(input.workType, domain);
+  const workType = isPersonalEvent(input.workType) ? "EVENT" : isContinuousWork(input.workType) ? "CONTINUOUS" : category.id ? null : normalizeWorkType(input.workType, domain);
   if (isPersonalEvent(workType) && !schedule.dueAt) throw new Error("Sự kiện cần ngày diễn ra");
   if (isPersonalEvent(workType) && input.tags?.some(t=>t.trim().toLowerCase()==="codex")) throw new Error("Sự kiện không gửi cho Codex thực hiện");
   const resolvedTargets = await Promise.all(
@@ -405,11 +424,13 @@ export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unk
         reminderMinutes: input.reminderMinutes,
         title, note: input.note?.trim() || null,
         personalOwnerUserId: userId, assignedToUserId: identity?.assignedToUserId??userId,
+        ...(isContinuousWork(workType)?{status:TaskStatus.IN_PROGRESS,startedAt:new Date(),reminderMinutes:null}:{}),
         priority: input.priority || "MEDIUM", workTypeId: workType,
         personalCategoryId: category.id, dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt,
         estimatedDays: schedule.estimatedDays ?? Math.max(1, Math.min(365, Math.round(input.estimatedDays ?? 1))),
       },
     });
+    if(isContinuousWork(workType))await tx.taskItemActivity.create({data:{taskItemId:item.id,sourceType:"SYSTEM",actorUserId:identity?.actorUserId??userId,title:"Bắt đầu duy trì",body:"Một việc liên tục, không hạn chót và không sinh bản sao hằng ngày.",metadataJson:{source:"CONTINUOUS_WORK"}}});
     await setTargetTagsRepo(tx, {
       ...personalWorkTagOwner(item),
       targetType: AppTagTargetType.TASK_ITEM,
@@ -540,6 +561,7 @@ export async function updatePersonalWorkItem(
 ) {
   if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
   const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
+  assertContinuousUpdate(current.workTypeId,input,current.access==="OWNER");
   if(current.id.startsWith("media-daily-")) {
     const receipt=await db.taskItemActivity.findFirst({where:{taskItemId:current.id,metadataJson:{path:["source"],equals:"WATCH_MEDIA_DAILY"}},orderBy:{createdAt:"asc"},select:{metadataJson:true}});
     const day=(receipt?.metadataJson as Prisma.JsonObject|null)?.day;
@@ -590,6 +612,8 @@ export async function updatePersonalWorkItem(
     : null;
   if (input.updateChecklistItemId && (event || !input.updateBody?.trim())) throw new Error("Chọn đầu việc cần kèm nội dung cập nhật cho công việc.");
   await withDbTransaction(db, async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
+    await assertPersonalWorkAccess(input.id, auth, "EDIT", tx);
     let updateEntry: { id: string; title: string } | null = null;
     if (input.updateChecklistItemId) {
       await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
@@ -604,7 +628,7 @@ export async function updatePersonalWorkItem(
       ...(input.reminderMinutes !== undefined ? {reminderMinutes:input.reminderMinutes} : {}),
       ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
       ...(category ? { personalCategoryId: category.id } : {}),
-      ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
+      ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : isContinuousWork(current.workTypeId) ? "CONTINUOUS" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
       ...(estimatedDays !== undefined ? { estimatedDays } : {}),
@@ -628,7 +652,7 @@ export async function updatePersonalWorkItem(
           taskItemId: input.id,
           sourceType: "DISCUSSION",
           actorUserId: current.userId,
-          title: updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          title: isContinuousWork(current.workTypeId)&&status==="CANCELLED"?"Dừng duy trì":isContinuousWork(current.workTypeId)&&status==="IN_PROGRESS"&&current.status==="CANCELLED"?"Tiếp tục duy trì":updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
           body: input.updateBody?.trim() || null,
           metadataJson: {
             ...(updateEntry ? { checklistItemId: updateEntry.id, checklistTitle: updateEntry.title } : {}),
@@ -734,6 +758,8 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
   if (!normalizedTitle) throw new Error("Vui lòng nhập tên đầu việc");
   if (normalizedTitle.length > 500) throw new Error("Tên đầu việc không được vượt quá 500 ký tự");
   return runBusinessEventTransaction(async (tx,delivery) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
     const last = await tx.taskItemChecklist.findFirst({
       where: { taskItemId },
       orderBy: { sortOrder: "desc" },
@@ -824,6 +850,8 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
     const entry = await tx.taskItemChecklist.findFirst({where:{id:checklistItemId,taskItemId}});
     if (!entry) throw new Error("Không tìm thấy đầu việc");
     const result = await tx.taskItemChecklist.deleteMany({ where: { id: checklistItemId, taskItemId } });
@@ -835,8 +863,11 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
 
 export async function finalizePersonalWorkChecklist(taskItemId: string, auth: unknown) {
   const current = await assertPersonalWorkAccess(taskItemId, auth, "EDIT");
+  if(isContinuousWork(current.workTypeId))throw Error("Việc duy trì không có thao tác hoàn thành.");
   assertChecklistOpen(current);
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
     const [total, done] = await Promise.all([
       tx.taskItemChecklist.count({ where: { taskItemId } }),
       tx.taskItemChecklist.count({ where: { taskItemId, isDone: true } }),
@@ -881,6 +912,7 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
   if (users.length !== unique.size) throw new Error("Có người nhận không còn hoạt động hoặc không tồn tại");
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    await assertPersonalWorkAccess(taskItemId, auth, "OWNER", tx);
     const previous = await tx.personalTaskShare.findMany({where:{taskItemId},select:{userId:true}});
     const item = await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId}});
     await tx.personalTaskShare.deleteMany({ where: { taskItemId } });

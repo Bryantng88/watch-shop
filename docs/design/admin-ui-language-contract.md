@@ -1755,22 +1755,19 @@ horizontal divider above these facts; spacing is sufficient. The rail has no
 independent card/background. The record's business sections remain visible.
 
 
-### Checklist rows with images on mobile (2026-11-25)
+### Checklist rows with images on mobile (2026-11-26)
 
-Personal Work checklist rows reserve a checkbox column and a flexible, min-width-zero
-content column. The 18px rounded-square completion mark has a larger hit area and
-is centered across both lines. Keep the title on the first line. Put the assignee,
-attachment and share controls together on the left of the second line; put update,
-linked-record/media and overflow actions on the right. Rename/delete use the shared
-overflow menu with the dialog-popover layer. Avoid a large linked-object thumbnail
-beside the title; retain its destination as a text link. Never place an attachment
-gallery or a repeated long image label in the same non-wrapping line as the title.
-The inline attachment trigger is an icon with the full entry title in its accessible
-name, and expanded images use the available width. On phones, the title
-editor input takes its own line and save/cancel controls wrap below; desktop keeps
-the inline editor. Preserve completion, rename, share and media permissions/callbacks.
-Regression coverage includes 320–430px phones, desktop, larger fonts, expanded
-images, owner/editor/viewer controls and title editing.
+Personal Work checklist rows reserve a checkbox column, an optional 36px Watch
+thumbnail, flexible title and right-hand controls. The 16px rounded-square mark
+aligns with the title and retains its larger hit area. Keep the thumbnail beside
+the title on all host widths. The right side has the overflow menu above the
+assignee and share controls; use 16px avatars, 11px metadata and 12px share icons.
+Update, linked-record/media, rename and delete use the shared dialog-popover menu
+with their existing permission checks. Attachments belong to the existing work-level
+image section below the update composer, without per-entry attachment triggers.
+Do not delete or migrate existing attachment data as part of this UI change.
+Phone title editors wrap save/cancel beneath the input. Regression coverage includes
+320–430px phones, desktop, larger fonts, owner/editor/viewer, rename and completion.
 
 ### Navigation loading and canonical section entry (2026-11-26)
 
@@ -1785,3 +1782,4 @@ status and neutral placeholders, without fake records/counts, overlays or new da
 requests. Respect reduced motion. Do not force full prefetch of dynamic admin pages
 or cache private queries to make navigation appear fast. Loading feedback is distinct
 from a confirmed reduction in server query time.
+

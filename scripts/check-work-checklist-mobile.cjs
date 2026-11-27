@@ -29,21 +29,20 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
    await page.setViewportSize({width,height:900});await open();
    const dialog=page.getByRole('dialog'),row=dialog.locator('[data-work-checklist-row]').first(),title=row.getByText(titles[0],{exact:true});
    const titleBox=await title.boundingBox();assert.ok(titleBox.width>=100,`title compressed at ${width}: ${titleBox.width}`);assert.ok(titleBox.height<=60,`short title wraps into single-character lines at ${width}`);
-   const actions=await row.locator('[data-checklist-actions]').boundingBox(),content=await row.locator('[data-checklist-content]').boundingBox(),images=await row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]}`,exact:true}).boundingBox();
-   assert.ok(actions.y>=content.y+content.height-1,`actions must be below the title at ${width}`);
-   const meta=await row.locator("[data-checklist-meta]").boundingBox();assert.ok(Math.abs(images.y-meta.y)<24,`attachment trigger should stay beside the assignee at ${width}`);
+   const actions=await row.locator('[data-checklist-actions]').boundingBox(),content=await row.locator('[data-checklist-content]').boundingBox();
+   assert.ok(Math.abs(actions.y+actions.height/2-content.y-content.height/2)<=1,`actions must align with the title at ${width}`);
+   assert.equal(await row.getByRole('button',{name:/Ảnh đầu việc/}).count(),0,'attachments belong to the work, not each checklist row');
+   const meta=await row.locator('[data-checklist-meta]').boundingBox();assert.ok(meta.x+meta.width>content.x+content.width-1,'assignee stays on the right');
    assert.ok(await dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`dialog overflows ${width}`);
    assert.ok(await dialog.locator('[data-work-checklist-row]').evaluateAll(rows=>rows.every(row=>row.scrollWidth<=row.clientWidth+1)),`checklist overflows ${width}`);
-   const gallery=row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]}`,exact:true});assert.equal((await gallery.innerText()).trim(),'');await gallery.click();
-   await row.getByRole('img',{name:'Ảnh bố trí bảng hiệu.jpg',exact:true}).waitFor();assert.ok(await row.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`expanded gallery overflows ${width}`);
-   await row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]} (1)`,exact:true}).click();await row.getByRole('img',{name:'Ảnh bố trí bảng hiệu.jpg',exact:true}).waitFor({state:'hidden'});
+
   }
   await page.setViewportSize({width:360,height:800});await open('EDITOR');let row=page.getByRole('dialog').locator('[data-work-checklist-row]').first();
   await row.getByRole('button',{name:`Thêm thao tác cho ${titles[0]}`,exact:true}).click();await page.getByRole('menuitem',{name:`Sửa ${titles[0]}`,exact:true}).click();const input=row.getByRole('textbox',{name:'Tên đầu việc',exact:true});assert.ok((await input.boundingBox()).width>=100,'mobile title editor is squeezed');await input.fill('Lắp bảng hiệu trước cửa');await row.getByRole('button',{name:'Lưu đầu việc',exact:true}).click();await row.getByText('Lắp bảng hiệu trước cửa',{exact:true}).waitFor();assert.ok(await page.evaluate(()=>window.__actions.some(action=>action.name==='renamePersonalWorkChecklistItemAction'&&action.input.title==='Lắp bảng hiệu trước cửa')));
   await row.getByRole('button',{name:'Hoàn thành Lắp bảng hiệu trước cửa',exact:true}).click();await row.getByRole('button',{name:'Mở lại Lắp bảng hiệu trước cửa',exact:true}).waitFor();
   await page.setViewportSize({width:390,height:844});await open('EDITOR');await fs.mkdir(process.env.WORK_CHECKLIST_SHOTS||'/tmp/work-checklist-mobile',{recursive:true});await page.screenshot({path:path.join(process.env.WORK_CHECKLIST_SHOTS||'/tmp/work-checklist-mobile','checklist-mobile.png'),fullPage:false});
   await page.evaluate(()=>document.documentElement.style.fontSize='20px');row=page.getByRole('dialog').locator('[data-work-checklist-row]').first();assert.ok((await row.getByText(titles[0],{exact:true}).boundingBox()).width>=100,'larger phone font compresses the title');assert.ok(await page.getByRole('dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1),'larger phone font overflows');
-  await open('VIEWER');row=page.getByRole('dialog').locator('[data-work-checklist-row]').first();assert.equal(await row.getByRole('button',{name:`Sửa ${titles[0]}`,exact:true}).count(),0);assert.equal(await row.getByRole('button',{name:`Xóa ${titles[0]}`,exact:true}).count(),0);assert.ok(await row.getByRole('button',{name:`Hoàn thành ${titles[0]}`,exact:true}).isDisabled());await row.getByRole('button',{name:`Ảnh đầu việc: ${titles[0]}`,exact:true}).click();await row.getByRole('img').last().waitFor();assert.equal(await row.getByRole('button',{name:'Thêm ảnh',exact:true}).count(),0);assert.deepEqual(errors,[]);
-  console.log('PASS real checklist + attachment mobile layout: 320–1440px, short/long titles, owner/editor/viewer, expanded images, larger fonts, rename payload and completion');
+  await open('VIEWER');row=page.getByRole('dialog').locator('[data-work-checklist-row]').first();assert.equal(await row.getByRole('button',{name:`Sửa ${titles[0]}`,exact:true}).count(),0);assert.equal(await row.getByRole('button',{name:`Xóa ${titles[0]}`,exact:true}).count(),0);assert.ok(await row.getByRole('button',{name:`Hoàn thành ${titles[0]}`,exact:true}).isDisabled());assert.deepEqual(errors,[]);
+  console.log('PASS real checklist mobile layout: 320–1440px, short/long titles, owner/editor/viewer, larger fonts, rename payload and completion');
  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1});

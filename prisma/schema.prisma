@@ -2814,6 +2814,11 @@ model Task {
 }
 
 model TaskItem {
+  mergedIntoTaskItemId String?
+  mergedInto TaskItem? @relation("PersonalWorkMerge", fields:[mergedIntoTaskItemId],references:[id],onDelete:Restrict)
+  mergedSources TaskItem[] @relation("PersonalWorkMerge")
+  mergeReceipt Json?
+  @@index([mergedIntoTaskItemId])
   reminderMinutes Int? @default(0)
   personalWorkNumber Int? @unique
   codexRuns PersonalCodexRun[]
@@ -3006,6 +3011,7 @@ model TaskItemActivityReply {
 }
 
 model TaskItemChecklist {
+  mergedFromTaskItemId String?
   personalShares PersonalChecklistShare[]
   id         String  @id @default(dbgenerated("(gen_random_uuid())::text"))
   taskItemId String

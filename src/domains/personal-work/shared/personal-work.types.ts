@@ -85,6 +85,7 @@ export type PersonalCodexRun = {
 };
 
 export type PersonalWorkItem = {
+  mergeSources?:{id:string;title:string}[];
   checklistOnly?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -166,6 +167,7 @@ export type PersonalCalendarEvent = {
 };
 
 export type PersonalWorkPageData = {
+  mergedWorkRedirects?:Record<string,string>;
   codex?: { ready: boolean; reason: string | null; canDispatch: boolean };
   canManageDefaultCategories: boolean;
   categories: PersonalWorkCategory[];

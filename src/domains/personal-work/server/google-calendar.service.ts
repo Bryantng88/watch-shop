@@ -1,3 +1,4 @@
+import { isContinuousWork } from "../shared/continuous-work";
 import { GoogleCalendarConnectionError, calendarRefreshFailure } from "./google-calendar-error";
 import {personalEventTiming} from "../shared/personal-event";
 import { googleCalendarReadiness, requireGoogleCalendarRedirectUri } from "./google-calendar-config";
@@ -235,8 +236,15 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
     include: { task: { select: { id: true, title: true } } },
   });
   if (!item) throw new Error("Không tìm thấy công việc cá nhân");
+  if(isContinuousWork(item.workTypeId))throw Error("Việc duy trì nằm trong dải riêng của lịch nội bộ, không đồng bộ thành sự kiện Google.");
   const auth = await accessToken(userId);
-  const existing = await prisma.personalTaskCalendarLink.findUnique({ where: { userId_taskItemId: { userId, taskItemId } } });
+  // Reserve the link under the same parent lock used by merge, before writing Google.
+  // A concurrent merge either sees this reservation and refuses, or wins and blocks sync.
+  const existing = await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    if(!await tx.taskItem.findFirst({where:{id:taskItemId,...personalWorkEditAccessWhere(userId)},select:{id:true}}))throw new Error("Công việc đã thay đổi hoặc đã gộp; hãy tải lại.");
+    return tx.personalTaskCalendarLink.upsert({where:{userId_taskItemId:{userId,taskItemId}},update:{},create:{userId,taskItemId,connectionId:auth.connection.id,calendarId:auth.connection.calendarId,eventId:googleTaskEventId(userId,taskItemId,auth.connection.calendarId),syncHash:"RESERVATION"}});
+  });
   const startDate = bangkokDateKey(item.dueAt || new Date());
   const estimatedDays = Math.max(1, Math.min(365, item.estimatedDays || 1));
   const endDate = addCalendarDays(startDate, estimatedDays);
@@ -255,7 +263,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   if (existing?.syncHash === syncHash) return existing;
   const endpoint = `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(auth.connection.calendarId)}/events`;
   const response = await writeGoogleTaskEvent({
-    existingId: existing?.eventId,
+    existingId: existing.syncHash === "RESERVATION" ? undefined : existing.eventId,
     stableId: googleTaskEventId(userId, item.id, auth.connection.calendarId),
     taskItemId: item.id,
     payload,

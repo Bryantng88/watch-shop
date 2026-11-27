@@ -1,12 +1,16 @@
 "use client";
+import { isContinuousWork } from "../shared/continuous-work";
 
+import { PersonalMediaMerge } from "./PersonalMediaMerge";
 import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
+import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
 import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
 import {PersonalWorkListRow} from "./PersonalWorkListRow";
+import { PersonalWorkFloatingPanel } from "./PersonalWorkFloatingPanel";
 import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
 import listStyles from "./PersonalWorkList.module.css";
 import { personalWorkCode } from "../shared/personal-work-code";
@@ -33,9 +37,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Plus,
-  MessageSquare,
   Check,
-  ChevronDown,
+  Settings2,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -53,6 +56,7 @@ import { AsyncActionButton, useUiMutation } from "@/domains/shared/ui/mutation";
 import {
   ProgressMetric,
   AdminUserAvatar,
+  AdminUserAvatarStack,
   AdminViewTabs,
 } from "@/domains/shared/ui/admin-design-contract";
 import {
@@ -199,6 +203,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [newDomain, setNewDomain] = useState<PersonalWorkDomain>("GENERAL");
   const [workType, setWorkType] = useState<string>(PERSONAL_WORK_TYPES.GENERAL[0].key);
   const creatingEvent = isPersonalEvent(workType);
+  const creatingContinuous = isContinuousWork(workType);
   const [targetType, setTargetType] = useState<PersonalWorkTargetType | "">("");
   const [targetQuery, setTargetQuery] = useState("");
   const [targetResults, setTargetResults] = useState<PersonalWorkTarget[]>([]);
@@ -209,7 +214,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
+  const [quickOptionsOpen, setQuickOptionsOpen] = useState(false);
+  const quickOptionsTrigger = useRef<HTMLButtonElement>(null);
+  const closeQuickOptions = useCallback(() => setQuickOptionsOpen(false), []);
   const [calendarOpen, setCalendarOpen] = useState(true);
+  const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
+  const calendarSettingsTrigger = useRef<HTMLButtonElement>(null);
+  const closeCalendarSettings = useCallback(() => setCalendarSettingsOpen(false), []);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
@@ -297,6 +308,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe && !item.checklistOnly) return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
+        if(isContinuousWork(item.workType))return item.status!=="CANCELLED"&&(view==="TODAY"||view==="ALL");
         const event = isPersonalEvent(item.workType);
         if (view === "EVENTS") return event;
         if (view === "DONE") return !event && item.status === "DONE";
@@ -311,13 +323,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         }
         if (view === "UPCOMING") return Boolean(item.dueAt && Date.parse(item.dueAt) > todayEndMs);
         return true;
-      }),
+      }).sort((a,b)=>Number(isContinuousWork(b.workType))-Number(isContinuousWork(a.workType))),
     [workItems, domain, scope, view, todayStartMs, todayEndMs, recentCompletions],
   );
-  const openCount = workItems.filter((item) => !isPersonalEvent(item.workType) && item.status !== "DONE").length;
+  const openCount = workItems.filter((item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE").length;
   const overdue = workItems.filter(
-    (item) => !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
+    (item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
   ).length;
+  const continuousItems=workItems.filter(item=>isContinuousWork(item.workType)&&item.status!=="CANCELLED"&&(scope!=="MINE"||item.access==="OWNER"||item.assignedToMe)&&(scope!=="SHARED"||item.access!=="OWNER")&&(domain==="ALL"||item.category.key===domain));
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
   const visibleCalendarEvents = useMemo(() => buildPersonalCalendarEvents(workItems, calendar.events), [workItems, calendar.events]);
   const eventsByDay = useMemo(() => groupCalendarEvents(visibleCalendarEvents, calendarDays.map(localDayKey)), [visibleCalendarEvents, calendarDays]);
@@ -360,7 +373,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }
 
   function completeWork(item: PersonalWorkItem, finalize = false) {
-    if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isPersonalEvent(item.workType)) return;
+    if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isContinuousWork(item.workType) || isPersonalEvent(item.workType)) return;
     const done = item.status !== "DONE";
     void completionMutation.run({
       key: `complete:${item.id}`,
@@ -390,7 +403,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
   function changeDomain(nextDomain: PersonalWorkDomain) {
     setNewDomain(nextDomain);
-    setWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0]?.key || "");
+    setWorkType(previous=>isContinuousWork(previous)?"CONTINUOUS":isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0]?.key || "");
     setTargetType(domainTargets[nextDomain][0]?.type || "");
     setTargetQuery("");
     setTargetResults([]);
@@ -509,15 +522,49 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     });
   }
 
-  useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit]);
+  useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(data.mergedWorkRedirects?.[requestedItem]||requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit,data.mergedWorkRedirects]);
+  const mediaMergeAction = <PersonalMediaMerge items={calendar.items} onMerged={id=>{const url=new URL(window.location.href);url.searchParams.set("item",id);router.replace(url.pathname+url.search);router.refresh();}}/>;
   return (
     <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
-      <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
+      <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{continuousItems.length>0&&<span>{continuousItems.length} duy trì</span>}{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
     } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
       <CalendarDays className="h-4 w-4" />Lịch
       {calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label={calendar.reconnectRequired ? "Lịch cần kết nối lại" : "Lịch có lỗi đồng bộ"} />}
-    </AdminButton></>}>
+    </AdminButton>{!listOnly && <><AdminButton ref={calendarSettingsTrigger} iconOnly variant="quiet" density="compact" type="button" aria-label="Cài đặt Google Calendar" title="Cài đặt Google Calendar" aria-expanded={calendarSettingsOpen} onClick={()=>setCalendarSettingsOpen(open=>!open)}><Settings2 className="h-4 w-4"/>{calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label="Google Calendar cần chú ý"/>}</AdminButton>{mediaMergeAction}</>}</>}>
+      {calendarSettingsOpen && <PersonalWorkFloatingPanel anchor={calendarSettingsTrigger.current} onClose={closeCalendarSettings} label="Cài đặt Google Calendar" className="rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+        <h2 className="text-sm font-semibold text-slate-950">Google Calendar</h2>
+        <p className="mt-1 break-all text-xs text-slate-500">{data.calendar.connected ? data.calendar.accountEmail || "Đã kết nối Google Calendar" : "Đang dùng lịch nội bộ"}</p>
+        <p className={`mt-1 text-xs ${calendar.error ? "text-amber-700" : "text-slate-500"}`}>{calendar.reconnectRequired ? "Cần kết nối lại" : calendar.error ? "Có lỗi đồng bộ" : calendar.loading ? "Đang kiểm tra" : data.calendar.connected ? "Đã liên kết" : "Chưa kết nối Google Calendar"}</p>
+          <AsyncActionButton variant="quiet"
+            pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
+            title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
+            pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
+            disabled={!data.calendar.configured}
+            onClick={() =>
+              data.calendar.connected && !calendar.reconnectRequired
+                ? void calendar.reload()
+                : run(async () => {
+                    const result = await getGoogleCalendarConnectUrlAction();
+                    window.location.assign(result.url);
+                  })
+            }
+            className="mt-3 inline-flex items-center gap-2 text-xs text-slate-500 disabled:cursor-not-allowed"
+          >
+            {data.calendar.connected && !calendar.reconnectRequired ? (
+              <>
+                <RefreshCw className="h-4 w-4" /> Tải lại lịch
+              </>
+            ) : (
+              <>
+                <ExternalLink className="h-4 w-4" /> {calendar.reconnectRequired ? "Kết nối lại Google Calendar" : "Kết nối Google Calendar"}
+              </>
+            )}
+          </AsyncActionButton>
+          {!data.calendar.connected && !data.calendar.configured && (
+            <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
+          )}
+      </PersonalWorkFloatingPanel>}
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
       <section hidden={listOnly} className={listOnly ? "hidden" : "border-b border-slate-100 pb-4"}>
@@ -535,16 +582,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               async () => {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
-                  reminderMinutes,
-                  tags: parsePersonalWorkTags(newTags),
+                  reminderMinutes:creatingContinuous?null:reminderMinutes,
+                    tags: creatingContinuous ? [] : parsePersonalWorkTags(newTags),
                   domain: creatingEvent ? "GENERAL" : newDomain,
                   categoryKey: creatingEvent ? "GENERAL" : newCategoryKey,
                   workType,
                   targets: creatingEvent ? [] : selectedTargets,
-                  ...(dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
-                  estimatedDays,
+                  ...(!creatingContinuous&&dueAt ? personalItemScheduleInput(dueAt, quickStartTime, quickEndTime, estimatedDays,isPersonalEvent(workType)) : { dueAt: null, scheduledEndAt: null }),
+                  estimatedDays:creatingContinuous?1:estimatedDays,
                 });
-                if (data.calendar.connected) syncCreatedCalendarTask({id:created.id,title:nextTitle});
+                if (data.calendar.connected&&!creatingContinuous) syncCreatedCalendarTask({id:created.id,title:nextTitle});
               },
               isPersonalEvent(workType) ? "Đã thêm sự kiện" : "Đã thêm công việc",
               () => {
@@ -560,18 +607,18 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         >
           <AdminViewTabs
             label="Kiểu mục"
-            value={creatingEvent ? "EVENT" : "TASK"}
-            items={[{ value: "TASK", label: "Công việc" }, { value: "EVENT", label: "Sự kiện" }]}
-            onValueChange={value => setWorkType(value === "EVENT" ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
-            className="mb-2 max-w-48"
+            value={creatingContinuous?"CONTINUOUS":creatingEvent ? "EVENT" : "TASK"}
+            items={[{ value: "TASK", label: "Công việc" }, { value: "EVENT", label: "Sự kiện" },{value:"CONTINUOUS",label:"Duy trì"}]}
+            onValueChange={value => setWorkType(value === "CONTINUOUS"?"CONTINUOUS":value === "EVENT" ? "EVENT" : PERSONAL_WORK_TYPES[newDomain][0].key)}
+            className="mb-2 max-w-sm"
           />
           <div className={createStyles.toolbar}>
             <input
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              aria-label={creatingEvent ? "Tên sự kiện" : "Tên công việc"}
-              placeholder={creatingEvent?"Tên sự kiện...":"Việc cần làm..."}
+              aria-label={creatingContinuous?"Tên việc duy trì":creatingEvent ? "Tên sự kiện" : "Tên công việc"}
+              placeholder={creatingContinuous?"Việc cần duy trì...":creatingEvent?"Tên sự kiện...":"Việc cần làm..."}
               className="h-11 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             />
             {!creatingEvent && (
@@ -588,6 +635,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               ))}
             </select>
             )}
+            {!creatingContinuous&&<>
             <input
               type="date"
               aria-label="Ngày dự kiến"
@@ -598,33 +646,35 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             />
 
             <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
+            </>}
+            {!creatingContinuous && <AdminButton ref={quickOptionsTrigger} iconOnly variant="quiet" density="compact" type="button" aria-label="Tùy chọn tạo việc" title="Tùy chọn tạo việc" aria-expanded={quickOptionsOpen} onClick={()=>setQuickOptionsOpen(open=>!open)}><Settings2 className="h-4 w-4"/>{(estimatedDays!==1||reminderMinutes!==0||newTags.trim())&&<span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-label="Đã chỉnh tùy chọn"/>}</AdminButton>}
             <AdminButton variant="primary"
               type="submit"
               disabled={pending}
               className="h-11 rounded-lg bg-slate-950 px-5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-50"
             >
-              {creatingEvent?"Thêm sự kiện":"Thêm việc"}
+              {creatingContinuous?"Thêm việc duy trì":creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </AdminButton>
           </div>
-          <details className="mt-2 text-sm">
-            <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</AdminDisclosureSummary>
-            <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
-              <label className="flex items-center gap-2 text-xs text-slate-600">
+          {quickOptionsOpen && !creatingContinuous && <PersonalWorkFloatingPanel anchor={quickOptionsTrigger.current} onClose={closeQuickOptions} label="Tùy chọn tạo việc" className="rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+            <div className="mb-3 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold text-slate-950">Tùy chọn tạo việc</h3><AdminButton variant="quiet" density="compact" type="button" onClick={()=>{closeQuickOptions();quickOptionsTrigger.current?.focus();}}>Xong</AdminButton></div>
+            <div className="space-y-3">
+              {!creatingContinuous&&<><label className="flex items-center justify-between gap-3 text-xs text-slate-600">
                 Số ngày dự kiến
                 <input type="number" min={1} max={365} value={estimatedDays}
                   onChange={event => setEstimatedDays(Number(event.target.value) || 1)}
                   className="h-9 w-20 rounded-lg border border-slate-200 px-2" />
               </label>
-              <label className="flex items-center gap-2 text-xs text-slate-600">Nhắc lịch
-                <select aria-label="Nhắc lịch" className="h-9 rounded-lg border border-slate-200 px-2" value={reminderMinutes === null ? "off" : reminderMinutes} onChange={e=>setReminderMinutes(e.target.value==="off"?null:Number(e.target.value))}>
+              <label className="flex items-center justify-between gap-3 text-xs text-slate-600">Nhắc lịch
+                <select aria-label="Nhắc lịch" className="h-9 w-32 rounded-lg border border-slate-200 px-2" value={reminderMinutes === null ? "off" : reminderMinutes} onChange={e=>setReminderMinutes(e.target.value==="off"?null:Number(e.target.value))}>
                   <option value="off">Không nhắc</option><option value="0">Đúng giờ</option>
                   {[10,15,30,60].map(m=><option key={m} value={m}>Trước {m} phút</option>)}
                 </select>
               </label>
-              <PersonalWorkTagsField allowCodex={!creatingEvent} value={newTags} onChange={setNewTags} configuration={data.codex} />
+              </>}<PersonalWorkTagsField allowCodex={!creatingEvent&&!creatingContinuous} value={newTags} onChange={setNewTags} configuration={data.codex} />
             </div>
-          </details>
-          {!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
+          </PersonalWorkFloatingPanel>}
+          {!isContinuousWork(workType)&&!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Loại công việc</span>
@@ -737,68 +787,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(340px,0.9fr)_minmax(420px,1.1fr)]" : "grid-cols-1"}`}
       >
         {calendarOpen && !listOnly && (
-          <section id="personal-google-calendar-agenda" className="order-2 min-w-0 bg-white xl:border-l xl:border-slate-100 xl:pl-5">
-        <aside className="mb-4 border-b border-slate-100 pb-3">
-          <AdminButton variant="contextual"
-            type="button"
-            aria-expanded={calendarOpen}
-            aria-controls="personal-google-calendar-agenda"
-            onClick={() => setCalendarOpen((open) => !open)}
-            className="flex w-full items-start justify-between gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-          >
-            <div className="flex gap-3">
-              <span className="pt-0.5 text-blue-600">
-                <CalendarDays className="h-5 w-5" />
-              </span>
-              <div>
-                <h2 className="font-semibold text-slate-950">Lịch công việc</h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {data.calendar.connected
-                    ? data.calendar.accountEmail || "Đã kết nối Google Calendar"
-                    : "Lịch nội bộ · Chưa kết nối Google Calendar"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {data.calendar.connected && (
-                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${calendar.error ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                  {calendar.reconnectRequired ? "CẦN KẾT NỐI LẠI" : calendar.error ? "LỖI ĐỒNG BỘ" : calendar.loading ? "ĐANG KIỂM TRA" : "ĐÃ LIÊN KẾT"}
-                </span>
-              )}
-              <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
-              />
-            </div>
-          </AdminButton>
-          <AsyncActionButton variant="quiet"
-            pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
-            title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
-            pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
-            disabled={!data.calendar.configured}
-            onClick={() =>
-              data.calendar.connected && !calendar.reconnectRequired
-                ? void calendar.reload()
-                : run(async () => {
-                    const result = await getGoogleCalendarConnectUrlAction();
-                    window.location.assign(result.url);
-                  })
-            }
-            className="mt-3 inline-flex items-center gap-2 text-xs text-slate-500 disabled:cursor-not-allowed"
-          >
-            {data.calendar.connected && !calendar.reconnectRequired ? (
-              <>
-                <RefreshCw className="h-4 w-4" /> Tải lại lịch
-              </>
-            ) : (
-              <>
-                <ExternalLink className="h-4 w-4" /> {calendar.reconnectRequired ? "Kết nối lại Google Calendar" : "Kết nối Google Calendar"}
-              </>
-            )}
-          </AsyncActionButton>
-          {!data.calendar.connected && !data.calendar.configured && (
-            <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
-          )}
-        </aside>
+          <section aria-label="Lịch công việc" id="personal-google-calendar-agenda" className="order-2 min-w-0 bg-white xl:border-l xl:border-slate-100 xl:pl-5">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
                 <p className="mt-0.5 text-xs text-slate-500">
@@ -954,11 +943,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
-          {listOnly && <PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}
+          {listOnly && <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />{mediaMergeAction}</div>}
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
-                const late = !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
+                const late = !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
                 return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={late}
                   scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending || completionMutation.isPending(`complete:${item.id}`)} completionPending={completionMutation.isPending(`complete:${item.id}`)} justCompleted={Boolean(recentCompletions[item.id])} onOpen={() => openTaskEdit(item)}
                   onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : completeWork(item)} />;
@@ -1041,11 +1030,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   {!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? <AdminButton variant="quiet" type="button" title="Sửa tên công việc" aria-label="Sửa tên công việc" onClick={() => setEditingTitle(value => !value)} className="max-w-full !p-0 text-left !text-lg !font-bold !leading-6">{editTitle || editingItem.title}</AdminButton> : editingItem.title}
                 </h2>
                 {editingTitle && <input autoFocus aria-label="Việc cần làm" value={editTitle} disabled={pending} onChange={event => setEditTitle(event.target.value)} onKeyDown={event => {if(event.key === "Enter"){event.preventDefault();setEditingTitle(false);}if(event.key === "Escape"){event.stopPropagation();setEditingTitle(false);}}} className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"/>}
-                <p className="mt-1 text-xs text-slate-500">{editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
+                <p className="mt-1 text-xs text-slate-500">{isContinuousWork(editingItem.workType)?"Đang duy trì":editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
                 {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
             </div>
             <div className="mt-5 space-y-4">
+              {!!editingItem.mergeSources?.length&&!editingItem.checklistOnly&&<details className="text-xs text-slate-500"><AdminDisclosureSummary className="cursor-pointer">Gộp từ {editingItem.mergeSources.length} công việc</AdminDisclosureSummary><ul className="mt-2 space-y-1">{editingItem.mergeSources.map(source=><li key={source.id}>{source.title}</li>)}</ul><p className="mt-2">Lịch sử nguồn giữ nguyên bên dưới. Việc nguồn không được tính thêm vào báo cáo hoàn thành.</p></details>}
+              {isContinuousWork(editingItem.workType)&&<p className="text-xs text-slate-500">Không có hạn chót hoặc xác nhận hoàn thành hằng ngày. Giữ một việc duy nhất và ghi nhận các cập nhật tại đây.</p>}
               {message && messageIsError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{message}</p>}
               {isPersonalEvent(editingItem.workType)?<p className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">Sự kiện · {personalEventLabel(editingItem.dueAt,editingItem.scheduledEndAt,new Date(),editingItem.estimatedDays)}. Không cần đánh dấu hoàn thành.</p>:<section className="space-y-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center justify-between gap-3">
@@ -1094,7 +1085,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           }}
                           className="group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md after:absolute after:-inset-1.5 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                         >
-                          <span aria-hidden="true" className={`flex h-[18px] w-[18px] items-center justify-center rounded border transition-colors ${entry.isDone ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-transparent group-hover:border-blue-400"}`}>
+                          <span aria-hidden="true" className={`flex h-4 w-4 items-center justify-center rounded border transition-colors ${entry.isDone ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-transparent group-hover:border-blue-400"}`}>
                           {checklistMutation.isPending(`toggle:${entry.id}`) ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
                           ) : (
@@ -1112,29 +1103,26 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                             router.refresh();
                           }}/>
                         </div>
+                        {entry.object?.type === "WATCH" && <span data-checklist-thumbnail className={listStyles.checklistThumbnail}><WorkObjectThumbnail object={entry.object} size={36}/></span>}
                         <div className={listStyles.checklistSecondary}>
                           <div className={listStyles.checklistTools}>
-                            <div data-checklist-meta className={listStyles.checklistMeta}>
-                          {!entry.sharedWith?.length ? <><AdminUserAvatar user={editingItem.owner} size="xs"/><span>{editingItem.owner.name || editingItem.owner.email}</span></> : <span className="flex items-center gap-1" title="Đã chia sẻ">{entry.sharedWith.slice(0,3).map(share=><AdminUserAvatar key={share.user.id} user={share.user} size="xs"/>)}<span>{entry.sharedWith.length} người</span></span>}
+                            <div data-checklist-meta data-shared={Boolean(entry.sharedWith?.length)} className={listStyles.checklistMeta}>
+                          {!entry.sharedWith?.length ? <><AdminUserAvatar user={editingItem.owner} size="xs"/><span>{editingItem.owner.name || editingItem.owner.email}</span></> : <AdminUserAvatarStack users={entry.sharedWith.map(share=>share.user)} max={2} size="xs"/>}
                         </div>
-                            <div data-checklist-images className="contents">
-                        <WorkImageAttachments workId={editingItem.id} entryId={entry.id} compact inline label={`Ảnh đầu việc: ${entry.title}`} triggerLabel="Ảnh đầu việc" />
-                        </div>
-                            {editingItem.access === "OWNER" && <PersonalChecklistShare users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
+                            {editingItem.access === "OWNER" && <PersonalChecklistShare showCount={false} users={data.availableUsers} shares={entry.sharedWith??[]} onSave={async shares=>{
                           await replacePersonalChecklistSharesAction({taskItemId:editingItem.id,checklistItemId:entry.id,shares:shares.map(s=>({userId:s.user.id,accessLevel:s.accessLevel}))});
                           setEditingItem(current=>current?{...current,checklist:current.checklist.map(e=>e.id===entry.id?{...e,sharedWith:shares}:e)}:current);
                           router.refresh();
                         }}/>}
                           </div>
                           <div data-checklist-actions className={listStyles.checklistActions}>
-                        {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && <AdminButton variant="quiet" iconOnly density="compact" type="button" aria-label={`Cập nhật ${entry.title}`} title="Cập nhật đầu việc" onClick={()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}><MessageSquare className="h-3.5 w-3.5"/></AdminButton>}
-                        {entry.mediaContext && <a href={entry.mediaContext.href} className="shrink-0 text-xs font-medium text-blue-700 underline" title={entry.mediaContext.label}>Mở media</a>}
-                        {!entry.mediaContext && entry.object && <a href={entry.object.href} className="shrink-0 text-xs text-blue-700" title={entry.object.label}>Xem liên kết</a>}
-
-                        {!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt && <AdminRowActionMenu
+                        {(entry.mediaContext || entry.object || (!editingItem.checklistOnly && editingItem.access !== "VIEWER") || (!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt)) && <AdminRowActionMenu
                           label={`Thêm thao tác cho ${entry.title}`} status={null} iconOnly layer="dialogPopover" triggerIcon={<MoreHorizontal className="h-4 w-4"/>}
                           disabled={completionMutation.hasPending || checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
                           actions={[
+                            ...(!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? [{key:"update",label:`Cập nhật ${entry.title}`,onSelect:()=>{setUpdateChecklistId(entry.id);updateComposerRef.current?.focus();updateComposerRef.current?.scrollIntoView({block:"nearest"});}}] : []),
+                            ...(entry.mediaContext ? [{key:"media",label:"Mở media",onSelect:()=>router.push(entry.mediaContext!.href)}] : entry.object ? [{key:"record",label:"Xem liên kết",onSelect:()=>router.push(entry.object!.href)}] : []),
+                            ...(!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt ? [
                             {key:"edit",label:`Sửa ${entry.title}`,disabled:editingItem.status==="DONE"||editingItem.status==="CANCELLED",onSelect:()=>setEditingChecklistTitleId(entry.id)},
                             {key:"delete",label:`Xóa ${entry.title}`,onSelect:()=>{
                               const snapshot=editingItem;
@@ -1145,6 +1133,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                                 rollback:previous=>setEditingItem(previous),onSuccess:()=>router.refresh(),
                               });
                             }},
+                            ] : []),
                           ]}/>}
 
                           </div>
@@ -1210,7 +1199,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
                     Đã xác nhận hoàn thành. Danh sách đầu việc đã được khóa.
                   </p>
-                ) : editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
+                ) : !isContinuousWork(editingItem.workType) && editingItem.checklist.length > 0 && editingItem.checklist.every((item) => item.isDone) && editingItem.access !== "VIEWER" ? (
                   <AsyncActionButton variant="secondary"
                     type="button"
                     pending={completionMutation.isPending(`complete:${editingItem.id}`)}
@@ -1255,7 +1244,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 />
                 <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật, không tự đánh dấu hoàn thành.</span>
               </div>
-              <details open={scheduleExpanded} onToggle={event => setScheduleExpanded(event.currentTarget.open)} data-work-disclosure="schedule" className="border-t border-slate-100 pt-3">
+              {!isContinuousWork(editWorkType)&&<details open={scheduleExpanded} onToggle={event => setScheduleExpanded(event.currentTarget.open)} data-work-disclosure="schedule" className="border-t border-slate-100 pt-3">
                 <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Lịch · {editDueAt ? `${editDueAt.split("-").reverse().join("/")}${editStartTime ? ` · ${editStartTime}` : " · Cả ngày"}` : "Chưa có lịch"}</AdminDisclosureSummary>
                 <div className="mt-3 space-y-3">
                 <label className="block space-y-1.5">
@@ -1306,7 +1295,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {editingItem.calendar.htmlLink && <a href={editingItem.calendar.htmlLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:underline">Mở trong Google <ExternalLink className="h-3.5 w-3.5" /></a>}
               {data.calendar.connected && !editingItem.calendar.synced && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={calendarSyncMutation.isPending(`calendar-sync:${editingItem.id}`)} pendingLabel="Đang đồng bộ…" onClick={() => syncCreatedCalendarTask(editingItem)} className="rounded-lg px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Đồng bộ Google Calendar</AsyncActionButton>}
                 </div>
-              </details>
+              </details>}
               <details key={editingItem.id} data-work-disclosure="settings" className="border-t border-slate-100 pt-3">
                 <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Thông tin khác · {editCategories.find(category => category.key === editCategoryKey)?.label}</AdminDisclosureSummary>
                 <div className="mt-3 space-y-3">
@@ -1320,7 +1309,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       setEditCategoryKey(event.target.value);
                       const nextDomain = editCategories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setEditDomain(nextDomain);
-                      setEditWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setEditWorkType(previous=>isContinuousWork(previous)?"CONTINUOUS":isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
                       setEditTargetType(domainTargets[nextDomain][0]?.type || "");
                       setEditTargetQuery("");
                       setEditTargetResults([]);
@@ -1334,7 +1323,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       </option>
                     ))}
                   </select>
-                </label>              {!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
+                </label>              {!isContinuousWork(editWorkType)&&!isPersonalEvent(editWorkType) && editCategories.find(category => category.key === editCategoryKey)?.isDefault && PERSONAL_WORK_TYPES[editDomain].length > 1 && (
                 <label className="block space-y-1.5">
                   <span className="text-xs font-semibold text-slate-600">Loại công việc</span>
                   <select aria-label="Loại công việc" value={editWorkType} disabled={editingItem.access === "VIEWER"} onChange={event => setEditWorkType(event.target.value)} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
@@ -1344,7 +1333,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
               <details className="border-b border-slate-100 pb-2">
                 <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500">Thẻ công việc</AdminDisclosureSummary>
-                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
+                <div className="pt-2"><PersonalWorkTagsField allowCodex={!isContinuousWork(editWorkType)&&!isPersonalEvent(editWorkType)} value={editTags} onChange={setEditTags} disabled={editingItem.access === "VIEWER"} configuration={data.codex} /></div>
               </details>
               {domainTargets[editDomain].length > 0 && (
                 <div className="space-y-2 rounded-xl bg-slate-50 p-3">
@@ -1430,22 +1419,22 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 </div>
               )}
                 {editingItem.access === "OWNER" && <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />}
-                <PersonalCodexPanel item={editingItem} configuration={data.codex} />
+                {!isContinuousWork(editingItem.workType)&&<PersonalCodexPanel item={editingItem} configuration={data.codex} />}
                 {editingItem.access === "OWNER" && <AdminButton variant="quiet" density="compact"
                 type="button"
                 disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
                 onClick={async () => {
-                  const confirmed = await appDialog.confirm({title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
+                  const confirmed = await appDialog.confirm(isContinuousWork(editingItem.workType)?{title:"Dừng duy trì?",message:"Việc sẽ rời danh sách đang duy trì. Lịch sử và cập nhật được giữ, không tính là hoàn thành công việc.",confirmText:"Dừng duy trì",tone:"danger"}:{title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
                   if (!confirmed) return;
                   run(
                     () => deletePersonalWorkAction(editingItem.id),
-                    "Đã xóa công việc",
+                    isContinuousWork(editingItem.workType)?"Đã dừng duy trì":"Đã xóa công việc",
                     () => setEditingItem(null),
                   );
                 }}
                 className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
               >
-                <Trash2 className="h-4 w-4" /> Xóa
+                <Trash2 className="h-4 w-4" /> {isContinuousWork(editingItem.workType)?"Dừng duy trì":"Xóa"}
               </AdminButton>}
 
                 </div>
@@ -1494,7 +1483,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             )}
             <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white py-3">
               <div className="ml-auto flex flex-wrap justify-end gap-2">
-                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
+                {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isContinuousWork(editingItem.workType) && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
                 <AdminButton variant="quiet" density="compact"
                   type="button"
                   disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
@@ -1638,7 +1627,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                       const nextDomain = data.categories.find(c => c.key === event.target.value)?.domain || "GENERAL";
                       setCalendarCategoryKey(event.target.value);
                       setCalendarCreateDomain(nextDomain);
-                      setCalendarWorkType(previous=>isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
+                      setCalendarWorkType(previous=>isContinuousWork(previous)?"CONTINUOUS":isPersonalEvent(previous)?"EVENT":PERSONAL_WORK_TYPES[nextDomain][0].key);
                     }}
                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   >
