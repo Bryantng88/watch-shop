@@ -132,15 +132,15 @@ if (require.main === module) (async () => {
     assert.ok(calendarWidth >= 420 && calendarWidth > listWidth, 'Calendar receives the wider desktop pane');
     if (process.env.WORK_RESPONSIVE_SHOTS) await page.screenshot({ path: path.join(process.env.WORK_RESPONSIVE_SHOTS, 'work-calendar-desktop.png'), fullPage: true });
     const navigation = page.getByRole('navigation', { name: 'Hiển thị công việc' });
-    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
-    assert.equal(await navigation.getByRole('button', { name: 'Tất cả', exact: true }).getAttribute('aria-pressed'), 'true');
+    await navigation.getByRole('button', { name: /^Tất cả \d+$/ }).click();
+    assert.equal(await navigation.getByRole('button', { name: /^Tất cả \d+$/ }).getAttribute('aria-pressed'), 'true');
     assert.ok(await page.getByRole('separator', { name: 'Điều chỉnh độ rộng menu công việc' }).isVisible());
     await page.getByPlaceholder('Việc cần làm...').fill('Bản nháp đang nhập');
-    await navigation.getByRole('button', { name: 'Quá hạn', exact: true }).click();
+    await navigation.getByRole('button', { name: /^Quá hạn \d+$/ }).click();
     await row(28).waitFor(); assert.equal(await row(31).count(), 0);
-    await navigation.getByRole('button', { name: 'Sự kiện', exact: true }).click();
+    await navigation.getByRole('button', { name: /^Sự kiện \d+$/ }).click();
     await row(26).waitFor(); assert.equal(await row(28).count(), 0);
-    await navigation.getByRole('button', { name: 'Tất cả', exact: true }).click();
+    await navigation.getByRole('button', { name: /^Tất cả \d+$/ }).click();
     assert.equal(await page.getByPlaceholder('Việc cần làm...').inputValue(), 'Bản nháp đang nhập');
     assert.equal(await page.evaluate(() => (window.__actions || []).length), 0);
     for (const width of [390, 320]) {
