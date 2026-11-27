@@ -1783,3 +1783,8 @@ requests. Respect reduced motion. Do not force full prefetch of dynamic admin pa
 or cache private queries to make navigation appear fast. Loading feedback is distinct
 from a confirmed reduction in server query time.
 
+
+
+### Work attachment image preview (2026-11-27)
+
+WorkImageAttachments opens the shared AdminImagePreviewDialog in place instead of navigating to the private image URL. Keep a compact white dialog, filename, quiet close control and a contained image that fits the available phone/desktop viewport. Native modal semantics isolate background interactions; Escape, close and backdrop dismiss the preview and restore focus without scrolling the work form. Preserve the owner-authorized image endpoint, no optimizer/public URL, existing upload/remove controls and confirmation. Clear the preview when the refreshed attachment list no longer permits it. Image loading failures have an inline message rather than a broken image or a new tab.

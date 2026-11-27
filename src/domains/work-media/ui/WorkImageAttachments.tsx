@@ -6,6 +6,7 @@ import { WorkAttachmentIcon } from "@/domains/shared/ui/icons/MediaIcons";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useAppDialog } from "@/domains/shared/feedback";
 import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
+import { AdminImagePreviewDialog } from "@/domains/shared/ui/media/AdminImagePreviewDialog";
 import { WORK_IMAGE_MAX_BYTES, workImagesUrl, type WorkImages, type WorkMediaTarget } from "../shared/work-media";
 
 type Upload={id:string;file:File};
@@ -25,6 +26,8 @@ async function readWorkImages(response:Response):Promise<WorkImages>{
 export function WorkImageAttachments({workId,entryId,compact=false,inline=false,label="Ảnh công việc",triggerLabel}:WorkMediaTarget&{compact?:boolean;inline?:boolean;label?:string;triggerLabel?:string}){
  const dialog=useAppDialog(),input=useRef<HTMLInputElement>(null),version=useRef(0);
  const [open,setOpen]=useState(!compact),[data,setData]=useState<WorkImages|null>(null),[loading,setLoading]=useState(false),[pending,setPending]=useState(false),[error,setError]=useState(""),[retry,setRetry]=useState<Upload[]|null>(null);
+ const [previewId,setPreviewId]=useState<string|null>(null);
+ const preview=data?.items.find(item=>item.id===previewId&&item.url);
  const endpoint=workImagesUrl({workId,entryId});
  const activeEndpoint=useRef(endpoint);
  const invalidate=useCallback(()=>{version.current++;activeEndpoint.current="";},[]);
@@ -71,12 +74,13 @@ export function WorkImageAttachments({workId,entryId,compact=false,inline=false,
    {data?.items.length===0&&<p className="text-xs text-slate-500">Chưa có ảnh đính kèm.</p>}
    {data&&<ul className="flex flex-wrap gap-3">{data.items.map(item=><li key={item.id} className="w-24 min-w-0">
     <div className="relative h-24 w-24">
-    {item.url?<a href={item.url} target="_blank" rel="noreferrer" title={`Mở ${item.name}`}><img src={`${item.url}?size=thumb`} alt={item.name} className="h-24 w-24 rounded-lg bg-slate-50 object-cover" loading="lazy" onError={event=>{event.currentTarget.alt="Ảnh không còn khả dụng; tải lại danh sách.";}}/></a>:<div className="grid h-24 place-items-center rounded-lg bg-slate-50 p-2 text-center text-xs text-slate-500">{item.state==="FAILED"?"Tải ảnh chưa hoàn tất":"Đang tải ảnh…"}</div>}
+    {item.url?<AdminButton variant="contextual" type="button" aria-label={`Xem ${item.name}`} title={`Xem ${item.name}`} className="block h-24 w-24 overflow-hidden rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400" onClick={()=>setPreviewId(item.id)}><img src={`${item.url}?size=thumb`} alt={item.name} className="h-24 w-24 rounded-lg bg-slate-50 object-cover" loading="lazy" onError={event=>{event.currentTarget.alt="Ảnh không còn khả dụng; tải lại danh sách.";}}/></AdminButton>:<div className="grid h-24 place-items-center rounded-lg bg-slate-50 p-2 text-center text-xs text-slate-500">{item.state==="FAILED"?"Tải ảnh chưa hoàn tất":"Đang tải ảnh…"}</div>}
     {data.canEdit&&<AdminButton variant="secondary" density="compact" iconOnly type="button" className="absolute right-1 top-1" title={`Gỡ ${item.name}`} aria-label={`Gỡ ${item.name}`} disabled={pending} onClick={()=>void remove(item.id)}><X className="h-4 w-4"/></AdminButton>}
     </div>
     <p className="mt-1 truncate text-xs text-slate-500" title={item.name}>{item.name}</p>
    </li>)}</ul>}
    {data?.canEdit&&<p className="text-xs text-slate-400">Bấm Thêm ảnh để chọn ảnh trên điện thoại hoặc máy tính. Ảnh được lưu ngay, không cần bấm Lưu thay đổi. JPEG/PNG/WebP, tối đa 10 MB/ảnh.</p>}
   </div>}
+  {preview?.url&&<AdminImagePreviewDialog key={`${endpoint}:${preview.id}`} src={preview.url} name={preview.name} onClose={()=>setPreviewId(null)}/> }
  </section>;
 }
