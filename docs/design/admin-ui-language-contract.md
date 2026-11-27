@@ -1788,3 +1788,9 @@ from a confirmed reduction in server query time.
 ### Work attachment image preview (2026-11-27)
 
 WorkImageAttachments opens the shared AdminImagePreviewDialog in place instead of navigating to the private image URL. Keep a compact white dialog, filename, quiet close control and a contained image that fits the available phone/desktop viewport. Native modal semantics isolate background interactions; Escape, close and backdrop dismiss the preview and restore focus without scrolling the work form. Preserve the owner-authorized image endpoint, no optimizer/public URL, existing upload/remove controls and confirmation. Clear the preview when the refreshed attachment list no longer permits it. Image loading failures have an inline message rather than a broken image or a new tab.
+
+### Personal Work list status and completion (2026-11-27)
+
+Remove the leading complete/reopen control from task rows and open the existing detail to complete work. Checklist entry controls and event/continuous-work semantics remain unchanged. Do not show the repeated Sửa/Xem access badge on the list; keep permissions in the existing sharing context and detail.
+
+Place a 7px noninteractive status dot immediately after the task title, with an accessible text label. DONE uses static emerald; unfinished overdue work uses static rose; other open work uses amber with a gentle 1.8s opacity pulse (never fully disappearing). Existing scheduledEndAt/dueAt overdue calculation stays authoritative. Cancelled work, events and continuous work keep their separate presentation. Disable the pulse with prefers-reduced-motion. The orange dot means Đang mở, not a newly invented in-progress business state.
