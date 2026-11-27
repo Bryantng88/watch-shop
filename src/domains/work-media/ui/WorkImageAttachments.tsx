@@ -5,9 +5,22 @@ import { Loader2, Trash2, RefreshCw } from "lucide-react";
 import { WorkAttachmentIcon } from "@/domains/shared/ui/icons/MediaIcons";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useAppDialog } from "@/domains/shared/feedback";
+import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import { WORK_IMAGE_MAX_BYTES, workImagesUrl, type WorkImages, type WorkMediaTarget } from "../shared/work-media";
 
 type Upload={id:string;file:File};
+const LOAD_ERROR="Không tải được ảnh công việc. Vui lòng thử lại.";
+function responseMessage(response:Response,fallback:string){
+ if(response.status===401||response.redirected)return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại rồi mở công việc.";
+ if(response.status===403)return "Không có quyền truy cập ảnh công việc này.";
+ if(response.status===413)return "Ảnh vượt giới hạn tải lên của máy chủ. Hãy chọn ảnh nhỏ hơn.";
+ return response.ok?fallback:`${fallback} (HTTP ${response.status})`;
+}
+async function readWorkImages(response:Response):Promise<WorkImages>{
+ const result=await readUiResponse(response,responseMessage(response,LOAD_ERROR));
+ if(!Array.isArray(result.items)||typeof result.canEdit!=="boolean"||!Number.isInteger(result.limit)||Number(result.limit)<1||result.items.some(item=>!item||typeof item.id!=="string"||typeof item.name!=="string"||!["READY","PENDING","FAILED"].includes(item.state)||(item.url!==null&&typeof item.url!=="string")))throw Error(LOAD_ERROR);
+ return result as unknown as WorkImages;
+}
 /** URLs point only at the owner-authorized endpoint, never at NAS/sign links. */
 export function WorkImageAttachments({workId,entryId,compact=false,inline=false,label="Ảnh công việc",triggerLabel}:WorkMediaTarget&{compact?:boolean;inline?:boolean;label?:string;triggerLabel?:string}){
  const dialog=useAppDialog(),input=useRef<HTMLInputElement>(null),version=useRef(0);
@@ -18,8 +31,8 @@ export function WorkImageAttachments({workId,entryId,compact=false,inline=false,
  const load=useCallback(async()=>{
   if(activeEndpoint.current!==endpoint)return;
   const request=++version.current;setLoading(true);
-  try{const response=await fetch(endpoint,{cache:"no-store"});const result=await response.json();if(!response.ok)throw Error(result.error||"Không thể tải ảnh.");if(request===version.current){setData(result);setError("");}}
-  catch(failure){if(request===version.current){setError(failure instanceof Error?failure.message:"Không thể tải ảnh.");setData(null);}}
+  try{const response=await fetch(endpoint,{cache:"no-store"});const result=await readWorkImages(response);if(request===version.current){setData(result);setError("");}}
+  catch(failure){if(request===version.current){setError(uiFeedbackMessage(failure,LOAD_ERROR));setData(null);}}
   finally{if(request===version.current)setLoading(false);}
  },[endpoint]);
  useEffect(()=>{activeEndpoint.current=endpoint;setData(null);setRetry(null);setError("");setPending(false);if(open)void load();return invalidate;},[endpoint,invalidate,load,open]);
@@ -30,14 +43,14 @@ export function WorkImageAttachments({workId,entryId,compact=false,inline=false,
   for(let i=0;i<batch.length;i++){
    const item=batch[i];try{
     const form=new FormData();form.set("file",item.file);form.set("uploadId",item.id);
-    const response=await fetch(endpoint,{method:"POST",body:form});const result=await response.json();if(!response.ok)throw Error(result.error||"Không thể tải ảnh.");if(activeEndpoint.current!==endpoint)return;
-   }catch(failure){if(activeEndpoint.current!==endpoint)return;setRetry(batch.slice(i));await load();setError(failure instanceof Error?failure.message:"Không thể tải ảnh.");setPending(false);return;}
+    const response=await fetch(endpoint,{method:"POST",body:form});await readUiResponse(response,responseMessage(response,"Không tải ảnh lên được. Vui lòng thử lại."));if(activeEndpoint.current!==endpoint)return;
+   }catch(failure){if(activeEndpoint.current!==endpoint)return;setRetry(batch.slice(i));await load();setError(uiFeedbackMessage(failure,"Không tải ảnh lên được. Vui lòng thử lại."));setPending(false);return;}
   }
   if(activeEndpoint.current===endpoint){await load();setPending(false);}
  }
  async function remove(id:string){
   if(!await dialog.confirm({title:"Gỡ ảnh khỏi công việc?",message:"Ảnh được gỡ khỏi công việc này và giữ trong thời gian lưu trữ trước khi dọn file.",confirmText:"Gỡ ảnh",cancelText:"Giữ lại",tone:"danger"}))return;
-  setPending(true);try{const response=await fetch(`/api/admin/personal-work/images/${id}`,{method:"DELETE"});const result=await response.json();if(!response.ok)throw Error(result.error||"Không gỡ được ảnh.");await load();}catch(failure){setError(failure instanceof Error?failure.message:"Không gỡ được ảnh.");}finally{setPending(false);}
+  setPending(true);try{const response=await fetch(`/api/admin/personal-work/images/${id}`,{method:"DELETE"});await readUiResponse(response,responseMessage(response,"Không gỡ được ảnh. Vui lòng thử lại."));await load();}catch(failure){setError(uiFeedbackMessage(failure,"Không gỡ được ảnh. Vui lòng thử lại."));}finally{setPending(false);}
  }
  return <section aria-label={label} className={inline?"contents":compact?"basis-full w-full min-w-0":"mt-4 min-w-0 border-t border-slate-100 pt-4"}>
   <div className={inline?"contents":"flex flex-wrap items-center justify-between gap-2"}>
@@ -54,13 +67,13 @@ export function WorkImageAttachments({workId,entryId,compact=false,inline=false,
     void upload(files.map(file=>({file,id:crypto.randomUUID()})));
    }}/>
    {loading&&!data&&<p role="status" className="text-xs text-slate-500">Đang tải ảnh…</p>}
-   {error&&<div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-rose-700"><span>{error}</span><AdminButton variant="quiet" density="compact" type="button" disabled={pending} onClick={()=>retry?void upload(retry):void load()}><RefreshCw className="h-3.5 w-3.5"/>Thử lại</AdminButton></div>}
+   {error&&<div role="alert" className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-rose-700"><span className="min-w-0 break-words">{error}</span><AdminButton variant="quiet" density="compact" type="button" disabled={pending} onClick={()=>retry?void upload(retry):void load()}><RefreshCw className="h-3.5 w-3.5"/>Thử lại</AdminButton></div>}
    {data?.items.length===0&&<p className="text-xs text-slate-500">Chưa có ảnh đính kèm.</p>}
    {data&&<ul className="flex flex-wrap gap-3">{data.items.map(item=><li key={item.id} className="w-24 min-w-0">
     {item.url?<a href={item.url} target="_blank" rel="noreferrer" title={`Mở ${item.name}`}><img src={`${item.url}?size=thumb`} alt={item.name} className="h-24 w-24 rounded-lg bg-slate-50 object-cover" loading="lazy" onError={event=>{event.currentTarget.alt="Ảnh không còn khả dụng; tải lại danh sách.";}}/></a>:<div className="grid h-24 place-items-center rounded-lg bg-slate-50 p-2 text-center text-xs text-slate-500">{item.state==="FAILED"?"Tải ảnh chưa hoàn tất":"Đang tải ảnh…"}</div>}
     <div className="mt-1 flex items-start gap-1"><span className="min-w-0 flex-1 break-words text-xs text-slate-500">{item.name}</span>{data.canEdit&&<AdminButton variant="quiet" density="compact" iconOnly type="button" aria-label={`Gỡ ${item.name}`} disabled={pending} onClick={()=>void remove(item.id)}><Trash2 className="h-3.5 w-3.5"/></AdminButton>}</div>
    </li>)}</ul>}
-   {data?.canEdit&&<p className="text-xs text-slate-400">Ảnh được lưu ngay vào công việc. JPEG/PNG/WebP, tối đa 10 MB/ảnh.</p>}
+   {data?.canEdit&&<p className="text-xs text-slate-400">Bấm Thêm ảnh để chọn ảnh trên điện thoại hoặc máy tính. Ảnh được lưu ngay, không cần bấm Lưu thay đổi. JPEG/PNG/WebP, tối đa 10 MB/ảnh.</p>}
   </div>}
  </section>;
 }
