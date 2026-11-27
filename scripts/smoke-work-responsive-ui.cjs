@@ -90,14 +90,16 @@ if (require.main === module) (async () => {
     await page.keyboard.press('Tab');
     assert.equal(await page.getByRole('combobox', { name: 'Phạm vi công việc', exact: true }).evaluate(el => el === document.activeElement), true);
     await page.getByRole('combobox', { name: 'Phạm vi công việc', exact: true }).selectOption('SHARED');
-    assert.equal(await page.locator('[data-work-row]').count(), 1); assert.ok(await page.getByRole('button', { name: 'Đánh dấu hoàn thành CV-40' }).isDisabled());
+    assert.equal(await page.locator('[data-work-row]').count(), 1); assert.equal(await page.getByRole('button', { name: 'Đánh dấu hoàn thành CV-40' }).count(),0);
     await page.getByRole('combobox', { name: 'Phạm vi công việc', exact: true }).selectOption('MINE');
     await page.getByRole('combobox', { name: 'Loại công việc', exact: true }).selectOption('WATCHSHOP');
     assert.equal(await page.locator('[data-work-row]').count(), 6);
     await page.keyboard.press('Escape');
-    await row(29).getByRole('button', { name: 'Đánh dấu hoàn thành CV-29' }).click();
+    await row(29).getByRole('button', { name: /^Mở CV-29:/ }).click();
+    await page.getByRole('dialog').getByRole('button',{name:'Hoàn thành',exact:true}).click();
     await page.waitForFunction(() => window.__actions?.some(a => a.name === 'updatePersonalWorkAction'));
     const action = await page.evaluate(() => window.__actions.find(a => a.name === 'updatePersonalWorkAction')); assert.deepEqual(action.input, { id: 'item-29', status: 'DONE' });
+    await page.getByRole('dialog').getByRole('button',{name:'Đóng',exact:true}).click();
     await row(28).getByRole('button', { name: /^Mở CV-28:/ }).click();
     await page.getByRole('button', { name: 'Đóng', exact: true }).waitFor();
     assert.equal(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count(), 1);
@@ -151,8 +153,8 @@ if (require.main === module) (async () => {
     const box = await lastSchedule.boundingBox(); assert.ok(box.x >= 0 && box.y >= 0 && box.y + box.height <= 1000);
     const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Bangkok', hasTouch: true });
     const phone = await touch.newPage(); await phone.goto(origin + '/?entryEditor=1');
-    await phone.locator('[data-work-row="shared"]').getByLabel('Sửa đầu việc', { exact: true }).waitFor();
-    assert.ok(await phone.getByRole('button', { name: 'Đánh dấu hoàn thành CV-40' }).isDisabled());
+    await phone.locator('[data-work-row="shared"]').getByRole('button',{name:/^Mở CV-40:/}).waitFor();
+    assert.equal(await phone.getByRole('button', { name: 'Đánh dấu hoàn thành CV-40' }).count(),0);
     await phone.locator('[data-work-row="item-31"]').getByRole('button', { name: /^Có cập nhật:/ }).tap();
     await phone.getByRole('tooltip').waitFor(); await phone.getByRole('heading', { level: 1 }).tap(); await phone.getByRole('tooltip').waitFor({ state: 'hidden' });
     await phone.locator('[data-work-row="item-23"]').getByRole('button', { name: /^Chia sẻ CV-23:/ }).tap();
@@ -217,7 +219,7 @@ if (require.main === module) (async () => {
     const sharedFull=page.locator('[data-work-row="shared-full"]');
     await sharedFull.waitFor();
     assert.ok(await page.getByRole('button',{name:'Bộ lọc công việc: Tất cả',exact:true}).isVisible());
-    assert.ok(await sharedFull.getByRole('button',{name:'Đánh dấu hoàn thành CV-41',exact:true}).isDisabled());
+    assert.equal(await sharedFull.getByRole('button',{name:'Đánh dấu hoàn thành CV-41',exact:true}).count(),0);
     await page.getByRole('button',{name:/^Bộ lọc công việc:/}).click();
     const scopeControl=page.getByRole('combobox',{name:'Phạm vi công việc',exact:true});
     await scopeControl.selectOption('MINE');await sharedFull.waitFor({state:'hidden'});

@@ -1783,3 +1783,10 @@ requests. Respect reduced motion. Do not force full prefetch of dynamic admin pa
 or cache private queries to make navigation appear fast. Loading feedback is distinct
 from a confirmed reduction in server query time.
 
+
+
+### Personal Work list status and completion (2026-11-27)
+
+Remove the leading complete/reopen control from task rows and open the existing detail to complete work. Checklist entry controls and event/continuous-work semantics remain unchanged. Do not show the repeated Sửa/Xem access badge on the list; keep permissions in the existing sharing context and detail.
+
+Place a 7px noninteractive status dot immediately after the task title, with an accessible text label. DONE uses static emerald; unfinished overdue work uses static rose; other open work uses amber with a gentle 1.8s opacity pulse (never fully disappearing). Existing scheduledEndAt/dueAt overdue calculation stays authoritative. Cancelled work, events and continuous work keep their separate presentation. Disable the pulse with prefers-reduced-motion. The orange dot means Đang mở, not a newly invented in-progress business state.
