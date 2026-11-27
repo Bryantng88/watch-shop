@@ -1806,3 +1806,8 @@ Use the shared navigation count slot for all work views, including zero. Counts 
 ### Bounded work list viewport (2026-11-27)
 
 The work list is a bounded, keyboard-focusable internal scroll pane on phone and desktop. Its viewport height follows the screen within 280–680px and stays constant as pages append; the page and adjacent calendar must not grow with the number of work rows. Observe the near-end sentinel relative to this pane. Preserve its scrollTop when returning from details and reset it when filters change. Use the existing flat list, a thin native scrollbar and no additional card. Continuous work has no leading infinity icon or reserved icon slot; its metadata line Duy trì liên tục is sufficient.
+
+
+### Initial work list loading (2026-11-27)
+
+Preload the first 30 row projections alongside the permission-projected overview so the first paint does not wait for a second browser action. Row projection carries at most the latest activity and omits full notes/Codex history; opening details reads the complete authorized item once. Reuse overview metadata only inside the same authenticated server request, with explicit user identity guards and a fresh owner/share check for row IDs. Never use a shared user-data cache. Calendar-link metadata refreshes alone must not invalidate list rows. Initial loading/error and footer load-more/error are mutually exclusive; background refresh keeps existing rows visible.

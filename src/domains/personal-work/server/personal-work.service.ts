@@ -238,9 +238,11 @@ export function normalizePersonalDomain(value: unknown): PersonalWorkDomain {
   return domainKeys.has(domain) ? domain : "GENERAL";
 }
 
-export async function getPersonalWorkPageData(auth: unknown, options: {summary?: boolean; ids?: string[]} = {}): Promise<PersonalWorkPageData> {
+export async function getPersonalWorkPageData(auth: unknown, options: {summary?: boolean; ids?: string[]; row?: boolean; context?: PersonalWorkPageData} = {}): Promise<PersonalWorkPageData> {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
+  const context = options.context;
+  if(context && context.currentUserId !== userId) throw new Error("Ngữ cảnh người dùng không hợp lệ.");
   const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
@@ -248,10 +250,10 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
         ...(options.ids ? {id: {in: options.ids.slice(0, 30)}} : {}),
       },
       include: {
-        mergedSources:{select:{id:true,title:true}},
+        mergedSources:{take: options.summary || options.row ? 0 : undefined,select:{id:true,title:true}},
         assignedToUser: { select: { id: true, name: true } },
         personalCategory: true,
-        codexRuns: { orderBy: { createdAt: "desc" }, take: options.summary ? 0 : 5, select: publicRunSelect },
+        codexRuns: { orderBy: { createdAt: "desc" }, take: options.summary || options.row ? 0 : 5, select: publicRunSelect },
         personalOwner: { select: { id: true, name: true, email: true, avatarUrl: true } },
         task: {
           select: {
@@ -276,20 +278,20 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
         activities: {
           include: { actorUser: { select: { id: true, name: true, email: true, avatarUrl: true } } },
           orderBy: { occurredAt: "desc" },
-          take: options.summary ? 0 : 20,
+          take: options.summary ? 0 : options.row ? 1 : 20,
         },
         checklists: { where: options.summary ? {personalShares:{some:{userId}}} : undefined, orderBy: { sortOrder: "asc" },include:{personalShares:{include:{user:{select:{id:true,name:true,email:true,avatarUrl:true}}}}} },
       },
       orderBy: [{ isDone: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
     }),
-    prisma.googleCalendarConnection.findUnique({ where: { userId } }),
-    prisma.user.findMany({
+    context ? null : prisma.googleCalendarConnection.findUnique({ where: { userId } }),
+    context ? context.availableUsers : prisma.user.findMany({
       where: { isActive: true, id: { not: userId } },
       select: { id: true, name: true, email: true, avatarUrl: true },
       orderBy: [{ name: "asc" }, { email: "asc" }],
     }),
-    listPersonalCategories(userId),
-    canManageDefaultCategories(userId),
+    context ? context.categories : listPersonalCategories(userId),
+    context ? context.canManageDefaultCategories : canManageDefaultCategories(userId),
   ]);
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
   const ownerIds = [...new Set(items.map(item => item.personalOwnerUserId || item.task?.createdByUserId || item.task?.assignedToUserId).filter((id): id is string => Boolean(id)))];
@@ -307,7 +309,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
       const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       const result: PersonalWorkItem = {
-        detailsLoaded: !options.summary,
+        detailsLoaded: !options.summary && !options.row,
         mergeSources:item.mergedSources,
         id: item.id,
         personalWorkNumber: item.personalWorkNumber,
@@ -318,7 +320,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
         title: item.title,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
-        note: options.summary ? null : item.note,
+        note: options.summary || options.row ? null : item.note,
         status: item.status,
         priority: item.priority,
         dueAt: item.dueAt?.toISOString() ?? null,
@@ -345,7 +347,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
           occurredAt: activity.occurredAt.toISOString(),
           actor: activity.actorUser,
         })),
-        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, mediaContext: mediaChecklistContext(entry.note),
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, mediaContext: options.row ? undefined : mediaChecklistContext(entry.note),
           access:owned?"OWNER":share?.accessLevel === "EDITOR"?"EDITOR":entry.personalShares.find(s=>s.userId===userId)?.accessLevel??"VIEWER",
           sharedWith:owned?entry.personalShares.map(s=>({user:s.user,accessLevel:s.accessLevel})):[],
         })),
@@ -370,10 +372,10 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
       }
       return result;
     }),
-    codex: { ...codexExecutionReadiness(), canDispatch: Boolean(await prisma.user.findFirst({ where: { id: userId, isActive: true, roles: { some: { name: "ADMIN" } } }, select: { id: true } })) },
+    codex: context?.codex ?? { ...codexExecutionReadiness(), canDispatch: Boolean(await prisma.user.findFirst({ where: { id: userId, isActive: true, roles: { some: { name: "ADMIN" } } }, select: { id: true } })) },
     currentUserId: userId,
     availableUsers,
-    calendar: {
+    calendar: context ? context.calendar : {
       configured: isGoogleCalendarConfigured(),
       configurationIssue: googleCalendarReadiness().reason,
       connected: Boolean(connection),
@@ -383,6 +385,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
       loadError: null,
     },
   };
+  if(options.ids) return {...data, items: await hydratePersonalWorkObjects(prisma,userId,data.items)};
   const visibleOriginIds=items.flatMap(row=>row.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).flatMap(e=>e.mergedFromTaskItemId?[e.mergedFromTaskItemId]:[]));
   const merged=await prisma.taskItem.findMany({where:{mergedIntoTaskItemId:{not:null},OR:[{personalOwnerUserId:userId},{personalShares:{some:{userId}}},{id:{in:visibleOriginIds}}]},select:{id:true,mergedIntoTaskItemId:true}});
   for(let depth=0;depth<50;depth++){

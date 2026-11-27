@@ -245,6 +245,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     });
   }, [calendar.items]);
   const workItems = useMemo(() => calendar.items.map(item => completedOverrides[item.id] || item), [calendar.items, completedOverrides]);
+  const editingSource = useRef(workItems);
   const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
@@ -304,7 +305,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const listQuery = useMemo<WorkListQuery>(()=>({view,scope,domain,day:scheduleDate(now)}),[view,scope,domain,now]);
   const matchingItems = useMemo(()=>workItems.filter(item=>matchesWorkList(item,listQuery)||Boolean(recentCompletions[item.id])&&view!=="DONE"&&item.status==="DONE"&&matchesWorkList({...item,status:"TODO"},listQuery)).sort(compareWorkList),[workItems,listQuery,recentCompletions,view]);
   const viewCounts = useMemo(()=>workViewCounts(workItems,listQuery),[workItems,listQuery]);
-  const paged = useWorkListPage(Boolean(data.pagination),listQuery,calendar.items);
+  const paged = useWorkListPage(Boolean(data.pagination),listQuery,calendar.items,data.initialList,data.items);
   const matchingIds = new Set(matchingItems.map(item=>item.id));
   const items = data.pagination ? paged.items.map(item=>completedOverrides[item.id]||item).filter(item=>matchingIds.has(item.id)) : matchingItems;
   const [detailLoading,setDetailLoading] = useState(false);
@@ -325,7 +326,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   }, [message, messageIsError]);
 
   useEffect(() => {
-    if (!editingItemId) return;
+    if (!editingItemId || editingSource.current === workItems) return;
+    editingSource.current = workItems;
     const refreshed = workItems.find((item) => item.id === editingItemId);
     if(!refreshed){setEditingItem(null);return;}
     if(refreshed.detailsLoaded!==false){setEditingItem(refreshed);return;}
@@ -471,6 +473,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditingTitle(false);
     setScheduleExpanded(false);
     setHistoryExpanded(false);
+    editingSource.current = workItems;
     setEditingItem(item);
     setEditTitle(item.title);
     setEditReminder(item.reminderMinutes === undefined ? 0 : item.reminderMinutes);
@@ -495,7 +498,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     setEditShares(item.sharedWith);
     setNewChecklistTitle("");
     setAddingChecklist(false);
-  }, []);
+  }, [workItems]);
   const openedWork = useRef<string | null>(null);
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("work");
@@ -948,12 +951,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               })
             ) : (
               <div className="flex flex-col items-center py-16 text-center">
-                <Circle className="h-8 w-8 text-slate-200" />
-                <p className="mt-3 text-sm font-medium text-slate-600">{data.pagination && paged.loading ? "Đang tải công việc…" : data.pagination && paged.error ? "Chưa tải được danh sách" : "Không có công việc trong nhóm này"}</p>
+                {data.pagination && paged.loading ? <><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-slate-300"/><p role="status" className="mt-3 text-sm text-slate-500">Đang tải công việc…</p></> : data.pagination && paged.error ? <><p role="alert" className="text-xs text-slate-500">{paged.error}</p><AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Thử lại</AdminButton></> : <><Circle className="h-8 w-8 text-slate-200"/><p className="mt-3 text-sm font-medium text-slate-600">Không có công việc trong nhóm này</p></>}
               </div>
             )}
-            {data.pagination && <div ref={paged.sentinel} className="flex min-h-10 flex-wrap items-center justify-center gap-2 py-3 text-xs text-slate-500" aria-live="polite">
-              {paged.loading ? <span role="status">Đang tải thêm công việc…</span> : paged.error ? <><span role="alert">{paged.error}</span><AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Thử lại</AdminButton></> : paged.hasMore ? <AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Tải thêm</AdminButton> : items.length > 0 ? <span>Đã hiển thị {items.length} công việc</span> : null}
+            {data.pagination && items.length > 0 && <div ref={paged.sentinel} className="flex min-h-10 flex-wrap items-center justify-center gap-2 py-3 text-xs text-slate-500" aria-live="polite">
+              {paged.loading ? <span role="status">{paged.refreshing ? "Đang cập nhật công việc…" : "Đang tải thêm công việc…"}</span> : paged.error ? <><span role="alert">{paged.error}</span><AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Thử lại</AdminButton></> : paged.hasMore ? <AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Tải thêm</AdminButton> : items.length > 0 ? <span>Đã hiển thị {items.length} công việc</span> : null}
             </div>}
           </div>
         </section>
