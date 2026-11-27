@@ -7,7 +7,7 @@ import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import { createPersonalWorkItem } from "./personal-work.service";
 import { mediaChecklistContext } from "../shared/media-daily";
-import { MediaMergeError, mediaMergeCommand, mediaMergeSelection, validateMediaMerge, type MediaMergePreview } from "../shared/media-merge";
+import { MediaMergeError, mediaMergeSchedule, mediaMergeCommand, mediaMergeSelection, validateMediaMerge, type MediaMergePreview } from "../shared/media-merge";
 const hash=(value:unknown)=>createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const include = {personalShares:{orderBy:{id:"asc" as const}},checklists:{orderBy:{id:"asc" as const},include:{personalShares:{orderBy:{id:"asc" as const}}}},calendarLinks:true,codexRuns:true,activities:{orderBy:{id:"asc" as const},select:{id:true,updatedAt:true}},executions:{orderBy:{id:"asc" as const}}} satisfies Prisma.TaskItemInclude;
 async function load(db:DB,ids:string[],userId:string){
@@ -24,7 +24,7 @@ async function load(db:DB,ids:string[],userId:string){
   const revision=hash({rows,images,tags:tagged.map(row=>({id:row.id,tags:row.tags.map(tag=>tag.name).sort()}))});
   const total=rows.reduce((n,r)=>n+r.checklists.length,0),done=rows.reduce((n,r)=>n+r.checklists.filter(e=>e.isDone).length,0);
   const products=new Set(rows.flatMap(r=>r.checklists.map(e=>mediaChecklistContext(e.note)!.productId)));
-  const preview:MediaMergePreview={revision,suggestedTitle:`Xử lý media · ${products.size} đồng hồ`,sources:rows.map(r=>({id:r.id,title:r.title,total:r.checklists.length,done:r.checklists.filter(e=>e.isDone).length})),total,done,warnings:["Việc nguồn sẽ ẩn khỏi mọi danh sách và lịch; chỉ việc chung được tính trong báo cáo công việc.","Giữ toàn bộ đầu việc đã xong/chưa xong, người được chia sẻ, lịch sử và ảnh; không loại các đầu việc trùng tên hoặc cùng Watch.","Không thể tự tách lại sau khi gộp. Liên kết cũ sẽ mở việc chung.",...(new Set(rows.map(r=>r.dueAt?.toISOString()||"")).size>1?["Các hạn khác nhau: việc chung dùng hạn sớm nhất. Hạn cũ được giữ trong dấu vết gộp."]:[])]};
+  const preview:MediaMergePreview={revision,suggestedTitle:`Xử lý media · ${products.size} đồng hồ`,sources:rows.map(r=>({id:r.id,title:r.title,total:r.checklists.length,done:r.checklists.filter(e=>e.isDone).length})),total,done,warnings:["Việc nguồn sẽ ẩn khỏi mọi danh sách và lịch; chỉ việc chung được tính trong báo cáo công việc.","Giữ toàn bộ đầu việc đã xong/chưa xong, người được chia sẻ, lịch sử và ảnh; không loại các đầu việc trùng tên hoặc cùng Watch.","Không thể tự tách lại sau khi gộp. Liên kết cũ sẽ mở việc chung.","Không chọn lịch: việc chung mặc định hôm nay. Chọn ngày khác nếu cần; lịch cũ được giữ trong dấu vết gộp."]};
   return {rows,images,preview};
 }
 export async function previewMediaMerge(raw:unknown,auth:unknown){
@@ -44,11 +44,11 @@ export async function mergeMediaWork(raw:unknown,auth:unknown){
     await tx.$queryRaw(Prisma.sql`SELECT id FROM "TaskItem" WHERE id IN (${Prisma.join([...input.ids].sort())}) ORDER BY id FOR UPDATE`);
     const {rows,images,preview}=await load(tx,input.ids,userId);
     if(input.revision!==preview.revision)throw new MediaMergeError("Dữ liệu hoặc quyền đã thay đổi sau khi xem trước. Hãy tải lại bản xem trước và xác nhận lại.");
-    const dates=rows.flatMap(r=>r.dueAt?[r.dueAt]:[]).sort((a,b)=>a.getTime()-b.getTime());
+    const schedule=mediaMergeSchedule(input.date);
     const first=rows[0];
     const rank=["LOW","MEDIUM","HIGH","URGENT"];
     const priority=rows.reduce((value,row)=>rank.indexOf(row.priority)>rank.indexOf(value)?row.priority:value,first.priority);
-    const target=await createPersonalWorkItem({title:input.title,domain:"WATCHSHOP",priority,workType:first.workTypeId||"GENERAL_TASK",dueAt:dates[0]?.toISOString(),reminderMinutes:null,tags:["Media"]},auth,tx,{systemId:id,onEvent:event=>delivery.track(event)});
+    const target=await createPersonalWorkItem({title:input.title,domain:"WATCHSHOP",priority,workType:first.workTypeId||"GENERAL_TASK",...schedule,reminderMinutes:null,tags:["Media"]},auth,tx,{systemId:id,onEvent:event=>delivery.track(event)});
     await tx.taskItem.update({where:{id},data:{personalCategoryId:first.personalCategoryId,workTypeId:first.workTypeId,assignedToUserId:userId,progressMode:"CHECKLIST",progressPercent:Math.round(preview.done/preview.total*100),status:rows.some(r=>r.status==="IN_PROGRESS")?"IN_PROGRESS":"TODO",mergeReceipt:{commandHash,actorUserId:userId,mergedAt:new Date().toISOString(),sources:rows.map(r=>({id:r.id,title:r.title,number:r.personalWorkNumber,dueAt:r.dueAt?.toISOString()??null,priority:r.priority,checklistIds:r.checklists.map(e=>e.id)}))}}});
     let sortOrder=0;
     for(const source of rows){
