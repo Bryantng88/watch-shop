@@ -17,7 +17,7 @@ export async function POST() {
   } catch (error) {
     ({ loadError, reconnectRequired } = calendarLoadFailure(error));
   }
-  const data = await getPersonalWorkPageData(user);
+  const data = await getPersonalWorkPageData(user, {summary: true});
   return NextResponse.json(
     {
       events,

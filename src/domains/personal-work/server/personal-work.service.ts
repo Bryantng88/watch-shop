@@ -238,19 +238,20 @@ export function normalizePersonalDomain(value: unknown): PersonalWorkDomain {
   return domainKeys.has(domain) ? domain : "GENERAL";
 }
 
-export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWorkPageData> {
+export async function getPersonalWorkPageData(auth: unknown, options: {summary?: boolean; ids?: string[]} = {}): Promise<PersonalWorkPageData> {
   const userId = getAuthUserId(auth);
   if (!userId) throw new Error("Không xác định được người dùng");
   const [items, connection, availableUsers, categories, canManageDefaults] = await Promise.all([
     prisma.taskItem.findMany({
       where: {
         ...personalWorkListAccessWhere(userId),
+        ...(options.ids ? {id: {in: options.ids.slice(0, 30)}} : {}),
       },
       include: {
         mergedSources:{select:{id:true,title:true}},
         assignedToUser: { select: { id: true, name: true } },
         personalCategory: true,
-        codexRuns: { orderBy: { createdAt: "desc" }, take: 5, select: publicRunSelect },
+        codexRuns: { orderBy: { createdAt: "desc" }, take: options.summary ? 0 : 5, select: publicRunSelect },
         personalOwner: { select: { id: true, name: true, email: true, avatarUrl: true } },
         task: {
           select: {
@@ -267,6 +268,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         },
         calendarLinks: { where: { userId }, take: 1 },
         executions: {
+          take: options.summary ? 0 : undefined,
           where: { actionType: { not: "CANCELLED" } },
           select: { targetType: true, targetId: true, metadataJson: true },
           orderBy: { createdAt: "desc" },
@@ -274,9 +276,9 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         activities: {
           include: { actorUser: { select: { id: true, name: true, email: true, avatarUrl: true } } },
           orderBy: { occurredAt: "desc" },
-          take: 20,
+          take: options.summary ? 0 : 20,
         },
-        checklists: { orderBy: { sortOrder: "asc" },include:{personalShares:{include:{user:{select:{id:true,name:true,email:true,avatarUrl:true}}}}} },
+        checklists: { where: options.summary ? {personalShares:{some:{userId}}} : undefined, orderBy: { sortOrder: "asc" },include:{personalShares:{include:{user:{select:{id:true,name:true,email:true,avatarUrl:true}}}}} },
       },
       orderBy: [{ isDone: "asc" }, { dueAt: "asc" }, { createdAt: "desc" }],
     }),
@@ -305,6 +307,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
       const owner = item.personalOwner || item.task?.createdByUser || item.task?.assignedToUser;
       if (!owner) throw new Error("Công việc cá nhân chưa có chủ sở hữu");
       const result: PersonalWorkItem = {
+        detailsLoaded: !options.summary,
         mergeSources:item.mergedSources,
         id: item.id,
         personalWorkNumber: item.personalWorkNumber,
@@ -315,7 +318,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         title: item.title,
         createdAt: item.createdAt.toISOString(),
         updatedAt: item.updatedAt.toISOString(),
-        note: item.note,
+        note: options.summary ? null : item.note,
         status: item.status,
         priority: item.priority,
         dueAt: item.dueAt?.toISOString() ?? null,
@@ -395,7 +398,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
   for(const id of [...partialSources]){let root=id;const seen=new Set<string>();while(edges.has(root)&&!seen.has(root)){seen.add(root);partialSources.add(root);root=edges.get(root)!;}}
   const redirects:Record<string,string>={};
   for(const row of merged){let root=row.id;const seen=new Set<string>();while(edges.has(root)&&!seen.has(root)){seen.add(root);root=edges.get(root)!;}if(visible.has(root)||partialSources.has(row.id))redirects[row.id]=root;}
-  return {...data,mergedWorkRedirects:redirects,items:await hydratePersonalWorkObjects(prisma,userId,data.items)};
+  return {...data, pagination: Boolean(options.summary), mergedWorkRedirects:redirects,items: options.summary ? data.items : await hydratePersonalWorkObjects(prisma,userId,data.items)};
 }
 
 export async function createPersonalWorkItem(input: PersonalWorkInput, auth: unknown, db: DB = prisma, identity?: { systemId?: string; actorUserId?: string; assignedToUserId?: string; eventTargets?: PersonalWorkTarget[]; onEvent?: (event:RecordedBusinessEvent)=>void; deferConsumers?: (work:()=>Promise<void>)=>void }): Promise<import("@prisma/client").TaskItem> {

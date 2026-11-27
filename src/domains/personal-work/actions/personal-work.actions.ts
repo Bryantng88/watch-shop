@@ -265,3 +265,16 @@ export async function replacePersonalChecklistSharesAction(input:{taskItemId:str
   await replacePersonalChecklistShares(input.taskItemId,input.checklistItemId,input.shares,await auth());
   refresh();return {ok:true};
 }
+
+export async function loadPersonalWorkPageAction(input: import("../shared/work-list-query").WorkListQuery & {cursor?: string | null}) {
+  const {getWorkListPage} = await import("../server/work-list-page");
+  return getWorkListPage(input, await auth());
+}
+
+export async function loadPersonalWorkDetailAction(id: string) {
+  if(typeof id!=="string" || !/^[\w:-]{1,160}$/.test(id)) throw new Error("Công việc không hợp lệ.");
+  const {getPersonalWorkPageData} = await import("../server/personal-work.service");
+  const data = await getPersonalWorkPageData(await auth(), {ids:[id]});
+  if(!data.items[0]) throw new Error("Công việc không còn khả dụng hoặc quyền xem đã thay đổi.");
+  return data.items[0];
+}

@@ -24,16 +24,16 @@ export function AdminWorkspaceNavigation({ label, entries, selected, compact = f
 
 /** In-place workspace views share route navigation styling without a server round trip. */
 export function AdminWorkspaceViewNavigation<T extends string>({ label, items, value, onChange }: {
-  label: string; items: readonly { value: T; label: string }[]; value: T; onChange: (value: T) => void;
+  label: string; items: readonly { value: T; label: string; count?: number }[]; value: T; onChange: (value: T) => void;
 }) {
   return <nav aria-label={label} className={s.filterNavigation} style={ADMIN_WORKSPACE_NAVIGATION_STYLE}>
     <div className={s.navigationLinks}>
       <AdminWorkspaceHeading navigation>{label}</AdminWorkspaceHeading>
       {items.map(item => <AdminButton key={item.value} variant="contextual" type="button" className={s.navigationLink}
-        aria-pressed={value === item.value} onClick={() => onChange(item.value)}>{item.label}</AdminButton>)}
+        aria-pressed={value === item.value} onClick={() => onChange(item.value)}><span>{item.label}</span>{item.count !== undefined && <span className={s.navigationCount}>{item.count.toLocaleString("vi-VN")}</span>}</AdminButton>)}
     </div>
     <label className={s.navigationSelect}>{label}<select value={value} onChange={event => onChange(event.target.value as T)}>
-      {items.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}
+      {items.map(item => <option key={item.value} value={item.value}>{item.label}{item.count !== undefined ? ` (${item.count.toLocaleString("vi-VN")})` : ""}</option>)}
     </select></label>
   </nav>;
 }

@@ -5,6 +5,8 @@ on:
       - 'src/domains/work-media/**'
       - 'src/domains/storefront/server/public-media.service*'
       - 'src/domains/personal-work/server/personal-work.service.ts'
+      - 'src/domains/personal-work/server/work-list-page.ts'
+      - 'scripts/check-work-list-pagination-db.ts'
       - 'src/domains/personal-work/ui/PersonalWorkClient.tsx'
       - 'src/domains/media/core/**'
       - 'src/domains/media/application/media-binding.service*'
@@ -68,6 +70,7 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx tsx --test src/domains/storefront/server/public-media.service.test.ts src/domains/work-media/server/work-media.test.ts src/domains/media/application/media-binding.service.test.ts src/domains/media/application/media-ingest.service.test.ts src/domains/media/core/media-path.policy.test.ts src/domains/media/storage/verified-delete.test.ts src/domains/personal-work/server/personal-work-access.test.ts
       - run: npx tsx scripts/check-work-media-db.ts
+      - run: npx tsx scripts/check-work-list-pagination-db.ts
       - run: npm run check:admin-buttons
       - run: npm install --prefix /tmp/work-media-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/work-media-browser/node_modules/.bin/playwright install --with-deps chromium

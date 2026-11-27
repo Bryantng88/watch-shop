@@ -1794,3 +1794,10 @@ WorkImageAttachments opens the shared AdminImagePreviewDialog in place instead o
 Remove the leading complete/reopen control from task rows and open the existing detail to complete work. Checklist entry controls and event/continuous-work semantics remain unchanged. Do not show the repeated Sửa/Xem access badge on the list; keep permissions in the existing sharing context and detail.
 
 Place a 7px noninteractive status dot immediately after the task title, with an accessible text label. DONE uses static emerald; unfinished overdue work uses static rose; other open work uses a steady amber core with a soft outer ring that expands and fades over 2s. Reserve space for the ring inside the title so truncation does not clip it. Existing scheduledEndAt/dueAt overdue calculation stays authoritative. Cancelled work, events and continuous work keep their separate presentation. Keep the ring static with prefers-reduced-motion. The orange dot means Đang mở, not a newly invented in-progress business state.
+
+
+### Personal Work list paging and view counts (2026-11-27)
+
+Load detailed list rows from the server in batches of 30. Use a stable cursor and a near-end sentinel; keep a quiet load-more/retry control as fallback. Preserve loaded rows on failure, ignore superseded filter requests and retain loaded depth/scroll when closing detail or refreshing the same view. A filter change starts at the first page.
+
+Use the shared navigation count slot for all work views, including zero. Counts follow the same permission-projected scope, category, day boundaries and view predicate as list selection, across the entire result. Keep a lightweight authorized schedule index for calendar/counts; omit history, object hydration and Codex runs from that index. Fetch full detail on demand for calendar links or deep links outside loaded rows. Partial checklist shares remain server-projected and never reveal parent-only fields.

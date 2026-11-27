@@ -1,4 +1,7 @@
 "use client";
+import {loadPersonalWorkDetailAction} from "../actions/personal-work.actions";
+import {matchesWorkList, compareWorkList, workViewCounts, type WorkListQuery} from "../shared/work-list-query";
+import {useWorkListPage} from "./use-work-list-page";
 import { PersonalWorkLifecycleActions } from "./PersonalWorkLifecycleActions";
 import { isContinuousWork } from "../shared/continuous-work";
 
@@ -24,7 +27,6 @@ import PersonalWorkTagsField, { parsePersonalWorkTags } from "./PersonalWorkTags
 import PersonalCodexPanel from "./PersonalCodexPanel";
 
 import { usePersonalCalendar } from "./use-personal-calendar";
-import { personalDayBucket } from "../shared/personal-work-day";
 import createStyles from "./PersonalWorkCreate.module.css";
 import { GoogleCalendarEventDialog } from "./GoogleCalendarEventDialog";
 import { PersonalWorkTimeFields } from "./PersonalWorkTimeFields";
@@ -299,34 +301,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   });
   const [now,setNow]=useState(()=>new Date());
   useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==="visible")setNow(new Date());},60000);return()=>clearInterval(timer);},[]);
-  const todayStartMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const todayEndMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
-  const items = useMemo(
-    () =>
-      workItems.filter((item) => {
-        if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe && !item.checklistOnly) return false;
-        if (scope === "SHARED" && item.access === "OWNER") return false;
-        if (domain !== "ALL" && item.category.key !== domain) return false;
-        if(view==="CANCELLED")return item.status==="CANCELLED";
-        if(item.status==="CANCELLED")return false;
-        if(isContinuousWork(item.workType))return (view==="TODAY"||view==="ALL");
-        const event = isPersonalEvent(item.workType);
-        if (view === "EVENTS") return event;
-        if (view === "DONE") return !event && item.status === "DONE";
-        if (item.status === "DONE") return Boolean(recentCompletions[item.id]);
-        if (view === "TODAY" || view === "OVERDUE") {
-          return personalDayBucket({
-            dueAt: item.dueAt ? new Date(item.dueAt) : null,
-            scheduledEndAt: item.scheduledEndAt ? new Date(item.scheduledEndAt) : null,
-            estimatedDays: item.estimatedDays,
-            workTypeId: item.workType,
-          }, todayStartMs, todayEndMs + 1) === view;
-        }
-        if (view === "UPCOMING") return Boolean(item.dueAt && Date.parse(item.dueAt) > todayEndMs);
-        return true;
-      }).sort((a,b)=>Number(isContinuousWork(b.workType))-Number(isContinuousWork(a.workType))),
-    [workItems, domain, scope, view, todayStartMs, todayEndMs, recentCompletions],
-  );
+  const listQuery = useMemo<WorkListQuery>(()=>({view,scope,domain,day:scheduleDate(now)}),[view,scope,domain,now]);
+  const matchingItems = useMemo(()=>workItems.filter(item=>matchesWorkList(item,listQuery)||Boolean(recentCompletions[item.id])&&view!=="DONE"&&item.status==="DONE"&&matchesWorkList({...item,status:"TODO"},listQuery)).sort(compareWorkList),[workItems,listQuery,recentCompletions,view]);
+  const viewCounts = useMemo(()=>workViewCounts(workItems,listQuery),[workItems,listQuery]);
+  const paged = useWorkListPage(Boolean(data.pagination),listQuery,calendar.items);
+  const matchingIds = new Set(matchingItems.map(item=>item.id));
+  const items = data.pagination ? paged.items.map(item=>completedOverrides[item.id]||item).filter(item=>matchingIds.has(item.id)) : matchingItems;
+  const [detailLoading,setDetailLoading] = useState(false);
+  const detailRequest = useRef(0);
   const openCount = workItems.filter((item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && !["DONE","CANCELLED"].includes(item.status)).length;
   const overdue = workItems.filter(
     (item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && !["DONE","CANCELLED"].includes(item.status) && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
@@ -345,7 +327,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   useEffect(() => {
     if (!editingItemId) return;
     const refreshed = workItems.find((item) => item.id === editingItemId);
-    setEditingItem(refreshed || null);
+    if(!refreshed){setEditingItem(null);return;}
+    if(refreshed.detailsLoaded!==false){setEditingItem(refreshed);return;}
+    let cancelled=false;
+    void loadPersonalWorkDetailAction(editingItemId).then(item=>{if(!cancelled)setEditingItem(item);}).catch(()=>{if(!cancelled){setEditingItem(null);setMessageIsError(true);setMessage("Công việc không còn khả dụng hoặc quyền xem đã thay đổi.");}});
+    return()=>{cancelled=true;};
   }, [workItems, editingItemId]);
 
   function run<T>(action: () => Promise<T>, success?: string | ((result: T) => string), onSuccess?: () => void, refresh = true) {
@@ -472,7 +458,14 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     else setSelectedCalendarEvent(event);
   }
 
-  const openTaskEdit = useCallback((item: PersonalWorkItem) => {
+  const openTaskEdit = useCallback(async (selected: PersonalWorkItem) => {
+    const version=++detailRequest.current;
+    let item=selected;
+    if(item.detailsLoaded===false){
+      setDetailLoading(true);
+      try{item=await loadPersonalWorkDetailAction(item.id);}catch{if(version===detailRequest.current){setMessageIsError(true);setMessage("Không mở được công việc. Vui lòng thử lại.");}return;}finally{if(version===detailRequest.current)setDetailLoading(false);}
+      if(version!==detailRequest.current)return;
+    }
     setMessage(null);
     setMessageIsError(false);
     setEditingTitle(false);
@@ -526,9 +519,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(data.mergedWorkRedirects?.[requestedItem]||requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit,data.mergedWorkRedirects]);
   const mediaMergeAction = <PersonalMediaMerge items={calendar.items} onMerged={id=>{const url=new URL(window.location.href);url.searchParams.set("item",id);router.replace(url.pathname+url.search);router.refresh();}}/>;
   return (
-    <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} summary={
+    <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} counts={viewCounts} summary={
       <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{continuousItems.length>0&&<span>{continuousItems.length} duy trì</span>}{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
-    } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
+    } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} counts={viewCounts} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
       <CalendarDays className="h-4 w-4" />Lịch
       {calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label={calendar.reconnectRequired ? "Lịch cần kết nối lại" : "Lịch có lỗi đồng bộ"} />}
@@ -944,7 +937,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         )}
 
         <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
-          {listOnly && <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />{mediaMergeAction}</div>}
+          {listOnly && <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} counts={viewCounts} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />{mediaMergeAction}</div>}
           <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
             {items.length ? (
               items.map((item) => {
@@ -956,12 +949,16 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             ) : (
               <div className="flex flex-col items-center py-16 text-center">
                 <Circle className="h-8 w-8 text-slate-200" />
-                <p className="mt-3 text-sm font-medium text-slate-600">Không có công việc trong nhóm này</p>
+                <p className="mt-3 text-sm font-medium text-slate-600">{data.pagination && paged.loading ? "Đang tải công việc…" : data.pagination && paged.error ? "Chưa tải được danh sách" : "Không có công việc trong nhóm này"}</p>
               </div>
             )}
+            {data.pagination && <div ref={paged.sentinel} className="flex min-h-10 flex-wrap items-center justify-center gap-2 py-3 text-xs text-slate-500" aria-live="polite">
+              {paged.loading ? <span role="status">Đang tải thêm công việc…</span> : paged.error ? <><span role="alert">{paged.error}</span><AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Thử lại</AdminButton></> : paged.hasMore ? <AdminButton variant="quiet" density="compact" type="button" onClick={paged.retry}>Tải thêm</AdminButton> : items.length > 0 ? <span>Đã hiển thị {items.length} công việc</span> : null}
+            </div>}
           </div>
         </section>
       </div>
+      {detailLoading && <p role="status" className="text-xs text-slate-500">Đang mở chi tiết công việc…</p>}
 
       {editingItem && (
         <div
