@@ -10,6 +10,7 @@ import { PersonalWorkWorkspace } from "./PersonalWorkWorkspace";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { personalWorkSavedMessage, personalWorkActionFailure, type CalendarSaveResult } from "../shared/calendar-save-result";
 import {PersonalWorkListRow} from "./PersonalWorkListRow";
+import { PersonalWorkFloatingPanel } from "./PersonalWorkFloatingPanel";
 import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
 import listStyles from "./PersonalWorkList.module.css";
 import { personalWorkCode } from "../shared/personal-work-code";
@@ -35,10 +36,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
-  Infinity as InfinityIcon,
   Plus,
   Check,
-  ChevronDown,
+  Settings2,
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
@@ -215,6 +215,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(true);
+  const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
+  const calendarSettingsTrigger = useRef<HTMLButtonElement>(null);
+  const closeCalendarSettings = useCallback(() => setCalendarSettingsOpen(false), []);
   const [selectedCalendarEvent, setSelectedCalendarEvent] = useState<PersonalCalendarEvent | null>(null);
   const [calendarCreateOpen, setCalendarCreateOpen] = useState(false);
   const [calendarCreateTitle, setCalendarCreateTitle] = useState("");
@@ -525,7 +528,40 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
       <CalendarDays className="h-4 w-4" />Lịch
       {calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label={calendar.reconnectRequired ? "Lịch cần kết nối lại" : "Lịch có lỗi đồng bộ"} />}
-    </AdminButton>{!listOnly && mediaMergeAction}</>}>
+    </AdminButton>{!listOnly && <><AdminButton ref={calendarSettingsTrigger} iconOnly variant="quiet" density="compact" type="button" aria-label="Cài đặt Google Calendar" title="Cài đặt Google Calendar" aria-expanded={calendarSettingsOpen} onClick={()=>setCalendarSettingsOpen(open=>!open)}><Settings2 className="h-4 w-4"/>{calendar.error && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-label="Google Calendar cần chú ý"/>}</AdminButton>{mediaMergeAction}</>}</>}>
+      {calendarSettingsOpen && <PersonalWorkFloatingPanel anchor={calendarSettingsTrigger.current} onClose={closeCalendarSettings} label="Cài đặt Google Calendar" className="rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+        <h2 className="text-sm font-semibold text-slate-950">Google Calendar</h2>
+        <p className="mt-1 break-all text-xs text-slate-500">{data.calendar.connected ? data.calendar.accountEmail || "Đã kết nối Google Calendar" : "Đang dùng lịch nội bộ"}</p>
+        <p className={`mt-1 text-xs ${calendar.error ? "text-amber-700" : "text-slate-500"}`}>{calendar.reconnectRequired ? "Cần kết nối lại" : calendar.error ? "Có lỗi đồng bộ" : calendar.loading ? "Đang kiểm tra" : data.calendar.connected ? "Đã liên kết" : "Chưa kết nối Google Calendar"}</p>
+          <AsyncActionButton variant="quiet"
+            pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
+            title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
+            pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
+            disabled={!data.calendar.configured}
+            onClick={() =>
+              data.calendar.connected && !calendar.reconnectRequired
+                ? void calendar.reload()
+                : run(async () => {
+                    const result = await getGoogleCalendarConnectUrlAction();
+                    window.location.assign(result.url);
+                  })
+            }
+            className="mt-3 inline-flex items-center gap-2 text-xs text-slate-500 disabled:cursor-not-allowed"
+          >
+            {data.calendar.connected && !calendar.reconnectRequired ? (
+              <>
+                <RefreshCw className="h-4 w-4" /> Tải lại lịch
+              </>
+            ) : (
+              <>
+                <ExternalLink className="h-4 w-4" /> {calendar.reconnectRequired ? "Kết nối lại Google Calendar" : "Kết nối Google Calendar"}
+              </>
+            )}
+          </AsyncActionButton>
+          {!data.calendar.connected && !data.calendar.configured && (
+            <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
+          )}
+      </PersonalWorkFloatingPanel>}
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
       <section hidden={listOnly} className={listOnly ? "hidden" : "border-b border-slate-100 pb-4"}>
@@ -747,69 +783,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         className={`grid items-start gap-5 ${calendarOpen && !listOnly ? "xl:grid-cols-[minmax(340px,0.9fr)_minmax(420px,1.1fr)]" : "grid-cols-1"}`}
       >
         {calendarOpen && !listOnly && (
-          <section id="personal-google-calendar-agenda" className="order-2 min-w-0 bg-white xl:border-l xl:border-slate-100 xl:pl-5">
-        <aside className="mb-4 border-b border-slate-100 pb-3">
-          <AdminButton variant="contextual"
-            type="button"
-            aria-expanded={calendarOpen}
-            aria-controls="personal-google-calendar-agenda"
-            onClick={() => setCalendarOpen((open) => !open)}
-            className="flex w-full items-start justify-between gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-          >
-            <div className="flex gap-3">
-              <span className="pt-0.5 text-blue-600">
-                <CalendarDays className="h-5 w-5" />
-              </span>
-              <div>
-                <h2 className="font-semibold text-slate-950">Lịch công việc</h2>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {data.calendar.connected
-                    ? data.calendar.accountEmail || "Đã kết nối Google Calendar"
-                    : "Lịch nội bộ · Chưa kết nối Google Calendar"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {data.calendar.connected && (
-                <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${calendar.error ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                  {calendar.reconnectRequired ? "CẦN KẾT NỐI LẠI" : calendar.error ? "LỖI ĐỒNG BỘ" : calendar.loading ? "ĐANG KIỂM TRA" : "ĐÃ LIÊN KẾT"}
-                </span>
-              )}
-              <ChevronDown
-                className={`h-4 w-4 text-slate-400 transition-transform ${calendarOpen ? "rotate-180" : ""}`}
-              />
-            </div>
-          </AdminButton>
-          <AsyncActionButton variant="quiet"
-            pending={data.calendar.connected && !calendar.reconnectRequired ? calendar.loading : pending}
-            title={calendar.lastSyncedAt ? `Cập nhật lịch: ${new Date(calendar.lastSyncedAt).toLocaleString("vi-VN")}` : undefined}
-            pendingLabel={data.calendar.connected && !calendar.reconnectRequired ? "Đang tải lịch…" : "Đang kết nối…"}
-            disabled={!data.calendar.configured}
-            onClick={() =>
-              data.calendar.connected && !calendar.reconnectRequired
-                ? void calendar.reload()
-                : run(async () => {
-                    const result = await getGoogleCalendarConnectUrlAction();
-                    window.location.assign(result.url);
-                  })
-            }
-            className="mt-3 inline-flex items-center gap-2 text-xs text-slate-500 disabled:cursor-not-allowed"
-          >
-            {data.calendar.connected && !calendar.reconnectRequired ? (
-              <>
-                <RefreshCw className="h-4 w-4" /> Tải lại lịch
-              </>
-            ) : (
-              <>
-                <ExternalLink className="h-4 w-4" /> {calendar.reconnectRequired ? "Kết nối lại Google Calendar" : "Kết nối Google Calendar"}
-              </>
-            )}
-          </AsyncActionButton>
-          {!data.calendar.connected && !data.calendar.configured && (
-            <p className="mt-2 text-xs text-slate-500">Kết nối Google Calendar chưa sẵn sàng. Bạn vẫn dùng được lịch công việc.</p>
-          )}
-        </aside>
-            {continuousItems.length>0&&<section aria-label="Việc duy trì" className="border-b border-slate-100 px-5 py-2"><h3 className="flex items-center gap-1 text-xs font-semibold text-slate-700"><InfinityIcon className="h-3.5 w-3.5"/>Việc duy trì · {continuousItems.length}</h3><p className="text-[11px] text-slate-500">Đang duy trì, không phụ thuộc ngày/tháng đang xem.</p><div className="flex max-h-28 flex-wrap gap-x-2 overflow-y-auto">{continuousItems.map(item=><AdminButton key={item.id} variant="quiet" density="compact" type="button" onClick={()=>openTaskEdit(item)} className="max-w-full text-xs"><span className="truncate">{item.title}</span></AdminButton>)}</div></section>}
+          <section aria-label="Lịch công việc" id="personal-google-calendar-agenda" className="order-2 min-w-0 bg-white xl:border-l xl:border-slate-100 xl:pl-5">
             <div className="flex min-h-[56px] flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-2">
               <div>
                 <p className="mt-0.5 text-xs text-slate-500">

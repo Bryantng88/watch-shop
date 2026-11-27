@@ -10,8 +10,8 @@ without dueAt, scheduledEndAt, date reminders or a finite duration. Existing
 finite tasks/events cannot be converted, preserving their completion history.
 
 Today/All show active continuous work first with an infinity symbol rather than
-a completion checkbox. The calendar has a dedicated current-responsibilities
-strip independent of the month being viewed, without filling day cells. Google
+a completion checkbox. Continuous work is shown in the work list, without a strip above the calendar
+or repeated day-cell events. Google
 event export and automatic Codex execution are refused. Normal work counts,
 overdue/unscheduled buckets and daily completion totals exclude this mode;
 Ben's daily summary exposes a separate continuousCount.
