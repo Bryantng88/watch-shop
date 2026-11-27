@@ -1783,3 +1783,26 @@ requests. Respect reduced motion. Do not force full prefetch of dynamic admin pa
 or cache private queries to make navigation appear fast. Loading feedback is distinct
 from a confirmed reduction in server query time.
 
+
+
+### Work attachment image preview (2026-11-27)
+
+WorkImageAttachments opens the shared AdminImagePreviewDialog in place instead of navigating to the private image URL. Keep a compact white dialog, filename, quiet close control and a contained image that fits the available phone/desktop viewport. Native modal semantics isolate background interactions; Escape, close and backdrop dismiss the preview and restore focus without scrolling the work form. Preserve the owner-authorized image endpoint, no optimizer/public URL, existing upload/remove controls and confirmation. Clear the preview when the refreshed attachment list no longer permits it. Image loading failures have an inline message rather than a broken image or a new tab.
+
+### Personal Work list status and completion (2026-11-27)
+
+Remove the leading complete/reopen control from task rows and open the existing detail to complete work. Checklist entry controls and event/continuous-work semantics remain unchanged. Do not show the repeated Sửa/Xem access badge on the list; keep permissions in the existing sharing context and detail.
+
+Place a 7px noninteractive status dot immediately after the task title, with an accessible text label. DONE uses static emerald; unfinished overdue work uses static rose; other open work uses a steady amber core with a soft outer ring that expands and fades over 2s. Reserve space for the ring inside the title so truncation does not clip it. Existing scheduledEndAt/dueAt overdue calculation stays authoritative. Cancelled work, events and continuous work keep their separate presentation. Keep the ring static with prefers-reduced-motion. The orange dot means Đang mở, not a newly invented in-progress business state.
+
+
+### Personal Work list paging and view counts (2026-11-27)
+
+Load detailed list rows from the server in batches of 30. Use a stable cursor and a near-end sentinel; keep a quiet load-more/retry control as fallback. Preserve loaded rows on failure, ignore superseded filter requests and retain loaded depth/scroll when closing detail or refreshing the same view. A filter change starts at the first page.
+
+Use the shared navigation count slot for all work views, including zero. Counts follow the same permission-projected scope, category, day boundaries and view predicate as list selection, across the entire result. Keep a lightweight authorized schedule index for calendar/counts; omit history, object hydration and Codex runs from that index. Fetch full detail on demand for calendar links or deep links outside loaded rows. Partial checklist shares remain server-projected and never reveal parent-only fields.
+
+
+### Bounded work list viewport (2026-11-27)
+
+The work list is a bounded, keyboard-focusable internal scroll pane on phone and desktop. Its viewport height follows the screen within 280–680px and stays constant as pages append; the page and adjacent calendar must not grow with the number of work rows. Observe the near-end sentinel relative to this pane. Preserve its scrollTop when returning from details and reset it when filters change. Use the existing flat list, a thin native scrollbar and no additional card. Continuous work has no leading infinity icon or reserved icon slot; its metadata line Duy trì liên tục is sufficient.

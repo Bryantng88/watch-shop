@@ -11,8 +11,8 @@ import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "@/domains/sha
 import { PERSONAL_WORK_VIEWS, type WorkListView } from "./PersonalWorkListToolbar";
 import styles from "./PersonalWorkList.module.css";
 
-export function PersonalWorkWorkspace({ compact, view, onView, summary, tools, children }: {
-  compact: boolean; view: WorkListView; onView: (value: WorkListView) => void; summary: ReactNode; tools?: ReactNode; children: ReactNode;
+export function PersonalWorkWorkspace({ compact, view, onView, counts, summary, tools, children }: {
+  counts?: Record<WorkListView, number>; compact: boolean; view: WorkListView; onView: (value: WorkListView) => void; summary: ReactNode; tools?: ReactNode; children: ReactNode;
 }) {
   const ref = useAdminSplitWorkspace<HTMLDivElement>(!compact);
   const pane = useAdminSplitResize(ref, "admin:personal-work:menu-width:v1", !compact);
@@ -26,7 +26,7 @@ export function PersonalWorkWorkspace({ compact, view, onView, summary, tools, c
     <div ref={ref} className={`${split.layout} ${resize.layout}`} style={{ ...ADMIN_SPLIT_WORKSPACE_STYLE, ...pane.style }}
       data-sidebar-collapsed={pane.width === 0} data-resizing={pane.resizing}>
       <aside id={id} data-admin-pane="sidebar"><AdminWorkspaceViewNavigation label="Hiển thị công việc"
-        items={PERSONAL_WORK_VIEWS.map(([value, label]) => ({ value, label }))} value={view} onChange={onView} /></aside>
+        items={PERSONAL_WORK_VIEWS.map(([value, label]) => ({ value, label, count: counts?.[value] }))} value={view} onChange={onView} /></aside>
       <div {...pane.separatorProps} aria-label="Điều chỉnh độ rộng menu công việc" aria-controls={id} className={resize.separator} />
       <div data-admin-pane="content" className="flex min-w-0 flex-col gap-4">
         <AdminWorkspaceHeadingRow>
