@@ -40,7 +40,7 @@ function benWindowPath(client) {
 self.addEventListener("push", event => {
   let payload = {};
   try { const data = event.data?.json(); if (data && typeof data === "object" && !Array.isArray(data)) payload = data; } catch {}
-  const labels = { ASSIGNED: "Bạn được giao một công việc mới", SHARED: "Có công việc được chia sẻ với bạn", CHANGED: "Lịch công việc đã thay đổi", CANCELLED: "Có công việc đã hủy", REMINDER: "Bạn có lịch công việc hoặc sự kiện cần nhắc" };
+  const labels = { ASSIGNED: "Bạn được giao một công việc mới", SHARED: "Có công việc được chia sẻ với bạn", CHANGED: "Lịch công việc đã thay đổi", CANCELLED: "Có công việc đã hủy", RESTORED: "Có công việc được mở lại", REMINDER: "Bạn có lịch công việc hoặc sự kiện cần nhắc" };
   const label = Object.prototype.hasOwnProperty.call(labels, payload.kind) ? labels[payload.kind] : undefined;
   const isWork = payload.type === "assignment" || payload.type === "work" || Boolean(label);
   event.waitUntil(self.registration.showNotification("Ben", {

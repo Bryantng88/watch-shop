@@ -104,6 +104,9 @@ export type PersonalWorkItem = {
   scheduledEndAt?: string | null;
   estimatedDays: number;
   completedAt: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: PersonalWorkUser | null;
+  cancellationReason?: string | null;
   domain: PersonalWorkDomain;
   category: PersonalWorkCategory;
   workType: string | null;

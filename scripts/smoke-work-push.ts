@@ -53,6 +53,8 @@ async function main(){
   await queueWorkNotification(prisma,queue('revoked-'+suffix));await prisma.personalTaskShare.deleteMany({where:{taskItemId:item.id}});
   const before=calls;await runWorkPush(new Date(),fakeSend);assert.equal(calls,before);
   await prisma.personalTaskShare.create({data:{taskItemId:item.id,userId:recipient.id,sharedByUserId:owner.id}});
+  await queueWorkNotification(prisma,queue('cancelled-stale-'+suffix));const beforeCancelledPush=calls;await runWorkPush(new Date(),fakeSend);assert.equal(calls,beforeCancelledPush);
+  await prisma.taskItem.update({where:{id:item.id},data:{status:'TODO',dueAt:null}});
   await queueWorkNotification(prisma,queue('retry-'+suffix));failure=503;await runWorkPush(new Date(),fakeSend);
   assert.equal(await prisma.workPushDelivery.count({where:{notificationKey:'retry-'+suffix,deliveredAt:null,attempts:1}}),1);
   failure=undefined;await prisma.workPushDelivery.updateMany({where:{notificationKey:'retry-'+suffix},data:{availableAt:new Date(0)}});await runWorkPush(new Date(),fakeSend);
@@ -68,7 +70,7 @@ async function main(){
   assert.equal((await getPersonalWorkPageData({userId:partial.id})).items.length,0);
   await replacePersonalChecklistShares(privateItem.id,visible.id,[{userId:partial.id,accessLevel:"VIEWER"}],{userId:owner.id});
   const read=(await getPersonalWorkPageData({userId:partial.id})).items;
-  assert.equal(read.length,1);assert.equal(await prisma.taskItem.count({where:{id:privateItem.id,...personalWorkViewAccessWhere(partial.id)}}),0);assert.equal(read[0].title,"Shared parent");assert.equal(read[0].checklistOnly,true);
+  assert.equal(read.length,1);assert.equal(await prisma.taskItem.count({where:{id:privateItem.id,...personalWorkViewAccessWhere(partial.id)}}),0);assert.equal(read[0].title,"Đầu việc được chia sẻ");assert.equal(read[0].checklistOnly,true);
   assert.deepEqual(read[0].checklist.map(e=>e.title),["Visible step"]);assert.equal(read[0].progressPercent,0);
   assert.ok(!JSON.stringify(read).includes("PRIVATE_"));assert.equal(read[0].note,null);assert.equal(read[0].activities.length,0);assert.equal(read[0].sharedWith.length,0);
   await assert.rejects(renamePersonalWorkChecklistItem(privateItem.id,visible.id,"Viewer edit",{userId:partial.id}));

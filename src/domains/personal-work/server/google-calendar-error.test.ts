@@ -26,6 +26,7 @@ test("calendar reads surface revoked tokens and recover a normal expired access 
   const requests: string[] = [];
   const connection = () => ({ id: "connection", calendarId: "primary", accessTokenCipher: encryptCalendarToken("fixture-access"), refreshTokenCipher, tokenExpiresAt: expires });
   holder.__prisma = {
+    personalTaskCalendarLink:{findMany:async()=>[]},
     googleCalendarConnection: {
       findUnique: async () => connection(),
       update: async () => { writes++; return connection(); },

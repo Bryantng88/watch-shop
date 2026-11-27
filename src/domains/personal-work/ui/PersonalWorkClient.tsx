@@ -1,4 +1,5 @@
 "use client";
+import { PersonalWorkLifecycleActions } from "./PersonalWorkLifecycleActions";
 import { isContinuousWork } from "../shared/continuous-work";
 
 import { PersonalMediaMerge } from "./PersonalMediaMerge";
@@ -47,7 +48,6 @@ import {
   Loader2,
   RefreshCw,
   Share2,
-  Trash2,
   X,
 } from "lucide-react";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
@@ -65,7 +65,6 @@ import {
   addPersonalWorkChecklistItemAction,
   createPersonalWorkAction,
   deletePersonalWorkChecklistItemAction,
-  deletePersonalWorkAction,
   finalizePersonalWorkChecklistAction,
   getGoogleCalendarConnectUrlAction,
   replacePersonalWorkSharesAction,
@@ -188,7 +187,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [calendarCreateError, setCalendarCreateError] = useState<string | null>(null);
   const [calendarSyncFailures, setCalendarSyncFailures] = useState<Record<string, {id:string;title:string}>>({});
   const [pending, startTransition] = useTransition();
-  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE" | "EVENTS" | "OVERDUE">(listOnly ? "ALL" : "TODAY");
+  const [view, setView] = useState<"TODAY" | "UPCOMING" | "ALL" | "DONE" | "EVENTS" | "OVERDUE" | "CANCELLED">(listOnly ? "ALL" : "TODAY");
   const [scope, setScope] = useState<"MINE" | "SHARED" | "ALL">("ALL");
   const [domain, setDomain] = useState<string>("ALL");
   const [newCategoryKey, setNewCategoryKey] = useState("GENERAL");
@@ -308,11 +307,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         if (scope === "MINE" && item.access !== "OWNER" && !item.assignedToMe && !item.checklistOnly) return false;
         if (scope === "SHARED" && item.access === "OWNER") return false;
         if (domain !== "ALL" && item.category.key !== domain) return false;
-        if(isContinuousWork(item.workType))return item.status!=="CANCELLED"&&(view==="TODAY"||view==="ALL");
+        if(view==="CANCELLED")return item.status==="CANCELLED";
+        if(item.status==="CANCELLED")return false;
+        if(isContinuousWork(item.workType))return (view==="TODAY"||view==="ALL");
         const event = isPersonalEvent(item.workType);
         if (view === "EVENTS") return event;
         if (view === "DONE") return !event && item.status === "DONE";
-        if (item.status === "DONE" || item.status === "CANCELLED") return Boolean(recentCompletions[item.id]);
+        if (item.status === "DONE") return Boolean(recentCompletions[item.id]);
         if (view === "TODAY" || view === "OVERDUE") {
           return personalDayBucket({
             dueAt: item.dueAt ? new Date(item.dueAt) : null,
@@ -326,9 +327,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       }).sort((a,b)=>Number(isContinuousWork(b.workType))-Number(isContinuousWork(a.workType))),
     [workItems, domain, scope, view, todayStartMs, todayEndMs, recentCompletions],
   );
-  const openCount = workItems.filter((item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE").length;
+  const openCount = workItems.filter((item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && !["DONE","CANCELLED"].includes(item.status)).length;
   const overdue = workItems.filter(
-    (item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
+    (item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && !["DONE","CANCELLED"].includes(item.status) && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
   ).length;
   const continuousItems=workItems.filter(item=>isContinuousWork(item.workType)&&item.status!=="CANCELLED"&&(scope!=="MINE"||item.access==="OWNER"||item.assignedToMe)&&(scope!=="SHARED"||item.access!=="OWNER")&&(domain==="ALL"||item.category.key===domain));
   const calendarDays = useMemo(() => monthCells(calendarCursor), [calendarCursor]);
@@ -948,7 +949,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             {items.length ? (
               items.map((item) => {
                 const late = !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
-                return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={late}
+                return <PersonalWorkListRow key={item.id} item={item} now={now} showDate={view !== "TODAY"} late={item.status!=="CANCELLED"&&late}
                   scheduleLabel={dueLabel(item.dueAt, personalEventTiming(item).timed)} pending={pending || completionMutation.isPending(`complete:${item.id}`)} completionPending={completionMutation.isPending(`complete:${item.id}`)} justCompleted={Boolean(recentCompletions[item.id])} onOpen={() => openTaskEdit(item)}
                   onComplete={() => item.progressMode === "CHECKLIST" && item.status !== "DONE" ? openTaskEdit(item) : completeWork(item)} />;
               })
@@ -974,7 +975,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             onMouseDown={(event) => event.stopPropagation()}
             onSubmit={(event) => {
               event.preventDefault();
-              if(editingItem.checklistOnly || editingItem.access === "VIEWER" || pending || completionMutation.hasPending || checklistMutation.hasPending)return;
+              if(editingItem.status==="CANCELLED" || editingItem.checklistOnly || editingItem.access === "VIEWER" || pending || completionMutation.hasPending || checklistMutation.hasPending)return;
               const nextTitle = editTitle.trim();
               if (!nextTitle) {
                 setMessageIsError(true);
@@ -1027,13 +1028,15 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               <div>
                 <p className="font-mono text-xs text-slate-600">{personalWorkCode(editingItem.id, editingItem.personalWorkNumber, editingItem.workType)}</p>
                 <h2 id="personal-task-detail-title" className="mt-1 text-lg font-bold leading-6 text-slate-950">
-                  {!editingItem.checklistOnly && editingItem.access !== "VIEWER" ? <AdminButton variant="quiet" type="button" title="Sửa tên công việc" aria-label="Sửa tên công việc" onClick={() => setEditingTitle(value => !value)} className="max-w-full !p-0 text-left !text-lg !font-bold !leading-6">{editTitle || editingItem.title}</AdminButton> : editingItem.title}
+                  {!editingItem.checklistOnly && editingItem.access !== "VIEWER" && editingItem.status!=="CANCELLED" ? <AdminButton variant="quiet" type="button" title="Sửa tên công việc" aria-label="Sửa tên công việc" onClick={() => setEditingTitle(value => !value)} className="max-w-full !p-0 text-left !text-lg !font-bold !leading-6">{editTitle || editingItem.title}</AdminButton> : editingItem.title}
                 </h2>
                 {editingTitle && <input autoFocus aria-label="Việc cần làm" value={editTitle} disabled={pending} onChange={event => setEditTitle(event.target.value)} onKeyDown={event => {if(event.key === "Enter"){event.preventDefault();setEditingTitle(false);}if(event.key === "Escape"){event.stopPropagation();setEditingTitle(false);}}} className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"/>}
-                <p className="mt-1 text-xs text-slate-500">{isContinuousWork(editingItem.workType)?"Đang duy trì":editingItem.status === "DONE" ? "Đã hoàn thành" : editingItem.status === "CANCELLED" ? "Đã hủy" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
-                {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
+                <p className="mt-1 text-xs text-slate-500">{editingItem.status === "CANCELLED"?"Đã hủy":isContinuousWork(editingItem.workType)?"Đang duy trì":editingItem.status === "DONE" ? "Đã hoàn thành" : "Đang mở"}{!editingItem.checklistOnly && ` · ${editingItem.assignee?.name || editingItem.owner.name || editingItem.owner.email}`}</p>
+                {editingItem.checklistOnly ? <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0"/>{editingItem.owner.name||editingItem.owner.email} chia sẻ đầu việc · {editingItem.status!=="CANCELLED"&&editingItem.checklist.some(e=>e.access === "EDITOR")?"Có thể cập nhật":"Chỉ xem"}</p> : calendarShareLabel(editingItem) && <p className="mt-2 flex items-center gap-1.5 text-xs text-violet-700"><Share2 className="h-3.5 w-3.5 shrink-0" />{calendarShareLabel(editingItem)}</p>}
               </div>
             </div>
+            {editingItem.status==="CANCELLED"&&<div role="status" className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600"><b>Đã hủy · Chỉ xem</b>{editingItem.cancelledAt&&<span> · {new Date(editingItem.cancelledAt).toLocaleString("vi-VN")}</span>}{editingItem.cancelledBy&&<span> · {editingItem.cancelledBy.name||editingItem.cancelledBy.email}</span>}{editingItem.cancellationReason&&<p className="mt-1 whitespace-pre-wrap break-words">{editingItem.cancellationReason}</p>}</div>}
+            <fieldset disabled={editingItem.status==="CANCELLED"} className="contents">
             <div className="mt-5 space-y-4">
               {!!editingItem.mergeSources?.length&&!editingItem.checklistOnly&&<details className="text-xs text-slate-500"><AdminDisclosureSummary className="cursor-pointer">Gộp từ {editingItem.mergeSources.length} công việc</AdminDisclosureSummary><ul className="mt-2 space-y-1">{editingItem.mergeSources.map(source=><li key={source.id}>{source.title}</li>)}</ul><p className="mt-2">Lịch sử nguồn giữ nguyên bên dưới. Việc nguồn không được tính thêm vào báo cáo hoàn thành.</p></details>}
               {isContinuousWork(editingItem.workType)&&<p className="text-xs text-slate-500">Không có hạn chót hoặc xác nhận hoàn thành hằng ngày. Giữ một việc duy nhất và ghi nhận các cập nhật tại đây.</p>}
@@ -1420,27 +1423,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               )}
                 {editingItem.access === "OWNER" && <PersonalWorkShareEditor users={data.availableUsers} shares={editShares} onChange={setEditShares} />}
                 {!isContinuousWork(editingItem.workType)&&<PersonalCodexPanel item={editingItem} configuration={data.codex} />}
-                {editingItem.access === "OWNER" && <AdminButton variant="quiet" density="compact"
-                type="button"
-                disabled={pending || completionMutation.hasPending || checklistMutation.hasPending}
-                onClick={async () => {
-                  const confirmed = await appDialog.confirm(isContinuousWork(editingItem.workType)?{title:"Dừng duy trì?",message:"Việc sẽ rời danh sách đang duy trì. Lịch sử và cập nhật được giữ, không tính là hoàn thành công việc.",confirmText:"Dừng duy trì",tone:"danger"}:{title:"Xóa công việc?",message:"Task sẽ bị xóa khỏi lịch và danh sách của những người được chia sẻ. Sự kiện liên kết trong Google Calendar của bạn cũng sẽ bị xóa.",confirmText:"Xóa công việc",tone:"danger"});
-                  if (!confirmed) return;
-                  run(
-                    () => deletePersonalWorkAction(editingItem.id),
-                    isContinuousWork(editingItem.workType)?"Đã dừng duy trì":"Đã xóa công việc",
-                    () => setEditingItem(null),
-                  );
-                }}
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-              >
-                <Trash2 className="h-4 w-4" /> {isContinuousWork(editingItem.workType)?"Dừng duy trì":"Xóa"}
-              </AdminButton>}
+
 
                 </div>
               </details>
               </>}
             </div>
+            </fieldset>
             {!editingItem.checklistOnly && <WorkImageAttachments key={editingItem.id} workId={editingItem.id} />}
             {editingItem.activities.length > 0 && (
               <section className="mt-4 border-t border-slate-100 pt-4">
@@ -1482,6 +1471,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </p>
             )}
             <div className="sticky bottom-0 mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white py-3">
+              <PersonalWorkLifecycleActions key={editingItem.id} item={editingItem} disabled={pending||completionMutation.hasPending||checklistMutation.hasPending} onSaved={text=>{setMessageIsError(false);setMessage(text);setEditingItem(null);setView(editingItem.status==="CANCELLED"?"ALL":"CANCELLED");}}/>
               <div className="ml-auto flex flex-wrap justify-end gap-2">
                 {!editingItem.checklistOnly && editingItem.status !== "CANCELLED" && !isContinuousWork(editingItem.workType) && !isPersonalEvent(editingItem.workType) && editingItem.progressMode !== "CHECKLIST" && editingItem.access !== "VIEWER" && <AsyncActionButton variant="quiet" density="compact" type="button" pending={completionMutation.isPending(`complete:${editingItem.id}`)} pendingLabel="Đang lưu…" disabled={pending} onClick={() => completeWork(editingItem)}><Check className="h-4 w-4"/>{editingItem.status === "DONE" ? "Mở lại" : "Hoàn thành"}</AsyncActionButton>}
                 <AdminButton variant="quiet" density="compact"
@@ -1490,9 +1480,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                   onClick={() => setEditingItem(null)}
                   className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
                 >
-                  {editingItem.checklistOnly?"Đóng":"Hủy"}
+                  Đóng
                 </AdminButton>
-                {!editingItem.checklistOnly && <AdminButton variant="primary"
+                {!editingItem.checklistOnly && editingItem.status!=="CANCELLED" && <AdminButton variant="primary"
                   type="submit"
                   disabled={pending || completionMutation.hasPending || checklistMutation.hasPending || editingItem.access === "VIEWER"}
                   className="rounded-lg bg-slate-950 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"

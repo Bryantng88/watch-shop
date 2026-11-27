@@ -6,8 +6,8 @@ import type { PersonalWorkCategory } from "../shared/personal-work.types";
 import { AdminViewTabs } from "@/domains/shared/ui/admin-design-contract";
 import styles from "./PersonalWorkList.module.css";
 import { PersonalWorkFloatingPanel } from "./PersonalWorkFloatingPanel";
-export type WorkListView = "TODAY" | "OVERDUE" | "UPCOMING" | "ALL" | "EVENTS" | "DONE";
-export const PERSONAL_WORK_VIEWS = [["TODAY", "Hôm nay"], ["OVERDUE", "Quá hạn"], ["UPCOMING", "Sắp tới"], ["ALL", "Tất cả"], ["EVENTS", "Sự kiện"], ["DONE", "Đã xong"]] as const;
+export type WorkListView = "TODAY" | "OVERDUE" | "UPCOMING" | "ALL" | "EVENTS" | "DONE" | "CANCELLED";
+export const PERSONAL_WORK_VIEWS = [["TODAY", "Hôm nay"], ["OVERDUE", "Quá hạn"], ["UPCOMING", "Sắp tới"], ["ALL", "Tất cả"], ["EVENTS", "Sự kiện"], ["DONE", "Đã xong"], ["CANCELLED", "Đã hủy"]] as const;
 export function PersonalWorkListToolbar({ inline = false, hideViews = false, view, onView, scope, onScope, domain, onDomain, categories, onManage }: {
   inline?: boolean; hideViews?: boolean; view: WorkListView; onView: (value: WorkListView) => void;
   scope: "MINE" | "SHARED" | "ALL"; onScope: (value: "MINE" | "SHARED" | "ALL") => void;

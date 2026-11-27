@@ -1,5 +1,7 @@
 "use server";
 
+import { calendarScheduleInput } from "../shared/personal-work-schedule";
+import { isContinuousWork } from "../shared/continuous-work";
 import { prisma } from "@/server/db/client";
 import { MediaMergeError } from "../shared/media-merge";
 import { previewMediaMerge, mergeMediaWork } from "../server/media-merge.service";
@@ -25,7 +27,6 @@ import {
 } from "../server/personal-work.service";
 import {
   updatePersonalGoogleCalendarEvent,
-  deletePersonalTaskFromGoogle,
   googleCalendarAuthorizationUrl,
   syncPersonalTaskToGoogle,
 } from "../server/google-calendar.service";
@@ -33,7 +34,7 @@ import type { PersonalWorkDomain, PersonalWorkTarget, PersonalWorkTargetType } f
 import { savePersonalCategory, deletePersonalCategory } from "../server/personal-work-categories.service";
 import { listPersonalPhotoshootPlans, schedulePersonalWatchPhotoshoot } from "../server/personal-photoshoot.service";
 import type { PersonalPhotoshootInput } from "../shared/personal-photoshoot";
-import { updatePersonalWorkWithCalendar, finalizePersonalWorkWithCalendar } from "../server/personal-work-calendar-mutations";
+import { updatePersonalWorkWithCalendar, finalizePersonalWorkWithCalendar, cleanupCancelledPersonalCalendar } from "../server/personal-work-calendar-mutations";
 
 export async function savePersonalWorkCategoryAction(input: {key?:string;label:string;color:string}) {
   await savePersonalCategory(input, await auth());
@@ -166,15 +167,32 @@ export async function finalizePersonalWorkChecklistAction(taskItemId: string) {
   return result;
 }
 
-export async function deletePersonalWorkAction(id: string) {
-  const user = await auth();
-  await assertPersonalWorkAccess(id, user, "OWNER");
-  const userId = getAuthUserId(user);
-  if (!userId) throw new Error("Không xác định được người dùng");
-  await deletePersonalTaskFromGoogle(userId, id);
-  await updatePersonalWorkItem({ id, status: TaskStatus.CANCELLED }, user);
-  refresh();
-  return { ok: true };
+export async function cancelPersonalWorkAction(input:{id:string;reason:string;confirmRunning?:boolean}) {
+  const user=await auth();
+  if(typeof input.reason!=="string"||!input.reason.trim()||input.reason.length>2000)throw new Error("Nhập lý do hủy, tối đa 2000 ký tự.");
+  await updatePersonalWorkItem({id:input.id,status:"CANCELLED",updateBody:input.reason,confirmRunning:input.confirmRunning},user);
+  const cleanup=await cleanupCancelledPersonalCalendar(input.id);
+  refresh();return {ok:true,calendarCleanupFailed:cleanup.calendarSync==="FAILED"};
+}
+
+export async function restorePersonalWorkAction(input:{id:string;date?:string}) {
+  const user=await auth();
+  const item=await assertPersonalWorkAccess(input.id,user,"OWNER",prisma,true);
+  if(item.status==="DONE")throw new Error("Không mở lại việc hoàn thành qua thao tác khôi phục việc đã hủy.");
+  if(item.status!=="CANCELLED")return {ok:true};
+  let schedule:Partial<{dueAt:string|null;scheduledEndAt:string|null;estimatedDays:number}>={};
+  if(!isContinuousWork(item.workTypeId)&&!item.id.startsWith("media-daily-")){
+    if(input.date){if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||new Date(input.date+"T00:00:00Z").toISOString().slice(0,10)!==input.date)throw new Error("Ngày không hợp lệ");schedule={...calendarScheduleInput(input.date,"","",1),estimatedDays:1};}
+    else if(item.workTypeId==="EVENT")throw new Error("Chọn ngày diễn ra sự kiện khi mở lại.");
+    else schedule={dueAt:null,scheduledEndAt:null,estimatedDays:1};
+  }
+  await updatePersonalWorkItem({id:input.id,restoreCancelled:true,status:isContinuousWork(item.workTypeId)||item.workTypeId!=="EVENT"&&item.startedAt?"IN_PROGRESS":"TODO",...schedule},user);
+  refresh();return {ok:true};
+}
+
+// Compatibility for older clients; cancellation still preserves the audit trail.
+export async function deletePersonalWorkAction(id:string){
+  return cancelPersonalWorkAction({id,reason:"Hủy từ giao diện cũ"});
 }
 
 export async function replacePersonalWorkSharesAction(input: {
