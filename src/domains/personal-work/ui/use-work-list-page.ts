@@ -40,7 +40,7 @@ export function useWorkListPage(enabled: boolean, query: WorkListQuery, source: 
   const hasMore=state.key===key&&Boolean(state.cursor);
   useEffect(()=>{
     if(!enabled||!hasMore||state.loading||state.error||!sentinel.current)return;
-    const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting))void load();},{rootMargin:"180px"});
+    const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting))void load();},{root:sentinel.current.closest('[role="list"]'),rootMargin:"180px 0px"});
     observer.observe(sentinel.current);return()=>observer.disconnect();
   },[enabled,hasMore,state.loading,state.error,load]);
   return {...state,items:state.key===key?state.items:[],loading:state.key!==key||state.loading,hasMore,sentinel,retry:()=>load(current.current.error?failedReset.current:!current.current.items.length)};

@@ -1,4 +1,8 @@
 .pane { container: work-list / inline-size; min-width: 0; }
+.listViewport { flex: 0 0 auto; min-width: 0; height: clamp(280px, calc(100dvh - 300px), 680px); overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; padding-right: 4px; }
+.listViewport::-webkit-scrollbar { width: 6px; }
+.listViewport::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.listViewport:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
 .viewTabs { flex: 1; min-width: 0; }
 .toolbar { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; padding: 6px 0; }
 .filters { position: absolute; top: calc(100% + 2px); right: 0; z-index: 35; width: 288px; max-width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: white; box-shadow: 0 10px 25px #0f172a12; }

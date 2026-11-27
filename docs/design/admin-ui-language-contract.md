@@ -1801,3 +1801,8 @@ Place a 7px noninteractive status dot immediately after the task title, with an 
 Load detailed list rows from the server in batches of 30. Use a stable cursor and a near-end sentinel; keep a quiet load-more/retry control as fallback. Preserve loaded rows on failure, ignore superseded filter requests and retain loaded depth/scroll when closing detail or refreshing the same view. A filter change starts at the first page.
 
 Use the shared navigation count slot for all work views, including zero. Counts follow the same permission-projected scope, category, day boundaries and view predicate as list selection, across the entire result. Keep a lightweight authorized schedule index for calendar/counts; omit history, object hydration and Codex runs from that index. Fetch full detail on demand for calendar links or deep links outside loaded rows. Partial checklist shares remain server-projected and never reveal parent-only fields.
+
+
+### Bounded work list viewport (2026-11-27)
+
+The work list is a bounded, keyboard-focusable internal scroll pane on phone and desktop. Its viewport height follows the screen within 280–680px and stays constant as pages append; the page and adjacent calendar must not grow with the number of work rows. Observe the near-end sentinel relative to this pane. Preserve its scrollTop when returning from details and reset it when filters change. Use the existing flat list, a thin native scrollbar and no additional card. Continuous work has no leading infinity icon or reserved icon slot; its metadata line Duy trì liên tục is sufficient.

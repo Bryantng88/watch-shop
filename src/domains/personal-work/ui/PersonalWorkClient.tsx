@@ -936,9 +936,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           </section>
         )}
 
-        <section className={`${listStyles.pane} order-1 bg-transparent xl:flex xl:min-h-[560px] xl:flex-col`}>
+        <section className={`${listStyles.pane} order-1 flex min-h-0 flex-col bg-transparent`}>
           {listOnly && <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><PersonalWorkListToolbar hideViews={!listOnly} view={view} onView={setView} counts={viewCounts} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />{mediaMergeAction}</div>}
-          <div role="list" aria-label="Công việc" className="min-w-0 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1">
+          <div role="list" aria-label="Công việc" tabIndex={0} className={listStyles.listViewport}>
             {items.length ? (
               items.map((item) => {
                 const late = !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && item.status !== "DONE" && isPastDueDate(item.scheduledEndAt || item.dueAt, now);
