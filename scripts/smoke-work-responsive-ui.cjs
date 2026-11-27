@@ -99,7 +99,7 @@ if (require.main === module) (async () => {
     await page.waitForFunction(() => window.__actions?.some(a => a.name === 'updatePersonalWorkAction'));
     const action = await page.evaluate(() => window.__actions.find(a => a.name === 'updatePersonalWorkAction')); assert.deepEqual(action.input, { id: 'item-29', status: 'DONE' });
     await row(28).getByRole('button', { name: /^Mở CV-28:/ }).click();
-    await page.getByRole('button', { name: 'Hủy', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Đóng', exact: true }).waitFor();
     assert.equal(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count(), 1);
     await page.getByRole('dialog').getByRole('button', {name:'Thêm thao tác cho Đầu việc 1',exact:true}).click();
     await page.getByRole('menuitem', {name:'Mở media',exact:true}).click();
@@ -109,7 +109,7 @@ if (require.main === module) (async () => {
     assert.equal(await page.getByRole('dialog').getByPlaceholder('Ví dụ: báo cáo, codex (ngăn cách bằng dấu phẩy)').isVisible().catch(()=>false), false);
 
     assert.equal((await page.evaluate(() => window.__actions)).filter(a => a.name === 'updatePersonalWorkAction').length, 1); // Opening never mutates work.
-    await page.getByRole('button', { name: 'Hủy', exact: true }).click();
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(origin + '/?full=1');
     await page.locator('[data-work-row]').first().waitFor();
