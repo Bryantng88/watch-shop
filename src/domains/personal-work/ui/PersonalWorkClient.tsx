@@ -580,7 +580,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 const created = await createPersonalWorkAction({
                   title: nextTitle,
                   reminderMinutes:creatingContinuous?null:reminderMinutes,
-                  tags: parsePersonalWorkTags(newTags),
+                    tags: creatingContinuous ? [] : parsePersonalWorkTags(newTags),
                   domain: creatingEvent ? "GENERAL" : newDomain,
                   categoryKey: creatingEvent ? "GENERAL" : newCategoryKey,
                   workType,
@@ -652,7 +652,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {creatingContinuous?"Thêm việc duy trì":creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </AdminButton>
           </div>
-          <details className="mt-2 text-sm">
+          {!creatingContinuous && <details className="mt-2 text-sm">
             <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</AdminDisclosureSummary>
             <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
               {!creatingContinuous&&<><label className="flex items-center gap-2 text-xs text-slate-600">
@@ -669,7 +669,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               </label>
               </>}<PersonalWorkTagsField allowCodex={!creatingEvent&&!creatingContinuous} value={newTags} onChange={setNewTags} configuration={data.codex} />
             </div>
-          </details>
+          </details>}
           {!isContinuousWork(workType)&&!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
