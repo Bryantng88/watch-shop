@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Private owner-checked images must bypass optimizer caches. */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2, Trash2, RefreshCw } from "lucide-react";
+import { Loader2, X, RefreshCw } from "lucide-react";
 import { WorkAttachmentIcon } from "@/domains/shared/ui/icons/MediaIcons";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useAppDialog } from "@/domains/shared/feedback";
@@ -70,8 +70,11 @@ export function WorkImageAttachments({workId,entryId,compact=false,inline=false,
    {error&&<div role="alert" className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-rose-700"><span className="min-w-0 break-words">{error}</span><AdminButton variant="quiet" density="compact" type="button" disabled={pending} onClick={()=>retry?void upload(retry):void load()}><RefreshCw className="h-3.5 w-3.5"/>Thử lại</AdminButton></div>}
    {data?.items.length===0&&<p className="text-xs text-slate-500">Chưa có ảnh đính kèm.</p>}
    {data&&<ul className="flex flex-wrap gap-3">{data.items.map(item=><li key={item.id} className="w-24 min-w-0">
+    <div className="relative h-24 w-24">
     {item.url?<a href={item.url} target="_blank" rel="noreferrer" title={`Mở ${item.name}`}><img src={`${item.url}?size=thumb`} alt={item.name} className="h-24 w-24 rounded-lg bg-slate-50 object-cover" loading="lazy" onError={event=>{event.currentTarget.alt="Ảnh không còn khả dụng; tải lại danh sách.";}}/></a>:<div className="grid h-24 place-items-center rounded-lg bg-slate-50 p-2 text-center text-xs text-slate-500">{item.state==="FAILED"?"Tải ảnh chưa hoàn tất":"Đang tải ảnh…"}</div>}
-    <div className="mt-1 flex items-start gap-1"><span className="min-w-0 flex-1 break-words text-xs text-slate-500">{item.name}</span>{data.canEdit&&<AdminButton variant="quiet" density="compact" iconOnly type="button" aria-label={`Gỡ ${item.name}`} disabled={pending} onClick={()=>void remove(item.id)}><Trash2 className="h-3.5 w-3.5"/></AdminButton>}</div>
+    {data.canEdit&&<AdminButton variant="secondary" density="compact" iconOnly type="button" className="absolute right-1 top-1" title={`Gỡ ${item.name}`} aria-label={`Gỡ ${item.name}`} disabled={pending} onClick={()=>void remove(item.id)}><X className="h-4 w-4"/></AdminButton>}
+    </div>
+    <p className="mt-1 truncate text-xs text-slate-500" title={item.name}>{item.name}</p>
    </li>)}</ul>}
    {data?.canEdit&&<p className="text-xs text-slate-400">Bấm Thêm ảnh để chọn ảnh trên điện thoại hoặc máy tính. Ảnh được lưu ngay, không cần bấm Lưu thay đổi. JPEG/PNG/WebP, tối đa 10 MB/ảnh.</p>}
   </div>}
