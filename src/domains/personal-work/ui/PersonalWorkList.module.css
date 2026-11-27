@@ -56,8 +56,9 @@
 
 .titleText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .statusDot { display: inline-block; width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; }
-.statusOpen { background: #f59e0b; animation: work-status-pulse 1.8s ease-in-out infinite; }
+.statusOpen { position: relative; margin: 4px; background: #f59e0b; box-shadow: 0 0 0 2px #f59e0b22; }
+.statusOpen::after { content: ""; position: absolute; inset: -2px; border: 1px solid #f59e0b; border-radius: 50%; pointer-events: none; animation: work-status-halo 2s ease-out infinite; }
 .statusLate { background: #f43f5e; }
 .statusDone { background: #10b981; }
-@keyframes work-status-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
-@media (prefers-reduced-motion: reduce) { .statusOpen { animation: none; } }
+@keyframes work-status-halo { 0% { transform: scale(.7); opacity: .7; } 75%, 100% { transform: scale(1.25); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .statusOpen::after { animation: none; opacity: .35; transform: none; } }
