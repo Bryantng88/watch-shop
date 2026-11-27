@@ -1,3 +1,4 @@
+import { isContinuousWork } from "../../shared/continuous-work";
 import {
   codexReadyWhere,
   personalCodexPrompt,
@@ -75,6 +76,7 @@ export async function requestPersonalCodexRun(
   const item = await ownerItem(taskItemId, userId, db);
   if (!item || !["TODO", "IN_PROGRESS"].includes(item.status))
     throw new Error("CODEX_OWNER_ACTIVE_TASK_REQUIRED");
+  if(isContinuousWork(item.workTypeId))throw new Error("CODEX_CONTINUOUS_NOT_EXECUTABLE");
   if (item.workTypeId === "EVENT")
     throw new Error("CODEX_EVENT_NOT_EXECUTABLE");
   if (!(await hasCodexTag(taskItemId, db)))

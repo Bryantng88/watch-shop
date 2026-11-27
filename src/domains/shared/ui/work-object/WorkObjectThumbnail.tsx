@@ -9,7 +9,7 @@ export function WorkObjectThumbnail({
   size = F.thumbnail.row,
 }: {
   object: { label: string; imageUrl?: string | null };
-  size?: 28 | 32 | 40 | 48;
+  size?: 28 | 32 | 36 | 40 | 48;
 }) {
   const src = resolveMediaPreviewSrc(object.imageUrl);
   return (

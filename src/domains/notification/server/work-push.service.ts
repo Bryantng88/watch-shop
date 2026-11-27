@@ -35,7 +35,7 @@ export async function queuePersonalChange(db: DB, id: string, actorId: string, k
 
 export async function runWorkPush(now = new Date(), send: typeof sendNotification = sendNotification) {
   // Catch up after short outages, without flooding users with old reminders.
-  const items = await prisma.taskItem.findMany({ where: { personalOwnerUserId: { not: null }, status: { notIn: ["DONE", "CANCELLED"] },
+  const items = await prisma.taskItem.findMany({ where: { personalOwnerUserId: { not: null }, mergedIntoTaskItemId:null, status: { notIn: ["DONE", "CANCELLED"] },
     reminderMinutes: {not:null}, dueAt: { gte: new Date(now.getTime() - 15 * 60000), lte: new Date(now.getTime()+60*60000) } }, include: { personalShares: true }, orderBy: [{dueAt:"asc"},{id:"asc"}], take: 500 });
   for (const item of items) {
     if (!personalEventTiming(item).timed || !item.dueAt || item.reminderMinutes===null || item.dueAt.getTime()-item.reminderMinutes*60000 > now.getTime() || item.dueAt.getTime()-item.reminderMinutes*60000 < now.getTime()-15*60000) continue;
@@ -44,7 +44,7 @@ export async function runWorkPush(now = new Date(), send: typeof sendNotificatio
       // Recheck under row lock: cancellation/rescheduling must win before enqueue.
       await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${item.id} FOR UPDATE`;
       const current = await tx.taskItem.findUnique({where:{id:item.id},include:{personalShares:true}});
-      if (!current || ["DONE","CANCELLED"].includes(current.status) || current.dueAt?.getTime() !== item.dueAt?.getTime() || current.reminderMinutes !== item.reminderMinutes) return;
+      if (!current || current.mergedIntoTaskItemId || ["DONE","CANCELLED"].includes(current.status) || current.dueAt?.getTime() !== item.dueAt?.getTime() || current.reminderMinutes !== item.reminderMinutes) return;
       if (current.personalOwnerUserId !== userId && !current.personalShares.some(s=>s.userId===userId)) return;
       await queueWorkNotification(tx, { key: reminderKey(item.id, userId, item.dueAt!, item.reminderMinutes ?? 0), userId, taskItemId: item.id, kind: "REMINDER", title: current.title, route: workRoute(item.id, true) });
     });

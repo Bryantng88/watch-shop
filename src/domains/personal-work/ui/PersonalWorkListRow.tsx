@@ -1,9 +1,10 @@
 "use client";
+import { isContinuousWork } from "../shared/continuous-work";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CalendarDays, Check, Clock3, ExternalLink, Info, Loader2, Share2 } from "lucide-react";
+import { AlertTriangle, Infinity as InfinityIcon, CalendarDays, Check, Clock3, ExternalLink, Info, Loader2, Share2 } from "lucide-react";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 import { personalCategoryStyle, type PersonalWorkItem } from "../shared/personal-work.types";
 import { isPersonalEvent, personalEventTiming } from "../shared/personal-event";
@@ -19,6 +20,7 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
   completionPending?: boolean; justCompleted?: boolean;
   onOpen: () => void; onComplete: () => void;
 }) {
+  const continuous=isContinuousWork(item.workType);
   const event = isPersonalEvent(item.workType), timed = personalEventTiming(item).timed;
   const update = personalWorkUpdateLabel(item, now);
   const code = personalWorkCode(item.id, item.personalWorkNumber, item.workType);
@@ -34,7 +36,7 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
   const rowObject=item.targets.find(target=>target.imageUrl)||item.targets[0];
   const fullSchedule = `${late ? "Quá hạn · " : ""}${scheduleLabel}${item.estimatedDays > 1 ? ` · ${item.estimatedDays} ngày` : ""}`;
   return <div ref={root} role="listitem" data-work-row={item.id} className={`${styles.row} ${justCompleted ? "rounded-lg bg-emerald-50/70 transition-colors motion-reduce:transition-none" : ""}`} onClick={e => { if (!(e.target as HTMLElement).closest("button,a,input,select,textarea")) onOpen(); }}>
-    {event ? <span title="Sự kiện không cần hoàn thành" aria-label="Sự kiện không cần hoàn thành" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><CalendarDays className="h-4 w-4" /></span> : <AdminButton iconOnly variant="contextual" density="compact" type="button" aria-label={`${item.status === "DONE" ? "Mở lại" : "Đánh dấu hoàn thành"} ${code}`} aria-busy={completionPending} disabled={pending || item.access === "VIEWER"} onClick={onComplete} className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-blue-300 ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}>{completionPending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 motion-reduce:animate-none" /> : <Check className="h-3.5 w-3.5" />}</AdminButton>}
+    {event||continuous ? <span title={continuous?"Duy trì liên tục":"Sự kiện không cần hoàn thành"} aria-label={continuous?"Duy trì liên tục":"Sự kiện không cần hoàn thành"} className="grid h-8 w-8 shrink-0 place-items-center text-slate-400">{continuous?<InfinityIcon className="h-4 w-4"/>:<CalendarDays className="h-4 w-4" />}</span> : <AdminButton iconOnly variant="contextual" density="compact" type="button" aria-label={`${item.status === "DONE" ? "Mở lại" : "Đánh dấu hoàn thành"} ${code}`} aria-busy={completionPending} disabled={pending || item.access === "VIEWER"} onClick={onComplete} className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition focus-visible:ring-2 focus-visible:ring-blue-300 ${item.status === "DONE" ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-500"}`}>{completionPending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600 motion-reduce:animate-none" /> : <Check className="h-3.5 w-3.5" />}</AdminButton>}
     {rowObject&&<WorkObjectThumbnail object={rowObject}/>}
     <div className={styles.body}>
       <div data-work-headline className={styles.headline}>
@@ -50,8 +52,8 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
       </div>
       <div data-work-meta className={styles.meta}>
         {late && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600" aria-label="Quá hạn" />}
-        <AdminButton variant="contextual" ref={scheduleTrigger} type="button" aria-label={`Lịch ${code}: ${fullSchedule}`} title={fullSchedule} aria-expanded={popup === "schedule"} onClick={() => setPopup(popup === "schedule" ? null : "schedule")} className={`${styles.schedule} focus-visible:ring-2 focus-visible:ring-blue-300`}><Clock3 className="h-3 w-3" />{timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa có lịch"}{showDate && item.dueAt && <span> · {compactDate}</span>}</AdminButton>
-        {!event && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && <span role="progressbar" aria-label={`Tiến độ ${item.title}`} aria-valuenow={item.progressPercent} aria-valuemin={0} aria-valuemax={100} className={styles.progress} title={`${item.checklist.filter(e => e.isDone).length}/${item.checklist.length} đầu việc · ${item.progressPercent}%`}><span className={styles.track}><span style={{ width: `${item.progressPercent}%` }} /></span><span>{item.checklist.filter(e => e.isDone).length}/{item.checklist.length}<span className={styles.percent}> · {item.progressPercent}%</span></span></span>}
+        {continuous?<span className="text-xs text-slate-500">Duy trì liên tục</span>:(<AdminButton variant="contextual" ref={scheduleTrigger} type="button" aria-label={`Lịch ${code}: ${fullSchedule}`} title={fullSchedule} aria-expanded={popup === "schedule"} onClick={() => setPopup(popup === "schedule" ? null : "schedule")} className={`${styles.schedule} focus-visible:ring-2 focus-visible:ring-blue-300`}><Clock3 className="h-3 w-3" />{timed && item.dueAt ? scheduleTime(item.dueAt) : item.dueAt ? "Cả ngày" : "Chưa có lịch"}{showDate && item.dueAt && <span> · {compactDate}</span>}</AdminButton>)}
+        {!continuous&&!event && item.progressMode === "CHECKLIST" && item.checklist.length > 0 && <span role="progressbar" aria-label={`Tiến độ ${item.title}`} aria-valuenow={item.progressPercent} aria-valuemin={0} aria-valuemax={100} className={styles.progress} title={`${item.checklist.filter(e => e.isDone).length}/${item.checklist.length} đầu việc · ${item.progressPercent}%`}><span className={styles.track}><span style={{ width: `${item.progressPercent}%` }} /></span><span>{item.checklist.filter(e => e.isDone).length}/{item.checklist.length}<span className={styles.percent}> · {item.progressPercent}%</span></span></span>}
         {update && <PersonalWorkUpdateHint labelClassName={styles.updateLabel} text={item.checklistOnly ? "Đầu việc được chia sẻ vừa cập nhật" : item.activities[0]?.body || update.detail} time={update.label.replace(/^Cập nhật /, "")} />}
         <span data-work-code title={code} className={styles.code}>{code}</span>
       </div>
