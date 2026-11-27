@@ -214,6 +214,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const [estimatedDays, setEstimatedDays] = useState(1);
   const [message, setMessage] = useState<string | null>(null);
   const [messageIsError, setMessageIsError] = useState(false);
+  const [quickOptionsOpen, setQuickOptionsOpen] = useState(false);
+  const quickOptionsTrigger = useRef<HTMLButtonElement>(null);
+  const closeQuickOptions = useCallback(() => setQuickOptionsOpen(false), []);
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
   const calendarSettingsTrigger = useRef<HTMLButtonElement>(null);
@@ -644,6 +647,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
 
             <PersonalWorkTimeFields endOptional compact start={quickStartTime} end={quickEndTime} onChange={(start, end) => { setQuickStartTime(start); setQuickEndTime(end); }} />
             </>}
+            {!creatingContinuous && <AdminButton ref={quickOptionsTrigger} iconOnly variant="quiet" density="compact" type="button" aria-label="Tùy chọn tạo việc" title="Tùy chọn tạo việc" aria-expanded={quickOptionsOpen} onClick={()=>setQuickOptionsOpen(open=>!open)}><Settings2 className="h-4 w-4"/>{(estimatedDays!==1||reminderMinutes!==0||newTags.trim())&&<span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-label="Đã chỉnh tùy chọn"/>}</AdminButton>}
             <AdminButton variant="primary"
               type="submit"
               disabled={pending}
@@ -652,24 +656,24 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               {creatingContinuous?"Thêm việc duy trì":creatingEvent?"Thêm sự kiện":"Thêm việc"}
             </AdminButton>
           </div>
-          {!creatingContinuous && <details className="mt-2 text-sm">
-            <AdminDisclosureSummary className="w-fit cursor-pointer text-xs text-slate-500 hover:text-slate-800">Thêm tùy chọn</AdminDisclosureSummary>
-            <div className="mt-2 flex max-w-2xl flex-wrap items-start gap-3">
-              {!creatingContinuous&&<><label className="flex items-center gap-2 text-xs text-slate-600">
+          {quickOptionsOpen && !creatingContinuous && <PersonalWorkFloatingPanel anchor={quickOptionsTrigger.current} onClose={closeQuickOptions} label="Tùy chọn tạo việc" className="rounded-lg border border-slate-200 bg-white p-3 shadow-lg">
+            <div className="mb-3 flex items-center justify-between gap-2"><h3 className="text-sm font-semibold text-slate-950">Tùy chọn tạo việc</h3><AdminButton variant="quiet" density="compact" type="button" onClick={()=>{closeQuickOptions();quickOptionsTrigger.current?.focus();}}>Xong</AdminButton></div>
+            <div className="space-y-3">
+              {!creatingContinuous&&<><label className="flex items-center justify-between gap-3 text-xs text-slate-600">
                 Số ngày dự kiến
                 <input type="number" min={1} max={365} value={estimatedDays}
                   onChange={event => setEstimatedDays(Number(event.target.value) || 1)}
                   className="h-9 w-20 rounded-lg border border-slate-200 px-2" />
               </label>
-              <label className="flex items-center gap-2 text-xs text-slate-600">Nhắc lịch
-                <select aria-label="Nhắc lịch" className="h-9 rounded-lg border border-slate-200 px-2" value={reminderMinutes === null ? "off" : reminderMinutes} onChange={e=>setReminderMinutes(e.target.value==="off"?null:Number(e.target.value))}>
+              <label className="flex items-center justify-between gap-3 text-xs text-slate-600">Nhắc lịch
+                <select aria-label="Nhắc lịch" className="h-9 w-32 rounded-lg border border-slate-200 px-2" value={reminderMinutes === null ? "off" : reminderMinutes} onChange={e=>setReminderMinutes(e.target.value==="off"?null:Number(e.target.value))}>
                   <option value="off">Không nhắc</option><option value="0">Đúng giờ</option>
                   {[10,15,30,60].map(m=><option key={m} value={m}>Trước {m} phút</option>)}
                 </select>
               </label>
               </>}<PersonalWorkTagsField allowCodex={!creatingEvent&&!creatingContinuous} value={newTags} onChange={setNewTags} configuration={data.codex} />
             </div>
-          </details>}
+          </PersonalWorkFloatingPanel>}
           {!isContinuousWork(workType)&&!isPersonalEvent(workType) && domainTargets[newDomain].length > 0 && (
             <div className="mt-3 grid gap-3 rounded-lg bg-slate-50 p-3 md:grid-cols-[220px_180px_minmax(0,1fr)_auto]">
               <label className="space-y-1">
