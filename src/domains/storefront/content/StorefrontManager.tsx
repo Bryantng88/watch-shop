@@ -24,6 +24,8 @@ import {
   type HomeContent,
   emptyImage,
 } from "./contract";
+import { FeaturedWatchImageEditor } from "./FeaturedWatchImageEditor";
+import type { FeaturedImage } from "./contract";
 import type { PublicWatchCard } from "../contracts";
 import "./manager.css";
 
@@ -196,8 +198,9 @@ function ImageField({
     </fieldset>
   );
 }
-function ProductPicker({ ids, onChange }: { ids: string[]; onChange: (v: string[]) => void }) {
+function ProductPicker({ ids, onChange, imageOverrides, onImageChange }: { ids: string[]; onChange: (v: string[]) => void; imageOverrides?: Record<string,FeaturedImage>; onImageChange?: (id:string,value:FeaturedImage|undefined)=>void }) {
   const [q, setQ] = useState("");
+  const [imageEditors,setImageEditors]=useState<Record<string,boolean>>({});
   const [items, setItems] = useState<PublicWatchCard[]>([]);
   const [selected, setSelected] = useState<PublicWatchCard[]>([]);
   const [error, setError] = useState("");
@@ -246,7 +249,7 @@ function ProductPicker({ ids, onChange }: { ids: string[]; onChange: (v: string[
         Chỉ hiển thị đồng hồ đủ điều kiện public. Tên, giá và tình trạng luôn lấy từ kho.
       </p>
       {ids.map((id, i) => (
-        <div className="sfc-product" key={id}>
+        <div key={id}><div className="sfc-product">
           <span>
             {i + 1}.{" "}
             {selected.find((p) => p.productId === id)?.title ||
@@ -275,6 +278,8 @@ function ProductPicker({ ids, onChange }: { ids: string[]; onChange: (v: string[
           >
             <X size={14} />
           </AdminButton>
+        </div>
+        {onImageChange&&<details className="sfc-advanced" onToggle={event=>{const open=event.currentTarget.open;setImageEditors(current=>({...current,[id]:open}));}}><AdminDisclosureSummary>Ảnh hiển thị & căn chỉnh</AdminDisclosureSummary>{imageEditors[id]&&<FeaturedWatchImageEditor productId={id} cover={selected.find(product=>product.productId===id)?.image} value={imageOverrides?.[id]} onChange={value=>onImageChange(id,value)}/>}</details>}
         </div>
       ))}
       <input
@@ -720,10 +725,12 @@ export default function StorefrontManager({
                   </p>
                   <ProductPicker
                     ids={home.featured.productIds}
+                    imageOverrides={home.featured.images}
+                    onImageChange={(id,value)=>{const images={...home.featured.images};if(value)images[id]=value;else delete images[id];edit({...home,featured:{...home.featured,images}});}}
                     onChange={(productIds) =>
                       edit({
                         ...home,
-                        featured: { ...home.featured, productIds },
+                        featured: { ...home.featured, productIds, images: Object.fromEntries(Object.entries(home.featured.images || {}).filter(([id])=>productIds.includes(id))) },
                       })
                     }
                   />

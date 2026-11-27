@@ -1,7 +1,7 @@
 import Link from "next/link";
 import React, { type CSSProperties } from "react";
 import PublicWatchCardView from "../ui/PublicWatchCard";
-import type { PublicWatchCard } from "../contracts";
+import type { PublicWatchCard, PublicWatchImage } from "../contracts";
 import type { EditorialImage, HomeContent, ArticleContent } from "./contract";
 
 export type DisplayImage = EditorialImage & { url: string };
@@ -61,7 +61,7 @@ export function Paragraphs({ text }: { text: string }) {
 export type HomeViewData = {
   content: HomeContent;
   images: Record<string, DisplayImage>;
-  watches: PublicWatchCard[];
+  watches: (PublicWatchCard & {featuredImage?:PublicWatchImage})[];
   journal: { id: string; content: ArticleContent; image?: DisplayImage } | null;
 };
 export default function HomeView({ content: c, images, watches, journal }: HomeViewData) {
@@ -109,7 +109,7 @@ export default function HomeView({ content: c, images, watches, journal }: HomeV
         </div>
         <div className="vg-products">
           {watches.map((watch) => (
-            <PublicWatchCardView key={watch.productId} watch={watch} />
+            <PublicWatchCardView key={watch.productId} watch={watch} featuredImage={watch.featuredImage} framing={c.featured.images?.[watch.productId]} />
           ))}
         </div>
       </section>

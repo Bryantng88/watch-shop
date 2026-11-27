@@ -363,6 +363,7 @@
 }
 .vg-header > nav {
   display: flex;
+  align-items: center;
   gap: 30px;
   font-size: 12px;
 }
@@ -1100,6 +1101,8 @@
   gap: 5px;
 }
 .vg-header-shop > details > summary {
+  display: flex;
+  align-items: center;
   list-style: none;
   cursor: pointer;
   padding: 8px 2px;

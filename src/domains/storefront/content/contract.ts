@@ -42,6 +42,13 @@ export const sectionSchema = z.object({
   id: z.enum(sectionIds),
   enabled: z.boolean(),
 });
+export const featuredImageSchema = z.object({
+  imageId: text(100),
+  focalX: z.number().min(0).max(100),
+  focalY: z.number().min(0).max(100),
+  zoom: z.number().min(1).max(2),
+});
+export type FeaturedImage = z.infer<typeof featuredImageSchema>;
 export const homeSchema = z.object({
   sections: z
     .array(sectionSchema)
@@ -59,6 +66,7 @@ export const homeSchema = z.object({
   }),
   featured: z.object({
     title: text(100),
+    images: z.record(z.string().min(1).max(100), featuredImageSchema).refine(v => Object.keys(v).length <= 12, "Tối đa 12 ảnh nổi bật.").optional(),
     productIds: z
       .array(text(100).min(1))
       .max(12)

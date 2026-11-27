@@ -50,7 +50,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     if (req.url.startsWith('/api/admin/storefront/content')) return reply({ record, articles: [] });
     if (req.url.startsWith('/api/admin/storefront/media/library')) return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], nextCursor: null, truncated: false });
     if (req.url === '/api/admin/storefront/media') return reply({ items: [{ key, name: 'Ảnh mẫu', url: '/image.svg' }], truncated: false });
-    if (req.url.startsWith('/api/admin/storefront/products')) return reply({ items: [] });
+    if (req.url.startsWith('/api/admin/storefront/products?gallery=')) return reply({images:[{id:'gallery-1',url:'/image.svg',alt:'Ảnh nổi bật'}]});
+    if (req.url.startsWith('/api/admin/storefront/products')) return reply({items:[{productId:'p1',title:'Đồng hồ mẫu',image:{url:'/image.svg',alt:'Cover mẫu'}}]});
     if (req.url.startsWith('/storefront-preview')) { res.setHeader('Content-Type', 'text/html'); return res.end('<p>Bản xem trước nháp</p>'); }
     if (req.url === '/image.svg') { res.setHeader('Content-Type', 'image/svg+xml'); return res.end('<svg xmlns="http://www.w3.org/2000/svg" width="140" height="115"><rect width="140" height="115" fill="#e2e8f0"/></svg>'); }
     res.setHeader('Content-Type', 'text/html');
@@ -89,6 +90,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     assert.equal(await page.getByRole('link', {name:/Thư viện ảnh website|Mở website/}).count(), 0, 'home editor omits removed shortcuts');
     assert.equal(await page.locator('.sfc-section-editor:visible').count(), 1);
     await page.getByLabel('Tông màu khối mở đầu').selectOption('charcoal');
+    await nav.getByRole('button',{name:/^Đồng hồ nổi bật/}).click();
+    await page.getByRole('button',{name:'Đồng hồ mẫu',exact:true}).click();
+    await page.getByText('Ảnh hiển thị & căn chỉnh',{exact:true}).click();
+    await page.getByRole('button',{name:'Chọn ảnh gallery 1',exact:true}).click();
+    await page.getByLabel(/^Ngang/).fill('30');await page.getByLabel(/^Dọc/).fill('65');await page.getByLabel(/^Phóng to/).fill('1.3');
     await nav.getByRole('button', { name: /^Về Vintic/ }).click();
     const about = page.locator('#home-editor-about');
     const hint = about.getByText('Ảnh không bắt buộc. Chưa chọn ảnh: phần giới thiệu hiển thị dạng văn bản gọn.', { exact: true });
@@ -114,6 +120,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
     await page.getByRole('button', { name: 'Xuất bản', exact: true }).click();
     await page.waitForFunction(() => window.__successes?.includes('Đã xuất bản phiên bản mới.'));
     assert.equal(published.about.title, 'Giới thiệu vẫn giữ khi đổi khối'); assert.equal(published.about.image.key, '');
+    assert.deepEqual(published.featured.images,{p1:{imageId:'gallery-1',focalX:30,focalY:65,zoom:1.3}});
     assert.equal(published.hero.theme, 'charcoal'); assert.deepEqual(mutations, ['save', 'save', 'publish']);
     for (const width of [320, 390, 768, 1280, 1440]) {
       await page.setViewportSize({ width, height: 1000 });

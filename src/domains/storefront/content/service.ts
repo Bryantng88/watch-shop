@@ -24,7 +24,7 @@ export async function readHome(draft = false): Promise<HomeContent> {
   });
   return homeSchema.parse((draft ? row?.draft : row?.published) ?? defaultHome());
 }
-export async function selectedWatches(ids: string[], fallback = false) {
+export async function selectedWatches(ids: string[], fallback = false, images: HomeContent["featured"]["images"] = {}) {
   if (!ids.length && !fallback) return [];
   const rows = await prisma.product.findMany({
     where: {
@@ -37,7 +37,13 @@ export async function selectedWatches(ids: string[], fallback = false) {
     take: ids.length || 4,
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
   });
-  const cards = rows.map(mapPublicWatchCard);
+  const imageIds=Object.values(images || {}).map(frame=>frame.imageId).filter(Boolean);
+  const selectedImages=imageIds.length ? await prisma.productImage.findMany({where:{id:{in:imageIds},productId:{in:rows.map(row=>row.id)},isForStorefront:true,fileKey:{not:""},role:{in:["COVER","GALLERY"]}},select:{id:true,productId:true,alt:true,width:true,height:true}}) : [];
+  const cards = rows.map(row => {
+    const card = mapPublicWatchCard(row);
+    const selected = selectedImages.find(image => image.productId === row.id && image.id === images?.[row.id]?.imageId);
+    return { ...card, featuredImage: selected ? { url: `/api/public/catalog/watches/${encodeURIComponent(row.id)}/images/${encodeURIComponent(selected.id)}`, alt: selected.alt || row.title, width: selected.width, height: selected.height } : undefined };
+  });
   return ids.length ? ids.flatMap((id) => cards.filter((c) => c.productId === id)) : cards;
 }
 export async function listArticles(draft = false) {
@@ -181,6 +187,10 @@ export async function saveContent(
             }))
           )
             throw new Error("Bài nổi bật phải được xuất bản trước.");
+          for (const [productId, frame] of Object.entries(home.featured.images || {})) {
+            if (!home.featured.productIds.includes(productId)) throw new Error("Ảnh nổi bật phải thuộc đồng hồ đã chọn.");
+            if (frame.imageId && !await tx.productImage.findFirst({where:{id:frame.imageId,productId,isForStorefront:true,fileKey:{not:""},role:{in:["COVER","GALLERY"]}},select:{id:true}})) throw new Error("Ảnh nổi bật không còn công khai hoặc không thuộc đồng hồ này. Hãy chọn lại.");
+          }
           const selectedIds = [...new Set(home.featured.productIds)];
           if (
             selectedIds.length &&

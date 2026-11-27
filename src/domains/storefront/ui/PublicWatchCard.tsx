@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { PublicWatchCard } from "../contracts";
+import type { PublicWatchCard, PublicWatchImage } from "../contracts";
 import { useStorefrontLocale } from "./StorefrontLocale";
 import { formatStorefrontWatchMoney } from "../shared/locale.utils";
 
@@ -15,26 +15,31 @@ function tagLabel(tag: string | null) {
 export default function PublicWatchCardView({
   watch,
   priority = false,
+  featuredImage,
+  framing,
 }: {
   watch: PublicWatchCard;
   priority?: boolean;
+  featuredImage?: PublicWatchImage;
+  framing?: { focalX: number; focalY: number; zoom: number };
 }) {
   const { locale, vndPerUsd } = useStorefrontLocale();
   return (
     <article
-      className={`storefront-card vgc-card${watch.hoverImage ? " storefront-card--has-hover" : ""}`}
+      className={`storefront-card vgc-card${!framing && !featuredImage && watch.hoverImage ? " storefront-card--has-hover" : ""}`}
     >
       <Link href={`/products/${watch.slug}`} className="storefront-focus vgc-card-link">
         <div className="vgc-card-media">
           <Image
-            src={watch.image.url}
-            alt={watch.image.alt}
+            src={featuredImage?.url || watch.image.url}
+            alt={featuredImage?.alt || watch.image.alt}
             fill
             priority={priority}
             sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 25vw, 20vw"
             className="storefront-card-image storefront-card-cover-image"
+            style={framing ? { objectPosition: `${framing.focalX}% ${framing.focalY}%`, transform: `scale(${framing.zoom})`, transformOrigin: `${framing.focalX}% ${framing.focalY}%` } : undefined}
           />
-          {watch.hoverImage ? (
+          {!framing && !featuredImage && watch.hoverImage ? (
             <Image
               src={watch.hoverImage.url}
               alt=""
