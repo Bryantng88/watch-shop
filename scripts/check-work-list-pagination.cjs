@@ -49,6 +49,24 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
   assert.ok(height>=280&&height<=680);await pane.evaluate(el=>{el.scrollTop=el.scrollHeight;});await page.waitForFunction(()=>document.querySelectorAll('[data-work-row]').length===60);
   assert.equal(await pane.evaluate(el=>el.clientHeight),height);assert.ok(Math.abs(await page.evaluate(()=>document.documentElement.scrollHeight)-documentHeight)<3);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }
- assert.deepEqual(errors,[]);console.log('PASS real work pagination: bounded internal scroll 30/60/88 without growing the page, exact full counts, automatic load, retry, no duplicates, filter races, refresh depth and detail scroll return');
+ // Preloaded rows paint without any initial page action, even if that action fails.
+ await page.addInitScript(()=>{window.__pageFail=true;window.__pageDelay=700;});
+ await page.goto(origin+'/?full=1&pagination=1&preloaded=1');await page.waitForFunction(()=>document.querySelectorAll('[data-work-row]').length===30);await page.waitForTimeout(150);
+ assert.equal(await page.evaluate(()=>(window.__actions||[]).filter(x=>x.name==='loadPersonalWorkPageAction').length),0);
+ assert.equal(await page.getByText(/^Đang tải (thêm )?công việc…$/).count(),0);
+ await page.locator('[data-work-row]').first().getByRole('button',{name:/^Mở CV/}).click();await page.getByRole('dialog').waitFor();await page.waitForTimeout(100);
+ assert.equal(await page.evaluate(()=>(window.__actions||[]).filter(x=>x.name==='loadPersonalWorkDetailAction').length),1);
+ await page.getByRole('button',{name:'Đóng',exact:true}).click();
+ // A link-only calendar snapshot must not trigger another list request.
+ const calendarItems=await page.evaluate(()=>window.__fixture.items.map(item=>({...item,calendar:{...item.calendar,lastSyncedAt:new Date().toISOString()}})));
+ let calendarReads=0;await page.route('**/api/admin/personal-work/calendar',route=>{calendarReads++;return route.fulfill({json:{items:calendarItems,events:[],lastSyncedAt:new Date().toISOString(),loadError:null}});});
+ await page.evaluate(()=>{window.__fixture={...window.__fixture,calendar:{...window.__fixture.calendar,configured:true,connected:true}};window.__renderFixture();});
+ await page.waitForTimeout(250);assert.ok(calendarReads>0);assert.equal(await page.evaluate(()=>(window.__actions||[]).filter(x=>x.name==='loadPersonalWorkPageAction').length),0);
+ await page.goto(origin+'/?view=list&pagination=1&preloaded=1&tiny=1');await page.waitForFunction(()=>document.querySelectorAll('[data-work-row]').length===2);await page.waitForTimeout(100);assert.equal(await page.evaluate(()=>(window.__actions||[]).filter(x=>x.name==='loadPersonalWorkPageAction').length),0);assert.equal(await page.getByText(/^Đang tải (thêm )?công việc…$/).count(),0);
+ // Non-preloaded fallback still presents just one initial loader/error/retry.
+ await page.goto(origin+'/?view=list&pagination=1');await page.getByText('Đang tải công việc…',{exact:true}).waitFor();assert.equal(await page.getByText(/^Đang tải (thêm )?công việc…$/).count(),1);
+ await page.getByRole('alert').filter({hasText:'Không tải được danh sách'}).waitFor();assert.equal(await page.getByRole('button',{name:'Thử lại',exact:true}).count(),1);
+ await page.evaluate(()=>window.__pageFail=false);await page.getByRole('button',{name:'Thử lại',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('[data-work-row]').length===30);
+ assert.deepEqual(errors,[]);console.log('PASS real work pagination: preloaded first paint with zero page actions, one detail read, calendar deduplication, single fallback loader, bounded internal scroll 30/60/88, exact full counts, automatic load, retry, no duplicates, filter races, refresh depth and detail scroll return');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -170,7 +170,10 @@ export type PersonalCalendarEvent = {
   linkedTaskItemId: string | null;
 };
 
+export type PersonalWorkListPage = {items: PersonalWorkItem[]; nextCursor: string | null; total: number; restart?: boolean};
+
 export type PersonalWorkPageData = {
+  initialList?: {query: import("./work-list-query").WorkListQuery; page: PersonalWorkListPage};
   pagination?: boolean;
   mergedWorkRedirects?:Record<string,string>;
   codex?: { ready: boolean; reason: string | null; canDispatch: boolean };
