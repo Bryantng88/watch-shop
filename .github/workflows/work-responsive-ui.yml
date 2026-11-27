@@ -13,6 +13,7 @@ on:
       - 'scripts/check-work-checklist-mobile.cjs'
       - 'scripts/check-media-merge-ui.cjs'
       - 'scripts/check-continuous-work-ui.cjs'
+      - 'scripts/check-work-cancellation-ui.cjs'
       - 'src/domains/personal-work/shared/continuous-work*'
       - 'src/domains/personal-work/shared/media-merge*'
       - 'src/domains/personal-work/server/media-merge*'
@@ -54,6 +55,7 @@ jobs:
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-checklist-mobile.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-media-merge-ui.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-continuous-work-ui.cjs
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-cancellation-ui.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

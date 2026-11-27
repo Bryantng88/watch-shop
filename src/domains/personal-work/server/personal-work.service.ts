@@ -1,3 +1,4 @@
+import { personalWorkTransition } from "../shared/personal-work-lifecycle";
 import { isContinuousWork, assertContinuousSchedule, assertContinuousUpdate } from "../shared/continuous-work";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import type { RecordedBusinessEvent } from "@/domains/event/server/business-event.service";
@@ -16,7 +17,7 @@ import {
   PersonalTaskShareAccess,
   TaskStatus,
   TaskProgressMode,
-  type Prisma,
+  Prisma,
   type TaskPriority,
 } from "@prisma/client";
 import { prisma, withDbTransaction, type DB } from "@/server/db/client";
@@ -61,6 +62,7 @@ export async function assertPersonalWorkAccess(
   auth: unknown,
   required: "VIEW" | "EDIT" | "OWNER" = "VIEW",
   db: DB = prisma,
+  allowCancelled = false,
 ) {
   const userId = getAuthUserId(auth);
   if (!userId) throw Object.assign(new Error("Không xác định được người dùng"), { status: 403 });
@@ -89,6 +91,7 @@ export async function assertPersonalWorkAccess(
   if (required === "EDIT" && !owned && sharedAccess !== PersonalTaskShareAccess.EDITOR)
     throw Object.assign(new Error("Bạn chỉ có quyền xem công việc này"), { status: 403 });
   if (required === "VIEW" && !owned && !sharedAccess) throw Object.assign(new Error("Bạn không có quyền truy cập công việc này"), { status: 403 });
+  if(required!=="VIEW"&&item.status==="CANCELLED"&&!allowCancelled)throw new Error("Công việc đã hủy chỉ được xem; hãy mở lại trước khi chỉnh sửa.");
   return {
     ...item,
     userId,
@@ -242,7 +245,6 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
     prisma.taskItem.findMany({
       where: {
         ...personalWorkListAccessWhere(userId),
-        status: { not: TaskStatus.CANCELLED },
       },
       include: {
         mergedSources:{select:{id:true,title:true}},
@@ -321,6 +323,9 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         reminderMinutes: item.reminderMinutes,
         estimatedDays: item.estimatedDays,
         completedAt: item.completedAt?.toISOString() ?? null,
+        cancelledAt:item.cancelledAt?.toISOString()??null,
+        cancelledBy:item.status==="CANCELLED"?item.activities.find(a=>(a.metadataJson as Prisma.JsonObject|null)?.status==="CANCELLED")?.actorUser??null:null,
+        cancellationReason:item.status==="CANCELLED"?item.activities.find(a=>(a.metadataJson as Prisma.JsonObject|null)?.status==="CANCELLED")?.body??null:null,
         domain,
         category: item.personalCategory ? categoryFromRow(item.personalCategory) : (ownerCategories.get(owner.id)?.find(c => c.key === domain) ?? defaultPersonalCategories().find(c => c.key === domain)!),
         workType: item.workTypeId,
@@ -343,7 +348,7 @@ export async function getPersonalWorkPageData(auth: unknown): Promise<PersonalWo
         })),
         tags: names.filter((name) => !domainKeys.has(name.toUpperCase())),
         calendar: {
-          synced: Boolean(calendar),
+          synced: Boolean(calendar)&&item.status!=="CANCELLED"&&calendar?.syncHash!=="CANCELLED_PENDING_DELETE",
           htmlLink: calendar?.eventHtmlLink ?? null,
           lastSyncedAt: calendar?.lastSyncedAt.toISOString() ?? null,
         },
@@ -555,12 +560,15 @@ export async function updatePersonalWorkItem(
     progressMode?: TaskProgressMode;
     updateBody?: string | null;
     updateChecklistItemId?: string | null;
+    confirmRunning?: boolean;
+    restoreCancelled?: boolean;
   },
   auth: unknown,
   db: DB = prisma,
 ) {
   if (input.reminderMinutes !== undefined && ![null,0,10,15,30,60].includes(input.reminderMinutes)) throw new Error("Thời gian nhắc không hợp lệ");
-  const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db);
+  const current = await assertPersonalWorkAccess(input.id, auth, "EDIT", db, true);
+  personalWorkTransition(current,input,current.access==="OWNER");
   assertContinuousUpdate(current.workTypeId,input,current.access==="OWNER");
   if(current.id.startsWith("media-daily-")) {
     const receipt=await db.taskItemActivity.findFirst({where:{taskItemId:current.id,metadataJson:{path:["source"],equals:"WATCH_MEDIA_DAILY"}},orderBy:{createdAt:"asc"},select:{metadataJson:true}});
@@ -570,7 +578,7 @@ export async function updatePersonalWorkItem(
   }
   const event = isPersonalEvent(current.workTypeId);
   if(input.workType!==undefined && isPersonalEvent(input.workType)!==event)throw new Error("Không đổi qua lại giữa công việc và sự kiện; hãy tạo mục mới.");
-  if(event && ((input.status && input.status!==TaskStatus.CANCELLED)||input.progressMode!==undefined||input.progressPercent!==undefined))throw new Error("Sự kiện không có trạng thái hoàn thành hoặc tiến độ");
+  if(event && ((input.status && input.status!==TaskStatus.CANCELLED && !(current.status==="CANCELLED"&&input.status==="TODO"))||input.progressMode!==undefined||input.progressPercent!==undefined))throw new Error("Sự kiện không có trạng thái hoàn thành hoặc tiến độ");
   if(event && input.tags?.some(t=>t.trim().toLowerCase()==="codex"))throw new Error("Sự kiện không gửi cho Codex thực hiện");
   if (input.title !== undefined && !input.title.trim()) throw new Error("Tên công việc không được để trống");
   const needsContext = input.categoryKey !== undefined || input.domain !== undefined || input.tags !== undefined || input.targets !== undefined || input.workType !== undefined;
@@ -611,9 +619,19 @@ export async function updatePersonalWorkItem(
       ]
     : null;
   if (input.updateChecklistItemId && (event || !input.updateBody?.trim())) throw new Error("Chọn đầu việc cần kèm nội dung cập nhật cho công việc.");
-  await withDbTransaction(db, async (tx) => {
+  const transaction=<T>(fn:(tx:Prisma.TransactionClient)=>Promise<T>)=>db===prisma?prisma.$transaction(fn,{timeout:30000}):withDbTransaction(db,fn);
+  const mutate=()=>transaction(async (tx) => {
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
-    await assertPersonalWorkAccess(input.id, auth, "EDIT", tx);
+    const locked=await assertPersonalWorkAccess(input.id, auth, "EDIT", tx, true);
+    const transition=personalWorkTransition(locked,input,locked.access==="OWNER");
+    if(transition.duplicate)return;
+    if(transition.cancelling){
+      await tx.$queryRaw`SELECT "id" FROM "PersonalCodexRun" WHERE "taskItemId"=${input.id} AND "status" IN ('QUEUED','RUNNING') FOR UPDATE`;
+      const running=await tx.personalCodexRun.count({where:{taskItemId:input.id,status:"RUNNING"}});
+      if(running&&!input.confirmRunning)throw new Error("Có tác vụ Codex đang chạy. Xác nhận dừng tác vụ trước khi hủy việc.");
+      await tx.personalCodexRun.updateMany({where:{taskItemId:input.id,status:{in:["QUEUED","RUNNING"]}},data:{status:"CANCELLED",activeTaskItemId:null,leaseToken:null,leaseExpiresAt:null,finishedAt:new Date(),errorCode:"TASK_CANCELLED"}});
+      await tx.workPushDelivery.updateMany({where:{taskItemId:input.id,deliveredAt:null,kind:{in:["REMINDER","ASSIGNED","SHARED","CHANGED"]}},data:{deliveredAt:new Date(),leaseUntil:null}});
+    }
     let updateEntry: { id: string; title: string } | null = null;
     if (input.updateChecklistItemId) {
       await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.id} FOR UPDATE`;
@@ -652,11 +670,11 @@ export async function updatePersonalWorkItem(
           taskItemId: input.id,
           sourceType: "DISCUSSION",
           actorUserId: current.userId,
-          title: isContinuousWork(current.workTypeId)&&status==="CANCELLED"?"Dừng duy trì":isContinuousWork(current.workTypeId)&&status==="IN_PROGRESS"&&current.status==="CANCELLED"?"Tiếp tục duy trì":updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
+          title: transition.cancelling?"Hủy công việc":transition.restoring?"Mở lại công việc":isContinuousWork(current.workTypeId)&&status==="CANCELLED"?"Dừng duy trì":isContinuousWork(current.workTypeId)&&status==="IN_PROGRESS"&&current.status==="CANCELLED"?"Tiếp tục duy trì":updateEntry ? `Cập nhật đầu việc · ${updateEntry.title}` : event?"Cập nhật sự kiện":input.updateBody?.trim() ? "Cập nhật tiến độ" : "Cập nhật công việc",
           body: input.updateBody?.trim() || null,
           metadataJson: {
             ...(updateEntry ? { checklistItemId: updateEntry.id, checklistTitle: updateEntry.title } : {}),
-            ...(status ? { status } : {}),
+            ...(status ? { status, previousStatus:locked.status } : {}),
             ...(progressPercent !== undefined ? { progressPercent } : {}),
           },
         },
@@ -707,7 +725,7 @@ export async function updatePersonalWorkItem(
         });
       }
     }
-    if (scheduleChanged || status === TaskStatus.CANCELLED) await queuePersonalChange(tx, input.id, current.userId, status === TaskStatus.CANCELLED ? "CANCELLED" : "CHANGED");
+    if (transition.cancelling||transition.restoring||scheduleChanged) await queuePersonalChange(tx,input.id,current.userId,transition.cancelling?"CANCELLED":transition.restoring?"RESTORED":"CHANGED",input.updateBody?.trim());
     if (input.domain || input.tags || category) {
       await setTargetTagsRepo(tx, {
         ...personalWorkTagOwner(current),
@@ -717,6 +735,10 @@ export async function updatePersonalWorkItem(
       });
     }
   });
+  for(let attempt=0;;attempt++){try{await mutate();break;}catch(error){
+    if(db===prisma&&input.status&&attempt<2&&error instanceof Prisma.PrismaClientKnownRequestError&&(error.code==="P2034"||error.code==="P2010"&&["40001","40P01"].includes(String(error.meta?.code))))continue;
+    throw error;
+  }}
 }
 
 function checklistProgress(total: number, done: number) {
@@ -783,6 +805,7 @@ export async function assertPersonalChecklistAccess(taskItemId:string,checklistI
   const canEdit=isPersonalWorkOwner(item,userId)||item.personalShares.some(s=>s.accessLevel==="EDITOR")||item.checklists[0].personalShares.some(s=>s.accessLevel==="EDITOR");
   const allowed=required === "EDIT" ? canEdit : isPersonalWorkOwner(item,userId)||item.personalShares.length>0||item.checklists[0].personalShares.length>0;
   if(!allowed)throw Object.assign(new Error("Bạn không có quyền cập nhật đầu việc này"), { status: 403 });
+  if(required==="EDIT"&&item.status==="CANCELLED")throw new Error("Công việc đã hủy chỉ được xem.");
   return {...item,userId,canEdit};
 }
 

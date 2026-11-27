@@ -64,15 +64,18 @@ export async function requestPersonalCodexRun(
   auth: unknown,
   retry = false,
   options: { notBefore?: string | null; db?: DB } = {},
-) {
-  const db = options.db ?? prisma;
+):Promise<Prisma.PersonalCodexRunGetPayload<{select:typeof publicRunSelect}>> {
+  requireReady();
+  if(!getAuthUserId(auth))throw new Error("CODEX_ADMIN_REQUIRED");
+  if(!options.db)return prisma.$transaction(tx=>requestPersonalCodexRun(taskItemId,auth,retry,{...options,db:tx}),{timeout:30000});
+  const db = options.db;
   const notBefore = options.notBefore ? new Date(options.notBefore) : null;
   if (notBefore && !Number.isFinite(notBefore.getTime()))
     throw new Error("CODEX_INVALID_START_TIME");
-  requireReady();
   const userId = getAuthUserId(auth);
   if (!userId || !(await eligibleRequester(userId, db)))
     throw new Error("CODEX_ADMIN_REQUIRED");
+  await db.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
   const item = await ownerItem(taskItemId, userId, db);
   if (!item || !["TODO", "IN_PROGRESS"].includes(item.status))
     throw new Error("CODEX_OWNER_ACTIVE_TASK_REQUIRED");

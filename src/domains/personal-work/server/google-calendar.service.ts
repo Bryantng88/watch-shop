@@ -236,13 +236,14 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
     include: { task: { select: { id: true, title: true } } },
   });
   if (!item) throw new Error("Không tìm thấy công việc cá nhân");
-  if(isContinuousWork(item.workTypeId))throw Error("Việc duy trì nằm trong dải riêng của lịch nội bộ, không đồng bộ thành sự kiện Google.");
+  if(item.status==="CANCELLED")throw Error("Công việc đã hủy không đồng bộ thành sự kiện Google.");
+  if(isContinuousWork(item.workTypeId))throw Error("Việc duy trì không đồng bộ thành sự kiện Google.");
   const auth = await accessToken(userId);
   // Reserve the link under the same parent lock used by merge, before writing Google.
   // A concurrent merge either sees this reservation and refuses, or wins and blocks sync.
   const existing = await prisma.$transaction(async tx=>{
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
-    if(!await tx.taskItem.findFirst({where:{id:taskItemId,...personalWorkEditAccessWhere(userId)},select:{id:true}}))throw new Error("Công việc đã thay đổi hoặc đã gộp; hãy tải lại.");
+    if(!await tx.taskItem.findFirst({where:{id:taskItemId,status:{not:"CANCELLED"},...personalWorkEditAccessWhere(userId)},select:{id:true}}))throw new Error("Công việc đã thay đổi hoặc đã gộp; hãy tải lại.");
     return tx.personalTaskCalendarLink.upsert({where:{userId_taskItemId:{userId,taskItemId}},update:{},create:{userId,taskItemId,connectionId:auth.connection.id,calendarId:auth.connection.calendarId,eventId:googleTaskEventId(userId,taskItemId,auth.connection.calendarId),syncHash:"RESERVATION"}});
   });
   const startDate = bangkokDateKey(item.dueAt || new Date());
@@ -256,7 +257,7 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
     description: item.note || "Đồng bộ từ Watch Shop Admin",
     start,
     end,
-    status: item.status === "CANCELLED" ? "cancelled" : "confirmed",
+    status: "confirmed",
     extendedProperties: { private: { watchShopTaskItemId: item.id, source: "WATCH_SHOP_PERSONAL_WORK", pointInTime:timing.point?"1":"0", estimatedDays: String(estimatedDays), watchShopTaskVersion: item.updatedAt.toISOString(), watchShopScheduleHash: googleTaskScheduleHash({ start, end }) } },
   };
   const syncHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
@@ -276,11 +277,17 @@ export async function syncPersonalTaskToGoogle(userId: string, taskItemId: strin
   });
   if (!response.ok) throw await googleApiError(response, "Google Calendar sync");
   const event = await response.json() as { id: string; htmlLink?: string };
-  const link = await prisma.personalTaskCalendarLink.upsert({
+  const link = await prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
+    const current=await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId},select:{status:true}});
+    const finalHash=current.status==="CANCELLED"?"CANCELLED_PENDING_DELETE":syncHash;
+    return tx.personalTaskCalendarLink.upsert({
     where: { userId_taskItemId: { userId, taskItemId } },
-    update: { eventId: event.id, eventHtmlLink: event.htmlLink || null, lastSyncedAt: new Date(), syncHash },
-    create: { userId, taskItemId, connectionId: auth.connection.id, calendarId: auth.connection.calendarId, eventId: event.id, eventHtmlLink: event.htmlLink || null, syncHash },
+    update: { eventId: event.id, eventHtmlLink: event.htmlLink || null, lastSyncedAt: new Date(), syncHash:finalHash },
+    create: { userId, taskItemId, connectionId: auth.connection.id, calendarId: auth.connection.calendarId, eventId: event.id, eventHtmlLink: event.htmlLink || null, syncHash:finalHash },
   });
+  });
+  if(link.syncHash==="CANCELLED_PENDING_DELETE"){await deletePersonalTaskFromGoogle(userId,taskItemId);throw Error("Công việc đã hủy trong lúc đồng bộ lịch.");}
   await prisma.googleCalendarConnection.update({ where: { id: auth.connection.id }, data: { lastSyncedAt: new Date() } });
   return link;
 }
@@ -313,6 +320,9 @@ export async function deletePersonalTaskFromGoogle(userId: string, taskItemId: s
 export async function listPersonalGoogleCalendarEvents(userId: string) {
   const syncStartedAt = new Date();
   let auth = await accessToken(userId);
+  const cancelledLinks=await prisma.personalTaskCalendarLink.findMany({where:{userId,syncHash:"CANCELLED_PENDING_DELETE",taskItem:{status:"CANCELLED"}},select:{taskItemId:true},take:5});
+  for(const link of cancelledLinks){try{await deletePersonalTaskFromGoogle(userId,link.taskItemId);}catch{break; /* Keep the marker and retry after reconnect. */}}
+
   const from = new Date();
   from.setFullYear(from.getFullYear() - 1);
   from.setHours(0, 0, 0, 0);
