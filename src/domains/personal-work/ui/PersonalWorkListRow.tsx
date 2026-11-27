@@ -4,7 +4,7 @@ import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButt
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
-import { Ban, CalendarDays, Clock3, ExternalLink, Info } from "lucide-react";
+import { Ban, Clock3, ExternalLink, Info } from "lucide-react";
 import { AdminUserAvatar } from "@/domains/shared/ui/admin-design-contract";
 import { personalCategoryStyle, type PersonalWorkItem } from "../shared/personal-work.types";
 import { isPersonalEvent, personalEventTiming } from "../shared/personal-event";
@@ -35,7 +35,7 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
   const rowObject=item.targets.find(target=>target.imageUrl)||item.targets[0];
   const fullSchedule = `${late ? "Quá hạn · " : ""}${scheduleLabel}${item.estimatedDays > 1 ? ` · ${item.estimatedDays} ngày` : ""}`;
   return <div ref={root} role="listitem" data-work-row={item.id} className={`${styles.row} ${justCompleted ? "rounded-lg bg-emerald-50/70 transition-colors motion-reduce:transition-none" : ""}`} onClick={e => { if (!(e.target as HTMLElement).closest("button,a,input,select,textarea")) onOpen(); }}>
-    {item.status==="CANCELLED" ? <span aria-label="Đã hủy" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><Ban className="h-4 w-4"/></span> : event ? <span title="Sự kiện không cần hoàn thành" aria-label="Sự kiện không cần hoàn thành" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><CalendarDays className="h-4 w-4" /></span> : null}
+    {item.status==="CANCELLED" ? <span aria-label="Đã hủy" className="grid h-8 w-8 shrink-0 place-items-center text-slate-400"><Ban className="h-4 w-4"/></span> : null}
     {rowObject&&<WorkObjectThumbnail object={rowObject}/>}
     <div className={styles.body}>
       <div data-work-headline className={styles.headline}>
