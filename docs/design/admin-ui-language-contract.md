@@ -1848,3 +1848,8 @@ Preload the first 30 row projections alongside the permission-projected overview
 Dùng `useAppDialog().confirm`, không dùng `window.confirm` hay overlay tự dựng ở từng trang. Xóa đầu việc, hoàn thành và mở lại đầu việc đều yêu cầu xác nhận, nêu rõ tên đối tượng và tác động tới tiến độ/lịch. Xóa dùng tone danger và nút “Giữ lại”; hoàn thành dùng tone success và nút “Bỏ qua”. Không đổi trạng thái, xóa hàng hoặc gửi mutation trước khi nhận `true`. Hủy, Escape và backdrop đều tương đương bỏ qua. Không coi mở popover/menu hay click vào title là xác nhận.
 
 AppDialogProvider dùng native modal top layer, khóa scroll, focus trap và restore focus. Focus đầu tiên ưu tiên action an toàn; Enter chỉ kích hoạt nút đang focus. Các yêu cầu đồng thời xếp hàng, không ghi đè promise trước. Dùng chung cho mọi caller; không thêm layer số tùy ý. Media từ đầu việc mở embedded workspace modal, kiểm tra origin/source của message và hỏi bỏ thay đổi chưa lưu khi đóng. Menu đầu việc không lặp lại sửa/chi tiết đã có trên title.
+
+
+### Tạo công việc trên giao diện Ben/compact
+
+`/admin/personal-work?view=list` có action primary “Tạo việc” trong header, không phụ thuộc lịch đang mở. Form tạo nhanh dùng chung với workspace đầy đủ; chỉ hiện sau khi bấm nút. Giữ cả Công việc/Sự kiện/Duy trì. Mở form focus tên; thu gọn/Escape giữ draft; lỗi không đóng form; thành công mới xóa draft/thu gọn và trả focus về trigger. Không đổi quyền tạo hay payload nghiệp vụ. Header và form không được tràn tại 320/390/768px.

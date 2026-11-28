@@ -181,6 +181,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const searchParams=useSearchParams();
   const requestedItem=searchParams.get("item");
   const listOnly=searchParams.get("view")==="list";
+  const [compactCreateOpen,setCompactCreateOpen]=useState(false);
+  const compactCreateTrigger=useRef<HTMLButtonElement>(null),quickCreateTitle=useRef<HTMLInputElement>(null);
+  useEffect(()=>{if(listOnly&&compactCreateOpen)quickCreateTitle.current?.focus({preventScroll:true});},[listOnly,compactCreateOpen]);
   const openedItem=useRef<string|null>(null);
   const appDialog = useAppDialog();
   const notify = useNotify();
@@ -531,7 +534,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   useEffect(()=>{if(requestedItem&&openedItem.current!==requestedItem){const item=itemMap.get(data.mergedWorkRedirects?.[requestedItem]||requestedItem);if(item){openedItem.current=requestedItem;openTaskEdit(item);}}},[requestedItem,itemMap,openTaskEdit,data.mergedWorkRedirects]);
   const mediaMergeAction = <PersonalMediaMerge items={calendar.items} onMerged={id=>{const url=new URL(window.location.href);url.searchParams.set("item",id);router.replace(url.pathname+url.search);router.refresh();}}/>;
   return (
-    <PersonalWorkWorkspace compact={listOnly} view={view} onView={setView} counts={viewCounts} summary={
+    <PersonalWorkWorkspace compact={listOnly} primaryAction={listOnly?<AdminButton ref={compactCreateTrigger} type="button" variant={compactCreateOpen?"quiet":"primary"} density="compact" disabled={pending} aria-expanded={compactCreateOpen} aria-controls="personal-work-quick-create" onClick={()=>{setCompactCreateOpen(open=>!open);setQuickOptionsOpen(false);}}>{compactCreateOpen?<X className="h-4 w-4"/>:<Plus className="h-4 w-4"/>}{compactCreateOpen?"Thu gọn tạo việc":"Tạo việc"}</AdminButton>:undefined} view={view} onView={setView} counts={viewCounts} summary={
       <div className={listStyles.summary}><span><b className="font-semibold tabular-nums text-slate-800">{openCount}</b> đang mở</span>{continuousItems.length>0&&<span>{continuousItems.length} duy trì</span>}{overdue > 0 && <span className="text-amber-700"><b className="font-semibold tabular-nums">{overdue}</b> quá hạn</span>}</div>
     } tools={<>{!listOnly && <PersonalWorkListToolbar inline hideViews view={view} onView={setView} counts={viewCounts} scope={scope} onScope={setScope} domain={domain} onDomain={setDomain} categories={filterCategories} onManage={() => setCategoryManagerOpen(true)} />}<AdminButton variant="quiet" density="compact" type="button" aria-label="Hiển thị lịch công việc"
       aria-expanded={calendarOpen} aria-controls="personal-google-calendar-agenda" onClick={() => setCalendarOpen(open => !open)}>
@@ -573,9 +576,10 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
       </PersonalWorkFloatingPanel>}
       {categoryManagerOpen && <PersonalWorkCategoryManager categories={data.categories} canManageDefaults={data.canManageDefaultCategories} onClose={() => setCategoryManagerOpen(false)} />}
 
-      <section hidden={listOnly} className={listOnly ? "hidden" : "border-b border-slate-100 pb-4"}>
+      <section id="personal-work-quick-create" aria-label="Tạo công việc" hidden={listOnly&&!compactCreateOpen} className={listOnly&&!compactCreateOpen ? "hidden" : "border-b border-slate-100 pb-4"}>
         <form
           className="flex h-full min-w-0 flex-col justify-center px-1"
+          onKeyDown={event=>{if(listOnly&&event.key==="Escape"&&!pending){event.preventDefault();event.stopPropagation();if(quickOptionsOpen){setQuickOptionsOpen(false);quickOptionsTrigger.current?.focus();return;}setCompactCreateOpen(false);compactCreateTrigger.current?.focus();}}}
           onSubmit={(event) => {
             event.preventDefault();
             const nextTitle = title.trim();
@@ -602,6 +606,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
               isPersonalEvent(workType) ? "Đã thêm sự kiện" : "Đã thêm công việc",
               () => {
                 setTitle("");
+                if(listOnly){setCompactCreateOpen(false);setQuickOptionsOpen(false);compactCreateTrigger.current?.focus();}
                 setEstimatedDays(1);
                 setNewTags("");
                 setTargetQuery("");
@@ -620,6 +625,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           />
           <div className={createStyles.toolbar}>
             <input
+              ref={quickCreateTitle}
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
