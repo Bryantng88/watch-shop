@@ -15,4 +15,5 @@ jobs:
         with:
           node-version: 22
       - run: bash -n ops/deployment/deploy-production-runner.sh
+      - run: bash ops/deployment/release-workspace.test.sh
       - run: node --test ops/deployment/reattach-ben-worker.test.cjs

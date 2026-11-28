@@ -47,7 +47,14 @@ image_tag="release-$short_commit"
 release_dir="$release_root/$image_tag"
 
 mkdir -p "$release_root"
-[[ ! -e "$release_dir" ]] || die "Release directory already exists: $release_dir"
+source "$(dirname "${BASH_SOURCE[0]}")/release-workspace.sh"
+resume_build=false
+if [[ -e "$release_dir" ]]; then
+  active_image="$($docker_bin inspect "$container_name" --format='{{.Config.Image}}' 2>/dev/null || true)"
+  retryable_release_workspace "$release_dir" "$tag_commit" "$release_tag" "$active_image" "watch-shop:$image_tag" "$config_dir" \
+    || die "Existing release is not a safe build-only retry; preserve it for inspection"
+  resume_build=true
+fi
 
 staging_dir="$(mktemp -d "$release_root/.staging-${image_tag}.XXXXXX")"
 cleanup_staging() {
@@ -63,6 +70,13 @@ cp "$config_dir/.env.production" "$staging_dir/.env.production"
 cp "$config_dir/.env.build" "$staging_dir/.env.build"
 printf '%s\n' "$tag_commit" > "$staging_dir/RELEASE_COMMIT"
 printf '%s\n' "$release_tag" > "$staging_dir/RELEASE_TAG"
+printf '%s\n' "$tag_commit" > "$staging_dir/.build-retry-allowed"
+if [[ "$resume_build" == true ]]; then
+  failed_build_dir="$(mktemp -d "$release_root/.failed-build-${image_tag}.XXXXXX")"
+  rmdir -- "$failed_build_dir"
+  mv -- "$release_dir" "$failed_build_dir"
+  log "Retrying the approved build from a fresh source archive; previous workspace retained"
+fi
 mv "$staging_dir" "$release_dir"
 staging_dir=""
 
@@ -85,6 +99,7 @@ for attempt in 1 2 3; do
     break
   fi
   log "Build attempt $attempt failed"
+  [[ "$attempt" == 3 ]] || sleep "$((attempt * 10))"
 done
 [[ "$build_ok" == true ]] || die "Production image build failed after 3 attempts"
 
@@ -99,6 +114,8 @@ printf '%s\n' "$previous_worker_image" > PREVIOUS_WORKER_IMAGE
 new_worker_image="$($docker_bin image inspect "watch-shop-ben:$image_tag" --format='{{.Id}}')"
 [[ "$new_worker_image" =~ ^sha256:[0-9a-f]{64}$ ]] || die "Cannot identify candidate Ben worker image"
 
+# Once database operations begin, this workspace must never be auto-resumed.
+rm -f -- "$release_dir/.build-retry-allowed"
 log "Backing up the production database"
 compose --profile tools run --rm db-backup
 
