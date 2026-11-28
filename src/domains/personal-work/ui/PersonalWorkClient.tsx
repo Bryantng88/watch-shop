@@ -1097,6 +1097,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         <div className="min-w-0 flex-1">
                           <AdminButton type="button" variant="contextual" onClick={()=>setEditingChecklistTitleId(editingChecklistTitleId===entry.id?null:entry.id)} className={`block w-full text-left text-sm ${entry.isDone?"text-slate-400 line-through":"text-slate-700"}`}>{entry.title}</AdminButton>
                           <p className="text-xs text-slate-500">{entry.deadlineAt?`Hạn ${scheduleDate(entry.deadlineAt).split("-").reverse().join("/")} · ${scheduleTime(entry.deadlineAt)}`:"Chưa có lịch"}</p>
+                          {entry.latestUpdate&&<AdminButton type="button" variant="contextual" density="compact" title={entry.latestUpdate.body} aria-label={`Xem cập nhật ${entry.title}`} onClick={()=>setEditingChecklistTitleId(entry.id)} className="block max-w-full truncate text-left text-xs text-blue-700">Có cập nhật · {scheduleDate(entry.latestUpdate.occurredAt).split("-").reverse().join("/")} {scheduleTime(entry.latestUpdate.occurredAt)}</AdminButton>}
                         </div>
                         </div>
                         {entry.object?.type === "WATCH" && <span data-checklist-thumbnail className={listStyles.checklistThumbnail}><WorkObjectThumbnail object={entry.object} size={36}/></span>}

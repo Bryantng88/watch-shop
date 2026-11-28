@@ -133,6 +133,7 @@ export type PersonalWorkActivity = {
 };
 
 export type PersonalWorkChecklistItem = {
+  latestUpdate?: {body:string;occurredAt:string} | null;
   updatedAt?: string;
   startAt?: string | null;
   deadlineAt?: string | null;

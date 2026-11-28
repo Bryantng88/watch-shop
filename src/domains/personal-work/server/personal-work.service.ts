@@ -295,6 +295,19 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
     context ? context.categories : listPersonalCategories(userId),
     context ? context.canManageDefaultCategories : canManageDefaultCategories(userId),
   ]);
+  // One bounded result per visible entry; do not depend on the parent's 20 recent activities.
+  const updateEntryIds=options.summary||options.row?[]:items.flatMap(item=>{
+    const full=isPersonalWorkOwner(item,userId)||item.personalShares.some(share=>share.userId===userId);
+    return item.checklists.filter(entry=>full||entry.personalShares.some(share=>share.userId===userId)).map(entry=>entry.id);
+  });
+  const entryUpdates=updateEntryIds.length?await prisma.$queryRaw<{checklistItemId:string;body:string;occurredAt:Date}[]>(Prisma.sql`
+    SELECT DISTINCT ON ("metadataJson"->>'checklistItemId') "metadataJson"->>'checklistItemId' AS "checklistItemId", "body", "occurredAt"
+    FROM "TaskItemActivity" WHERE "taskItemId" IN (${Prisma.join(items.map(item=>item.id))})
+      AND "metadataJson"->>'checklistItemId' IN (${Prisma.join(updateEntryIds)})
+      AND "title" LIKE 'Cập nhật đầu việc%' AND "body" IS NOT NULL
+    ORDER BY "metadataJson"->>'checklistItemId', "occurredAt" DESC, "id" DESC
+  `):[];
+  const entryUpdateMap=new Map(entryUpdates.map(row=>[row.checklistItemId,{body:row.body,occurredAt:row.occurredAt.toISOString()}]));
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
   const ownerIds = [...new Set(items.map(item => item.personalOwnerUserId || item.task?.createdByUserId || item.task?.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
@@ -349,7 +362,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
           occurredAt: activity.occurredAt.toISOString(),
           actor: activity.actorUser,
         })),
-        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, updatedAt:entry.updatedAt.toISOString(), startAt:entry.startAt?.toISOString()??null, deadlineAt:entry.deadlineAt?.toISOString()??null, mediaContext: options.row ? undefined : mediaChecklistContext(entry.note),
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, updatedAt:entry.updatedAt.toISOString(), latestUpdate:entryUpdateMap.get(entry.id)??null, startAt:entry.startAt?.toISOString()??null, deadlineAt:entry.deadlineAt?.toISOString()??null, mediaContext: options.row ? undefined : mediaChecklistContext(entry.note),
           access:owned?"OWNER":share?.accessLevel === "EDITOR"?"EDITOR":entry.personalShares.find(s=>s.userId===userId)?.accessLevel??"VIEWER",
           sharedWith:owned?entry.personalShares.map(s=>({user:s.user,accessLevel:s.accessLevel})):[],
         })),

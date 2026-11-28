@@ -27,6 +27,8 @@ async function main(){
  await prisma.personalChecklistShare.createMany({data:[{checklistItemId:a,userId:editor,sharedByUserId:owner,accessLevel:"EDITOR"},{checklistItemId:a,userId:viewer,sharedByUserId:owner,accessLevel:"VIEWER"}]});
  const command={taskItemId:id,checklistItemId:a,title:"Shared entry",startAt:"2026-11-28T09:00:00+07:00",deadlineAt:"2026-11-29T18:00:00+07:00",updateBody:"First separate update"};
  await editPersonalChecklist(command,auth(editor));
+ // The latest entry update must survive more than 20 newer sibling/parent activities.
+ await prisma.taskItemActivity.createMany({data:Array.from({length:25},(_,i)=>({taskItemId:id,actorUserId:owner,sourceType:"DISCUSSION" as const,title:"Cập nhật đầu việc · Private sibling",body:"PRIVATE SIBLING UPDATE "+i,metadataJson:{checklistItemId:b},occurredAt:new Date(Date.now()+i*1000)}))});
  let task=await prisma.taskItem.findUniqueOrThrow({where:{id}});assert.equal(task.dueAt?.toISOString(),"2026-11-20T00:00:00.000Z");assert.equal(task.scheduledEndAt?.toISOString(),"2026-12-05T00:00:00.000Z");
  await assert.rejects(()=>editPersonalChecklist({...command,checklistItemId:b},auth(editor)));
  await assert.rejects(()=>editPersonalChecklist(command,auth(viewer)));
@@ -34,7 +36,7 @@ async function main(){
  await assert.rejects(()=>editPersonalChecklist({...command,deadlineAt:"2026-11-01"},auth(owner)));
  assert.equal((await personalChecklistHistory(id,a,auth(editor))).filter(row=>row.body==="First separate update").length,1);
  await assert.rejects(()=>personalChecklistHistory(id,b,auth(editor)));
- const partial=(await getPersonalWorkPageData(auth(editor),{ids:[id]})).items[0];assert.equal(partial.title,"Đầu việc được chia sẻ");assert.equal(partial.checklist.length,1);assert.equal(partial.dueAt,"2026-11-28T02:00:00.000Z");assert.equal(partial.scheduledEndAt,"2026-11-29T11:00:00.000Z");assert.deepEqual(partial.activities,[]);
+ const partial=(await getPersonalWorkPageData(auth(editor),{ids:[id]})).items[0];assert.equal(partial.title,"Đầu việc được chia sẻ");assert.equal(partial.checklist.length,1);assert.equal(partial.dueAt,"2026-11-28T02:00:00.000Z");assert.equal(partial.scheduledEndAt,"2026-11-29T11:00:00.000Z");assert.deepEqual(partial.activities,[]);assert.equal(partial.checklist[0].latestUpdate?.body,"First separate update");assert.equal(JSON.stringify(partial).includes("PRIVATE SIBLING UPDATE"),false);
  await updatePersonalWorkItem({id,title:"Changed parent",dueAt:"2030-01-01"},auth(owner));task=await prisma.taskItem.findUniqueOrThrow({where:{id}});assert.equal(task.dueAt?.toISOString(),"2026-11-20T00:00:00.000Z");
  await deletePersonalWorkChecklistItem(id,b,auth(owner));task=await prisma.taskItem.findUniqueOrThrow({where:{id}});assert.equal(task.scheduledEndAt?.toISOString(),"2026-11-29T11:00:00.000Z");
  await prisma.taskItem.update({where:{id},data:{status:"CANCELLED"}});await assert.rejects(()=>editPersonalChecklist(command,auth(owner)));

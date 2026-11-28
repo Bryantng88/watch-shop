@@ -23,3 +23,9 @@ Hai cột nullable trên TaskItemChecklist; không xóa/đổi cột cũ. Backfi
 - check-work-modal-feedback.cjs: cập nhật riêng, ngày giờ UTC+7, giữ draft khi lỗi, form chung chỉ cho việc không có đầu việc.
 - smoke-work-responsive-ui.cjs: danh sách/lịch và quyền hiện có.
 - check-checklist-schedule-db.ts trong CI PostgreSQL test: phạm vi quyền, lịch đầu việc đã hoàn thành, version cũ, projection riêng tư, chặn ghi đè lịch parent, xóa và hủy.
+
+## Phản hồi sau khi lưu
+
+Lưu thành công hiện toast, mỗi hàng có nội dung cập nhật riêng hiện “Có cập nhật” kèm thời điểm. Đây là chỉ báo có nội dung cập nhật, không phải trạng thái chưa đọc. Mở đầu việc thấy nội dung gần nhất ngay trên lịch sử. Truy vấn lấy một cập nhật gần nhất cho mỗi đầu việc được phép xem, không phụ thuộc 20 mốc gần nhất của parent; không thêm truy vấn này vào tải danh sách/index.
+
+Preview local lưu thay đổi và lịch sử mẫu theo đầu việc vào sessionStorage để tải lại cùng tab vẫn xem được. Đây vẫn là dữ liệu giả lập, không ghi vào dữ liệu thật.
