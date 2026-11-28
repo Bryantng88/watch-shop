@@ -2,25 +2,25 @@ name: Consignment and shared watch quick preview
 on:
   pull_request:
     paths:
-      - 'src/domains/consignment/**'
-      - 'src/app/**/consignments/**'
-      - 'src/domains/shared/ui/work-object/**'
-      - 'src/domains/payment/**'
-      - 'src/domains/storefront/server/public-catalog*'
-      - 'src/domains/shared/business/business-entity-preview.actions.ts'
-      - 'src/domains/acquisition/**'
-      - 'src/domains/coordination/**'
-      - 'src/domains/order/ui/detail/**'
-      - 'src/domains/task/ui/**'
-      - 'src/app/(admin)/admin/layout.tsx'
-      - 'src/server/auth/admin-api-policy.ts'
-      - 'src/domains/trading/**'
-      - 'src/domains/watch/server/state/**'
-      - 'src/domains/watch/server/inventory-lifecycle/**'
-      - 'src/domains/projection/server/watch-cost-ledger.projection.ts'
-      - 'prisma/**'
-      - 'scripts/check-consignment*'
-      - '.github/workflows/consignment-contract.yml'
+      - "src/domains/consignment/**"
+      - "src/app/**/consignments/**"
+      - "src/domains/shared/ui/work-object/**"
+      - "src/domains/payment/**"
+      - "src/domains/storefront/server/public-catalog*"
+      - "src/domains/shared/business/business-entity-preview.actions.ts"
+      - "src/domains/acquisition/**"
+      - "src/domains/coordination/**"
+      - "src/domains/order/ui/detail/**"
+      - "src/domains/task/ui/**"
+      - "src/app/(admin)/admin/layout.tsx"
+      - "src/server/auth/admin-api-policy.ts"
+      - "src/domains/trading/**"
+      - "src/domains/watch/server/state/**"
+      - "src/domains/watch/server/inventory-lifecycle/**"
+      - "src/domains/projection/server/watch-cost-ledger.projection.ts"
+      - "prisma/**"
+      - "scripts/check-consignment*"
+      - ".github/workflows/consignment-contract.yml"
 permissions:
   contents: read
 jobs:
@@ -34,7 +34,7 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: fixture-password
           POSTGRES_DB: watch_shop_consignment_test
-        ports: ['5432:5432']
+        ports: ["5432:5432"]
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
@@ -42,8 +42,9 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:fixture-password@127.0.0.1:5432/watch_shop_consignment_test
-      PERSONAL_CODEX_ENABLED: '0'
-      ORDER_CODEX_ENABLED: '0'
+      DIRECT_URL: postgresql://postgres:fixture-password@127.0.0.1:5432/watch_shop_consignment_test
+      PERSONAL_CODEX_ENABLED: "0"
+      ORDER_CODEX_ENABLED: "0"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
