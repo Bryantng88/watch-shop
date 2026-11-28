@@ -1013,8 +1013,8 @@ export async function editPersonalChecklist(input:{taskItemId:string;checklistIt
     await recomputePersonalChecklistSchedule(tx,current.id);
   });
 }
-export async function personalChecklistHistory(taskItemId:string,checklistItemId:string,auth:unknown) {
+export async function personalChecklistHistory(taskItemId:string,checklistItemId:string,auth:unknown,updatesOnly=false) {
   await assertPersonalChecklistAccess(taskItemId,checklistItemId,auth);
-  const rows=await prisma.taskItemActivity.findMany({where:{taskItemId,metadataJson:{path:["checklistItemId"],equals:checklistItemId}},orderBy:[{occurredAt:"desc"},{id:"desc"}],take:30,include:{actorUser:{select:{id:true,name:true,email:true,avatarUrl:true}}}});
+  const rows=await prisma.taskItemActivity.findMany({where:{taskItemId,metadataJson:{path:["checklistItemId"],equals:checklistItemId},...(updatesOnly?{title:{startsWith:"Cập nhật đầu việc"},body:{not:null}}:{})},orderBy:[{occurredAt:"desc"},{id:"desc"}],take:30,include:{actorUser:{select:{id:true,name:true,email:true,avatarUrl:true}}}});
   return rows.map(row=>({id:row.id,title:row.title,body:row.body,occurredAt:row.occurredAt.toISOString(),actor:row.actorUser}));
 }

@@ -11,15 +11,20 @@ export function PersonalWorkFloatingPanel({ anchor, children, onClose, role = "g
   const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
   useLayoutEffect(() => {
     if (!anchor || !panel.current) return;
-    const bounds = anchor.getBoundingClientRect(), box = panel.current.getBoundingClientRect();
-    const left = Math.max(12, Math.min(bounds.right - box.width, window.innerWidth - box.width - 12));
-    const top = bounds.bottom + box.height + 8 <= window.innerHeight ? bounds.bottom + 4 : Math.max(12, bounds.top - box.height - 4);
-    setPosition({ left, top });
+    const place=()=>{
+      if(!panel.current)return;
+      const bounds=anchor.getBoundingClientRect(),box=panel.current.getBoundingClientRect();
+      const left=Math.max(12,Math.min(bounds.right-box.width,window.innerWidth-box.width-12));
+      const top=bounds.bottom+box.height+8<=window.innerHeight?bounds.bottom+4:Math.max(12,bounds.top-box.height-4);
+      setPosition(current=>current?.left===left&&current.top===top?current:{left,top});
+    };
+    place();
+    const observer=new ResizeObserver(place);observer.observe(panel.current);
     const outside = (e: PointerEvent) => { if (!panel.current?.contains(e.target as Node) && !anchor.contains(e.target as Node)) onClose(); };
     const escape = (e: KeyboardEvent) => { if (e.key === "Escape") { onClose(); if (role !== "tooltip" && focusOnOpen) anchor.focus(); } };
     const scroll = (e: Event) => { if (!panel.current?.contains(e.target as Node)) onClose(); };
     document.addEventListener("pointerdown", outside); document.addEventListener("keydown", escape); window.addEventListener("resize", onClose); window.addEventListener("scroll", scroll, true);
-    return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); window.removeEventListener("resize", onClose); window.removeEventListener("scroll", scroll, true); };
+    return () => { observer.disconnect(); document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); window.removeEventListener("resize", onClose); window.removeEventListener("scroll", scroll, true); };
   }, [anchor, onClose, role, focusOnOpen]);
   useLayoutEffect(() => {
     if (!position || role !== "group" || !focusOnOpen || focused.current) return;

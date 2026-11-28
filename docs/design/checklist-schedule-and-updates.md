@@ -26,6 +26,6 @@ Hai cột nullable trên TaskItemChecklist; không xóa/đổi cột cũ. Backfi
 
 ## Phản hồi sau khi lưu
 
-Lưu thành công hiện toast, mỗi hàng có nội dung cập nhật riêng hiện “Có cập nhật” kèm thời điểm. Đây là chỉ báo có nội dung cập nhật, không phải trạng thái chưa đọc. Bấm chỉ báo sẽ cuộn tới lịch sử cập nhật chung; không có lịch sử hay bản sao nội dung bên trong form sửa đầu việc. Truy vấn lấy một cập nhật gần nhất cho mỗi đầu việc được phép xem, không phụ thuộc 20 mốc gần nhất của parent; không thêm truy vấn này vào tải danh sách/index.
+Lưu thành công hiện toast, mỗi hàng có nội dung cập nhật riêng hiện “Có cập nhật” kèm thời điểm. Đây là chỉ báo có nội dung cập nhật, không phải trạng thái chưa đọc. Bấm chỉ báo mở popover ngay cạnh dòng, chỉ tải tối đa 30 nội dung cập nhật của đúng đầu việc (người cập nhật và thời gian). Đóng bằng Escape, nút đóng hoặc bấm ngoài. Form sửa không chứa lịch sử; lịch sử chung cuối modal vẫn giữ toàn bộ mốc theo quyền. Truy vấn lấy một cập nhật gần nhất cho mỗi đầu việc được phép xem, không phụ thuộc 20 mốc gần nhất của parent; không thêm truy vấn này vào tải danh sách/index.
 
 Preview local lưu thay đổi và lịch sử mẫu theo đầu việc vào sessionStorage để tải lại cùng tab vẫn xem được. Đây vẫn là dữ liệu giả lập, không ghi vào dữ liệu thật.

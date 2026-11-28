@@ -36,6 +36,7 @@ async function main(){
  await assert.rejects(()=>editPersonalChecklist({...command,deadlineAt:"2026-11-01"},auth(owner)));
  assert.equal((await personalChecklistHistory(id,a,auth(editor))).filter(row=>row.body==="First separate update").length,1);
  await assert.rejects(()=>personalChecklistHistory(id,b,auth(editor)));
+ const updates=await personalChecklistHistory(id,a,auth(editor),true);assert.equal(updates.length,1);assert.equal(updates[0].body,"First separate update");
  const partial=(await getPersonalWorkPageData(auth(editor),{ids:[id]})).items[0];assert.equal(partial.title,"Đầu việc được chia sẻ");assert.equal(partial.checklist.length,1);assert.equal(partial.dueAt,"2026-11-28T02:00:00.000Z");assert.equal(partial.scheduledEndAt,"2026-11-29T11:00:00.000Z");assert.ok(partial.activities.some(row=>row.body==="First separate update"));assert.equal(partial.checklist[0].latestUpdate?.body,"First separate update");assert.equal(JSON.stringify(partial).includes("PRIVATE SIBLING UPDATE"),false);
  await updatePersonalWorkItem({id,title:"Changed parent",dueAt:"2030-01-01"},auth(owner));task=await prisma.taskItem.findUniqueOrThrow({where:{id}});assert.equal(task.dueAt?.toISOString(),"2026-11-20T00:00:00.000Z");
  await deletePersonalWorkChecklistItem(id,b,auth(owner));task=await prisma.taskItem.findUniqueOrThrow({where:{id}});assert.equal(task.scheduledEndAt?.toISOString(),"2026-11-29T11:00:00.000Z");

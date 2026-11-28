@@ -20,6 +20,7 @@ import {PersonalWorkListToolbar} from "./PersonalWorkListToolbar";
 import listStyles from "./PersonalWorkList.module.css";
 import { personalWorkCode } from "../shared/personal-work-code";
 import {PersonalChecklistShare} from "./PersonalChecklistShare";
+import {PersonalChecklistUpdates} from "./PersonalChecklistUpdates";
 import {PersonalChecklistEditor} from "./PersonalChecklistEditor";
 import {PersonalWorkKindField} from "./PersonalWorkKindField";
 import {isPersonalEvent,personalEventLabel,personalItemScheduleInput,personalEventTiming} from "../shared/personal-event";
@@ -248,7 +249,6 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const editingSource = useRef(workItems);
   const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const workHistoryRef=useRef<HTMLElement>(null);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const [editingChecklistTitleId, setEditingChecklistTitleId] = useState<string | null>(null);
   useEffect(()=>setEditingChecklistTitleId(null),[editingItem?.id]);
@@ -1098,7 +1098,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                         <div className="min-w-0 flex-1">
                           <AdminButton type="button" variant="contextual" onClick={()=>setEditingChecklistTitleId(editingChecklistTitleId===entry.id?null:entry.id)} className={`block w-full text-left text-sm ${entry.isDone?"text-slate-400 line-through":"text-slate-700"}`}>{entry.title}</AdminButton>
                           <p className="text-xs text-slate-500">{entry.deadlineAt?`Hạn ${scheduleDate(entry.deadlineAt).split("-").reverse().join("/")} · ${scheduleTime(entry.deadlineAt)}`:"Chưa có lịch"}</p>
-                          {entry.latestUpdate&&<AdminButton type="button" variant="contextual" density="compact" title={entry.latestUpdate.body} aria-label={`Xem cập nhật ${entry.title}`} onClick={()=>{setHistoryExpanded(true);workHistoryRef.current?.scrollIntoView({block:"nearest",behavior:"smooth"});}} className="block max-w-full truncate text-left text-xs text-blue-700">Có cập nhật · {scheduleDate(entry.latestUpdate.occurredAt).split("-").reverse().join("/")} {scheduleTime(entry.latestUpdate.occurredAt)}</AdminButton>}
+                          <PersonalChecklistUpdates taskItemId={editingItem.id} entry={entry}/>
                         </div>
                         </div>
                         {entry.object?.type === "WATCH" && <span data-checklist-thumbnail className={listStyles.checklistThumbnail}><WorkObjectThumbnail object={entry.object} size={36}/></span>}
@@ -1422,7 +1422,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
             </fieldset>
             {!editingItem.checklistOnly && <WorkImageAttachments key={editingItem.id} workId={editingItem.id} />}
             {editingItem.activities.length > 0 && (
-              <section ref={workHistoryRef} aria-label="Lịch sử cập nhật" className="mt-4 border-t border-slate-100 pt-4">
+              <section aria-label="Lịch sử cập nhật" className="mt-4 border-t border-slate-100 pt-4">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Lịch sử cập nhật

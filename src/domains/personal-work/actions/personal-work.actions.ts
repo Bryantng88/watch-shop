@@ -287,6 +287,6 @@ export async function editPersonalChecklistAction(input:Parameters<typeof editPe
   refresh();
   return syncChecklistParentCalendar(input.taskItemId);
 }
-export async function personalChecklistHistoryAction(input:{taskItemId:string;checklistItemId:string}) {
-  return personalChecklistHistory(input.taskItemId,input.checklistItemId,await auth());
+export async function personalChecklistHistoryAction(input:{taskItemId:string;checklistItemId:string;updatesOnly?:boolean}) {
+  return personalChecklistHistory(input.taskItemId,input.checklistItemId,await auth(),input.updatesOnly===true);
 }
