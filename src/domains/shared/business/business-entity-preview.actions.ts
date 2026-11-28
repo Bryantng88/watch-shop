@@ -171,8 +171,8 @@ export async function getBusinessEntityPreviewAction(input: {
     if (!id) return null;
 
     if (input.type === "WATCH") {
-        const row = await prisma.watch.findUnique({
-            where: { id },
+        const row = await prisma.watch.findFirst({
+            where: { OR: [{ id }, { productId: id }] },
             include: {
                 product: {
                     select: {

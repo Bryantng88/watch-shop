@@ -1,5 +1,7 @@
 "use client";
 
+import NextImage from "next/image";
+import { WatchQuickPreviewTrigger } from "@/domains/shared/ui/work-object/WatchQuickPreviewTrigger";
 import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { AdminLinkAction } from "@/domains/shared/ui/admin-design-contract/AdminLinkAction";
@@ -743,7 +745,7 @@ function queueItemToBusinessPreview(item: TaskItemQueueItem): BusinessEntityPrev
   };
 }
 
-export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
+export function QueueItemThumbnail({ item, interactive=true }: { item: TaskItemQueueItem; interactive?:boolean }) {
   const imageUrls = item.preview.imageUrls?.length
     ? item.preview.imageUrls
     : item.preview.imageUrl
@@ -752,6 +754,7 @@ export function QueueItemThumbnail({ item }: { item: TaskItemQueueItem }) {
   const src = resolveQueuePreviewSrc(imageUrls[0]);
   const label = queueItemTitle(item);
 
+  if(interactive && item.targetType === "WATCH")return <WatchQuickPreviewTrigger watch={{productId:item.targetId,label,imageUrl:src}} className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 text-xs text-slate-500 ring-1 ring-slate-200">{src ? <NextImage unoptimized src={src} alt={label} width={44} height={44} className="h-full w-full object-cover"/> : "ĐH"}</WatchQuickPreviewTrigger>;
   if (item.targetType === "MEDIA_POST") {
     return <MediaPostItemIcon />;
   }

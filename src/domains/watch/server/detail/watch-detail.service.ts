@@ -310,6 +310,7 @@ export async function getWatchTradeHistoryDetail(productId: string) {
       ? {
           currency: costLedger.currency,
           acquisitionAmount: costLedger.acquisitionAmount,
+          acquisitionKind: costLedger.acquisitionKind,
           serviceAmount: costLedger.serviceAmount,
           shipmentAmount: costLedger.shipmentAmount,
           otherAmount: costLedger.otherAmount,

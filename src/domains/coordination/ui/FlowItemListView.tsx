@@ -1190,7 +1190,7 @@ export default function FlowItemListView({
                       className={cn("flex min-w-0 items-center gap-3 text-left", isCompact && styles.identity)}
                     >
                       <span className={cn("relative shrink-0", isCompact && styles.thumbnail)}>
-                        <QueueItemThumbnail item={thumbnailItem as TaskItemQueueItem} />
+                        <QueueItemThumbnail item={thumbnailItem as TaskItemQueueItem} interactive={false} />
                         {item.discussionCount > 0 ? (
                           <span
                             title={`${item.discussionCount} comment`}

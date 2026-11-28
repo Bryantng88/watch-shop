@@ -37,7 +37,7 @@ test("storefront requires explicit publication and a sellable product status", (
   const where = JSON.stringify(publicWatchEligibilityWhere({ requireCoverImage: true }));
 
   assert.match(where, /"publishedAt":\{"not":null\}/);
-  assert.match(where, /"status":\{"in":\["AVAILABLE","IN_SERVICE","HOLD","SOLD"\]\}/);
+  assert.match(where, /"status":\{"in":\["AVAILABLE","CONSIGNED_FROM","IN_SERVICE","HOLD","SOLD"\]\}/);
   assert.doesNotMatch(where, /"OR":\[\{"status":/);
 });
 
@@ -46,7 +46,7 @@ test("contact-price watches remain eligible for a purchase request", () => {
 
   assert.equal(where.includes('"priceVisibility":"SHOW"'), false);
   assert.match(where, /"priceVisibility":"HIDE"/);
-  assert.match(where, /"status":"AVAILABLE"/);
+  assert.match(where, /"status":\{"in":\["AVAILABLE","CONSIGNED_FROM"\]\}/);
   assert.match(where, /"saleStage":\{"in":\["PROCESSING","READY"\]\}/);
   assert.match(where, /"serviceStage":\{"in":\["NOT_REQUIRED","DONE"\]\}/);
   assert.match(where, /"stockStage":"IN_STOCK"/);

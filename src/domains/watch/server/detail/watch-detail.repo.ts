@@ -1,3 +1,4 @@
+import { readConsignment, consignmentAmounts } from "@/domains/consignment/shared/contract";
 import type { DB } from "@/server/db/client";
 import { dbOrTx } from "@/server/db/client";
 
@@ -244,6 +245,7 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
             refNo: true,
             accquisitionStt: true,
             type: true,
+            consignment: true,
             createdAt: true,
             updatedAt: true,
             vendor: {
@@ -287,23 +289,31 @@ export async function getWatchTradeHistory(db: DB, productId: string) {
   ]);
 
   return {
-    acquisitions: acquisitionItems.map((item) => ({
-      id: item.id,
-      type: "ACQUISITION",
-      acquisitionId: item.acquisitionId,
-      code: item.acquisition?.refNo ?? item.acquisitionId,
-      acquisitionCode: item.acquisition?.refNo ?? item.acquisitionId,
-      status: item.acquisition?.accquisitionStt ?? item.status ?? null,
-      acquisitionType: item.acquisition?.type ?? null,
-      unitCost: item.unitCost ?? null,
-      amount: item.unitCost ?? null,
-      vendor: item.acquisition?.vendor ?? null,
-      vendorName: item.acquisition?.vendor?.name ?? null,
-      customer: item.acquisition?.customer ?? null,
-      customerName: item.acquisition?.customer?.name ?? null,
-      createdAt: item.acquisition?.createdAt ?? item.createdAt,
-      updatedAt: item.acquisition?.updatedAt ?? item.updatedAt,
-    })),
+    acquisitions: acquisitionItems.map((item) => {
+      const document = readConsignment(item.acquisition?.consignment);
+      const amount = document
+        ? document.soldAmount == null ? null : consignmentAmounts(document.soldAmount, document.terms).net
+        : item.unitCost ?? null;
+      return {
+        id: item.id,
+        type: "ACQUISITION",
+        acquisitionId: item.acquisitionId,
+        code: item.acquisition?.refNo ?? item.acquisitionId,
+        acquisitionCode: item.acquisition?.refNo ?? item.acquisitionId,
+        status: item.acquisition?.accquisitionStt ?? item.status ?? null,
+        acquisitionType: item.acquisition?.type ?? null,
+        unitCost: item.unitCost ?? null,
+        amount,
+        consignmentDirection: document?.direction ?? null,
+        consignmentStatus: document?.status ?? null,
+        vendor: item.acquisition?.vendor ?? null,
+        vendorName: item.acquisition?.vendor?.name ?? null,
+        customer: item.acquisition?.customer ?? null,
+        customerName: item.acquisition?.customer?.name ?? null,
+        createdAt: item.acquisition?.createdAt ?? item.createdAt,
+        updatedAt: item.acquisition?.updatedAt ?? item.updatedAt,
+      };
+    }),
 
     orders: orderItems.map((item) => ({
       id: item.id,

@@ -1,3 +1,4 @@
+import { readConsignment, consignmentAmounts } from "@/domains/consignment/shared/contract";
 import type { BusinessEventDispatchContext } from "@/domains/event/dispatcher/business-event-consumer.types";
 import { ORDER_BUSINESS_EVENT_KEYS } from "@/domains/order/server/events/order-business-event.contract";
 import { SHIPMENT_OPERATION_EVENT_KEYS } from "@/domains/shipment/server/events/shipment-business-event.contract";
@@ -47,6 +48,7 @@ const SERVICE_EVENTS = [
 ] as const;
 
 const SOURCE_EVENTS = [
+  "watch.price.updated",
   ...PAYMENT_EVENTS,
   ...ACQUISITION_EVENTS,
   ...SERVICE_EVENTS,
@@ -58,6 +60,7 @@ export type WatchCostLedgerProjection = {
   productId: string;
   currency: string;
   acquisitionAmount: number;
+  acquisitionKind?: "PURCHASE" | "CONSIGNMENT";
   serviceAmount: number;
   shipmentAmount: number;
   otherAmount: number;
@@ -127,6 +130,7 @@ export async function buildWatchCostLedgerProjectionRow(db: DB, productId: strin
       select: {
         id: true,
         acquisitionId: true,
+        acquisition: {select:{consignment:true,updatedAt:true}},
         unitCost: true,
         currency: true,
         createdAt: true,
@@ -286,7 +290,17 @@ export async function buildWatchCostLedgerProjectionRow(db: DB, productId: strin
   const linkedShipmentIds = new Set(
     costLedger.map((payment) => payment.shipmentId).filter(Boolean),
   );
-  const acquisitionAmount = toNumber(acquisitionItems[0]?.unitCost);
+  const costSource=acquisitionItems.find(item=>readConsignment(item.acquisition?.consignment)?.direction!=="OUT");
+  const received=readConsignment(costSource?.acquisition?.consignment);
+  let acquisitionAmount = toNumber(costSource?.unitCost);
+  if(received?.direction === "IN"){
+    if(received.soldAmount!=null)acquisitionAmount=consignmentAmounts(received.soldAmount,received.terms).net;
+    else if(received.status === "ACTIVE"){
+      const watch=await client.watch.findUnique({where:{productId},select:{watchPrice:{select:{salePrice:true}}}});
+      const price=toNumber(watch?.watchPrice?.salePrice);
+      acquisitionAmount=received.terms.mode === "NET" ? received.terms.value : received.terms.mode === "FIXED" ? Math.max(0,price-received.terms.value) : price-Math.round(price*received.terms.value/100);
+    }
+  }
   const serviceAmount = paymentAmount("SERVICE") + serviceFees
     .filter((fee) =>
       !linkedIssueIds.has(fee.id) &&
@@ -296,11 +310,13 @@ export async function buildWatchCostLedgerProjectionRow(db: DB, productId: strin
   const shipmentAmount = paymentAmount("SHIPMENT") + shipmentFees
     .filter((fee) => !linkedShipmentIds.has(fee.id))
     .reduce((total, fee) => total + fee.amount, 0);
-  const otherAmount = costLedger
+  const partnerFee=acquisitionItems.reduce((sum,item)=>{const document=readConsignment(item.acquisition?.consignment);return document?.direction === "OUT" && ["SOLD","SETTLED"].includes(document.status) && document.soldAmount!=null && (!costSource || item.createdAt>=costSource.createdAt) ? sum+consignmentAmounts(document.soldAmount,document.terms).fee : sum;},0);
+  const otherAmount = partnerFee + costLedger
     .filter((payment) => !["ACQUISITION", "SERVICE", "SHIPMENT"].includes(payment.type))
     .reduce((total, payment) => total + payment.amount / payment.allocationDivisor, 0);
   const sourceUpdatedAt = maxDate([
     ...acquisitionItems.map((item) => item.updatedAt),
+    ...acquisitionItems.map((item) => item.acquisition?.updatedAt),
     ...orderItems.map((item) => item.updatedAt),
     ...serviceRequests.map((item) => item.updatedAt),
     ...serviceRequests.flatMap((item) => item.technicalIssue.map((issue) => issue.updatedAt)),
@@ -310,6 +326,7 @@ export async function buildWatchCostLedgerProjectionRow(db: DB, productId: strin
     productId,
     currency: acquisitionItems[0]?.currency ?? payments[0]?.currency ?? "VND",
     acquisitionAmount,
+    acquisitionKind: received?.direction === "IN" ? "CONSIGNMENT" : "PURCHASE",
     serviceAmount,
     shipmentAmount,
     otherAmount,
@@ -502,6 +519,7 @@ export const watchCostLedgerProjectionBuilder: ProjectionBuilder = {
   description: "Event-driven per-Watch rollup for acquisition, service, shipment and other OUT costs.",
   sourceEvents: [...SOURCE_EVENTS],
   targetTypes: [
+    "WATCH",
     "PAYMENT",
     "ACQUISITION",
     "ORDER",

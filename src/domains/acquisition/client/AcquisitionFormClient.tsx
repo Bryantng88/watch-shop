@@ -621,7 +621,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                     <option value="PURCHASE">Thu mua</option>
                                     <option value="BUY_BACK">Mua lại</option>
                                     <option value="TRADE_IN">Đổi đồng hồ</option>
-                                    <option value="CONSIGNMENT">Ký gửi</option>
+
                                 </select>
                             </div>
 

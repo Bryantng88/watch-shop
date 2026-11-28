@@ -1,3 +1,4 @@
+import { readConsignment } from "@/domains/consignment/shared/contract";
 import { prisma } from "@/server/db/client";
 
 import { resolveWatchStateTransition } from "./watch-state.rules";
@@ -15,13 +16,20 @@ export async function transitionWatchState(
   action: WatchStateAction
 ): Promise<WatchStateTransitionResult> {
   return prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${productId} FOR UPDATE`;
     const current = await getWatchStateSnapshotRepo(tx, productId);
 
     if (!current) {
       throw new Error("Không tìm thấy watch.");
     }
 
+    const owner=await tx.watch.findUnique({where:{productId},select:{acquisitionId:true}});
+    const acquisition=owner?.acquisitionId?await tx.acquisition.findUnique({where:{id:owner.acquisitionId},select:{consignment:true}}):null;
+    const consignment=readConsignment(acquisition?.consignment);
+    if(consignment?.direction === "IN" && ["DRAFT","RETURNED","CANCELLED"].includes(consignment.status))throw new Error("Đồng hồ chưa được nhận hoặc đã trả người gửi. Xử lý hồ sơ ký gửi trước.");
+    if(consignment?.direction === "IN" && action === "MARK_SOLD")throw new Error("Bán đồng hồ nhận ký gửi qua Đơn hàng để chốt đúng số tiền và quyết toán.");
     const patch = resolveWatchStateTransition(action, current);
+    if(consignment?.direction === "IN" && consignment.status === "ACTIVE" && patch.productStatus === "AVAILABLE")patch.productStatus="CONSIGNED_FROM";
     const next = await applyWatchStatePatchRepo(tx, productId, patch);
 
     return {

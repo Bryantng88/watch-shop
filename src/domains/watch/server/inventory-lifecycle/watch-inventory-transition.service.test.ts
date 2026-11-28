@@ -6,6 +6,7 @@ import { transitionWatchInventoryTx } from "./watch-inventory-transition.service
 test("HOLD transition updates Product and Watch as one canonical triple", async () => {
   const writes: Array<{ target: string; data: Record<string, unknown> }> = [];
   const tx = {
+    $queryRaw: async () => [],
     watch: {
       findUnique: async () => ({
         productId: "product-1", currentInventoryCycleId: "cycle-1",
@@ -30,6 +31,7 @@ test("HOLD transition updates Product and Watch as one canonical triple", async 
 test("canonical transition is idempotent", async () => {
   let writes = 0;
   const tx = {
+    $queryRaw: async () => [],
     watch: {
       findUnique: async () => ({
         productId: "product-1", currentInventoryCycleId: "cycle-1",
@@ -47,6 +49,7 @@ test("canonical transition is idempotent", async () => {
 
 test("transition refuses a Watch without lifecycle identity", async () => {
   const tx = {
+    $queryRaw: async () => [],
     watch: { findUnique: async () => ({ productId: "product-1", currentInventoryCycleId: null, saleStage: "READY", stockStage: "IN_STOCK", serviceStage: "NOT_REQUIRED", product: { status: "AVAILABLE" } }) },
   } as unknown as Prisma.TransactionClient;
   await assert.rejects(() => transitionWatchInventoryTx(tx, { productId: "product-1", next: "HOLD" }), /no current inventory cycle/);
@@ -55,6 +58,7 @@ test("transition refuses a Watch without lifecycle identity", async () => {
 test("AVAILABLE preserves the IN_SERVICE overlay while service remains active", async () => {
   const writes: Array<{ target: string; data: Record<string, unknown> }> = [];
   const tx = {
+    $queryRaw: async () => [],
     watch: {
       findUnique: async () => ({
         productId: "product-1", currentInventoryCycleId: "cycle-1",
@@ -79,6 +83,7 @@ test("AVAILABLE preserves the IN_SERVICE overlay while service remains active", 
 test("AVAILABLE clears the service overlay when the workflow marks service done", async () => {
   const writes: Array<{ target: string; data: Record<string, unknown> }> = [];
   const tx = {
+    $queryRaw: async () => [],
     watch: {
       findUnique: async () => ({
         productId: "product-1", currentInventoryCycleId: "cycle-1",

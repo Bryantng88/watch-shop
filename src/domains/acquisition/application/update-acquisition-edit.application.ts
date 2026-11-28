@@ -216,11 +216,13 @@ export async function updateAcquisitionEditApplication(
             select: {
                 id: true,
                 accquisitionStt: true,
+                consignment: true,
                 currency: true,
             },
         });
 
         if (!acquisition) throw new Error("Không tìm thấy phiếu nhập.");
+        if(acquisition.consignment)throw new Error("Sửa hồ sơ tại Mua bán → Ký gửi để giữ đúng thỏa thuận và quyết toán.");
         const status = String(acquisition.accquisitionStt ?? "").toUpperCase();
 
         if (!["DRAFT", "POSTED"].includes(status)) {

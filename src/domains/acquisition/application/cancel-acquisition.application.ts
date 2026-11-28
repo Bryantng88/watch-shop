@@ -22,6 +22,7 @@ export async function cancelAcquisitionApplication(
             throw new Error("Không tìm thấy phiếu nhập");
         }
 
+        if(acq.consignment)throw new Error("Hồ sơ ký gửi cần được xử lý tại Mua bán → Ký gửi.");
         const status = normalizeStatus(acq.accquisitionStt);
 
         if (status === "CANCELED" || status === "CANCELLED") {

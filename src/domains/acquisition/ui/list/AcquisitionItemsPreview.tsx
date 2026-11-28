@@ -1,6 +1,7 @@
 "use client";
 
 import { AdminListThumbnail } from "@/domains/shared/ui/admin-design-contract/AdminListThumbnail";
+import { WatchQuickPreviewTrigger } from "@/domains/shared/ui/work-object/WatchQuickPreviewTrigger";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -133,7 +134,7 @@ export default function AcquisitionItemsPreview({ row }: { row: AcquisitionListI
                             {row.detailItems.map((item) => (
                                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
                                     <div className="flex gap-3">
-                                        <ItemThumb src={item.imageUrl} title={item.title} />
+                                        {item.linkedWatchProductId ? <WatchQuickPreviewTrigger watch={{productId:item.linkedWatchProductId,label:item.linkedWatchTitle||item.title,imageUrl:item.imageUrl}} className="shrink-0 rounded-lg"><ItemThumb src={item.imageUrl} title={item.title}/></WatchQuickPreviewTrigger> : <ItemThumb src={item.imageUrl} title={item.title} />}
 
                                         <div className="min-w-0 flex-1">
                                             <div className="flex min-w-0 items-center gap-2">

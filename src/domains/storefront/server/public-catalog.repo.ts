@@ -182,6 +182,7 @@ export function publicWatchEligibilityWhere(options?: {
         // visible so customers can discover a published watch while work runs.
         status: { in: [
           ProductStatus.AVAILABLE,
+          ProductStatus.CONSIGNED_FROM,
           ProductStatus.IN_SERVICE,
           ProductStatus.HOLD,
           ProductStatus.SOLD,
@@ -210,7 +211,7 @@ export function publicWatchOrderableWhere(): Prisma.ProductWhereInput {
     AND: [
       publicWatchEligibilityWhere(),
       {
-        status: ProductStatus.AVAILABLE,
+        status: { in: [ProductStatus.AVAILABLE, ProductStatus.CONSIGNED_FROM] },
         watch: {
           is: {
             saleStage: {

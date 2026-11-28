@@ -98,7 +98,7 @@ export function mapPublicWatchCard(row: PublicWatchListRow): PublicWatchCard {
     condition: row.watch.conditionGrade ?? null,
     availability: row.watch.saleStage === "SOLD" || row.status === "SOLD" ? "SOLD" : row.watch.saleStage === "HOLD" || row.status === "HOLD" ? "HOLD" : "AVAILABLE",
     orderable:
-      row.status === "AVAILABLE" &&
+      ["AVAILABLE", "CONSIGNED_FROM"].includes(row.status) &&
       (row.watch.saleStage === "PROCESSING" || row.watch.saleStage === "READY") &&
       row.watch.stockStage === "IN_STOCK",
     updatedAt: row.updatedAt.toISOString(),

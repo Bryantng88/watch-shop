@@ -1,4 +1,5 @@
 "use client";
+import { WatchQuickPreviewTrigger } from "@/domains/shared/ui/work-object/WatchQuickPreviewTrigger";
 
 import { ADMIN_DETAIL as detail } from "@/domains/shared/ui/admin-design-contract/AdminDetail";
 import Image from "next/image";
@@ -42,13 +43,19 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
                   className={detail.itemRow}
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                    {item.productType === "WATCH" && item.productId ? <WatchQuickPreviewTrigger watch={{productId:item.productId,label:item.title,imageUrl:imageSrc}} className="shrink-0 rounded-lg"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                       {imageSrc ? (
                         <Image src={imageSrc} alt={item.title} width={48} height={48} unoptimized className="h-full w-full object-cover" />
                       ) : (
                         <ImageIcon className="h-5 w-5 text-slate-400" />
                       )}
-                    </div>
+                    </div></WatchQuickPreviewTrigger> : <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                      {imageSrc ? (
+                        <Image src={imageSrc} alt={item.title} width={48} height={48} unoptimized className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-slate-400" />
+                      )}
+                    </div>}
 
                     <div className="min-w-0">
                       <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -63,7 +70,7 @@ export default function OrderItemsPanel({ data }: { data: OrderDetailData }) {
                       </div>
 
                       <div className={detail.itemName}>
-                        {item.title}
+                        {item.productType === "WATCH" && item.productId ? <WatchQuickPreviewTrigger watch={{productId:item.productId,label:item.title,imageUrl:imageSrc}} className="max-w-full text-left hover:underline">{item.title}</WatchQuickPreviewTrigger> : item.title}
                       </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
