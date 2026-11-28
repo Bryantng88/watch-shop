@@ -1,5 +1,6 @@
 "use client";
 
+import { WatchQuickPreviewTrigger } from "@/domains/shared/ui/work-object/WatchQuickPreviewTrigger";
 import Link from "next/link";
 import {
   ExternalLink,
@@ -371,7 +372,7 @@ function DefaultExecutionCard({ item }: { item: any }) {
       href={href}
     >
       <div className="break-all font-semibold text-slate-950">
-        {displayRef}
+        {item.targetType === "WATCH" ? <WatchQuickPreviewTrigger watch={{productId:item.targetId,label:displayRef}} className="text-left hover:underline">{displayRef}</WatchQuickPreviewTrigger> : displayRef}
       </div>
 
       {item.note ? (

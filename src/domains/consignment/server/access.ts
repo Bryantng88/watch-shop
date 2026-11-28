@@ -1,0 +1,9 @@
+import { PERMISSIONS as P } from "@/constants/permissions";
+export type ConsignmentActor={id:string;name?:string|null;roles:string[];permissions:string[]};
+export const consignmentReadPermissions=[P.WATCH_ACQUISITION_VIEW,P.ACQUISITION_VIEW_ALL] as const;
+export function hasAny(actor:ConsignmentActor,codes:readonly string[]){return actor.roles.includes("ADMIN")||codes.some(code=>actor.permissions.includes(code));}
+export class ConsignmentError extends Error{constructor(message:string,public status=400){super(message);}}
+export function requireConsignment(actor:ConsignmentActor,codes:readonly string[]){if(!hasAny(actor,codes))throw new ConsignmentError("Bạn không có quyền thực hiện thao tác ký gửi này.",403);}
+export function canReadConsignmentMoney(actor:ConsignmentActor){return actor.roles.includes("ADMIN")||(actor.permissions.includes(P.PRODUCT_COST_VIEW)&&hasAny(actor,[P.ACQUISITION_PAYMENT_VIEW,P.PAYMENT_VIEW_ALL]));}
+export function requireConsignmentMoney(actor:ConsignmentActor){if(!canReadConsignmentMoney(actor))throw new ConsignmentError("Cần quyền xem tài chính phiếu nhập để quản lý thỏa thuận ký gửi.",403);}
+export function consignmentCapabilities(actor:ConsignmentActor){const money=canReadConsignmentMoney(actor);return {create:money&&hasAny(actor,[P.WATCH_ACQUISITION_CREATE,P.ACQUISITION_CREATE_ALL]),approve:money&&hasAny(actor,[P.WATCH_ACQUISITION_APPROVE,P.ACQUISITION_APPROVE_ALL]),edit:money&&hasAny(actor,[P.WATCH_ACQUISITION_UPDATE,P.ACQUISITION_UPDATE_ALL]),cancel:money&&hasAny(actor,[P.WATCH_ACQUISITION_DELETE,P.ACQUISITION_DELETE_ALL]),paymentView:money&&hasAny(actor,[P.ACQUISITION_PAYMENT_VIEW,P.PAYMENT_VIEW_ALL]),paymentCreate:money&&hasAny(actor,[P.ACQUISITION_PAYMENT_CREATE,P.PAYMENT_CREATE_ALL]),paymentUpdate:money&&hasAny(actor,[P.ACQUISITION_PAYMENT_UPDATE,P.PAYMENT_UPDATE_ALL])};}

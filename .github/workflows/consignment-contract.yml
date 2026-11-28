@@ -1,0 +1,80 @@
+name: Consignment and shared watch quick preview
+on:
+  pull_request:
+    paths:
+      - 'src/domains/consignment/**'
+      - 'src/app/**/consignments/**'
+      - 'src/domains/shared/ui/work-object/**'
+      - 'src/domains/payment/**'
+      - 'src/domains/storefront/server/public-catalog*'
+      - 'src/domains/shared/business/business-entity-preview.actions.ts'
+      - 'src/domains/acquisition/**'
+      - 'src/domains/coordination/**'
+      - 'src/domains/order/ui/detail/**'
+      - 'src/domains/task/ui/**'
+      - 'src/app/(admin)/admin/layout.tsx'
+      - 'src/server/auth/admin-api-policy.ts'
+      - 'src/domains/trading/**'
+      - 'src/domains/watch/server/state/**'
+      - 'src/domains/watch/server/inventory-lifecycle/**'
+      - 'src/domains/projection/server/watch-cost-ledger.projection.ts'
+      - 'prisma/**'
+      - 'scripts/check-consignment*'
+      - '.github/workflows/consignment-contract.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: fixture-password
+          POSTGRES_DB: watch_shop_consignment_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:fixture-password@127.0.0.1:5432/watch_shop_consignment_test
+      PERSONAL_CODEX_ENABLED: '0'
+      ORDER_CODEX_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma generate --generator client
+      - name: Rehearse additive migration against the previous acquisition schema
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          schema=Path('prisma/schema.prisma').read_text().replace('  consignment     Json?\n','')
+          Path('/tmp/consignment-baseline.prisma').write_text(schema)
+          PY
+          npx prisma db push --skip-generate --schema /tmp/consignment-baseline.prisma
+          npx prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261128090000_consignment_documents/migration.sql
+      - run: npx tsc --noEmit
+      - run: npx eslint src/domains/consignment src/domains/shared/ui/work-object src/domains/trading src/app/api/admin/consignments 'src/app/(admin)/admin/consignments' scripts/check-consignment-db.ts scripts/check-consignment-ui.cjs
+      - run: npx tsx --test src/domains/consignment/shared/contract.test.ts src/domains/watch/server/inventory-lifecycle/watch-inventory-transition.service.test.ts src/domains/storefront/server/public-catalog.repo.test.ts src/domains/storefront/contracts/public-catalog.contract.test.ts
+      - run: npx tsx scripts/check-consignment-db.ts
+      - run: npm install --prefix /tmp/consignment-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: /tmp/consignment-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: node scripts/check-consignment-ui.cjs
+        env:
+          PLAYWRIGHT_MODULE_PATH: /tmp/consignment-browser/node_modules/playwright
+          CONSIGNMENT_SCREENSHOTS: ${{ runner.temp }}/consignment-preview
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: consignment-preview
+          path: ${{ runner.temp }}/consignment-preview
+          if-no-files-found: ignore

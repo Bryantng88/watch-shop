@@ -15,6 +15,7 @@ type Props = {
     loading?: boolean;
     owner: PaymentOwner;
     submitting?: boolean;
+    allowComplete?: boolean;
     setPayments: React.Dispatch<React.SetStateAction<PaymentListItem[]>>;
     onReload: () => Promise<void>;
     onUpdated?: () => void;
@@ -121,6 +122,7 @@ export default function PaymentTable({
     loading = false,
     owner,
     submitting = false,
+    allowComplete = true,
     setPayments,
     onReload,
     onUpdated,
@@ -133,7 +135,7 @@ export default function PaymentTable({
     const [cancelingPaymentId, setCancelingPaymentId] = useState<string | null>(null);
 
     async function submitCompletePayment(payment: PaymentListItem) {
-        if (!payment.id || !canComplete(payment)) return;
+        if (!allowComplete || !payment.id || !canComplete(payment)) return;
 
         await onCompletePayment({
             paymentId: payment.id,
@@ -276,7 +278,7 @@ export default function PaymentTable({
                                     </div>
 
                                     <div className="flex justify-end gap-2">
-                                        {canComplete(payment) ? (
+                                        {allowComplete && canComplete(payment) ? (
                                             <AdminButton variant="secondary" density="compact"
                                                 type="button"
                                                 disabled={submitting}
@@ -304,7 +306,7 @@ export default function PaymentTable({
                                     </div>
                                 </div>
 
-                                {isRowCompleting && canComplete(payment) ? (
+                                {allowComplete && isRowCompleting && canComplete(payment) ? (
                                     <div className="mt-4 rounded-2xl bg-slate-50 p-4">
                                         <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-950">
                                             <CheckCircle2 className="h-4 w-4 text-emerald-600" />

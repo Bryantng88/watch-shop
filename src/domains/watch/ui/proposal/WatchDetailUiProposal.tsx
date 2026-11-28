@@ -161,7 +161,7 @@ export default function WatchDetailUiProposal({
   const profit = salePrice - landedCost;
   const margin = salePrice > 0 ? profit / salePrice * 100 : 0;
   const costRows = [
-    { label: "Giá nhập", note: "Từ phiếu nhập gần nhất", amount: acquisitionCost },
+    { label: summary.acquisitionKind === "CONSIGNMENT" ? "Tiền trả người gửi" : "Giá nhập", note: summary.acquisitionKind === "CONSIGNMENT" ? "Theo giá bán và thỏa thuận ký gửi" : "Từ phiếu nhập gần nhất", amount: acquisitionCost },
     { label: "Service", note: `${rows(tradeHistory.serviceFees).length} hạng mục kỹ thuật`, amount: serviceCost },
     { label: "Vận chuyển", note: `${rows(tradeHistory.shipmentFees).length} vận đơn liên quan`, amount: shipmentCost },
     { label: "Chi phí khác", note: "Các khoản chi đã ghi nhận", amount: otherCost },

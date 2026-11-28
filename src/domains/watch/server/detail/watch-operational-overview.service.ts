@@ -1,3 +1,4 @@
+import { readConsignment } from "@/domains/consignment/shared/contract";
 import type { Prisma } from "@prisma/client";
 import type { DB } from "@/server/db/client";
 import { authorizeTaskItemDetail } from "@/domains/task/server/core/task-item-detail.service";
@@ -10,11 +11,13 @@ import type { WatchOperationalOverview, WatchRelatedWork } from "../../shared/wa
 type Viewer = { id: string; permissions: string[]; roles: string[] };
 /** Read-only watch overview. Existing task/personal-work policies decide visibility. */
 export async function getWatchOperationalOverview(db: DB, productId: string, viewer: Viewer, service: WatchServiceProjection): Promise<WatchOperationalOverview | null> {
-  const watch = await db.watch.findUnique({ where: { productId }, select: { id: true, saleStage: true, stockStage: true, product: { select: { status: true } } } });
+  const watch = await db.watch.findUnique({ where: { productId }, select: { id: true, acquisitionId:true, saleStage: true, stockStage: true, product: { select: { status: true } } } });
   if (!watch) return null;
   const productStatus = String(watch.product.status);
   const sale = String(watch.saleStage);
-  const consign = [productStatus, sale].find(status => ["CONSIGNED_TO", "CONSIGNED_FROM"].includes(status)) ?? "NONE";
+  const acquisition=watch.acquisitionId?await db.acquisition.findUnique({where:{id:watch.acquisitionId},select:{consignment:true}}):null;
+  const received=readConsignment(acquisition?.consignment);
+  const consign = received?.direction === "IN" && received.status === "ACTIVE" ? "CONSIGNED_FROM" : [productStatus, sale].find(status => ["CONSIGNED_TO", "CONSIGNED_FROM"].includes(status)) ?? "NONE";
   const result: WatchOperationalOverview = {
     sale: productStatus === "SOLD" || sale === "SOLD" ? "SOLD" : sale,
     stock: String(watch.stockStage), consignment: productStatus === "SOLD" || sale === "SOLD" ? "NONE" : consign,

@@ -478,6 +478,11 @@ export async function resolveWatchIdsForProjectionTarget(
 
   if (targetType === "WATCH") return [targetId];
 
+  if(targetType === "ACQUISITION"){
+    const rows=await dbOrTx(db).acquisitionItem.findMany({where:{acquisitionId:targetId,product:{watch:{isNot:null}}},select:{product:{select:{watch:{select:{id:true}}}}}});
+    return [...new Set(rows.flatMap(row=>row.product?.watch?.id?[row.product.watch.id]:[]))];
+  }
+
   if (targetType === "PRODUCT") {
     const row = await dbOrTx(db).watch.findUnique({
       where: { productId: targetId },

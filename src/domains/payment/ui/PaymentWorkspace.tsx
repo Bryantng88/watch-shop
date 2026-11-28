@@ -47,6 +47,7 @@ type Props = {
     open: boolean;
     owner: PaymentOwner;
     submitting?: boolean;
+    allowComplete?: boolean;
     onClose: () => void;
     onUpdated?: () => void;
     onCreatePayment: (payload: {
@@ -95,6 +96,7 @@ export default function PaymentWorkspace({
     open,
     owner,
     submitting = false,
+    allowComplete = true,
     onClose,
     onUpdated,
     onCreatePayment,
@@ -211,6 +213,7 @@ export default function PaymentWorkspace({
                         />
 
                         <PaymentTable
+                            allowComplete={allowComplete}
                             payments={payments}
                             loading={loading}
                             owner={owner}

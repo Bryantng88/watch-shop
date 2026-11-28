@@ -1,3 +1,4 @@
+import { readConsignment } from "@/domains/consignment/shared/contract";
 import {
   Prisma,
   ProductStatus,
@@ -53,10 +54,12 @@ export async function transitionWatchInventoryTx(
     serviceStageOverride?: WatchServiceStage | null;
   },
 ) {
+  await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${input.productId} FOR UPDATE`;
   const current = await tx.watch.findUnique({
     where: { productId: input.productId },
     select: {
       productId: true,
+      acquisitionId: true,
       currentInventoryCycleId: true,
       saleStage: true,
       stockStage: true,
@@ -69,13 +72,18 @@ export async function transitionWatchInventoryTx(
     throw new Error(`Watch ${input.productId} has no current inventory cycle.`);
   }
 
+  const acquisition=current.acquisitionId?await tx.acquisition.findUnique({where:{id:current.acquisitionId},select:{consignment:true}}):null;
+  const consignment=readConsignment(acquisition?.consignment);
+  if(consignment?.direction === "IN" && ["DRAFT","RETURNED","CANCELLED"].includes(consignment.status))throw new Error("Đồng hồ ký gửi chưa nhận hoặc đã trả người gửi.");
+  if(consignment?.direction === "IN" && ["SOLD","SETTLED"].includes(consignment.status) && input.next!=="SOLD")throw new Error("Hồ sơ ký gửi đã chốt bán. Cần đối soát / điều chỉnh quyết toán trước khi hoàn đơn.");
   const patch = CANONICAL_PATCH[input.next];
   const saleStage = input.saleStageOverride ?? patch.saleStage;
-  const productStatus = productStatusForTransition({
+  let productStatus: ProductStatus = productStatusForTransition({
     next: input.next,
     currentServiceStage: current.serviceStage,
     serviceStageOverride: input.serviceStageOverride,
   });
+  if(consignment?.direction === "IN" && consignment.status === "ACTIVE" && input.next === "AVAILABLE" && productStatus === ProductStatus.AVAILABLE)productStatus=ProductStatus.CONSIGNED_FROM;
   const unchanged = current.product.status === productStatus &&
     current.saleStage === saleStage && current.stockStage === patch.stockStage &&
     (input.serviceStageOverride == null || String(current.serviceStage) === input.serviceStageOverride);
