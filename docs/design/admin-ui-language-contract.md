@@ -1811,3 +1811,9 @@ The work list is a bounded, keyboard-focusable internal scroll pane on phone and
 ### Initial work list loading (2026-11-27)
 
 Preload the first 30 row projections alongside the permission-projected overview so the first paint does not wait for a second browser action. Row projection carries at most the latest activity and omits full notes/Codex history; opening details reads the complete authorized item once. Reuse overview metadata only inside the same authenticated server request, with explicit user identity guards and a fresh owner/share check for row IDs. Never use a shared user-data cache. Calendar-link metadata refreshes alone must not invalidate list rows. Initial loading/error and footer load-more/error are mutually exclusive; background refresh keeps existing rows visible.
+
+### Xác nhận thay đổi trạng thái và xóa đầu việc
+
+Dùng `useAppDialog().confirm`, không dùng `window.confirm` hay overlay tự dựng ở từng trang. Xóa đầu việc, hoàn thành và mở lại đầu việc đều yêu cầu xác nhận, nêu rõ tên đối tượng và tác động tới tiến độ/lịch. Xóa dùng tone danger và nút “Giữ lại”; hoàn thành dùng tone success và nút “Bỏ qua”. Không đổi trạng thái, xóa hàng hoặc gửi mutation trước khi nhận `true`. Hủy, Escape và backdrop đều tương đương bỏ qua. Không coi mở popover/menu hay click vào title là xác nhận.
+
+AppDialogProvider dùng native modal top layer, khóa scroll, focus trap và restore focus. Focus đầu tiên ưu tiên action an toàn; Enter chỉ kích hoạt nút đang focus. Các yêu cầu đồng thời xếp hàng, không ghi đè promise trước. Dùng chung cho mọi caller; không thêm layer số tùy ý. Media từ đầu việc mở embedded workspace modal, kiểm tra origin/source của message và hỏi bỏ thay đổi chưa lưu khi đóng. Menu đầu việc không lặp lại sửa/chi tiết đã có trên title.

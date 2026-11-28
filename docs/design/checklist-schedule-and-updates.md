@@ -29,3 +29,9 @@ Hai cột nullable trên TaskItemChecklist; không xóa/đổi cột cũ. Backfi
 Lưu thành công hiện toast, mỗi hàng có nội dung cập nhật riêng hiện “Có cập nhật” kèm thời điểm. Đây là chỉ báo có nội dung cập nhật, không phải trạng thái chưa đọc. Bấm chỉ báo mở popover ngay cạnh dòng, chỉ tải tối đa 30 nội dung cập nhật của đúng đầu việc (người cập nhật và thời gian). Đóng bằng Escape, nút đóng hoặc bấm ngoài. Form sửa không chứa lịch sử; lịch sử chung cuối modal vẫn giữ toàn bộ mốc theo quyền. Truy vấn lấy một cập nhật gần nhất cho mỗi đầu việc được phép xem, không phụ thuộc 20 mốc gần nhất của parent; không thêm truy vấn này vào tải danh sách/index.
 
 Preview local lưu thay đổi và lịch sử mẫu theo đầu việc vào sessionStorage để tải lại cùng tab vẫn xem được. Đây vẫn là dữ liệu giả lập, không ghi vào dữ liệu thật.
+
+## Menu và xác nhận
+
+Click title để sửa; menu không lặp Sửa/Chi tiết. Mở media dùng AdminEmbeddedWorkspaceDialog và giữ nguyên modal công việc/bản nháp. Kiểm tra origin/source của message, cảnh báo dirty khi đóng/Escape (kể cả focus trong iframe), refresh sau thay đổi đã lưu. Preview chỉ mô phỏng cửa sổ media; iframe editor thật dùng route embedded có bảo vệ quyền hiện hữu.
+
+Hoàn thành/mở lại đầu việc và công việc tổng, xóa đầu việc đều dùng AppDialogProvider thật. Không mutation hay optimistic update trước xác nhận. Provider native top layer, focus an toàn, Escape/backdrop bỏ qua, khôi phục focus và xếp hàng yêu cầu đồng thời. Quy tắc chi tiết nằm trong admin-ui-language-contract.md. check-work-checklist-actions.cjs kiểm tra provider thật, menu, iframe, dirty guard và số lần gọi mutation tại 320/390/1440px.

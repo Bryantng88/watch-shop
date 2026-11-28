@@ -7,6 +7,7 @@ import { PersonalWorkLifecycleActions } from "./PersonalWorkLifecycleActions";
 import { isContinuousWork } from "../shared/continuous-work";
 
 import { PersonalMediaMerge } from "./PersonalMediaMerge";
+import {AdminEmbeddedWorkspaceDialog} from "@/domains/shared/ui/media/AdminEmbeddedWorkspaceDialog";
 import { WorkImageAttachments } from "@/domains/work-media/ui/WorkImageAttachments";
 import { WorkObjectThumbnail } from "@/domains/shared/ui/work-object/WorkObjectThumbnail";
 import { AdminRowActionMenu } from "@/domains/shared/ui/admin-design-contract/AdminRowActionMenu";
@@ -249,6 +250,8 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const editingSource = useRef(workItems);
   const itemMap = useMemo(() => new Map(workItems.map(item => [item.id, item])), [workItems]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [checklistMedia,setChecklistMedia]=useState<{href:string;title:string}|null>(null);
+  const checklistConfirming=useRef(false);
   const [editingItem, setEditingItem] = useState<PersonalWorkItem | null>(null);
   const [editingChecklistTitleId, setEditingChecklistTitleId] = useState<string | null>(null);
   useEffect(()=>setEditingChecklistTitleId(null),[editingItem?.id]);
@@ -360,9 +363,13 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     });
   }
 
-  function completeWork(item: PersonalWorkItem, finalize = false) {
+  async function completeWork(item: PersonalWorkItem, finalize = false) {
     if (item.checklistOnly || item.access === "VIEWER" || item.status === "CANCELLED" || isContinuousWork(item.workType) || isPersonalEvent(item.workType)) return;
     const done = item.status !== "DONE";
+    if(checklistConfirming.current)return;checklistConfirming.current=true;
+    let accepted=false;
+    try{accepted=await appDialog.confirm({title:done?"Hoàn thành công việc?":"Mở lại công việc?",message:finalize?`Xác nhận hoàn thành “${item.title}”? Danh sách đầu việc sẽ được khóa sau bước này.`:`${done?"Đánh dấu hoàn thành":"Mở lại"} “${item.title}”?`,confirmText:done?"Hoàn thành công việc":"Mở lại công việc",cancelText:"Bỏ qua",tone:done?"success":"default"});}finally{checklistConfirming.current=false;}
+    if(!accepted)return;
     void completionMutation.run({
       key: `complete:${item.id}`,
       action: async () => {
@@ -1062,7 +1069,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           aria-busy={checklistMutation.isPending(`toggle:${entry.id}`)}
                           aria-pressed={entry.isDone}
                           aria-label={entry.isDone ? `Mở lại ${entry.title}` : `Hoàn thành ${entry.title}`}
-                          onClick={() => {
+                          onClick={async () => {
+                            if(checklistConfirming.current)return;checklistConfirming.current=true;
+                            let accepted=false;
+                            try{accepted=await appDialog.confirm({title:entry.isDone?"Mở lại đầu việc?":"Hoàn thành đầu việc?",message:`${entry.isDone?"Mở lại":"Đánh dấu hoàn thành"} “${entry.title}”? Tiến độ công việc sẽ được tính lại.`,confirmText:entry.isDone?"Mở lại đầu việc":"Hoàn thành đầu việc",cancelText:"Bỏ qua",tone:entry.isDone?"default":"success"});}finally{checklistConfirming.current=false;}
+                            if(!accepted)return;
                             const snapshot = editingItem;
                             void checklistMutation.run({
                               key: `toggle:${entry.id}`,
@@ -1118,11 +1129,12 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                           label={`Thêm thao tác cho ${entry.title}`} status={null} iconOnly layer="dialogPopover" triggerIcon={<MoreHorizontal className="h-4 w-4"/>}
                           disabled={completionMutation.hasPending || checklistMutation.isPending(`delete:${entry.id}`) || checklistMutation.isPending(`toggle:${entry.id}`)}
                           actions={[
-                            {key:"update",label:`Chi tiết và cập nhật ${entry.title}`,onSelect:()=>setEditingChecklistTitleId(entry.id)},
-                            ...(entry.mediaContext ? [{key:"media",label:"Mở media",onSelect:()=>router.push(entry.mediaContext!.href)}] : entry.object ? [{key:"record",label:"Xem liên kết",onSelect:()=>router.push(entry.object!.href)}] : []),
-                            ...(!(entry.access ? entry.access === "VIEWER" : editingItem.access === "VIEWER") && !editingItem.checklistLockedAt ? [
-                            {key:"edit",label:`Sửa ${entry.title}`,disabled:editingItem.status==="DONE"||editingItem.status==="CANCELLED",onSelect:()=>setEditingChecklistTitleId(entry.id)},
-                            {key:"delete",label:`Xóa ${entry.title}`,onSelect:()=>{
+                            ...(entry.mediaContext ? [{key:"media",label:"Mở media",onSelect:()=>setChecklistMedia({href:entry.mediaContext!.href,title:`Xử lý media · ${entry.title}`})}] : entry.object ? [{key:"record",label:"Xem liên kết",onSelect:()=>router.push(entry.object!.href)}] : []),
+                            ...(editingItem.access !== "VIEWER" && !editingItem.checklistLockedAt && editingItem.status!=="DONE"&&editingItem.status!=="CANCELLED" ? [
+                            {key:"delete",label:`Xóa ${entry.title}`,onSelect:async()=>{
+                              if(checklistConfirming.current)return;checklistConfirming.current=true;
+                              let accepted=false;try{accepted=await appDialog.confirm({title:"Xóa đầu việc?",message:`Xóa “${entry.title}”? Đầu việc sẽ bị bỏ khỏi danh sách và không thể hoàn tác. Lịch sử đã ghi vẫn được giữ.`,confirmText:"Xóa đầu việc",cancelText:"Giữ lại",tone:"danger"});}finally{checklistConfirming.current=false;}
+                              if(!accepted)return;
                               const snapshot=editingItem;
                               void checklistMutation.run({
                                 key:`delete:${entry.id}`,
@@ -1206,16 +1218,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                     pending={completionMutation.isPending(`complete:${editingItem.id}`)}
                     pendingLabel="Đang hoàn thành..."
                     disabled={checklistMutation.hasPending || pending}
-                    onClick={async () => {
-                      const confirmed = await appDialog.confirm({
-                        title: "Xác nhận hoàn thành công việc?",
-                        message: "Sau bước này bạn sẽ không thể thêm, xóa hoặc đổi trạng thái đầu việc.",
-                        confirmText: "Xác nhận hoàn thành",
-                        tone: "success",
-                      });
-                      if (!confirmed) return;
-                      completeWork(editingItem, true);
-                    }}
+                    onClick={() => void completeWork(editingItem, true)}
                     className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     Xác nhận hoàn thành công việc
@@ -1485,6 +1488,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
         </div>
       )}
 
+      {checklistMedia&&<AdminEmbeddedWorkspaceDialog href={checklistMedia.href} title={checklistMedia.title} onClose={changed=>{setChecklistMedia(null);if(changed)router.refresh();}}/>}
       {selectedDay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/25 p-4 backdrop-blur-[1px]" onMouseDown={() => setSelectedDay(null)} onKeyDown={event => {if(event.key === "Escape") setSelectedDay(null);}}>
           <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-title" onMouseDown={event => event.stopPropagation()} className="flex max-h-[75vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl shadow-slate-950/10">

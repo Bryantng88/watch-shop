@@ -14,6 +14,9 @@ on:
       - 'src/domains/personal-work/shared/work-list-query*'
       - 'src/domains/personal-work/server/work-list-page.ts'
       - 'scripts/check-work-checklist-mobile.cjs'
+      - 'scripts/check-work-checklist-actions.cjs'
+      - 'src/domains/shared/feedback/AppDialogProvider.tsx'
+      - 'src/domains/shared/ui/media/AdminEmbeddedWorkspaceDialog.tsx'
       - 'scripts/check-media-merge-ui.cjs'
       - 'scripts/check-continuous-work-ui.cjs'
       - 'scripts/check-work-cancellation-ui.cjs'
@@ -58,6 +61,7 @@ jobs:
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-list-pagination.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-modal-feedback.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-checklist-mobile.cjs
+      - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-checklist-actions.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-media-merge-ui.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-continuous-work-ui.cjs
       - run: PLAYWRIGHT_MODULE_PATH=/tmp/work-responsive-browser/node_modules/playwright node scripts/check-work-cancellation-ui.cjs

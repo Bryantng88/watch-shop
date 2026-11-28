@@ -4,13 +4,14 @@ const {buildFixture}=require('./smoke-work-responsive-ui.cjs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
 (async()=>{
  const root=path.resolve(__dirname,'..');
- const built=await buildFixture({realFeedback:true});
+ const built=await buildFixture({realFeedback:true,realDialogs:Boolean(process.env.WORK_MODAL_PREVIEW)});
  const css=(await require('postcss')([require('tailwindcss')({...require(path.join(root,'tailwind.config.js')),content:[path.join(root,'src/**/*.{ts,tsx}')],corePlugins:{preflight:true}})]).process(await fs.readFile(path.join(root,'src/app/globals.css'),'utf8'),{from:undefined})).css+'\n'+built.css;
  const toolbar=`<aside style="padding:10px 16px;background:#f8fafc;font:12px Arial;color:#475569">Bản thử · dữ liệu giả lập, không ghi vào hệ thống thật. <a href="?view=list&item=item-23">Mở việc có đầu việc</a> · <a href="?view=list&item=item-29">Mở việc thường</a> · <a href="?view=list">Danh sách</a> · <button onclick="window.__completionError=!window.__completionError;this.textContent=window.__completionError?'Đang giả lập lỗi':'Giả lập lỗi hoàn thành'">Giả lập lỗi hoàn thành</button></aside>`;
  const html=`<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}body{margin:0;font-family:Arial,sans-serif}</style></head><body>${toolbar}<div id="root"></div><script>${built.js.replace(/<\/script/gi,'<\\/script')}</script></body></html>`;
  if(process.env.WORK_MODAL_HTML)await fs.writeFile(process.env.WORK_MODAL_HTML,html);
  const previewImages=[],previewFiles=new Map();
  const server=http.createServer(async(req,res)=>{
+  if(process.env.WORK_MODAL_PREVIEW&&new URL(req.url,'http://fixture').searchParams.has('embedded')){res.setHeader('content-type','text/html;charset=utf-8');res.end('<p style="font:14px Arial;padding:24px">Bản mẫu cửa sổ xử lý media. Dữ liệu media thật sẽ được tải khi chạy trên môi trường ứng dụng.</p>');return;}
   if(req.url.startsWith('/api/admin/personal-work/images')){
    const previewFile=previewFiles.get(new URL(req.url,'http://fixture').pathname);
    if(req.method==='GET'&&previewFile){res.setHeader('content-type',previewFile.type);res.end(previewFile.bytes);return;}
