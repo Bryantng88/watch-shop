@@ -109,7 +109,7 @@ export default function HomeView({ content: c, images, watches, journal }: HomeV
         </div>
         <div className="vg-products">
           {watches.map((watch) => (
-            <PublicWatchCardView key={watch.productId} watch={watch} featuredImage={watch.featuredImage} framing={c.featured.images?.[watch.productId]} />
+            <PublicWatchCardView key={watch.productId} watch={watch} featuredImage={watch.featuredImage} />
           ))}
         </div>
       </section>

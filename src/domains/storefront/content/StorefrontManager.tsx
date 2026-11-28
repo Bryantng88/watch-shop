@@ -279,7 +279,7 @@ function ProductPicker({ ids, onChange, imageOverrides, onImageChange }: { ids: 
             <X size={14} />
           </AdminButton>
         </div>
-        {onImageChange&&<details className="sfc-advanced" onToggle={event=>{const open=event.currentTarget.open;setImageEditors(current=>({...current,[id]:open}));}}><AdminDisclosureSummary>Ảnh hiển thị & căn chỉnh</AdminDisclosureSummary>{imageEditors[id]&&<FeaturedWatchImageEditor productId={id} cover={selected.find(product=>product.productId===id)?.image} value={imageOverrides?.[id]} onChange={value=>onImageChange(id,value)}/>}</details>}
+        {onImageChange&&<details className="sfc-advanced" onToggle={event=>{const open=event.currentTarget.open;setImageEditors(current=>({...current,[id]:open}));}}><AdminDisclosureSummary>Chọn ảnh gallery</AdminDisclosureSummary>{imageEditors[id]&&<FeaturedWatchImageEditor productId={id} cover={selected.find(product=>product.productId===id)?.image} value={imageOverrides?.[id]} onChange={value=>onImageChange(id,value)}/>}</details>}
         </div>
       ))}
       <input
