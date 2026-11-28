@@ -22,7 +22,8 @@ function dockerApi(method, path, body) {
   });
 }
 
-async function reattach(api = dockerApi, pause = delay) {
+async function reattach(api = dockerApi, pause = delay, workerImage = process.env.BEN_WORKER_IMAGE) {
+  if (workerImage && !/^sha256:[0-9a-f]{64}$/.test(workerImage)) throw new Error('Worker image must be an immutable digest');
   const name = 'watch-shop-production-ben-worker';
   const app = await api('GET', '/containers/watch-shop-app-1/json');
   const worker = await api('GET', '/containers/' + name + '/json');
@@ -34,8 +35,8 @@ async function reattach(api = dockerApi, pause = delay) {
   let renamed = false;
   let promoted = false;
   try {
-    if (worker.HostConfig.NetworkMode !== network) {
-      const config = { ...worker.Config, Image: worker.Image,
+    if (worker.HostConfig.NetworkMode !== network || (workerImage && worker.Image !== workerImage)) {
+      const config = { ...worker.Config, Image: workerImage || worker.Image,
         HostConfig: { ...worker.HostConfig, NetworkMode: network } };
       delete config.Hostname;
       delete config.Domainname;
