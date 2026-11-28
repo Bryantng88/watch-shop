@@ -386,6 +386,7 @@ export async function listPersonalGoogleCalendarEvents(userId: string) {
       return prisma.taskItem.updateMany({
         where: {
           id: linkMap.get(event.id!)!,
+          checklists:{none:{}},
           status: { not: "CANCELLED" },
           updatedAt: {
             lte: syncStartedAt,

@@ -1,3 +1,4 @@
+import {recomputePersonalChecklistSchedule} from "./personal-work.service";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
 import { recordPersonalChecklistCreated } from "./personal-work-events";
 import { createHash } from "node:crypto";
@@ -52,8 +53,9 @@ export async function addDailyMediaWork(userId:string,raw:unknown, options?:{def
       const reopened=item.status==='DONE'||!!item.checklistLockedAt;
       const last=await tx.taskItemChecklist.findFirst({where:{taskItemId:parentId},orderBy:{sortOrder:'desc'},select:{sortOrder:true}});
       const context={source:'WATCH_MEDIA_DAILY',productId:input.productId,watchTitle:watch.product.title.slice(0,500),sku:watch.product.sku?.slice(0,150)||null,part:input.part,request:input.request};
-      const checklist=await tx.taskItemChecklist.create({data:{id:entryId,taskItemId:parentId,title:`${(watch.product.sku||watch.product.title).slice(0,150)} · ${MEDIA_DAILY_PARTS[input.part]}: ${input.request}`.slice(0,500),note:JSON.stringify(context),sortOrder:(last?.sortOrder??-1)+1}});
+      const checklist=await tx.taskItemChecklist.create({data:{id:entryId,taskItemId:parentId,startAt:new Date(input.day+"T00:00:00+07:00"),deadlineAt:new Date(input.day+"T23:59:00+07:00"),title:`${(watch.product.sku||watch.product.title).slice(0,150)} · ${MEDIA_DAILY_PARTS[input.part]}: ${input.request}`.slice(0,500),note:JSON.stringify(context),sortOrder:(last?.sortOrder??-1)+1}});
       if(userId!==input.assigneeUserId)await tx.personalChecklistShare.create({data:{checklistItemId:entryId,userId,accessLevel:'EDITOR',sharedByUserId:userId}});
+      await recomputePersonalChecklistSchedule(tx,parentId);
       const [total,done]=await Promise.all([tx.taskItemChecklist.count({where:{taskItemId:parentId}}),tx.taskItemChecklist.count({where:{taskItemId:parentId,isDone:true}})]);
       await tx.taskItem.update({where:{id:parentId},data:{progressMode:'CHECKLIST',progressPercent:Math.round(done/total*100),...(reopened?{status:'IN_PROGRESS',isDone:false,completedAt:null,checklistLockedAt:null}:{}),assignedToUserId:input.assigneeUserId}});
       await tx.taskItemActivity.create({data:{id:entryId,taskItemId:parentId,sourceType:'SYSTEM',sourceId:entryId,actorUserId:userId,title:created?'Tạo việc media trong ngày':'Thêm đầu việc media',body:`${watch.product.title} · ${MEDIA_DAILY_PARTS[input.part]}: ${input.request}`,metadataJson:{...context,requestHash,day:input.day,checklistItemId:entryId}}});

@@ -33,3 +33,11 @@ export async function finalizePersonalWorkWithCalendar(taskItemId: string, auth:
   await finalizePersonalWorkChecklist(taskItemId, auth);
   return syncAfterSave(auth, taskItemId);
 }
+
+// Child schedule is authoritative. Update existing links without creating new calendars.
+export async function syncChecklistParentCalendar(taskItemId:string):Promise<CalendarSaveResult> {
+  const task=await prisma.taskItem.findUniqueOrThrow({where:{id:taskItemId},select:{dueAt:true,calendarLinks:{select:{userId:true}}}});
+  let failed=false;
+  for(const link of task.calendarLinks){try{if(task.dueAt)await syncPersonalTaskToGoogleIfLinked(link.userId,taskItemId);else await deletePersonalTaskFromGoogle(link.userId,taskItemId);}catch{failed=true;}}
+  return {ok:true,calendarSync:failed?"FAILED":task.calendarLinks.length?"SYNCED":"NOT_LINKED"};
+}

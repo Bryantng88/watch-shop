@@ -3011,6 +3011,8 @@ model TaskItemActivityReply {
 }
 
 model TaskItemChecklist {
+  startAt DateTime?
+  deadlineAt DateTime?
   mergedFromTaskItemId String?
   personalShares PersonalChecklistShare[]
   id         String  @id @default(dbgenerated("(gen_random_uuid())::text"))

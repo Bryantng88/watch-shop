@@ -13,6 +13,7 @@ on:
       - 'public/ben-sw.js'
       - 'ops/notifications/**'
       - 'scripts/smoke-work-push.ts'
+      - 'scripts/check-checklist-schedule-db.ts'
       - '.github/workflows/work-push.yml'
 permissions:
   contents: read
@@ -43,6 +44,8 @@ jobs:
       - run: npm ci
       - run: npx prisma generate --generator client
       - run: npx prisma db push --skip-generate
+      - run: timeout 90s node --import tsx scripts/check-checklist-schedule-db.ts
+      - run: node --import tsx --test src/domains/personal-work/shared/checklist-schedule.test.ts
       - run: timeout 90s node --import tsx scripts/smoke-work-push.ts
       - run: node --import tsx --test src/domains/notification/server/work-push-policy.test.ts
       - run: node --test tests/pwa/ben-service-worker.test.mjs

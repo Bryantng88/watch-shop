@@ -14,6 +14,8 @@ import { requirePermission } from "@/server/auth/requirePermission";
 import { PERMISSIONS } from "@/constants/permissions";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import {
+  editPersonalChecklist,
+  personalChecklistHistory,
   replacePersonalChecklistShares,
   renamePersonalWorkChecklistItem,
   addPersonalWorkChecklistItem,
@@ -34,7 +36,7 @@ import type { PersonalWorkDomain, PersonalWorkTarget, PersonalWorkTargetType } f
 import { savePersonalCategory, deletePersonalCategory } from "../server/personal-work-categories.service";
 import { listPersonalPhotoshootPlans, schedulePersonalWatchPhotoshoot } from "../server/personal-photoshoot.service";
 import type { PersonalPhotoshootInput } from "../shared/personal-photoshoot";
-import { updatePersonalWorkWithCalendar, finalizePersonalWorkWithCalendar, cleanupCancelledPersonalCalendar } from "../server/personal-work-calendar-mutations";
+import { syncChecklistParentCalendar, updatePersonalWorkWithCalendar, finalizePersonalWorkWithCalendar, cleanupCancelledPersonalCalendar } from "../server/personal-work-calendar-mutations";
 
 export async function savePersonalWorkCategoryAction(input: {key?:string;label:string;color:string}) {
   await savePersonalCategory(input, await auth());
@@ -136,7 +138,7 @@ export async function addPersonalWorkChecklistItemAction(input: { taskItemId: st
   const user = await auth();
   const item = await addPersonalWorkChecklistItem(input.taskItemId, input.title, user);
   refresh();
-  return { ok: true, item: { id: item.id, title: item.title, isDone: item.isDone } };
+  return { ok: true, item: { id: item.id, title: item.title, isDone: item.isDone, startAt:item.startAt?.toISOString()??null,deadlineAt:item.deadlineAt?.toISOString()??null,updatedAt:item.updatedAt.toISOString() } };
 }
 
 export async function togglePersonalWorkChecklistItemAction(input: {
@@ -157,7 +159,7 @@ export async function deletePersonalWorkChecklistItemAction(input: {
   const user = await auth();
   await deletePersonalWorkChecklistItem(input.taskItemId, input.checklistItemId, user);
   refresh();
-  return { ok: true };
+  return syncChecklistParentCalendar(input.taskItemId);
 }
 
 export async function finalizePersonalWorkChecklistAction(taskItemId: string) {
@@ -277,4 +279,14 @@ export async function loadPersonalWorkDetailAction(id: string) {
   const data = await getPersonalWorkPageData(await auth(), {ids:[id]});
   if(!data.items[0]) throw new Error("Công việc không còn khả dụng hoặc quyền xem đã thay đổi.");
   return data.items[0];
+}
+
+export async function editPersonalChecklistAction(input:Parameters<typeof editPersonalChecklist>[0]) {
+  const user=await auth();
+  await editPersonalChecklist(input,user);
+  refresh();
+  return syncChecklistParentCalendar(input.taskItemId);
+}
+export async function personalChecklistHistoryAction(input:{taskItemId:string;checklistItemId:string}) {
+  return personalChecklistHistory(input.taskItemId,input.checklistItemId,await auth());
 }
