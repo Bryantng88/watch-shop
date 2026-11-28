@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useId,useRef,useState} from "react";
 import {X} from "lucide-react";
 import {AdminButton} from "../admin-design-contract/AdminButton";
-import {useAppDialog} from "../../feedback";
+import {useAppDialog} from "@/domains/shared/feedback";
 
 export function AdminEmbeddedWorkspaceDialog({href,title,onClose}:{href:string;title:string;onClose:(changed:boolean)=>void}) {
   const dialog=useRef<HTMLDialogElement>(null),frame=useRef<HTMLIFrameElement>(null),dirty=useRef(false),changed=useRef(false),closing=useRef(false);
