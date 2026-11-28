@@ -67,6 +67,10 @@ jobs:
       - run: npx eslint src/domains/consignment src/domains/shared/ui/work-object src/domains/trading src/app/api/admin/consignments 'src/app/(admin)/admin/consignments' scripts/check-consignment-db.ts scripts/check-consignment-ui.cjs
       - run: npx tsx --test src/domains/consignment/shared/contract.test.ts src/domains/watch/server/inventory-lifecycle/watch-inventory-transition.service.test.ts src/domains/storefront/server/public-catalog.repo.test.ts src/domains/storefront/contracts/public-catalog.contract.test.ts src/domains/order/server/order-watch-sync.service.test.ts
       - run: npx tsx scripts/check-consignment-db.ts
+      - run: npm run build
+        env:
+          NEXTAUTH_SECRET: consignment-ci-fixture-only
+          NEXTAUTH_URL: http://localhost:3000
       - run: npm install --prefix /tmp/consignment-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/consignment-browser/node_modules/.bin/playwright install --with-deps chromium
       - run: node scripts/check-consignment-ui.cjs

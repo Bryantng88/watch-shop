@@ -453,7 +453,7 @@ export async function commandConsignment(
               productId: document.productId,
               order: {
                 status: {
-                  in: ["POSTED", "PAID", "PROCESSING", "SHIPPED", "COMPLETED"],
+                  in: ["COMPLETED"],
                 },
               },
             },
