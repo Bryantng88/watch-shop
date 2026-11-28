@@ -1,4 +1,5 @@
 "use client";
+import { AdminPendingDetailDialog } from "@/domains/shared/ui/admin-design-contract/AdminPendingDetailDialog";
 import {loadPersonalWorkDetailAction} from "../actions/personal-work.actions";
 import {matchesWorkList, compareWorkList, workViewCounts, type WorkListQuery} from "../shared/work-list-query";
 import {useWorkListPage} from "./use-work-list-page";
@@ -308,8 +309,9 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
   const paged = useWorkListPage(Boolean(data.pagination),listQuery,calendar.items,data.initialList,data.items);
   const matchingIds = new Set(matchingItems.map(item=>item.id));
   const items = data.pagination ? paged.items.map(item=>completedOverrides[item.id]||item).filter(item=>matchingIds.has(item.id)) : matchingItems;
-  const [detailLoading,setDetailLoading] = useState(false);
+  const [openingDetail,setOpeningDetail] = useState<{item: PersonalWorkItem; error?: string} | null>(null);
   const detailRequest = useRef(0);
+  useEffect(() => () => { ++detailRequest.current; }, []);
   const openCount = workItems.filter((item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && !["DONE","CANCELLED"].includes(item.status)).length;
   const overdue = workItems.filter(
     (item) => !isContinuousWork(item.workType) && !isPersonalEvent(item.workType) && !["DONE","CANCELLED"].includes(item.status) && isPastDueDate(item.scheduledEndAt || item.dueAt, now),
@@ -464,10 +466,11 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
     const version=++detailRequest.current;
     let item=selected;
     if(item.detailsLoaded===false){
-      setDetailLoading(true);
-      try{item=await loadPersonalWorkDetailAction(item.id);}catch{if(version===detailRequest.current){setMessageIsError(true);setMessage("Không mở được công việc. Vui lòng thử lại.");}return;}finally{if(version===detailRequest.current)setDetailLoading(false);}
+      setOpeningDetail({item:selected});
+      try{item=await loadPersonalWorkDetailAction(item.id);}catch{if(version===detailRequest.current)setOpeningDetail({item:selected,error:"Không mở được công việc. Vui lòng thử lại."});return;}
       if(version!==detailRequest.current)return;
     }
+    setOpeningDetail(null);
     setMessage(null);
     setMessageIsError(false);
     setEditingTitle(false);
@@ -960,7 +963,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
           </div>
         </section>
       </div>
-      {detailLoading && <p role="status" className="text-xs text-slate-500">Đang mở chi tiết công việc…</p>}
+      {openingDetail && <AdminPendingDetailDialog title={openingDetail.item.title} error={openingDetail.error} onRetry={() => void openTaskEdit(openingDetail.item)} onClose={() => { ++detailRequest.current; setOpeningDetail(null); }}/> }
 
       {editingItem && (
         <div

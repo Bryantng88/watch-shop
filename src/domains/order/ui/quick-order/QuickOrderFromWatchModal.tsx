@@ -1,8 +1,9 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useState } from "react";
-import { Loader2, ShoppingCart, X } from "lucide-react";
+import { ShoppingCart, X } from "lucide-react";
 
 import OrderFormClient from "@/domains/order/client/OrderFormClient";
 import type {
@@ -90,10 +91,7 @@ export default function QuickOrderFromWatchModal({
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
                     {loading ? (
-                        <div className="flex min-h-[360px] items-center justify-center gap-3 text-sm font-medium text-slate-500">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            Đang tải dữ liệu Watch và Order...
-                        </div>
+                        <AdminContentSkeleton variant="form" label="Đang tải nội dung…"/>
                     ) : error ? (
                         <div className="mx-auto max-w-xl rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                             {error}

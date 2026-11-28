@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
@@ -265,7 +266,7 @@ export default function AcquisitionEditModal({ open, acquisitionId, onClose, onU
                 if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) { event.preventDefault(); last.focus(); }
                 else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
             }} className="mx-auto h-full w-full max-w-[1440px] overflow-y-auto bg-white outline-none sm:rounded-xl">
-                {loading || !detail ? <div role="status" className="flex min-h-[300px] items-center justify-center gap-3"><h1 id="acquisition-detail-title" className="sr-only">Phiếu nhập</h1><Loader2 className="h-5 w-5 animate-spin"/>Đang tải phiếu nhập...</div> :
+                {loading || !detail ? <div><h1 id="acquisition-detail-title" className="sr-only">Phiếu nhập</h1><AdminContentSkeleton variant="form" label="Đang tải phiếu nhập…"/></div> :
                     <AcquisitionDetailClient detail={detail} canManage={canManage} canViewFinancials={canViewFinancials} editing={editing} pending={submitting} onEdit={() => setEditing(true)} onClose={onClose}
                         actions={<><AdminButton variant="secondary" disabled={submitting} onClick={() => setEditing(false)}>Xem phiếu</AdminButton><AdminButton disabled={submitting} onClick={submit}>{submitting ? <Loader2 size={14} className="animate-spin"/> : <Save size={14}/>}Lưu thay đổi</AdminButton></>}>
                         <AdminDetailSection id="acquisition-items" title="Sản phẩm" description={posted ? "Phiếu đã nhập kho: chỉ có thể chỉnh giá nhập." : "Có thể thêm, xóa sản phẩm và đổi ảnh khi còn nháp."}>
