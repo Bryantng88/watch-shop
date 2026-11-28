@@ -543,6 +543,23 @@ Sharing ít người là subsection trong dialog hiện tại.
 
 ## 15. Cảnh báo, phản hồi và trạng thái UI
 
+### Loading belongs to its content (2026-11-28)
+
+Open a record's dialog immediately, using the selected row's real title and
+`AdminContentSkeleton` while its detail is fetched. Never append detail-loading
+text after the list/calendar. A failed read stays in that dialog with Retry and
+Close. Closing or switching records invalidates the old request: a late response
+must not reopen a closed dialog or replace a newer record. No edit/mutation
+controls become available until the authorized detail arrives.
+
+Use one loading indicator per region. Initial form/detail/list loads use the
+shared skeleton variant in the region they replace; skeletons contain no fake
+business values and respect reduced motion. Refresh preserves valid existing
+content and uses one quiet indicator by the affected region or refresh control.
+Table loading belongs inside a full-width table row, never below the whole
+workspace. A load-more indicator at the list's end is intentional and distinct
+from opening a record. Errors and safe retry remain in the same region.
+
 Warning không nhất thiết là card. “Cần chú ý trước” gồm label 12px slate-500,
 link domain + count + lý do, marker trước text 4px/gap 6px; gap giữa link 20px
 ngang, 4px dọc. Mobile label chiếm dòng riêng, link wrap. Link có hover/focus và

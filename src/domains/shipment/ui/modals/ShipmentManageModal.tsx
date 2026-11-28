@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState } from "react";
@@ -524,10 +525,7 @@ export default function ShipmentManageModal({
                 </div>
 
                 {loading ? (
-                    <div className="flex min-h-[320px] items-center justify-center gap-3 text-sm font-medium text-slate-500">
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Đang tải shipment...
-                    </div>
+                    <AdminContentSkeleton variant="form" label="Đang tải nội dung…"/>
                 ) : !shipment ? (
                     <div className="overflow-y-auto px-6 py-6">
                         <div className={`mb-5 rounded-2xl border px-4 py-3 text-sm leading-6 ${

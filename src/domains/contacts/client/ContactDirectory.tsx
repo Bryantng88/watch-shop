@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -91,8 +92,8 @@ export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind:
       <label className={s.searchField}><span className="sr-only">Tìm tên, điện thoại hoặc email</span><input className={s.input} type="search" value={search} maxLength={200} placeholder="Tìm tên, điện thoại hoặc email…" onChange={event => setSearch(event.target.value)} /></label>
       <Button type="submit"><Search aria-hidden="true" />Tìm</Button>
       {(search || query) && <Button onClick={() => { setData(null); setSearch(""); setQuery(""); setPage(1); setReload(v => v + 1); }}>Xóa tìm</Button>}
-      <span className={`${s.metadata} ${s.resultCount}`} role="status">{loading ? "Đang tải…" : data ? `${data.total.toLocaleString("vi-VN")} liên hệ` : "—"}</span>
-      <AdminRefreshAction loading={loading} label="Làm mới danh bạ" onRefresh={() => setReload(v => v + 1)} />
+      <span className={`${s.metadata} ${s.resultCount}`} >{data ? `${data.total.toLocaleString("vi-VN")} liên hệ` : "—"}</span>
+      {(!loading || data) && <AdminRefreshAction loading={loading} label="Làm mới danh bạ" onRefresh={() => setReload(v => v + 1)} />}
     </form>
     {message && <p role="status" className={s.metadata}>{message}</p>}
     {draft && <form ref={editor} data-admin-form className={`${s.form} ${s.editor}`} aria-label={draft.id ? "Sửa liên hệ" : "Thêm liên hệ"} onSubmit={event => void save(event)}>
@@ -105,7 +106,7 @@ export default function ContactDirectory({ kind, canCreate, canUpdate }: { kind:
     </form>}
     {!canCreate && !canUpdate && <p className={s.metadata}>Chỉ xem · Bạn có thể tra cứu thông tin liên hệ.</p>}
     {error && <PageNotice title="Không tải được danh bạ" action={<Button onClick={() => setReload(v => v + 1)}>Thử lại</Button>}>{error}</PageNotice>}
-    {loading && <p role="status" className={s.metadata}>Đang tải danh bạ…</p>}
+    {loading && !data && <AdminContentSkeleton variant="list" label="Đang tải danh bạ…"/>}
     {!error && data && <>
       <div className={s.columnHeader} aria-hidden="true"><span>Liên hệ</span><span>Điện thoại / Email</span><span>Địa chỉ</span><span>{canUpdate ? "Thao tác" : ""}</span></div>
       {!data.items.length ? <p className={s.metadata}>{query ? "Không có liên hệ phù hợp." : "Chưa có liên hệ trong danh bạ."}</p> : <ul className={s.list} aria-label="Danh sách liên hệ" aria-busy={loading}>

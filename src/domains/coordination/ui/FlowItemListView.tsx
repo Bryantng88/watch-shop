@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 import { AdminLoadingStatus } from "@/domains/shared/ui/admin-design-contract/AdminLoadingStatus";
 import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminMoney } from "@/domains/shared/ui/admin-design-contract/AdminMoney";
@@ -293,7 +294,7 @@ export default function FlowItemListView({
   const transitionFeedback = useManualTransitionFeedback();
   const [transitionPending, startActionTransition] = useTransition();
   const [withdrawPending, setWithdrawPending] = useState(false);
-  const isActionPending = transitionPending || withdrawPending;
+  const isActionPending = pending || transitionPending || withdrawPending;
   const [pendingActionId, setPendingActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [purchaseRequestItem, setPurchaseRequestItem] = useState<CoordinationFlowListItemDTO | null>(null);
@@ -1102,8 +1103,9 @@ export default function FlowItemListView({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {isCompact && (pending || !visibleItems.length) && <tr><td colSpan={columnCount} className="py-6 text-center text-sm text-slate-500">{pending ? <AdminLoadingStatus>Đang tải danh sách…</AdminLoadingStatus> : "Không có mục phù hợp với bộ lọc hiện tại."}</td></tr>}
-            {!pending && visibleItems.map((item) => {
+            {((pending && !visibleItems.length) || (isCompact && !visibleItems.length)) && <tr><td colSpan={columnCount} className="py-3 text-center text-sm text-slate-500">{pending ? <AdminContentSkeleton variant="list" label="Đang tải danh sách…"/> : "Không có mục phù hợp với bộ lọc hiện tại."}</td></tr>}
+            {pending && !!visibleItems.length && <tr><td colSpan={columnCount} className="py-2"><AdminLoadingStatus>Đang cập nhật danh sách…</AdminLoadingStatus></td></tr>}
+            {visibleItems.map((item) => {
               const stage = stageByKey.get(normalize(item.flowStageKey));
               const checked = selectedIds.includes(item.id);
               const imageUrl = imageOverrides[item.targetId] || item.preview.imageUrl;
@@ -1727,7 +1729,6 @@ export default function FlowItemListView({
           void onReloadRequested?.();
         }}
       />
-      {!isCompact && pending ? <div className="px-5 py-12 text-center text-sm text-slate-500"><AdminLoadingStatus>Đang tải danh sách…</AdminLoadingStatus></div> : null}
       {!isCompact && !pending && !visibleItems.length ? (
         <div className="flex flex-col items-center px-5 py-14 text-center">
           <CheckCircle2 className="h-8 w-8 text-slate-300" />

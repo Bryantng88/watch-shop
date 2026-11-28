@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -1127,11 +1128,10 @@ export default function TechnicalAssessmentModal({
                     </section>
 
                     {panelLoading ? (
-                        <section className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
-                            Đang tải dữ liệu phiếu kỹ thuật...
-                        </section>
+                        <AdminContentSkeleton variant="form" label="Đang tải nội dung…"/>
                     ) : null}
 
+                    <fieldset hidden={panelLoading} disabled={panelLoading} className="min-w-0 space-y-6">
                     <SectionCard
                         title="Đánh giá bộ máy"
                         subtitle="Đây là phần kiểm tra và ghi nhận xử lý kỹ thuật cho máy."
@@ -2153,6 +2153,7 @@ export default function TechnicalAssessmentModal({
                         </Field>
                     </SectionCard>
 
+                    </fieldset>
                     {errorMessage ? (
                         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                             {errorMessage}
