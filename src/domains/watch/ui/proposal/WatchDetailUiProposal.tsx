@@ -190,7 +190,8 @@ export default function WatchDetailUiProposal({
     ...acquisitions.slice(0, 2).map((item) => ({
       id: text(item.id, ""),
       type: "ACQUISITION" as const,
-      label: text(item.acquisitionType, "").toUpperCase() === "BUY_BACK"
+      href: item.consignmentDirection ? `/admin/consignments?id=${encodeURIComponent(text(item.acquisitionId,""))}` : null,
+      label: item.consignmentDirection === "IN" ? "Nhận ký gửi" : item.consignmentDirection === "OUT" ? "Gửi đối tác" : text(item.acquisitionType, "").toUpperCase() === "BUY_BACK"
         ? "Buy back"
         : text(item.acquisitionType, "").toUpperCase() === "TRADE_IN"
           ? "Trade-in"
@@ -203,6 +204,7 @@ export default function WatchDetailUiProposal({
     ...orders.slice(0, 2).map((item) => ({
       id: text(item.id, ""),
       type: "ORDER" as const,
+      href: null,
       label: "Bán hàng",
       party: text(item.customerName, "Khách hàng"),
       amount: item.amount,
@@ -546,7 +548,7 @@ export default function WatchDetailUiProposal({
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
-                  <AdminButton variant="contextual" type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
+                  <AdminButton variant="contextual" type="button" onClick={() => event.href ? router.push(event.href) : openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
                     <span className={`${detailUi.transactionIcon} ${event.type === "ACQUISITION" ? detailUi.incomingTrade : detailUi.outgoingTrade}`}>
                       {event.type === "ACQUISITION" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>

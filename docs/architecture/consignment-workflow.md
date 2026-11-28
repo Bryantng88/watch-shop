@@ -28,6 +28,8 @@ Tái sử dụng quyền Acquisition. Quản lý điều khoản cần đọc t�
 
 Khóa Product rồi Acquisition khi chuyển trạng thái; unique index chặn nhiều hồ sơ đang xử lý cho một watch. UUID receipt/checksum chống tạo trùng khi thử lại; cập nhật cần đúng phiên bản updatedAt. Payment khóa cùng Acquisition để tránh đua với khóa quyết toán. Sự kiện/projection hiện có cập nhật danh sách và giá vốn. Rebuild ngay thất bại sẽ báo chờ đồng bộ thay vì yêu cầu tạo lại hồ sơ.
 
+Lịch sử watch phân biệt Nhận ký gửi/Gửi đối tác, mở đúng hồ sơ và chỉ hiện tiền quyết toán sau chốt bán. Bán qua đối tác lưu tham chiếu trên hồ sơ, không tự tạo Order; báo cáo chỉ dựa trên Order không tính đây là đơn bán trực tiếp. Khoản thu đối tác vẫn vào Payment hiện có.
+
 Hồ sơ ký gửi cũ thiếu metadata không được tự suy diễn chiều hoặc công thức; cần đối chiếu riêng. Chưa có điều chỉnh quyết toán đã khóa. Hoàn/hủy đơn đã chốt ký gửi bị chặn để đối chiếu trước, tránh trả tồn kho khi đã chi tiền cho chủ.
 
 ## Xem nhanh
