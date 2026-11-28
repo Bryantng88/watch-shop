@@ -1,5 +1,5 @@
-import {checklistMomentLabel} from "../shared/checklist-schedule";
 "use client";
+import {checklistMomentLabel} from "../shared/checklist-schedule";
 import {loadPersonalWorkDetailAction} from "../actions/personal-work.actions";
 import {matchesWorkList, compareWorkList, workViewCounts, type WorkListQuery} from "../shared/work-list-query";
 import {useWorkListPage} from "./use-work-list-page";
