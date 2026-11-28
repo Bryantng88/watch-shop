@@ -6,6 +6,7 @@ import AcquisitionMoneyInput from "../shared/AcquisitionMoneyInput";
 import { Expand, Trash2, X } from "lucide-react";
 import MediaPickerInline from "@/components/media/MediaPickerInline";
 import { useNotify } from "@/domains/shared/feedback/AppToastProvider";
+import { vendorIdentityCode } from "../../shared/admin-watch-identity";
 import type { AcquisitionPurchasedWatch, AcquisitionWatchLine } from "../../client/form/acquisition-form.types";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
     onChange: (id: string, patch: Partial<AcquisitionWatchLine>) => void;
     onRemove: (id: string) => void;
     codexStatus?: string;
+    intakeVendorName?: string;
     canRemove?: boolean;
     tradeIn?: boolean;
     currency?: string;
@@ -40,6 +42,7 @@ const WatchLineCard = memo(function WatchLineCard({
     purchasedWatches = [],
     currency = "VND",
     codexStatus,
+    intakeVendorName,
 }: Props) {
     const notify = useNotify();
     const [previewOpen, setPreviewOpen] = useState(false);
@@ -205,6 +208,7 @@ const WatchLineCard = memo(function WatchLineCard({
                             placeholder="VD: Seiko 5 7009 Automatic"
                             className="h-[42px] w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                         />
+                        {line.quickInput && <p className="text-xs leading-5 text-slate-500">{vendorIdentityCode(intakeVendorName) || "Chưa chọn vendor"} · Mã phiếu được cấp khi duyệt</p>}
                         {codexStatus && <p role="status" className="text-xs leading-5 text-slate-500">{codexStatus}</p>}
                     </div>
 

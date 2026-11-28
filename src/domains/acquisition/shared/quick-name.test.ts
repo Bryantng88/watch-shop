@@ -4,7 +4,22 @@ import { applyQuickName, isQuickNameImageKey, quickNameResultSchema, quickNameTi
 import { buildWatchTitleFromForm } from "@/domains/watch/shared/watch-title-sku.helpers";
 import { createEmptyWatchLine } from "../client/form/acquisition-form.mapper";
 import type { WatchFormValues } from "@/domains/watch/client/form/watch-form.types";
+import { adminWatchIdentity, intakeIdentitySuffix, vendorIdentityCode } from "./admin-watch-identity";
 const facts={brandName:"Seiko",model:"5",referenceNumber:"7009",nickname:null,movementType:"AUTOMATIC" as const,notes:[]};
+test("visual identification is bounded, optional for old workers, and does not invent unknown facts", () => {
+ assert.equal(quickNameTitle(quickNameResultSchema.parse({...facts,dialColor:"bạc",caseShape:"tròn"})),"Seiko 5 7009 Automatic · mặt bạc · vỏ tròn");
+ assert.equal(quickNameTitle({...facts,dialColor:null,caseShape:null}),"Seiko 5 7009 Automatic");
+ assert.throws(()=>quickNameResultSchema.parse({...facts,dialColor:"x".repeat(121)}));
+ assert.equal(quickNameTitle({...facts,brandName:null,model:null,dialColor:"trắng"}),"");
+});
+test("admin identity uses real receipt ref; no fabricated draft ref or public title mutation", () => {
+ assert.equal(vendorIdentityCode("Nhật"),"NHAT");
+ assert.equal(vendorIdentityCode("Đạt & Co."),"DATCO");
+ assert.equal(adminWatchIdentity("IWC Automatic · mặt bạc", "Nhật", "PN-281126-000001"),"IWC Automatic · mặt bạc · NHAT-PN281126-000001");
+ assert.equal(intakeIdentitySuffix("Nhật",null),"");
+ assert.equal(adminWatchIdentity("IWC Automatic", "Nhật", null),"IWC Automatic");
+ assert.equal(intakeIdentitySuffix(null,"PN-281126-000001"),"PN281126-000001");
+});
 test("quick title shares full watch editor order, with no made-up year or unknown placeholders",()=>{
  const title=quickNameTitle(facts);
  assert.equal(title,"Seiko 5 7009 Automatic");

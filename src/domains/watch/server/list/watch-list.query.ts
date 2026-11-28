@@ -331,9 +331,12 @@ export function buildWatchListBaseWhere(
 
     if (input.q?.trim()) {
         const q = input.q.trim();
+        const intakeRef = q.match(/(?:^|-)PN-?(\d{6}-\d{6})$/i)?.[1];
+        const refQuery = intakeRef ? `PN-${intakeRef}` : q;
 
         and.push({
             OR: [
+                { currentInventoryCycle: { is: { sourceAcquisitionItem: { is: { acquisition: { is: { accquisitionStt: "POSTED", refNo: { contains: refQuery, mode: "insensitive" } } } } } } } },
                 { product: { is: { title: { contains: q, mode: "insensitive" } } } },
                 { product: { is: { sku: { contains: q, mode: "insensitive" } } } },
                 {

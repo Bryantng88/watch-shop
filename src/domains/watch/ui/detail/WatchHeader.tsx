@@ -24,7 +24,7 @@ export default function WatchHeader({ detail, inlineImage }: Props) {
   const progress = useAppProgress();
   const [raiseCaseOpen, setRaiseCaseOpen] = useState(false);
   const returnTo = searchParams.get("returnTo") || "/admin/watches";
-  const title = detail?.title || "Untitled watch";
+  const title = detail?.adminTitle || detail?.title || "Untitled watch";
   const productId = detail?.productId;
   const watchId = detail?.watch?.id;
   const imageSrc = getImageSrc(inlineImage);

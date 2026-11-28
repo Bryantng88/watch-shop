@@ -1,3 +1,4 @@
+import { loadAdminIntakeIdentities } from "@/domains/acquisition/server/admin-watch-identity.query";
 import { ImageRole, Prisma, TaskExecutionActionType, TaskExecutionTargetType } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 import { getQueueItemWorkflowState } from "@/domains/task/server/business-binding-workflow.service";
@@ -455,9 +456,11 @@ export async function loadWatchListProjectionSourceRows(
   ]);
 
   const storefrontProductIdSet = new Set(storefrontProductIds);
+  const intakeIdentities = await loadAdminIntakeIdentities(db, rows.map(row => row.productId));
 
   return rows.map((row) => ({
     ...row,
+    __adminIdentitySuffix: intakeIdentities.get(row.productId),
     __mediaState: mediaStatesByWatchId.get(row.id) ?? [],
     __serviceState: serviceStatesByWatchId.get(row.id) ?? null,
     __lastAction: lastActionsByWatchId.get(row.id) ?? null,

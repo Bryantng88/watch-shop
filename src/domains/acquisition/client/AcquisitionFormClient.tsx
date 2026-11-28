@@ -720,7 +720,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                             }
                         />
 
-                        <p className="py-2 text-xs leading-5 text-slate-500">Tên theo thứ tự: thương hiệu · dòng/model · mã tham chiếu · biệt danh · loại máy. Chỉ điền thông tin đã biết; năm sản xuất có thể bổ sung sau. Chọn ảnh NAS rồi nhờ Codex gợi ý tối đa 12 ảnh/lượt. Đây là bản nháp để bạn chỉnh, chưa đủ để tự đăng storefront.</p>
+                        <p className="py-2 text-xs leading-5 text-slate-500">Tên nhận diện: thương hiệu · dòng/model · loại máy · màu mặt · dáng vỏ (khi nhìn rõ). Mã vendor và phiếu nhập được ghép riêng trong admin sau khi duyệt phiếu. Chỉ điền thông tin đã biết; năm sản xuất có thể bổ sung sau. Chọn ảnh NAS rồi nhờ Codex gợi ý tối đa 12 ảnh/lượt. Đây là bản nháp để bạn chỉnh, chưa đủ để tự đăng storefront.</p>
                         {quickNames.error && <p role="alert" className="pb-2 text-xs text-amber-800">{quickNames.error}</p>}
                         <div className="divide-y divide-slate-100">
                             {watchLines.map((line, index) => (
@@ -729,6 +729,7 @@ export default function AcquisitionFormClient({ vendors: initialVendors, canAppr
                                     line={line}
                                     currency={currency}
                                     codexStatus={quickNames.statuses[line.id]}
+                                    intakeVendorName={vendors.find(vendor => vendor.id === vendorId)?.name}
                                     index={index}
                                     onChange={updateLine}
                                     onRemove={removeLine}
