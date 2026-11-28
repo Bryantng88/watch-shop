@@ -1,3 +1,4 @@
+import {readFile} from "node:fs/promises";
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {prisma} from "../src/server/db/client";
@@ -7,6 +8,20 @@ if(!["localhost","127.0.0.1"].includes(url.hostname)||!/test/.test(url.pathname)
 const prefix="checklist-schedule-"+randomUUID(),owner=prefix+"-owner",editor=prefix+"-editor",viewer=prefix+"-viewer",id=prefix+"-task",a=prefix+"-a",b=prefix+"-b";
 const auth=(userId:string)=>({userId});
 async function main(){
+ // Run the actual migration against transaction-local tables, never altering public schema.
+ await prisma.$transaction(async tx=>{
+  await tx.$executeRawUnsafe('CREATE TEMP TABLE "Task" (id text, kind text) ON COMMIT DROP');
+  await tx.$executeRawUnsafe('CREATE TEMP TABLE "TaskItem" (id text,"taskId" text,"personalOwnerUserId" text,"dueAt" timestamp,"scheduledEndAt" timestamp) ON COMMIT DROP');
+  await tx.$executeRawUnsafe('CREATE TEMP TABLE "TaskItemChecklist" (id text,"taskItemId" text) ON COMMIT DROP');
+  await tx.$executeRawUnsafe(`INSERT INTO "Task" VALUES ('legacy','PERSONAL'),('service','SERVICE')`);
+  await tx.$executeRawUnsafe(`INSERT INTO "TaskItem" VALUES ('personal',null,'owner','2026-11-28 02:00','2026-11-30 10:00'),('legacy','legacy',null,'2026-11-28 03:00',null),('undated',null,'owner',null,null),('service','service',null,'2026-11-28 04:00',null)`);
+  await tx.$executeRawUnsafe(`INSERT INTO "TaskItemChecklist" VALUES ('a','personal'),('b','legacy'),('c','undated'),('d','service')`);
+  const sql=await readFile('prisma/migrations/20261128010000_checklist_schedule/migration.sql','utf8');
+  for(const statement of sql.split(';').filter(part=>part.trim()))await tx.$executeRawUnsafe(statement);
+  const rows=await tx.$queryRawUnsafe<{id:string;startAt:Date|null;deadlineAt:Date|null}[]>('SELECT * FROM "TaskItemChecklist" ORDER BY id');
+  assert.equal(rows[0].startAt?.toISOString(),'2026-11-28T02:00:00.000Z');assert.equal(rows[0].deadlineAt?.toISOString(),'2026-11-30T10:00:00.000Z');
+  assert.equal(rows[1].deadlineAt?.toISOString(),'2026-11-28T03:00:00.000Z');assert.equal(rows[2].startAt,null);assert.equal(rows[3].deadlineAt,null);
+ });
  await prisma.user.createMany({data:[owner,editor,viewer].map(id=>({id,email:id+"@example.invalid",isActive:false}))});
  await prisma.taskItem.create({data:{id,title:"Private parent",personalOwnerUserId:owner,checklists:{create:[{id:a,title:"Shared entry"},{id:b,title:"Private sibling",isDone:true,startAt:new Date("2026-11-20"),deadlineAt:new Date("2026-12-05")}]}}});
  await prisma.personalChecklistShare.createMany({data:[{checklistItemId:a,userId:editor,sharedByUserId:owner,accessLevel:"EDITOR"},{checklistItemId:a,userId:viewer,sharedByUserId:owner,accessLevel:"VIEWER"}]});
