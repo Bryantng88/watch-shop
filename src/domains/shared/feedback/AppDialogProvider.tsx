@@ -147,7 +147,7 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
                         onClick={handleCancel}
                     />
 
-                    <div className="relative z-[1] w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div role="alertdialog" aria-modal="true" aria-label={dialog.title || "Xác nhận thao tác"} className="relative z-[1] w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
                         <div className="p-5">
                             <div
                                 className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${styles.badge}`}

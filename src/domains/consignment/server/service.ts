@@ -1,3 +1,7 @@
+import {
+  runBusinessEventTransaction,
+  type BusinessEventTransactionDelivery,
+} from "@/domains/event/server/business-event-transaction";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Prisma,
@@ -88,6 +92,26 @@ async function refreshProjection(productId: string) {
     return true;
   }
 }
+async function transact(
+  work: (
+    tx: Tx,
+    delivery: BusinessEventTransactionDelivery,
+  ) => Promise<{ id: string; productId: string }>,
+) {
+  const drains: Array<() => Promise<void>> = [];
+  const result = await runBusinessEventTransaction(work, {
+    allowNoEvents: true,
+    timeout: 30000,
+    deferConsumers: (run) => {
+      drains.push(run);
+    },
+  });
+  const outcomes = await Promise.allSettled(drains.map((run) => run()));
+  return {
+    ...result,
+    deliveryPending: outcomes.some((outcome) => outcome.status === "rejected"),
+  };
+}
 export async function createConsignment(
   input: unknown,
   actor: ConsignmentActor,
@@ -101,7 +125,7 @@ export async function createConsignment(
   const checksum = createHash("sha256")
     .update(JSON.stringify(value))
     .digest("hex");
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await transact(async (tx, delivery) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`consignment:create:${value.requestId}`},0))`;
     const replay = await tx.acquisition.findFirst({
       where: {
@@ -217,17 +241,20 @@ export async function createConsignment(
         where: { productId },
         data: { acquisitionId: acquisition.id },
       });
-    await emitAcquisitionBusinessEvent(tx, {
-      eventKey: "acquisition.created",
-      acquisitionId: acquisition.id,
-      actorUserId: actor.id,
-      payload: { consignmentAction: "CREATE", productId },
-    });
+    delivery.track(
+      await emitAcquisitionBusinessEvent(tx, {
+        eventKey: "acquisition.created",
+        acquisitionId: acquisition.id,
+        actorUserId: actor.id,
+        payload: { consignmentAction: "CREATE", productId },
+      }),
+    );
     return { id: acquisition.id, productId };
   });
   return {
     ...result,
-    projectionPending: await refreshProjection(result.productId),
+    projectionPending:
+      (await refreshProjection(result.productId)) || result.deliveryPending,
   };
 }
 export async function commandConsignment(
@@ -254,271 +281,263 @@ export async function commandConsignment(
       "Hồ sơ ký gửi không hợp lệ hoặc là hồ sơ cũ chưa được đối chiếu.",
       404,
     );
-  const result = await prisma.$transaction(
-    async (tx) => {
-      await lockProduct(tx, initial.productId);
-      await tx.$queryRaw`SELECT "id" FROM "Acquisition" WHERE "id"=${value.id} FOR UPDATE`;
-      const row = await tx.acquisition.findUniqueOrThrow({
-        where: { id: value.id },
-        include: acquisitionInclude,
-      });
-      const document = metadataSchema.parse(row.consignment);
-      if (row.updatedAt.toISOString() !== value.expectedVersion)
-        throw new ConsignmentError(
-          "Hồ sơ vừa được thay đổi. Tải lại trước khi thao tác.",
-          409,
-        );
-      const watch = await tx.watch.findUniqueOrThrow({
-        where: { productId: document.productId },
-        include: { product: true },
-      });
-      const data: Prisma.AcquisitionUpdateInput = {};
-      switch (value.action) {
-        case "TERMS":
-          if (!["DRAFT", "ACTIVE"].includes(document.status) || !value.terms)
+  const result = await transact(async (tx, delivery) => {
+    await lockProduct(tx, initial.productId);
+    await tx.$queryRaw`SELECT "id" FROM "Acquisition" WHERE "id"=${value.id} FOR UPDATE`;
+    const row = await tx.acquisition.findUniqueOrThrow({
+      where: { id: value.id },
+      include: acquisitionInclude,
+    });
+    const document = metadataSchema.parse(row.consignment);
+    if (row.updatedAt.toISOString() !== value.expectedVersion)
+      throw new ConsignmentError(
+        "Hồ sơ vừa được thay đổi. Tải lại trước khi thao tác.",
+        409,
+      );
+    const watch = await tx.watch.findUniqueOrThrow({
+      where: { productId: document.productId },
+      include: { product: true },
+    });
+    const data: Prisma.AcquisitionUpdateInput = {};
+    switch (value.action) {
+      case "TERMS":
+        if (!["DRAFT", "ACTIVE"].includes(document.status) || !value.terms)
+          throw new ConsignmentError("Chỉ sửa thỏa thuận trước khi chốt bán.");
+        document.terms = value.terms;
+        break;
+      case "ACTIVATE": {
+        if (document.status !== "DRAFT")
+          throw new ConsignmentError("Chỉ xác nhận hồ sơ nháp.", 409);
+        if (document.direction === "OUT") {
+          if (
+            !["AVAILABLE", "IN_SERVICE"].includes(watch.product.status) ||
+            watch.stockStage !== "IN_STOCK" ||
+            ["SOLD", "HOLD", "CONSIGNED_TO"].includes(watch.saleStage)
+          )
             throw new ConsignmentError(
-              "Chỉ sửa thỏa thuận trước khi chốt bán.",
+              "Đồng hồ không còn đủ điều kiện gửi đối tác.",
+              409,
             );
-          document.terms = value.terms;
-          break;
-        case "ACTIVATE": {
-          if (document.status !== "DRAFT")
-            throw new ConsignmentError("Chỉ xác nhận hồ sơ nháp.", 409);
-          if (document.direction === "OUT") {
-            if (
-              !["AVAILABLE", "IN_SERVICE"].includes(watch.product.status) ||
-              watch.stockStage !== "IN_STOCK" ||
-              ["SOLD", "HOLD", "CONSIGNED_TO"].includes(watch.saleStage)
-            )
-              throw new ConsignmentError(
-                "Đồng hồ không còn đủ điều kiện gửi đối tác.",
-                409,
-              );
-            if (["PENDING", "IN_SERVICE"].includes(watch.serviceStage))
-              throw new ConsignmentError(
-                "Hoàn tất kỹ thuật trước khi gửi đối tác.",
-              );
-            document.previous = {
-              productStatus: watch.product.status,
-              saleStage: watch.saleStage,
-              stockStage: watch.stockStage,
-            };
-            await ensureCurrentInventoryCycles(tx, [document.productId]);
-            await tx.product.update({
-              where: { id: document.productId },
-              data: { status: "CONSIGNED_TO" },
-            });
-            await tx.watch.update({
-              where: { id: watch.id },
-              data: { saleStage: "CONSIGNED_TO", stockStage: "OUT_OF_STOCK" },
-            });
-          } else {
-            if (
-              watch.stockStage !== "OUT_OF_STOCK" ||
-              watch.product.status !== "AVAILABLE"
-            )
-              throw new ConsignmentError(
-                "Trạng thái đồng hồ nhận ký gửi đã thay đổi.",
-                409,
-              );
-            const item = row.acquisitionItem[0];
-            if (!item)
-              throw new ConsignmentError("Thiếu dòng đồng hồ trong hồ sơ.");
-            await openInventoryCycleFromAcquisitionItem(tx, {
-              productId: document.productId,
-              acquisitionItemId: item.id,
-            });
-            await tx.product.update({
-              where: { id: document.productId },
-              data: { status: "CONSIGNED_FROM", isStockManaged: true },
-            });
-            await tx.watch.update({
-              where: { id: watch.id },
-              data: { stockStage: "IN_STOCK" },
-            });
+          if (["PENDING", "IN_SERVICE"].includes(watch.serviceStage))
+            throw new ConsignmentError(
+              "Hoàn tất kỹ thuật trước khi gửi đối tác.",
+            );
+          document.previous = {
+            productStatus: watch.product.status,
+            saleStage: watch.saleStage,
+            stockStage: watch.stockStage,
+          };
+          await ensureCurrentInventoryCycles(tx, [document.productId]);
+          await tx.product.update({
+            where: { id: document.productId },
+            data: { status: "CONSIGNED_TO" },
+          });
+          await tx.watch.update({
+            where: { id: watch.id },
+            data: { saleStage: "CONSIGNED_TO", stockStage: "OUT_OF_STOCK" },
+          });
+        } else {
+          if (
+            watch.stockStage !== "OUT_OF_STOCK" ||
+            watch.product.status !== "AVAILABLE"
+          )
+            throw new ConsignmentError(
+              "Trạng thái đồng hồ nhận ký gửi đã thay đổi.",
+              409,
+            );
+          const item = row.acquisitionItem[0];
+          if (!item)
+            throw new ConsignmentError("Thiếu dòng đồng hồ trong hồ sơ.");
+          await openInventoryCycleFromAcquisitionItem(tx, {
+            productId: document.productId,
+            acquisitionItemId: item.id,
+          });
+          await tx.product.update({
+            where: { id: document.productId },
+            data: { status: "CONSIGNED_FROM", isStockManaged: true },
+          });
+          await tx.watch.update({
+            where: { id: watch.id },
+            data: { stockStage: "IN_STOCK" },
+          });
+          delivery.track(
             await emitWatchCreatedEvent(tx, {
               watch,
               acquisitionId: row.id,
               acquisitionItemId: item.id,
               actorUserId: actor.id,
-            });
-          }
-          document.status = "ACTIVE";
-          data.accquisitionStt = "POSTED";
-          data.sentAt = new Date();
-          await tx.acquisitionItem.updateMany({
-            where: { acquisitionId: row.id },
-            data: { status: "SENT" },
-          });
-          break;
+            }),
+          );
         }
-        case "RETURN":
-          if (document.status !== "ACTIVE")
-            throw new ConsignmentError(
-              "Chỉ trả / nhận lại hồ sơ đang ký gửi, chưa chốt bán.",
-              409,
-            );
-          if (
-            watch.saleStage === "SOLD" ||
-            watch.product.status === "SOLD" ||
-            watch.stockStage === "RESERVED" ||
-            watch.product.status === "HOLD"
-          )
-            throw new ConsignmentError(
-              "Đồng hồ đã bán hoặc đang giữ cho đơn hàng. Xử lý đơn trước khi trả lại.",
-              409,
-            );
-          if (document.direction === "OUT") {
-            if (watch.saleStage !== "CONSIGNED_TO" || !document.previous)
-              throw new ConsignmentError(
-                "Trạng thái gửi đối tác không khớp.",
-                409,
-              );
-            await tx.product.update({
-              where: { id: document.productId },
-              data: {
-                status: document.previous.productStatus as ProductStatus,
-              },
-            });
-            await tx.watch.update({
-              where: { id: watch.id },
-              data: {
-                saleStage: document.previous.saleStage as WatchSaleStage,
-                stockStage: document.previous.stockStage as WatchStockStage,
-              },
-            });
-          } else {
-            await tx.watch.update({
-              where: { id: watch.id },
-              data: { stockStage: "OUT_OF_STOCK", saleStage: "DRAFT" },
-            });
-            await tx.product.update({
-              where: { id: document.productId },
-              data: {
-                publishedAt: null,
-                status: "AVAILABLE",
-                isStockManaged: false,
-              },
-            });
-            if (watch.currentInventoryCycleId)
-              await tx.watchInventoryCycle.update({
-                where: { id: watch.currentInventoryCycleId },
-                data: {
-                  closedAt: new Date(),
-                  closeReason: "CONSIGNMENT_RETURNED",
-                },
-              });
-          }
-          document.status = "RETURNED";
-          data.returnedAt = new Date();
-          break;
-        case "SALE": {
-          if (document.status !== "ACTIVE")
-            throw new ConsignmentError("Chỉ chốt bán hồ sơ đang ký gửi.", 409);
-          let amount = value.saleAmount;
-          if (document.direction === "IN") {
-            if (!value.orderId || watch.product.status !== "SOLD")
-              throw new ConsignmentError(
-                "Bán đồng hồ qua Đơn hàng trước, sau đó chọn đơn đã bán để chốt ký gửi.",
-              );
-            const item = await tx.orderItem.findFirst({
-              where: {
-                orderId: value.orderId,
-                productId: document.productId,
-                order: {
-                  status: {
-                    in: [
-                      "POSTED",
-                      "PAID",
-                      "PROCESSING",
-                      "SHIPPED",
-                      "COMPLETED",
-                    ],
-                  },
-                },
-              },
-              select: { subtotal: true, quantity: true, orderId: true },
-            });
-            if (!item || item.quantity !== 1)
-              throw new ConsignmentError(
-                "Đơn hàng không chứa đồng hồ này hoặc chưa đủ điều kiện.",
-              );
-            amount = Number(item.subtotal);
-            document.orderId = item.orderId;
-          } else {
-            if (
-              !value.saleReference?.trim() ||
-              watch.saleStage !== "CONSIGNED_TO"
-            )
-              throw new ConsignmentError(
-                "Nhập xác nhận bán từ đối tác; đồng hồ phải đang gửi đối tác.",
-              );
-            await tx.product.update({
-              where: { id: document.productId },
-              data: { status: "SOLD" },
-            });
-            await tx.watch.update({
-              where: { id: watch.id },
-              data: { saleStage: "SOLD", stockStage: "OUT_OF_STOCK" },
-            });
-            document.saleReference = value.saleReference;
-          }
-          if (!amount) throw new ConsignmentError("Thiếu giá bán.");
-          let split;
-          try {
-            split = consignmentAmounts(amount, document.terms);
-          } catch (failure) {
-            throw new ConsignmentError(
-              failure instanceof Error
-                ? failure.message
-                : "Giá bán không hợp lệ.",
-            );
-          }
-          document.soldAmount = amount;
-          document.status = "SOLD";
-          data.totalAmount = split.net;
-          break;
-        }
-        case "SETTLE": {
-          if (document.status !== "SOLD")
-            throw new ConsignmentError("Chỉ quyết toán sau khi chốt bán.");
-          const summary = await getPaymentSummaryTx(tx, "ACQUISITION", row.id);
-          if (
-            summary.remaining > 0 ||
-            summary.unpaidTotal > 0 ||
-            summary.paidTotal !== summary.totalDue
-          )
-            throw new ConsignmentError(
-              "Còn khoản thu/chi chưa hoàn tất. Mở Thanh toán để xử lý trước.",
-            );
-          document.status = "SETTLED";
-          break;
-        }
-        case "CANCEL":
-          if (document.status !== "DRAFT")
-            throw new ConsignmentError(
-              "Chỉ hủy hồ sơ nháp. Hồ sơ đã nhận/gửi cần dùng thao tác trả lại.",
-            );
-          document.status = "CANCELLED";
-          data.accquisitionStt = "CANCELED";
-          break;
+        document.status = "ACTIVE";
+        data.accquisitionStt = "POSTED";
+        data.sentAt = new Date();
+        await tx.acquisitionItem.updateMany({
+          where: { acquisitionId: row.id },
+          data: { status: "SENT" },
+        });
+        break;
       }
-      document.history.push({
-        action: value.action,
-        at: new Date().toISOString(),
-        actorId: actor.id,
-        note: value.note,
-      });
-      await tx.acquisition.update({
-        where: { id: row.id },
-        data: {
-          ...data,
-          consignment: document as Prisma.InputJsonValue,
-          updatedAt: new Date(
-            Math.max(Date.now(), row.updatedAt.getTime() + 1),
-          ),
-        },
-      });
+      case "RETURN":
+        if (document.status !== "ACTIVE")
+          throw new ConsignmentError(
+            "Chỉ trả / nhận lại hồ sơ đang ký gửi, chưa chốt bán.",
+            409,
+          );
+        if (
+          watch.saleStage === "SOLD" ||
+          watch.product.status === "SOLD" ||
+          watch.stockStage === "RESERVED" ||
+          watch.product.status === "HOLD"
+        )
+          throw new ConsignmentError(
+            "Đồng hồ đã bán hoặc đang giữ cho đơn hàng. Xử lý đơn trước khi trả lại.",
+            409,
+          );
+        if (document.direction === "OUT") {
+          if (watch.saleStage !== "CONSIGNED_TO" || !document.previous)
+            throw new ConsignmentError(
+              "Trạng thái gửi đối tác không khớp.",
+              409,
+            );
+          await tx.product.update({
+            where: { id: document.productId },
+            data: {
+              status: document.previous.productStatus as ProductStatus,
+            },
+          });
+          await tx.watch.update({
+            where: { id: watch.id },
+            data: {
+              saleStage: document.previous.saleStage as WatchSaleStage,
+              stockStage: document.previous.stockStage as WatchStockStage,
+            },
+          });
+        } else {
+          await tx.watch.update({
+            where: { id: watch.id },
+            data: { stockStage: "OUT_OF_STOCK", saleStage: "DRAFT" },
+          });
+          await tx.product.update({
+            where: { id: document.productId },
+            data: {
+              publishedAt: null,
+              status: "AVAILABLE",
+              isStockManaged: false,
+            },
+          });
+          if (watch.currentInventoryCycleId)
+            await tx.watchInventoryCycle.update({
+              where: { id: watch.currentInventoryCycleId },
+              data: {
+                closedAt: new Date(),
+                closeReason: "CONSIGNMENT_RETURNED",
+              },
+            });
+        }
+        document.status = "RETURNED";
+        data.returnedAt = new Date();
+        break;
+      case "SALE": {
+        if (document.status !== "ACTIVE")
+          throw new ConsignmentError("Chỉ chốt bán hồ sơ đang ký gửi.", 409);
+        let amount = value.saleAmount;
+        if (document.direction === "IN") {
+          if (!value.orderId || watch.product.status !== "SOLD")
+            throw new ConsignmentError(
+              "Bán đồng hồ qua Đơn hàng trước, sau đó chọn đơn đã bán để chốt ký gửi.",
+            );
+          const item = await tx.orderItem.findFirst({
+            where: {
+              orderId: value.orderId,
+              productId: document.productId,
+              order: {
+                status: {
+                  in: ["POSTED", "PAID", "PROCESSING", "SHIPPED", "COMPLETED"],
+                },
+              },
+            },
+            select: { subtotal: true, quantity: true, orderId: true },
+          });
+          if (!item || item.quantity !== 1)
+            throw new ConsignmentError(
+              "Đơn hàng không chứa đồng hồ này hoặc chưa đủ điều kiện.",
+            );
+          amount = Number(item.subtotal);
+          document.orderId = item.orderId;
+        } else {
+          if (
+            !value.saleReference?.trim() ||
+            watch.saleStage !== "CONSIGNED_TO"
+          )
+            throw new ConsignmentError(
+              "Nhập xác nhận bán từ đối tác; đồng hồ phải đang gửi đối tác.",
+            );
+          await tx.product.update({
+            where: { id: document.productId },
+            data: { status: "SOLD" },
+          });
+          await tx.watch.update({
+            where: { id: watch.id },
+            data: { saleStage: "SOLD", stockStage: "OUT_OF_STOCK" },
+          });
+          document.saleReference = value.saleReference;
+        }
+        if (!amount) throw new ConsignmentError("Thiếu giá bán.");
+        let split;
+        try {
+          split = consignmentAmounts(amount, document.terms);
+        } catch (failure) {
+          throw new ConsignmentError(
+            failure instanceof Error
+              ? failure.message
+              : "Giá bán không hợp lệ.",
+          );
+        }
+        document.soldAmount = amount;
+        document.status = "SOLD";
+        data.totalAmount = split.net;
+        break;
+      }
+      case "SETTLE": {
+        if (document.status !== "SOLD")
+          throw new ConsignmentError("Chỉ quyết toán sau khi chốt bán.");
+        const summary = await getPaymentSummaryTx(tx, "ACQUISITION", row.id);
+        if (
+          summary.remaining > 0 ||
+          summary.unpaidTotal > 0 ||
+          summary.paidTotal !== summary.totalDue
+        )
+          throw new ConsignmentError(
+            "Còn khoản thu/chi chưa hoàn tất. Mở Thanh toán để xử lý trước.",
+          );
+        document.status = "SETTLED";
+        break;
+      }
+      case "CANCEL":
+        if (document.status !== "DRAFT")
+          throw new ConsignmentError(
+            "Chỉ hủy hồ sơ nháp. Hồ sơ đã nhận/gửi cần dùng thao tác trả lại.",
+          );
+        document.status = "CANCELLED";
+        data.accquisitionStt = "CANCELED";
+        break;
+    }
+    document.history.push({
+      action: value.action,
+      at: new Date().toISOString(),
+      actorId: actor.id,
+      note: value.note,
+    });
+    await tx.acquisition.update({
+      where: { id: row.id },
+      data: {
+        ...data,
+        consignment: document as Prisma.InputJsonValue,
+        updatedAt: new Date(Math.max(Date.now(), row.updatedAt.getTime() + 1)),
+      },
+    });
+    delivery.track(
       await emitAcquisitionBusinessEvent(tx, {
         eventKey: "acquisition.updated",
         acquisitionId: row.id,
@@ -527,14 +546,14 @@ export async function commandConsignment(
           consignmentAction: value.action,
           productId: document.productId,
         },
-      });
-      return { id: row.id, productId: document.productId };
-    },
-    { timeout: 30000 },
-  );
+      }),
+    );
+    return { id: row.id, productId: document.productId };
+  });
   return {
     ...result,
-    projectionPending: await refreshProjection(result.productId),
+    projectionPending:
+      (await refreshProjection(result.productId)) || result.deliveryPending,
   };
 }
 export async function listConsignments(

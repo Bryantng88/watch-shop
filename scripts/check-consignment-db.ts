@@ -1,3 +1,4 @@
+import { syncWatchInventoryFromOrders } from "../src/domains/order/server/order-watch-sync.service";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../src/server/db/client";
@@ -123,13 +124,22 @@ async function main() {
     transitionWatchState(incoming.productId, "MARK_SOLD"),
     /qua Đơn hàng/,
   );
+  const currentWatch = await prisma.watch.findUniqueOrThrow({
+    where: { productId: incoming.productId },
+  });
   const order = await prisma.order.create({
     data: {
       subtotal: 10000000,
       status: "POSTED",
+      shipPhone: "0000000000",
+      shipAddress: "Synthetic fixture",
+      shipCity: "Synthetic",
+      hasShipment: false,
       orderItem: {
         create: {
           productId: incoming.productId,
+          inventoryCycleId: currentWatch.currentInventoryCycleId,
+          productType: "WATCH",
           title: "Fixture sale",
           listPrice: 10000000,
           unitPriceAgreed: 10000000,
@@ -140,15 +150,36 @@ async function main() {
       },
     },
   });
-  // Simulate the authoritative successful order posting, not an off-system inbound sale.
-  await prisma.product.update({
-    where: { id: incoming.productId },
-    data: { status: "SOLD" },
+  await prisma.$transaction((tx) =>
+    syncWatchInventoryFromOrders(tx, [incoming.productId]),
+  );
+  assert.equal(
+    (
+      await prisma.product.findUniqueOrThrow({
+        where: { id: incoming.productId },
+      })
+    ).status,
+    "HOLD",
+  );
+  await assert.rejects(
+    command(incoming.id, "SALE", { orderId: order.id }),
+    /qua Đơn hàng/,
+  );
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { status: "COMPLETED" },
   });
-  await prisma.watch.update({
-    where: { productId: incoming.productId },
-    data: { saleStage: "SOLD", stockStage: "OUT_OF_STOCK" },
-  });
+  await prisma.$transaction((tx) =>
+    syncWatchInventoryFromOrders(tx, [incoming.productId]),
+  );
+  assert.equal(
+    (
+      await prisma.product.findUniqueOrThrow({
+        where: { id: incoming.productId },
+      })
+    ).status,
+    "SOLD",
+  );
   await command(incoming.id, "SALE", { orderId: order.id });
   const paySeed = await getPaymentOwnerSeedTx(
     prisma,

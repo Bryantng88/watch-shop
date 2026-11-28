@@ -519,6 +519,7 @@ export const watchCostLedgerProjectionBuilder: ProjectionBuilder = {
   description: "Event-driven per-Watch rollup for acquisition, service, shipment and other OUT costs.",
   sourceEvents: [...SOURCE_EVENTS],
   targetTypes: [
+    "WATCH",
     "PAYMENT",
     "ACQUISITION",
     "ORDER",

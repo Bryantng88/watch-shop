@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
           quantity: 1,
           order: {
             status: {
-              in: ["POSTED", "PAID", "PROCESSING", "SHIPPED", "COMPLETED"],
+              in: ["COMPLETED"],
             },
           },
         },

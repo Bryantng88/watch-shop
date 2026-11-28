@@ -65,7 +65,7 @@ jobs:
           npx prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261128090000_consignment_documents/migration.sql
       - run: npx tsc --noEmit
       - run: npx eslint src/domains/consignment src/domains/shared/ui/work-object src/domains/trading src/app/api/admin/consignments 'src/app/(admin)/admin/consignments' scripts/check-consignment-db.ts scripts/check-consignment-ui.cjs
-      - run: npx tsx --test src/domains/consignment/shared/contract.test.ts src/domains/watch/server/inventory-lifecycle/watch-inventory-transition.service.test.ts src/domains/storefront/server/public-catalog.repo.test.ts src/domains/storefront/contracts/public-catalog.contract.test.ts
+      - run: npx tsx --test src/domains/consignment/shared/contract.test.ts src/domains/watch/server/inventory-lifecycle/watch-inventory-transition.service.test.ts src/domains/storefront/server/public-catalog.repo.test.ts src/domains/storefront/contracts/public-catalog.contract.test.ts src/domains/order/server/order-watch-sync.service.test.ts
       - run: npx tsx scripts/check-consignment-db.ts
       - run: npm install --prefix /tmp/consignment-browser --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: /tmp/consignment-browser/node_modules/.bin/playwright install --with-deps chromium
