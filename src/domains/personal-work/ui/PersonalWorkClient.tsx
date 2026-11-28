@@ -1,3 +1,4 @@
+import {checklistMomentLabel} from "../shared/checklist-schedule";
 "use client";
 import {loadPersonalWorkDetailAction} from "../actions/personal-work.actions";
 import {matchesWorkList, compareWorkList, workViewCounts, type WorkListQuery} from "../shared/work-list-query";
@@ -1233,7 +1234,7 @@ export function PersonalWorkClient({ data }: { data: PersonalWorkPageData }) {
                 />
                 <span className="block text-[11px] text-slate-400">Mỗi lần lưu sẽ tạo một mốc mới trong lịch sử cập nhật, không tự đánh dấu hoàn thành.</span>
               </div>}
-              {editingItem.checklist.length>0&&!isContinuousWork(editWorkType)&&<p className="text-xs text-slate-500">Lịch tổng hợp · {editingItem.dueAt?`${scheduleDate(editingItem.dueAt).split("-").reverse().join("/")} → ${scheduleDate(editingItem.scheduledEndAt||editingItem.dueAt).split("-").reverse().join("/")}`:"Chưa có lịch"} · Theo lịch của các đầu việc ({editingItem.checklist.filter(e=>!e.deadlineAt).length} chưa có lịch)</p>}
+              {editingItem.checklist.length>0&&!isContinuousWork(editWorkType)&&<p className="text-xs text-slate-500">Lịch tổng hợp · {editingItem.dueAt?`${checklistMomentLabel(editingItem.dueAt)} → ${checklistMomentLabel(editingItem.scheduledEndAt||editingItem.dueAt)}`:"Chưa có lịch"} · Theo lịch của các đầu việc ({editingItem.checklist.filter(e=>!e.deadlineAt).length} chưa có lịch)</p>}
               {editingItem.checklist.length===0&&!isContinuousWork(editWorkType)&&<details open={scheduleExpanded} onToggle={event => setScheduleExpanded(event.currentTarget.open)} data-work-disclosure="schedule" className="border-t border-slate-100 pt-3">
                 <AdminDisclosureSummary className="cursor-pointer text-xs font-medium text-slate-600">Lịch · {editDueAt ? `${editDueAt.split("-").reverse().join("/")}${editStartTime ? ` · ${editStartTime}` : " · Cả ngày"}` : "Chưa có lịch"}</AdminDisclosureSummary>
                 <div className="mt-3 space-y-3">

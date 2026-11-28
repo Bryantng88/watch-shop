@@ -183,7 +183,7 @@ export async function restorePersonalWorkAction(input:{id:string;date?:string}) 
   if(item.status==="DONE")throw new Error("Không mở lại việc hoàn thành qua thao tác khôi phục việc đã hủy.");
   if(item.status!=="CANCELLED")return {ok:true};
   let schedule:Partial<{dueAt:string|null;scheduledEndAt:string|null;estimatedDays:number}>={};
-  if(!isContinuousWork(item.workTypeId)&&!item.id.startsWith("media-daily-")){
+  if(!isContinuousWork(item.workTypeId)&&!item.id.startsWith("media-daily-")&&!await prisma.taskItemChecklist.count({where:{taskItemId:item.id}})){
     if(input.date){if(!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||new Date(input.date+"T00:00:00Z").toISOString().slice(0,10)!==input.date)throw new Error("Ngày không hợp lệ");schedule={...calendarScheduleInput(input.date,"","",1),estimatedDays:1};}
     else if(item.workTypeId==="EVENT")throw new Error("Chọn ngày diễn ra sự kiện khi mở lại.");
     else schedule={dueAt:null,scheduledEndAt:null,estimatedDays:1};

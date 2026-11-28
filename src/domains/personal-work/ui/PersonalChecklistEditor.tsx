@@ -1,7 +1,7 @@
 "use client";
 import {useNotify} from "@/domains/shared/feedback/AppToastProvider";
 import {useEffect,useRef,useState} from "react";
-import {AdminButton} from "@/domains/shared/ui/admin-design-contract/AdminButton";
+import {AdminButton,AdminDisclosureSummary} from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {editPersonalChecklistAction,personalChecklistHistoryAction} from "../actions/personal-work.actions";
 import {scheduleDate,scheduleTime} from "../shared/personal-work-schedule";
 import type {PersonalWorkChecklistItem,PersonalWorkActivity} from "../shared/personal-work.types";
@@ -24,7 +24,7 @@ export function PersonalChecklistEditor({taskItemId,entry,readOnly,onSaved,onClo
     {!readOnly&&<label className="block space-y-1.5 text-xs text-slate-600">Nội dung cập nhật<textarea aria-label="Nội dung cập nhật" value={body} maxLength={10000} onChange={e=>setBody(e.target.value)} disabled={saving} rows={2} placeholder="Kết quả, vấn đề hoặc bước tiếp theo của đầu việc này…" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"/></label>}
     {error&&<p role="alert" className="text-xs text-rose-700">{error}</p>}
     <div className="flex justify-end gap-2"><AdminButton type="button" variant="quiet" density="compact" disabled={saving} onClick={onClose}>{readOnly?"Đóng":"Bỏ qua"}</AdminButton>{!readOnly&&<AdminButton type="button" density="compact" disabled={saving||!title.trim()} onClick={()=>void save()}>{saving?"Đang lưu…":"Lưu đầu việc"}</AdminButton>}</div>
-    <details><summary className="cursor-pointer text-xs text-slate-500">Lịch sử đầu việc{history?` · ${history.length}${history.length===30?" gần nhất":" mốc"}`:""}</summary>
+    <details><AdminDisclosureSummary className="cursor-pointer text-xs text-slate-500">Lịch sử đầu việc{history?` · ${history.length}${history.length===30?" gần nhất":" mốc"}`:""}</AdminDisclosureSummary>
       <div className="max-h-48 space-y-3 overflow-y-auto pt-3">{historyError?<p role="alert" className="text-xs text-rose-700">{historyError}</p>:history===null?<p role="status" className="text-xs text-slate-500">Đang tải…</p>:!history.length?<p className="text-xs text-slate-500">Chưa có cập nhật riêng.</p>:history.map(row=><div key={row.id} className="text-xs text-slate-600"><p className="font-medium">{row.title}</p>{row.body&&<p className="whitespace-pre-wrap">{row.body}</p>}<p className="text-slate-500">{row.actor?.name||"Hệ thống"} · {scheduleDate(row.occurredAt).split("-").reverse().join("/")} {scheduleTime(row.occurredAt)}</p></div>)}</div>
     </details>
   </div>;
