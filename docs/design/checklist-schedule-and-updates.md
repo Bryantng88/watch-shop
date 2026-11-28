@@ -8,7 +8,7 @@ Công việc có đầu việc dùng lịch tổng hợp, không nhập hạn t�
 - Thêm, sửa, xóa và gộp đầu việc tính lại lịch parent trong transaction dưới cùng khóa TaskItem. Gộp giữ nguyên ID/lịch/lịch sử của đầu việc. Yêu cầu media trong ngày khởi tạo lịch đầu việc theo ngày yêu cầu.
 - Không nhập ngược thay đổi lịch Google vào công việc có đầu việc. Sửa/xóa lịch đầu việc cập nhật các liên kết Google hiện có; lỗi Google không đảo ngược dữ liệu đã lưu và được báo riêng.
 - Share EDITOR của một đầu việc chỉ sửa/xem lịch sử đầu việc đó. Parent projection chỉ tổng hợp lịch từ các đầu việc người nhận thấy; không lộ lịch/ghi chú/hoạt động của sibling. VIEWER và công việc đã đóng chỉ đọc.
-- Lịch sử gắn checklistItemId; thay đổi tên/lịch ghi mốc trước/sau, cập nhật riêng là mốc mới, không đánh dấu hoàn thành. Chi tiết đầu việc tải 30 mốc gần nhất. Parent vẫn giữ toàn bộ lịch sử cho người có quyền xem parent.
+- Lịch sử gắn checklistItemId; thay đổi tên/lịch ghi mốc trước/sau, cập nhật riêng là mốc mới, không đánh dấu hoàn thành. Lịch sử hiển thị tập trung ở cuối modal. Người chỉ được chia sẻ đầu việc chỉ thấy các mốc của những đầu việc họ được xem. Parent vẫn giữ toàn bộ lịch sử cho người có quyền xem parent.
 - Bản sửa giữ version khi bắt đầu nhập; nếu đầu việc đã đổi trên server, từ chối lưu bản cũ. Nút lưu chặn double-click, lỗi giữ draft.
 
 ## Migration
@@ -26,6 +26,6 @@ Hai cột nullable trên TaskItemChecklist; không xóa/đổi cột cũ. Backfi
 
 ## Phản hồi sau khi lưu
 
-Lưu thành công hiện toast, mỗi hàng có nội dung cập nhật riêng hiện “Có cập nhật” kèm thời điểm. Đây là chỉ báo có nội dung cập nhật, không phải trạng thái chưa đọc. Mở đầu việc thấy nội dung gần nhất ngay trên lịch sử. Truy vấn lấy một cập nhật gần nhất cho mỗi đầu việc được phép xem, không phụ thuộc 20 mốc gần nhất của parent; không thêm truy vấn này vào tải danh sách/index.
+Lưu thành công hiện toast, mỗi hàng có nội dung cập nhật riêng hiện “Có cập nhật” kèm thời điểm. Đây là chỉ báo có nội dung cập nhật, không phải trạng thái chưa đọc. Bấm chỉ báo sẽ cuộn tới lịch sử cập nhật chung; không có lịch sử hay bản sao nội dung bên trong form sửa đầu việc. Truy vấn lấy một cập nhật gần nhất cho mỗi đầu việc được phép xem, không phụ thuộc 20 mốc gần nhất của parent; không thêm truy vấn này vào tải danh sách/index.
 
 Preview local lưu thay đổi và lịch sử mẫu theo đầu việc vào sessionStorage để tải lại cùng tab vẫn xem được. Đây vẫn là dữ liệu giả lập, không ghi vào dữ liệu thật.

@@ -308,6 +308,9 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
     ORDER BY "metadataJson"->>'checklistItemId', "occurredAt" DESC, "id" DESC
   `):[];
   const entryUpdateMap=new Map(entryUpdates.map(row=>[row.checklistItemId,{body:row.body,occurredAt:row.occurredAt.toISOString()}]));
+  const partialParents=options.summary||options.row?[]:items.filter(item=>!isPersonalWorkOwner(item,userId)&&!item.personalShares.some(share=>share.userId===userId));
+  const partialEntryIds=partialParents.flatMap(item=>item.checklists.filter(entry=>entry.personalShares.some(share=>share.userId===userId)).map(entry=>entry.id));
+  const partialHistory=partialEntryIds.length?await prisma.taskItemActivity.findMany({where:{taskItemId:{in:partialParents.map(item=>item.id)},OR:partialEntryIds.map(id=>({metadataJson:{path:["checklistItemId"],equals:id}}))},orderBy:[{occurredAt:"desc"},{id:"desc"}],take:30,include:{actorUser:{select:{id:true,name:true,email:true,avatarUrl:true}}}}):[];
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
   const ownerIds = [...new Set(items.map(item => item.personalOwnerUserId || item.task?.createdByUserId || item.task?.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
@@ -383,7 +386,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
       if (!owned && !share) {
         const visibleIds=new Set(item.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).map(e=>e.id));
         const updated=item.checklists.filter(e=>visibleIds.has(e.id)).reduce((latest,e)=>e.updatedAt>latest?e.updatedAt:latest,item.createdAt);
-        return checklistOnlyWork(result,result.checklist.filter(e=>visibleIds.has(e.id)),updated.toISOString());
+        return {...checklistOnlyWork(result,result.checklist.filter(e=>visibleIds.has(e.id)),updated.toISOString()),activities:partialHistory.filter(row=>row.taskItemId===item.id).map(row=>({id:row.id,title:row.title,body:row.body,occurredAt:row.occurredAt.toISOString(),actor:row.actorUser}))};
       }
       return result;
     }),
