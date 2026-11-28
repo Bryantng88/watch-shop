@@ -135,17 +135,22 @@ test("save, publish, stale revision and unpublish preserve isolated snapshots", 
   patch(mediaStorage, "stat", async () => metadata);
   const home = defaultHome();
   home.hero.image.key = metadata.key;
+  home.hero.image.zoom = 1.7;
   home.about.image.key = metadata.key;
   home.collections.forEach(c => {c.image.key = metadata.key;});
   await saveContent({ id: "home", revision: 0, action: "save", content: home }, "tester");
   assert.equal((await readHome()).hero.image.key, "", "draft must not become public");
   await saveContent({ id: "home", revision: 1, action: "publish", content: home }, "tester");
   assert.equal((await readHome()).hero.image.key, metadata.key);
+  assert.equal((await readHome()).hero.image.zoom, 1.7);
   const changed = structuredClone(home);
   changed.hero.title = "Draft only";
+  changed.hero.image.zoom = 0.5;
   await saveContent({ id: "home", revision: 2, action: "save", content: changed }, "tester");
   assert.equal((await readHome()).hero.title, home.hero.title);
   assert.equal((await readHome(true)).hero.title, "Draft only");
+  assert.equal((await readHome(true)).hero.image.zoom, 0.5);
+  assert.equal((await readHome()).hero.image.zoom, 1.7, "draft zoom cannot alter published framing");
   await assert.rejects(
     saveContent({ id: "home", revision: 2, action: "publish", content: changed }, "tester"),
     ContentConflict,

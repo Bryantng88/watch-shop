@@ -1,0 +1,30 @@
+{
+  "note": "Existing browser-boundary debt, frozen for incremental migration; entries are exceptions, not architectural approval. Adding an exception requires review and a reason in the PR.",
+  "violations": [
+    "src/app/(admin)/admin/acquisitions/_client/EditAcqForm.tsx -> @prisma/client",
+    "src/app/(admin)/admin/acquisitions/_client/NewAcqForm.tsx -> @prisma/client",
+    "src/domains/event/catalog/business-event-catalog.ts -> src/domains/media-post/server/events/media-post-business-event.contract.ts",
+    "src/domains/event/catalog/business-event-catalog.ts -> src/domains/order/server/events/order-business-event.contract.ts",
+    "src/domains/event/catalog/business-event-catalog.ts -> src/domains/purchase-request/server/events/purchase-request-business-event.contract.ts",
+    "src/domains/event/catalog/business-event-catalog.ts -> src/domains/shipment/server/events/shipment-business-event.contract.ts",
+    "src/domains/event/catalog/business-event-catalog.ts -> src/domains/strap/server/events/strap-business-event.contract.ts",
+    "src/domains/event/catalog/business-event-catalog.ts -> src/domains/watch/server/events/watch-business-event.contract.ts",
+    "src/domains/order/shared/order-reserve-type.ts -> @prisma/client",
+    "src/domains/order/ui/list/helpers.ts -> @prisma/client",
+    "src/domains/service/client/technician/TechnicianWorkspace.tsx -> src/domains/service/server/shared/technical-issue-stage.policy.ts",
+    "src/domains/shared/ui/signals/StatePrioritySignal.tsx -> @prisma/client",
+    "src/domains/task/ui/detail/TaskDomainActions.tsx -> @prisma/client",
+    "src/domains/task/ui/quick-create/TaskQuickCreateModal.tsx -> @prisma/client",
+    "src/domains/task/ui/shared/TaskBadges.tsx -> @prisma/client",
+    "src/domains/task/utils/task-labels.ts -> @prisma/client",
+    "src/domains/watch/ui/edit/WatchImageSection.tsx -> @prisma/client",
+    "src/domains/work-case/client/WorkCaseDetailClient.tsx -> @prisma/client",
+    "src/domains/work-case/client/WorkCaseListClient.tsx -> @prisma/client",
+    "src/domains/work-case/client/WorkCaseSettingsClient.tsx -> @prisma/client",
+    "src/domains/work-case/ui/RaiseWorkCaseModal.tsx -> @prisma/client",
+    "src/domains/work-case/ui/WorkCaseListTable.tsx -> @prisma/client",
+    "src/domains/work-case/utils/work-case-labels.ts -> @prisma/client",
+    "src/domains/workflow/ui/WorkflowTemplateModal.tsx -> @prisma/client",
+    "src/domains/workflow/ui/WorkflowTemplateModal.tsx -> src/domains/workflow/server/workflow.registry.ts"
+  ]
+}

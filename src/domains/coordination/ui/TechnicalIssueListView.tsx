@@ -1,5 +1,6 @@
 "use client";
 
+import { WatchQuickPreviewTrigger } from "@/domains/shared/ui/work-object/WatchQuickPreviewTrigger";
 import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
 import { AdminListFooter } from "@/domains/shared/ui/admin-design-contract/AdminListFooter";
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -296,7 +297,7 @@ export default function TechnicalIssueListView({
                         : undefined
                     }
                   />
-                  <TechnicalThumbnail key={image || "missing"} src={image} />
+                  {item.serviceRequest.productId ? <WatchQuickPreviewTrigger watch={{productId:item.serviceRequest.productId,label:item.serviceRequest.productTitle||item.serviceRequest.sku||"Đồng hồ",imageUrl:image}} className="relative z-20 shrink-0 rounded-lg"><TechnicalThumbnail key={image||"missing"} src={image}/></WatchQuickPreviewTrigger> : <TechnicalThumbnail key={image || "missing"} src={image} />}
                   <div className={styles.identityText}>
                     <div className={styles.titleLine}>
                       <span className={styles.title}>{item.summary}</span>

@@ -88,6 +88,17 @@ for attempt in 1 2 3; do
 done
 [[ "$build_ok" == true ]] || die "Production image build failed after 3 attempts"
 
+log "Preparing the intake-name worker update from its current immutable image"
+previous_worker_image="$($docker_bin inspect watch-shop-production-ben-worker --format='{{.Image}}')"
+[[ "$previous_worker_image" =~ ^sha256:[0-9a-f]{64}$ ]] || die "Cannot identify previous Ben worker image"
+printf '%s\n' "$previous_worker_image" > PREVIOUS_WORKER_IMAGE
+"$docker_bin" build -f ops/deployment/Dockerfile.ben-quick-name \
+  --build-arg "BASE_WORKER_IMAGE=$previous_worker_image" \
+  --label "org.opencontainers.image.revision=$tag_commit" \
+  -t "watch-shop-ben:$image_tag" .
+new_worker_image="$($docker_bin image inspect "watch-shop-ben:$image_tag" --format='{{.Id}}')"
+[[ "$new_worker_image" =~ ^sha256:[0-9a-f]{64}$ ]] || die "Cannot identify candidate Ben worker image"
+
 log "Backing up the production database"
 compose --profile tools run --rm db-backup
 
@@ -99,6 +110,7 @@ compose --profile tools run --rm migrate npm run projection:rebuild-watch-list
 
 reattach_ben() {
   "$docker_bin" run --rm --network none --user 0 --entrypoint node \
+    -e "BEN_WORKER_IMAGE=$1" \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$release_dir/ops/deployment/reattach-ben-worker.cjs:/reattach-ben-worker.cjs:ro" \
     "watch-shop:$image_tag" /reattach-ben-worker.cjs
@@ -128,7 +140,7 @@ if [[ "$healthy" != true ]]; then
       [[ "$status" == healthy ]] && break
       sleep 3
     done
-    reattach_ben || log "ERROR: Ben worker recovery needs attention"
+    reattach_ben "$previous_worker_image" || log "ERROR: Ben worker recovery needs attention"
   else
     log "No previous application image is available for automatic rollback"
   fi
@@ -136,7 +148,7 @@ if [[ "$healthy" != true ]]; then
 fi
 
 log "Attaching Ben worker to current application"
-if ! reattach_ben; then
+if ! reattach_ben "$new_worker_image"; then
   if [[ -n "$previous_image" ]] && "$docker_bin" image inspect "$previous_image" >/dev/null 2>&1; then
     log "Rolling back after Ben worker verification failed"
     "$docker_bin" tag "$previous_image" "watch-shop:$image_tag"
@@ -146,7 +158,7 @@ if ! reattach_ben; then
       [[ "$status" == healthy ]] && break
       sleep 3
     done
-    reattach_ben || log "ERROR: Ben worker recovery needs attention"
+    reattach_ben "$previous_worker_image" || log "ERROR: Ben worker recovery needs attention"
   fi
   die "Deployment failed Ben worker verification"
 fi

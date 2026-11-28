@@ -2121,6 +2121,7 @@ async function loadTechnicalIssueBoardLive(input: {
       updatedAt: true,
       serviceRequest: {
         select: {
+          productId: true,
           refNo: true,
           orderItemId: true,
           skuSnapshot: true,
@@ -2345,6 +2346,7 @@ async function loadTechnicalIssueBoardLive(input: {
           ? "CUSTOMER_ORDER"
           : "OTHER",
         serviceRequest: {
+          productId: issue.serviceRequest?.productId ?? null,
           refNo: issue.serviceRequest?.refNo ?? null,
           productTitle: issue.serviceRequest?.product?.title ?? null,
           sku:

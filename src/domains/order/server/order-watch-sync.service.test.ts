@@ -16,6 +16,7 @@ test("old completed sale cannot override a hold in the current buy-back cycle", 
   let orderWhere: Record<string, unknown> | null = null;
   const writes: Array<{ target: string; data: Record<string, unknown> }> = [];
   const tx = {
+    $queryRaw: async () => [],
     watch: {
       findMany: async () => [currentCycleWatch()],
       findUnique: async () => ({
@@ -70,6 +71,7 @@ test("old completed sale cannot override a hold in the current buy-back cycle", 
 test("order reconciliation only reads the current inventory cycle", async () => {
   let orderWhere: Record<string, unknown> | null = null;
   const tx = {
+    $queryRaw: async () => [],
     watch: { findMany: async () => [currentCycleWatch()] },
     orderItem: {
       findMany: async (input: { where: Record<string, unknown> }) => {

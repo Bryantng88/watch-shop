@@ -68,7 +68,7 @@ export function PersonalWorkListRow({ item, now, showDate, late, scheduleLabel, 
         </div>)}
       </div>}
       {item.tags.length > 0 && <p>Tag: {item.tags.join(", ")}</p>}
-      {item.targets.map(target => <Link key={`${target.type}:${target.id}`} href={target.href} className="mt-2 flex items-center gap-2 text-blue-700 hover:underline"><WorkObjectThumbnail object={target}/>{target.label}{target.secondary ? ` · ${target.secondary}` : ""}<ExternalLink className="h-3 w-3 shrink-0" /></Link>)}
+      {item.targets.map(target => <Link key={`${target.type}:${target.id}`} href={target.href} className="mt-2 flex items-center gap-2 text-blue-700 hover:underline"><WorkObjectThumbnail object={target} interactive={false}/>{target.label}{target.secondary ? ` · ${target.secondary}` : ""}<ExternalLink className="h-3 w-3 shrink-0" /></Link>)}
     </PersonalWorkFloatingPanel>}
   </div>;
 }

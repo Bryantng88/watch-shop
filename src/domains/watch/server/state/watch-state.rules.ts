@@ -83,14 +83,7 @@ export function resolveWatchStateTransition(
     }
 
     case "MARK_CONSIGNED_TO": {
-      assertNotSold(current);
-      assertServiceReady(current);
-
-      return {
-        saleStage: WatchSaleStage.CONSIGNED_TO,
-        stockStage: WatchStockStage.OUT_OF_STOCK,
-        productStatus: ProductStatus.CONSIGNED_TO,
-      };
+      fail("Lập hồ sơ tại Mua bán → Ký gửi trước khi xác nhận gửi đối tác.");
     }
 
     case "MARK_SERVICE_PENDING": {

@@ -92,6 +92,7 @@ export async function postAcquisitionApplication(
 
     const vendorId = await resolveVendorIdForPosting(acq, vendorName);
 
+    if(acq.type === "CONSIGNMENT")throw new Error("Xác nhận hồ sơ tại Mua bán → Ký gửi; không nhập kho ký gửi như hàng mua vào.");
     const isBuyBack = acq.type === "BUY_BACK";
 
     const isTradeIn = acq.type === "TRADE_IN";

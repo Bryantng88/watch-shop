@@ -5,7 +5,6 @@ import type {
   QuickOrderWatchInput,
 } from "../shared";
 import { getWatchBridgeRow } from "./watch-bridge.repo";
-import { markWatchConsignedTo } from "../state";
 
 // Giữ tạm bridge sang service cũ để không gãy hệ thống
 import * as orderService from "@/domains/order/server";
@@ -76,26 +75,6 @@ export async function buyBackFromWatch(input: BuyBackFromWatchInput) {
 }
 
 export async function consignWatch(input: ConsignWatchInput) {
-  const watch = await getWatchBridgeRow(prisma as any, input.productId);
-
-  if (!watch) {
-    throw new Error("Không tìm thấy watch");
-  }
-
-  const productStatus = normalizeStatus(watch.product.status);
-  const saleState = normalizeStatus(watch.saleStage);
-
-  if (productStatus === "SOLD" || saleState === "SOLD") {
-    throw new Error("Watch đã SOLD, không thể consign");
-  }
-
-  const result = await acquisitionService.createConsignToFromProduct({
-    productId: input.productId,
-    vendorId: input.vendorId,
-    notes: input.notes ?? null,
-  });
-
-  await markWatchConsignedTo(input.productId);
-
-  return result;
+  void input;
+  throw new Error("Lập và xác nhận hồ sơ tại Mua bán → Ký gửi; không chuyển trạng thái trực tiếp.");
 }

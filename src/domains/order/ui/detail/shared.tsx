@@ -24,6 +24,7 @@ export type OrderDetailItem = {
   subtotal?: number | null;
   img?: string | null;
   productId?: string | null;
+  productType?: string | null;
   variantId?: string | null;
   serviceScope?: string | null;
   customerItemNote?: string | null;

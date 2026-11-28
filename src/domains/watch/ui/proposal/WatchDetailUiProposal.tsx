@@ -136,11 +136,12 @@ export default function WatchDetailUiProposal({
   const imageSrc = firstImage
     ? resolveMediaPreviewSrc(firstImage) ?? firstImage
     : null;
-  const title =
+  const baseTitle =
     values.basic.title ||
     text(detail.title, "") ||
     [text(brand.name, ""), values.spec.model].filter(Boolean).join(" ") ||
     "Watch";
+  const title = [baseTitle, text(detail.adminIdentitySuffix, "")].filter(Boolean).join(" · ");
   const detailHref = `/admin/watches/${values.productId}`;
   const workspace = record(mediaWorkspace);
   const mediaQuery = new URLSearchParams({ embedded: "1", mode: "media", returnTo: detailHref });
@@ -161,7 +162,7 @@ export default function WatchDetailUiProposal({
   const profit = salePrice - landedCost;
   const margin = salePrice > 0 ? profit / salePrice * 100 : 0;
   const costRows = [
-    { label: "Giá nhập", note: "Từ phiếu nhập gần nhất", amount: acquisitionCost },
+    { label: summary.acquisitionKind === "CONSIGNMENT" ? "Tiền trả người gửi" : "Giá nhập", note: summary.acquisitionKind === "CONSIGNMENT" ? "Theo giá bán và thỏa thuận ký gửi" : "Từ phiếu nhập gần nhất", amount: acquisitionCost },
     { label: "Service", note: `${rows(tradeHistory.serviceFees).length} hạng mục kỹ thuật`, amount: serviceCost },
     { label: "Vận chuyển", note: `${rows(tradeHistory.shipmentFees).length} vận đơn liên quan`, amount: shipmentCost },
     { label: "Chi phí khác", note: "Các khoản chi đã ghi nhận", amount: otherCost },
@@ -190,7 +191,8 @@ export default function WatchDetailUiProposal({
     ...acquisitions.slice(0, 2).map((item) => ({
       id: text(item.id, ""),
       type: "ACQUISITION" as const,
-      label: text(item.acquisitionType, "").toUpperCase() === "BUY_BACK"
+      href: item.consignmentDirection ? `/admin/consignments?id=${encodeURIComponent(text(item.acquisitionId,""))}` : null,
+      label: item.consignmentDirection === "IN" ? "Nhận ký gửi" : item.consignmentDirection === "OUT" ? "Gửi đối tác" : text(item.acquisitionType, "").toUpperCase() === "BUY_BACK"
         ? "Buy back"
         : text(item.acquisitionType, "").toUpperCase() === "TRADE_IN"
           ? "Trade-in"
@@ -203,6 +205,7 @@ export default function WatchDetailUiProposal({
     ...orders.slice(0, 2).map((item) => ({
       id: text(item.id, ""),
       type: "ORDER" as const,
+      href: null,
       label: "Bán hàng",
       party: text(item.customerName, "Khách hàng"),
       amount: item.amount,
@@ -274,7 +277,7 @@ export default function WatchDetailUiProposal({
       const result = await saveWatchWorkbenchPricingAction({
         productId: values.productId,
         pricing: { ...values.pricing, salePrice: salePriceValue },
-        title,
+        title: baseTitle,
         sku: values.header.sku,
       });
       notify.success({
@@ -451,7 +454,7 @@ export default function WatchDetailUiProposal({
                 </div>
                 <div className={`${detailUi.contentGrid} ${detailUi.editorialGrid}`}>
                   <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-slate-950">{values.content.titleOverride || title}</h3>
+                    <h3 className="text-base font-semibold text-slate-950">{values.content.titleOverride || baseTitle}</h3>
                     {values.content.hookText && <p className="mt-2 text-sm font-semibold text-violet-700">{values.content.hookText}</p>}
                     <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
                       {values.content.body || "Watch chưa có nội dung bán hàng."}
@@ -546,7 +549,7 @@ export default function WatchDetailUiProposal({
               </div>
               <div className="mt-4 space-y-3">
                 {transactionEvents.length ? transactionEvents.map((event, index) => (
-                  <AdminButton variant="contextual" type="button" onClick={() => openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
+                  <AdminButton variant="contextual" type="button" onClick={() => event.href ? router.push(event.href) : openRelatedPreview(event.type, { id: event.id }, event.label)} key={`${event.type}-${event.id || index}`} disabled={!event.id} className="flex w-full items-start gap-3 border-b border-slate-100 pb-3 text-left transition last:border-0 last:pb-0 hover:opacity-75 disabled:cursor-default disabled:opacity-100">
                     <span className={`${detailUi.transactionIcon} ${event.type === "ACQUISITION" ? detailUi.incomingTrade : detailUi.outgoingTrade}`}>
                       {event.type === "ACQUISITION" ? <Landmark className="h-4 w-4" /> : <BadgeDollarSign className="h-4 w-4" />}
                     </span>

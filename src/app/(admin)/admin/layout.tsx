@@ -1,3 +1,4 @@
+import { WatchQuickPreviewProvider } from "@/domains/shared/ui/work-object/WatchQuickPreviewProvider";
 import { AdminButtonProvider } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import {benEnvironment} from "@/domains/ai-assistant/environment";
 import AdminShell from "./_client/AdminShell";
@@ -29,7 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return (
         <AdminButtonProvider><AppToastProvider>
             <AppDialogProvider>
-                <AppProgressProvider>
+                <AppProgressProvider><WatchQuickPreviewProvider allowed={user.roles.includes("ADMIN") || permissions.includes("TASK_VIEW")}>
                     <AdminShell
                         assistantSimulation={localSalesSimulationEnabled()}
                         assistantLive={customerAssistantReady()}
@@ -45,7 +46,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                     >
                         {children}
                     </AdminShell>
-                </AppProgressProvider>
+                </WatchQuickPreviewProvider></AppProgressProvider>
             </AppDialogProvider>
         </AppToastProvider></AdminButtonProvider>
     );

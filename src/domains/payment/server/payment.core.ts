@@ -1,3 +1,4 @@
+import { readConsignment } from "@/domains/consignment/shared/contract";
 import {
   PaymentDirection,
   PaymentMethod,
@@ -153,7 +154,7 @@ export async function getPaymentOwnerSeedTx(
   if (ownerType === "ACQUISITION") {
     const acquisition = await tx.acquisition.findUnique({
       where: { id: ownerId },
-      select: { id: true, totalAmount: true, accquisitionStt: true },
+      select: { id: true, totalAmount: true, accquisitionStt: true, consignment: true },
     });
     if (!acquisition) throw new Error("Phiếu nhập không tồn tại.");
 
@@ -162,7 +163,7 @@ export async function getPaymentOwnerSeedTx(
       ownerId: acquisition.id,
       totalDue: toNumber(acquisition.totalAmount),
       depositAmount: 0,
-      direction: PaymentDirection.OUT,
+      direction: readConsignment(acquisition.consignment)?.direction === "OUT" ? PaymentDirection.IN : PaymentDirection.OUT,
       defaultMethod: PaymentMethod.BANK_TRANSFER,
       status: String(acquisition.accquisitionStt ?? ""),
     };
@@ -359,9 +360,20 @@ async function syncPaymentOwnerBusinessStateTx(
   });
 }
 
+async function guardConsignmentPaymentTx(tx: Tx, acquisitionId?: string | null) {
+  if (!acquisitionId) return;
+  const seed=await tx.acquisition.findUnique({where:{id:acquisitionId},select:{consignment:true}});
+  if(!readConsignment(seed?.consignment))return;
+  await tx.$queryRaw`SELECT "id" FROM "Acquisition" WHERE "id"=${acquisitionId} FOR UPDATE`;
+  const row=await tx.acquisition.findUnique({where:{id:acquisitionId},select:{consignment:true}});
+  const document=readConsignment(row?.consignment);
+  if(document && document.status!=="SOLD")throw new Error("Chỉ xử lý thanh toán ký gửi sau khi chốt bán và trước khi khóa quyết toán.");
+}
+
 export async function createPayment(input: CreatePaymentInput) {
   const payment = await prisma.$transaction(async (tx) => {
     const normalizedOwnerType = input.ownerType === "SERVICE" ? "TECHNICAL_ISSUE" : input.ownerType;
+    if(normalizedOwnerType==="ACQUISITION")await guardConsignmentPaymentTx(tx,input.ownerId);
     const exposure = await getPaymentExposureTx(tx, normalizedOwnerType, input.ownerId);
 
     if (exposure.ownerType === "ORDER") {
@@ -483,6 +495,7 @@ export async function splitPayment(input: {
   const result = await prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({ where: { id: input.paymentId } });
     if (!payment) throw new Error("Payment không tồn tại.");
+    if(payment.acquisition_id){await guardConsignmentPaymentTx(tx,payment.acquisition_id);const latest=await tx.payment.findUnique({where:{id:payment.id},select:{status:true}});if(latest&&latest.status!==payment.status)throw new Error("Payment vừa thay đổi. Vui lòng tải lại.");}
     if (payment.status !== PaymentStatus.UNPAID) {
       throw new Error("Chỉ có thể split Payment chưa thanh toán.");
     }
@@ -649,6 +662,7 @@ export async function completePayment(input: {
     });
 
     if (!payment) throw new Error("Payment không tồn tại.");
+    if(payment.acquisition_id){await guardConsignmentPaymentTx(tx,payment.acquisition_id);const latest=await tx.payment.findUnique({where:{id:payment.id},select:{status:true}});if(latest&&latest.status!==payment.status)throw new Error("Payment vừa thay đổi. Vui lòng tải lại.");}
     if (payment.status === PaymentStatus.PAID) throw new Error("Payment này đã hoàn tất.");
     if (["CANCELED", "CANCELLED"].includes(String(payment.status))) {
       throw new Error("Không thể hoàn tất payment đã hủy.");
@@ -758,6 +772,7 @@ export async function cancelPayment(input: {
     });
 
     if (!payment) throw new Error("Payment không tồn tại.");
+    if(payment.acquisition_id){await guardConsignmentPaymentTx(tx,payment.acquisition_id);const latest=await tx.payment.findUnique({where:{id:payment.id},select:{status:true}});if(latest&&latest.status!==payment.status)throw new Error("Payment vừa thay đổi. Vui lòng tải lại.");}
     const status = String(payment.status ?? "").toUpperCase();
     if (status === "PAID") throw new Error("Không thể hủy payment đã hoàn tất. Cần xử lý refund/điều chỉnh riêng.");
     if (status === "CANCELED" || status === "CANCELLED") throw new Error("Payment này đã bị hủy.");

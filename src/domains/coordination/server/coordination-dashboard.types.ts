@@ -117,6 +117,7 @@ export type CoordinationTechnicalIssueBoardItemDTO = {
   srCaseTaskItemId: string | null;
   requestOrigin: "CUSTOMER_ORDER" | "OTHER";
   serviceRequest: {
+    productId?: string | null;
     refNo: string | null;
     productTitle: string | null;
     sku: string | null;

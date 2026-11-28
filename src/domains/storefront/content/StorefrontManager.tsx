@@ -25,6 +25,7 @@ import {
   emptyImage,
 } from "./contract";
 import { FeaturedWatchImageEditor } from "./FeaturedWatchImageEditor";
+import { HeroLivePreview } from "./HeroLivePreview";
 import type { FeaturedImage } from "./contract";
 import type { PublicWatchCard } from "../contracts";
 import "./manager.css";
@@ -194,6 +195,12 @@ function ImageField({
           />
         </label>
       </div>
+      {folder === "hero" && <div className="sfc-row">
+        <label className="sfc-field">Thu / phóng · {Math.round((value.zoom ?? 1)*100)}%
+          <input aria-label={`Thu phóng ${label}`} disabled={disabled || !value.key} type="range" min="0.5" max="3" step="0.05" value={value.zoom ?? 1} onChange={event=>onChange({...value,zoom:Number(event.target.value)})}/>
+        </label>
+        <AdminButton variant="quiet" density="compact" type="button" disabled={disabled || !value.key} onClick={()=>onChange({...value,focalX:50,focalY:50,zoom:1})}>Đặt lại căn chỉnh</AdminButton>
+      </div>}
       </details>
     </fieldset>
   );
@@ -279,7 +286,7 @@ function ProductPicker({ ids, onChange, imageOverrides, onImageChange }: { ids: 
             <X size={14} />
           </AdminButton>
         </div>
-        {onImageChange&&<details className="sfc-advanced" onToggle={event=>{const open=event.currentTarget.open;setImageEditors(current=>({...current,[id]:open}));}}><AdminDisclosureSummary>Ảnh hiển thị & căn chỉnh</AdminDisclosureSummary>{imageEditors[id]&&<FeaturedWatchImageEditor productId={id} cover={selected.find(product=>product.productId===id)?.image} value={imageOverrides?.[id]} onChange={value=>onImageChange(id,value)}/>}</details>}
+        {onImageChange&&<details className="sfc-advanced" onToggle={event=>{const open=event.currentTarget.open;setImageEditors(current=>({...current,[id]:open}));}}><AdminDisclosureSummary>Chọn ảnh gallery</AdminDisclosureSummary>{imageEditors[id]&&<FeaturedWatchImageEditor productId={id} cover={selected.find(product=>product.productId===id)?.image} value={imageOverrides?.[id]} onChange={value=>onImageChange(id,value)}/>}</details>}
         </div>
       ))}
       <input
@@ -707,6 +714,9 @@ export default function StorefrontManager({
                       }
                     />
                   </div>
+                  <HeroLivePreview hero={home.hero}
+                    image={home.hero.image.key ? {...home.hero.image,url:library.find(item=>item.key===home.hero.image.key)?.url || websiteImageUrl(home.hero.image.key)} : undefined}
+                    mobile={home.hero.mobileImage.key ? {...home.hero.mobileImage,url:library.find(item=>item.key===home.hero.mobileImage.key)?.url || websiteImageUrl(home.hero.mobileImage.key)} : undefined}/>
                 </HomeSection>
                 <HomeSection id="featured" title="Đồng hồ nổi bật" homeOnly={homeOnly} active={activeSection} actions={homeOnly ? documentActions : undefined}>
                   <Field

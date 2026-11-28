@@ -1,17 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { consignWatch } from "@/domains/watch/server/bridge";
-
-export async function POST(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    const body = await req.json();
-
-    const result = await consignWatch({
-        productId: (await params).id,
-        vendorId: String(body?.vendorId ?? "").trim(),
-        notes: body?.notes ?? null,
-    });
-
-    return NextResponse.json({ ok: true, result });
+export async function POST(_request:NextRequest){
+ return NextResponse.json({error:"Lập hồ sơ tại Mua bán → Ký gửi và xác nhận gửi đối tác trong hồ sơ.",href:"/admin/consignments"},{status:409,headers:{"Cache-Control":"no-store"}});
 }

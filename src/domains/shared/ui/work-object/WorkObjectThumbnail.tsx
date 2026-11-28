@@ -1,18 +1,21 @@
 "use client";
 
 import { ADMIN_UI_FOUNDATION as F } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
+import { WatchQuickPreviewTrigger } from "./WatchQuickPreviewTrigger";
 import Image from "next/image";
 import { ImageIcon } from "lucide-react";
 import { resolveMediaPreviewSrc } from "@/lib/media-profile";
 export function WorkObjectThumbnail({
   object,
+  interactive = true,
   size = F.thumbnail.row,
 }: {
-  object: { label: string; imageUrl?: string | null };
+  object: { label: string; imageUrl?: string | null; type?: string; id?: string; href?: string };
+  interactive?: boolean;
   size?: 28 | 32 | 36 | 40 | 48;
 }) {
   const src = resolveMediaPreviewSrc(object.imageUrl);
-  return (
+  const thumbnail = (
     <span
       role="img"
       aria-label={`Ảnh ${object.label}`}
@@ -38,4 +41,5 @@ export function WorkObjectThumbnail({
       )}
     </span>
   );
+  return interactive && object.type === "WATCH" && object.id ? <WatchQuickPreviewTrigger watch={{productId:object.id,label:object.label,imageUrl:object.imageUrl}} className="inline-flex shrink-0 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400">{thumbnail}</WatchQuickPreviewTrigger> : thumbnail;
 }

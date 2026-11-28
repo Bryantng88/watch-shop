@@ -72,7 +72,7 @@ export default function WatchStateSection({
             variant: "danger",
         },
         {
-            label: "Ký gửi",
+            label: "Lập hồ sơ gửi đối tác",
             action: "MARK_CONSIGNED_TO",
             icon: <ShieldCheck className="h-4 w-4" />,
             variant: "outline",
@@ -98,6 +98,7 @@ export default function WatchStateSection({
     ];
 
     const runAction = (action: ActionItem["action"]) => {
+        if(action === "MARK_CONSIGNED_TO"){router.push(`/admin/consignments/new?productId=${encodeURIComponent(productId)}`);return;}
         startTransition(async () => {
             const result = await transitionWatchStateAction({ productId, action });
 

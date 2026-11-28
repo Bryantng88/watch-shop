@@ -17,3 +17,7 @@ test('extra writes, fabricated year fields, malformed facts, missing image and l
  await assert.rejects(runQuickNamePreview({kind:'acquisition-quick-name',text:'x'},{execute:async()=>result,api:async()=>writes++}));
  await assert.rejects(runQuickNamePreview({kind:'acquisition-quick-name',imageBase64:'x',text:'x'},{execute:async()=>result,api:async()=>writes++,assertActive:()=>{throw Error('LEASE_LOST');}}));assert.equal(writes,0);
 });
+test('appearance accepts short observable facts and rejects malformed/unknown fields',()=>{
+ assert.deepEqual(validateQuickNameResult({...result,dialColor:'bạc',caseShape:'tròn'}),{...result,dialColor:'bạc',caseShape:'tròn'});
+ for(const extra of [{dialColor:7},{caseShape:'x'.repeat(121)},{caseMaterial:'gold'}])assert.throws(()=>validateQuickNameResult({...result,...extra}));
+});

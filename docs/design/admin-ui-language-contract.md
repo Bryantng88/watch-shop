@@ -543,6 +543,20 @@ Sharing ít người là subsection trong dialog hiện tại.
 
 ## 15. Cảnh báo, phản hồi và trạng thái UI
 
+### Hero image framing (2026-11-28)
+
+Hero desktop/mobile images support focal position and optional zoom 0.5–3;
+missing legacy zoom means 1. An explicit mobile image has its own zoom (default
+1); an omitted mobile image inherits desktop framing. Position/zoom and reset
+belong in the existing image adjustment disclosure. Reset changes framing only.
+
+Show an inline live preview using the public `HomeHero`/`EditorialPhoto`
+components and public CSS in a real desktop/mobile iframe viewport. Preview
+controls do not save, upload or publish. Draft saving and publication retain the
+existing revision/permission gates. Explain that automatic catalogue fallback
+requires the full page preview when no desktop image is selected. Do not fetch
+private catalogue media or duplicate public Hero markup to approximate the crop.
+
 ### Loading belongs to its content (2026-11-28)
 
 Open a record's dialog immediately, using the selected row's real title and
@@ -1834,3 +1848,7 @@ Preload the first 30 row projections alongside the permission-projected overview
 Dùng `useAppDialog().confirm`, không dùng `window.confirm` hay overlay tự dựng ở từng trang. Xóa đầu việc, hoàn thành và mở lại đầu việc đều yêu cầu xác nhận, nêu rõ tên đối tượng và tác động tới tiến độ/lịch. Xóa dùng tone danger và nút “Giữ lại”; hoàn thành dùng tone success và nút “Bỏ qua”. Không đổi trạng thái, xóa hàng hoặc gửi mutation trước khi nhận `true`. Hủy, Escape và backdrop đều tương đương bỏ qua. Không coi mở popover/menu hay click vào title là xác nhận.
 
 AppDialogProvider dùng native modal top layer, khóa scroll, focus trap và restore focus. Focus đầu tiên ưu tiên action an toàn; Enter chỉ kích hoạt nút đang focus. Các yêu cầu đồng thời xếp hàng, không ghi đè promise trước. Dùng chung cho mọi caller; không thêm layer số tùy ý. Media từ đầu việc mở embedded workspace modal, kiểm tra origin/source của message và hỏi bỏ thay đổi chưa lưu khi đóng. Menu đầu việc không lặp lại sửa/chi tiết đã có trên title.
+
+### Tạo công việc trên giao diện Ben/compact
+
+`/admin/personal-work?view=list` có action primary “Tạo việc” trong header, không phụ thuộc lịch đang mở. Form tạo nhanh dùng chung với workspace đầy đủ; chỉ hiện sau khi bấm nút. Giữ cả Công việc/Sự kiện/Duy trì. Mở form focus tên; thu gọn/Escape giữ draft; lỗi không đóng form; thành công mới xóa draft/thu gọn và trả focus về trigger. Không đổi quyền tạo hay payload nghiệp vụ. Header và form không được tràn tại 320/390/768px.

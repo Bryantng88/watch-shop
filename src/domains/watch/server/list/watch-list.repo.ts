@@ -1,3 +1,4 @@
+import { loadAdminIntakeIdentities } from "@/domains/acquisition/server/admin-watch-identity.query";
 import { ImageRole, Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
@@ -687,6 +688,7 @@ export async function listAdminWatches(
       : Promise.resolve(new Map<string, ServiceRequestPreview[]>()),
   ]);
 
+  const intakeIdentities = await loadAdminIntakeIdentities(prisma, productIds);
   const items = rows.map((row) => {
     const enrichedRow = attachBulkLoadedRelations(row, {
       imageMap,
@@ -696,6 +698,7 @@ export async function listAdminWatches(
     return mapWatchRow({
       ...enrichedRow,
       __userMap: userMap,
+      __adminIdentitySuffix: intakeIdentities.get(row.productId),
     });
   });
 

@@ -1,0 +1,4 @@
+# Preserve the deployed worker runtime/CLI; update only the intake extractor.
+ARG BASE_WORKER_IMAGE
+FROM ${BASE_WORKER_IMAGE}
+COPY ops/codex-worker/acquisition-quick-name.mjs ops/codex-worker/acquisition-quick-name-schema.json /opt/worker/

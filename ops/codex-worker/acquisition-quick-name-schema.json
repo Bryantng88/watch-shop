@@ -48,6 +48,18 @@
       "items": {
         "type": "string"
       }
+    },
+    "dialColor": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "caseShape": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "required": [
@@ -56,6 +68,8 @@
     "referenceNumber",
     "nickname",
     "movementType",
-    "notes"
+    "notes",
+    "dialColor",
+    "caseShape"
   ]
 }

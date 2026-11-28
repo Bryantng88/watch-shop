@@ -42,3 +42,15 @@ test('failed connectivity restores original worker name and running state for ap
  assert.ok(f.calls.some(x=>x.path==='/containers/old/start'));
  assert.ok(!f.calls.some(x=>x.path==='/containers/old'&&x.method==='DELETE'));
 });
+test('updates an aligned worker image while preserving env and runtime restrictions', async()=>{
+ const f=fixture(false,true),image='sha256:'+'a'.repeat(64);await reattach(f.api,async()=>{},image);
+ const c=f.calls.find(x=>x.path.startsWith('/containers/create')).body;
+ assert.equal(c.Image,image);assert.deepEqual(c.Env,f.rows.old.Config.Env);
+ assert.deepEqual(c.HostConfig,{...f.rows.old.HostConfig,NetworkMode:'container:app-new'});
+});
+test('failed image update restores previous worker and rejects mutable image references',async()=>{
+ const f=fixture(true,true);await assert.rejects(reattach(f.api,async()=>{},'sha256:'+'a'.repeat(64)));
+ assert.ok(f.calls.some(x=>x.path==='/containers/old/start'));
+ assert.ok(!f.calls.some(x=>x.path==='/containers/old'&&x.method==='DELETE'));
+ const invalid=fixture();await assert.rejects(reattach(invalid.api,async()=>{},'worker:latest'));assert.equal(invalid.calls.length,0);
+});

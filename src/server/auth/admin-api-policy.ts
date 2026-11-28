@@ -32,6 +32,7 @@ export function isAdminAccessAllowed(
 }
 
 export function getAdminApiPolicy(pathname: string, method: string): AdminAccessPolicy | null {
+    if (/^\/api\/admin\/consignments(\/|$)/.test(pathname)) return anyOf(PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL, PERMISSIONS.WATCH_ACQUISITION_CREATE, PERMISSIONS.ACQUISITION_CREATE_ALL, PERMISSIONS.WATCH_ACQUISITION_UPDATE, PERMISSIONS.ACQUISITION_UPDATE_ALL, PERMISSIONS.WATCH_ACQUISITION_APPROVE, PERMISSIONS.ACQUISITION_APPROVE_ALL, PERMISSIONS.WATCH_ACQUISITION_DELETE, PERMISSIONS.ACQUISITION_DELETE_ALL);
     if (pathname === "/api/admin/ben-code" && method === "POST") return publicToAuthenticatedUser();
     const normalizedMethod = method.toUpperCase();
     const read = READ_METHODS.has(normalizedMethod);
@@ -233,6 +234,7 @@ export function getAdminApiPolicy(pathname: string, method: string): AdminAccess
 }
 
 export function getAdminPagePolicy(pathname: string): AdminAccessPolicy | null {
+    if (/^\/admin\/consignments(?:\/new)?$/.test(pathname)) return anyOf(PERMISSIONS.WATCH_ACQUISITION_VIEW, PERMISSIONS.ACQUISITION_VIEW_ALL);
     if (pathname === "/admin/trading") return anyOf(...TRADING_READ_PERMISSIONS);
     if (pathname === "/admin/system") return anyOf(...SYSTEM_READ_PERMISSIONS);
     if (pathname === "/admin/reports") return anyOf(...REPORT_READ_PERMISSIONS);
