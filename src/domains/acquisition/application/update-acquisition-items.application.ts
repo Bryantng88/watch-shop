@@ -17,13 +17,14 @@ async function updateAcquisitionItemsTx(
 
     const acq = await tx.acquisition.findUnique({
         where: { id: acqId },
-        select: { accquisitionStt: true },
+        select: { accquisitionStt: true, consignment:true },
     });
 
     if (!acq) {
         throw new Error("Không tìm thấy phiếu nhập");
     }
 
+    if(acq.consignment)throw new Error("Sửa hồ sơ tại Mua bán → Ký gửi để giữ đúng thỏa thuận và quyết toán.");
     const existing = await repoAcq.findAcqItems(tx, acqId);
     const existingIds = new Set(existing.map((i) => i.id));
     const receivedIds = new Set(items.map((i) => i.id));
