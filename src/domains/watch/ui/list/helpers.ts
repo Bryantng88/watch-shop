@@ -254,7 +254,7 @@ export function mapWatchRow(row: any): WatchRow {
         id: String(row?.id ?? product?.id ?? ""),
         productId: String(row?.productId ?? product?.id ?? ""),
         sku: String(product?.sku ?? row?.sku ?? ""),
-        title: String(product?.title ?? row?.title ?? ""),
+        title: [String(product?.title ?? row?.title ?? ""), row?.__adminIdentitySuffix].filter(Boolean).join(" · "),
         slug: product?.slug ?? row?.slug ?? null,
 
         brandName:

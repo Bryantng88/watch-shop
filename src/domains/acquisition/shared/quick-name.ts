@@ -3,12 +3,19 @@ import { formatWatchTitle } from "@/domains/watch/shared/watch-title-format";
 const fact = z.string().trim().min(1).max(120).nullable();
 export const quickNameResultSchema = z.object({
   brandName: fact, model: fact, referenceNumber: fact, nickname: fact,
+  dialColor: fact.optional(), caseShape: fact.optional(),
   movementType: z.enum(["AUTOMATIC", "HAND_WOUND", "QUARTZ", "SOLAR", "KINETIC", "MECHAQUARTZ", "SPRING_DRIVE", "HYBRID"]).nullable(),
   notes: z.array(z.string().trim().min(1).max(240)).max(6),
 }).strict();
 export type QuickNameResult = z.infer<typeof quickNameResultSchema>;
 export function quickNameTitle(result: QuickNameResult) {
-  return result.brandName || result.model ? formatWatchTitle(result) : "";
+  const name = result.brandName || result.model ? formatWatchTitle(result) : "";
+  if (!name) return "";
+  let title = name.slice(0, 500);
+  for (const trait of [result.dialColor ? `mặt ${result.dialColor}` : null, result.caseShape ? `vỏ ${result.caseShape}` : null]) {
+    if (trait && title.length + trait.length + 3 <= 500) title += ` · ${trait}`;
+  }
+  return title;
 }
 export const quickNameLineSchema = z.object({
   id: z.string().min(1).max(100), imageKey: z.string().min(1).max(500),

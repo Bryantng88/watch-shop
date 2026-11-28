@@ -190,6 +190,7 @@ export type WatchListProjectionSourceRow = {
     submittedAt: Date | null;
     submittedById: string | null;
   }>;
+  __adminIdentitySuffix?: string;
   __imagesCount?: number;
   __mediaState?: WatchListProjectionMediaState[];
   __serviceState?: WatchListProjectionServiceState | null;

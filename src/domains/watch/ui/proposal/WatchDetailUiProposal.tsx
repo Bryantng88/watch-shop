@@ -136,11 +136,12 @@ export default function WatchDetailUiProposal({
   const imageSrc = firstImage
     ? resolveMediaPreviewSrc(firstImage) ?? firstImage
     : null;
-  const title =
+  const baseTitle =
     values.basic.title ||
     text(detail.title, "") ||
     [text(brand.name, ""), values.spec.model].filter(Boolean).join(" ") ||
     "Watch";
+  const title = [baseTitle, text(detail.adminIdentitySuffix, "")].filter(Boolean).join(" · ");
   const detailHref = `/admin/watches/${values.productId}`;
   const workspace = record(mediaWorkspace);
   const mediaQuery = new URLSearchParams({ embedded: "1", mode: "media", returnTo: detailHref });
@@ -274,7 +275,7 @@ export default function WatchDetailUiProposal({
       const result = await saveWatchWorkbenchPricingAction({
         productId: values.productId,
         pricing: { ...values.pricing, salePrice: salePriceValue },
-        title,
+        title: baseTitle,
         sku: values.header.sku,
       });
       notify.success({
@@ -451,7 +452,7 @@ export default function WatchDetailUiProposal({
                 </div>
                 <div className={`${detailUi.contentGrid} ${detailUi.editorialGrid}`}>
                   <div className="min-w-0">
-                    <h3 className="text-base font-semibold text-slate-950">{values.content.titleOverride || title}</h3>
+                    <h3 className="text-base font-semibold text-slate-950">{values.content.titleOverride || baseTitle}</h3>
                     {values.content.hookText && <p className="mt-2 text-sm font-semibold text-violet-700">{values.content.hookText}</p>}
                     <div className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-600">
                       {values.content.body || "Watch chưa có nội dung bán hàng."}

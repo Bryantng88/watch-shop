@@ -1,3 +1,4 @@
+import { loadAdminIntakeIdentities } from "@/domains/acquisition/server/admin-watch-identity.query";
 import { prisma } from "@/server/db/client";
 import { perfStep } from "@/lib/server-perf";
 import {
@@ -163,7 +164,9 @@ export async function getWatchDetail(productId: string) {
     throw new Error("Không tìm thấy watch");
   }
 
-  return mapWatchDetail(await withComposedReviewNotes(row));
+  const detail = mapWatchDetail(await withComposedReviewNotes(row));
+  const suffix = (await loadAdminIntakeIdentities(prisma, [productId])).get(productId);
+  return { ...detail, adminIdentitySuffix: suffix, adminTitle: [detail.title, suffix].filter(Boolean).join(" · ") };
 }
 
 export async function getWatchEditDetail(productId: string) {
@@ -201,6 +204,7 @@ export async function getWatchEditDetail(productId: string) {
 
   return {
     ...mapped,
+    adminIdentitySuffix: (await loadAdminIntakeIdentities(prisma, [productId])).get(productId),
     taskSummary: row.taskSummary ?? {
       watchImage: 0,
       watchContent: 0,
@@ -277,6 +281,7 @@ export async function getWatchMediaEditDetail(productId: string) {
 
   return {
     ...mapped,
+    adminIdentitySuffix: (await loadAdminIntakeIdentities(prisma, [productId])).get(productId),
     taskSummary: {
       watchImage: 0,
       watchContent: 0,

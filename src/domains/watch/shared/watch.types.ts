@@ -52,6 +52,8 @@ export type WatchDetailModel = {
     watchId: string;
 
     title: string | null;
+    adminTitle?: string;
+    adminIdentitySuffix?: string;
     slug?: string | null;
     status: ProductStatus | string;
 
