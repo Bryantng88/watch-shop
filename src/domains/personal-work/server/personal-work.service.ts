@@ -1,3 +1,4 @@
+import {checklistMomentLabel, checklistScheduleRange, validateChecklistSchedule} from "../shared/checklist-schedule";
 import { personalWorkTransition } from "../shared/personal-work-lifecycle";
 import { isContinuousWork, assertContinuousSchedule, assertContinuousUpdate } from "../shared/continuous-work";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
@@ -80,6 +81,7 @@ export async function assertPersonalWorkAccess(
       workTypeId: true,
       dueAt: true,
       scheduledEndAt: true,
+      estimatedDays: true,
       task: { select: { kind: true, createdByUserId: true, assignedToUserId: true } },
       personalShares: { where: { userId }, select: { accessLevel: true }, take: 1 },
     },
@@ -293,6 +295,22 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
     context ? context.categories : listPersonalCategories(userId),
     context ? context.canManageDefaultCategories : canManageDefaultCategories(userId),
   ]);
+  // One bounded result per visible entry; do not depend on the parent's 20 recent activities.
+  const updateEntryIds=options.summary||options.row?[]:items.flatMap(item=>{
+    const full=isPersonalWorkOwner(item,userId)||item.personalShares.some(share=>share.userId===userId);
+    return item.checklists.filter(entry=>full||entry.personalShares.some(share=>share.userId===userId)).map(entry=>entry.id);
+  });
+  const entryUpdates=updateEntryIds.length?await prisma.$queryRaw<{checklistItemId:string;body:string;occurredAt:Date}[]>(Prisma.sql`
+    SELECT DISTINCT ON ("metadataJson"->>'checklistItemId') "metadataJson"->>'checklistItemId' AS "checklistItemId", "body", "occurredAt"
+    FROM "TaskItemActivity" WHERE "taskItemId" IN (${Prisma.join(items.map(item=>item.id))})
+      AND "metadataJson"->>'checklistItemId' IN (${Prisma.join(updateEntryIds)})
+      AND "title" LIKE 'Cập nhật đầu việc%' AND "body" IS NOT NULL
+    ORDER BY "metadataJson"->>'checklistItemId', "occurredAt" DESC, "id" DESC
+  `):[];
+  const entryUpdateMap=new Map(entryUpdates.map(row=>[row.checklistItemId,{body:row.body,occurredAt:row.occurredAt.toISOString()}]));
+  const partialParents=options.summary||options.row?[]:items.filter(item=>!isPersonalWorkOwner(item,userId)&&!item.personalShares.some(share=>share.userId===userId));
+  const partialEntryIds=partialParents.flatMap(item=>item.checklists.filter(entry=>entry.personalShares.some(share=>share.userId===userId)).map(entry=>entry.id));
+  const partialHistory=partialEntryIds.length?await prisma.taskItemActivity.findMany({where:{taskItemId:{in:partialParents.map(item=>item.id)},OR:partialEntryIds.map(id=>({metadataJson:{path:["checklistItemId"],equals:id}}))},orderBy:[{occurredAt:"desc"},{id:"desc"}],take:30,include:{actorUser:{select:{id:true,name:true,email:true,avatarUrl:true}}}}):[];
   const tagged = await hydrateTaskItemsWithTagsRepo(prisma, items);
   const ownerIds = [...new Set(items.map(item => item.personalOwnerUserId || item.task?.createdByUserId || item.task?.assignedToUserId).filter((id): id is string => Boolean(id)))];
   const ownerCategoryRows = await prisma.personalWorkCategory.findMany({ where: { userId: { in: ownerIds } } });
@@ -347,7 +365,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
           occurredAt: activity.occurredAt.toISOString(),
           actor: activity.actorUser,
         })),
-        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, mediaContext: options.row ? undefined : mediaChecklistContext(entry.note),
+        checklist: item.checklists.map((entry) => ({ id: entry.id, title: entry.title, isDone: entry.isDone, updatedAt:entry.updatedAt.toISOString(), latestUpdate:entryUpdateMap.get(entry.id)??null, startAt:entry.startAt?.toISOString()??null, deadlineAt:entry.deadlineAt?.toISOString()??null, mediaContext: options.row ? undefined : mediaChecklistContext(entry.note),
           access:owned?"OWNER":share?.accessLevel === "EDITOR"?"EDITOR":entry.personalShares.find(s=>s.userId===userId)?.accessLevel??"VIEWER",
           sharedWith:owned?entry.personalShares.map(s=>({user:s.user,accessLevel:s.accessLevel})):[],
         })),
@@ -368,7 +386,7 @@ export async function getPersonalWorkPageData(auth: unknown, options: {summary?:
       if (!owned && !share) {
         const visibleIds=new Set(item.checklists.filter(e=>e.personalShares.some(s=>s.userId===userId)).map(e=>e.id));
         const updated=item.checklists.filter(e=>visibleIds.has(e.id)).reduce((latest,e)=>e.updatedAt>latest?e.updatedAt:latest,item.createdAt);
-        return checklistOnlyWork(result,result.checklist.filter(e=>visibleIds.has(e.id)),updated.toISOString());
+        return {...checklistOnlyWork(result,result.checklist.filter(e=>visibleIds.has(e.id)),updated.toISOString()),activities:partialHistory.filter(row=>row.taskItemId===item.id).map(row=>({id:row.id,title:row.title,body:row.body,occurredAt:row.occurredAt.toISOString(),actor:row.actorUser}))};
       }
       return result;
     }),
@@ -597,7 +615,8 @@ export async function updatePersonalWorkItem(
     input.dueAt !== undefined && current.scheduledEndAt && current.dueAt && nextStart
       ? new Date(new Date(nextStart).getTime() + current.scheduledEndAt.getTime() - current.dueAt.getTime())
       : nextStart ? current.scheduledEndAt : null;
-  const schedule = validatePersonalSchedule(nextStart, nextEnd);
+  const hasChecklist=await db.taskItemChecklist.count({where:{taskItemId:input.id}})>0;
+  const schedule = hasChecklist ? {dueAt:current.dueAt,scheduledEndAt:current.scheduledEndAt,estimatedDays:current.estimatedDays} : validatePersonalSchedule(nextStart, nextEnd);
   if(event && !schedule.dueAt)throw new Error("Sự kiện cần ngày diễn ra");
   const ownerId = current.personalOwnerUserId || current.task?.createdByUserId || current.task?.assignedToUserId;
   const category = input.categoryKey !== undefined
@@ -646,16 +665,17 @@ export async function updatePersonalWorkItem(
       updateEntry = await tx.taskItemChecklist.findFirst({ where: { id: input.updateChecklistItemId, taskItemId: input.id }, select: { id: true, title: true } });
       if (!updateEntry) throw new Error("Đầu việc không còn tồn tại. Chọn lại mục cập nhật.");
     }
+    const lockedHasChecklist=await tx.taskItemChecklist.count({where:{taskItemId:input.id}})>0;
     await tx.taskItem.update({
       where: { id: input.id },
       data: {
       ...(input.reminderMinutes !== undefined ? {reminderMinutes:input.reminderMinutes} : {}),
-      ...(scheduleChanged ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
+      ...(scheduleChanged && !lockedHasChecklist ? { dueAt: schedule.dueAt, scheduledEndAt: schedule.scheduledEndAt } : {}),
       ...(category ? { personalCategoryId: category.id } : {}),
       ...(category || input.workType !== undefined ? { workTypeId: event ? "EVENT" : isContinuousWork(current.workTypeId) ? "CONTINUOUS" : (category ? category.id : current.personalCategoryId) ? null : normalizeWorkType(input.workType ?? current.workTypeId, category?.domain ?? currentDomain) } : {}),
       ...(input.title !== undefined ? { title: input.title.trim() } : {}),
       ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
-      ...(estimatedDays !== undefined ? { estimatedDays } : {}),
+      ...(estimatedDays !== undefined && !lockedHasChecklist ? { estimatedDays } : {}),
       ...(input.priority ? { priority: input.priority } : {}),
       ...(progressPercent !== undefined ? { progressPercent } : {}),
       ...(input.progressMode ? { progressMode: input.progressMode } : {}),
@@ -787,16 +807,18 @@ export async function addPersonalWorkChecklistItem(taskItemId: string, title: st
   if (normalizedTitle.length > 500) throw new Error("Tên đầu việc không được vượt quá 500 ký tự");
   return runBusinessEventTransaction(async (tx,delivery) => {
     await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${taskItemId} FOR UPDATE`;
-    assertChecklistOpen(await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx));
+    const locked=await assertPersonalWorkAccess(taskItemId, auth, "EDIT", tx);
+    assertChecklistOpen(locked);
     const last = await tx.taskItemChecklist.findFirst({
       where: { taskItemId },
       orderBy: { sortOrder: "desc" },
       select: { sortOrder: true },
     });
     const checklist = await tx.taskItemChecklist.create({
-      data: { taskItemId, title: normalizedTitle, sortOrder: (last?.sortOrder || 0) + 1 },
+      data: { taskItemId, title: normalizedTitle, sortOrder: (last?.sortOrder || 0) + 1, ...(!last?{startAt:locked.dueAt,deadlineAt:locked.scheduledEndAt||locked.dueAt}:{}) },
     });
     await updateChecklistProgress(tx, taskItemId);
+    await recomputePersonalChecklistSchedule(tx, taskItemId);
     await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Thêm đầu việc",body:normalizedTitle}});
     delivery.track(await recordPersonalChecklistCreated(tx,{taskItemId,id:checklist.id,title:checklist.title,actorUserId:current.userId}));
     return checklist;
@@ -870,7 +892,7 @@ export async function setPersonalWorkChecklistItemDone(
     });
     if (!result.count) throw new Error("Không tìm thấy đầu việc");
     const entry = await tx.taskItemChecklist.findUniqueOrThrow({where:{id:checklistItemId}});
-    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:isDone?"Hoàn thành đầu việc":"Mở lại đầu việc",body:entry.title}});
+    await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:isDone?"Hoàn thành đầu việc":"Mở lại đầu việc",body:entry.title,metadataJson:{checklistItemId:entry.id,checklistTitle:entry.title}}});
     return updateChecklistProgress(tx, taskItemId);
   });
 }
@@ -886,6 +908,7 @@ export async function deletePersonalWorkChecklistItem(taskItemId: string, checkl
     const result = await tx.taskItemChecklist.deleteMany({ where: { id: checklistItemId, taskItemId } });
     await tx.taskItemActivity.create({data:{taskItemId,actorUserId:current.userId,sourceType:"DISCUSSION",title:"Xóa đầu việc",body:entry.title}});
     if (!result.count) throw new Error("Không tìm thấy đầu việc");
+    await recomputePersonalChecklistSchedule(tx, taskItemId);
     return updateChecklistProgress(tx, taskItemId);
   });
 }
@@ -960,4 +983,38 @@ export async function replacePersonalWorkShares(taskItemId: string, shares: Shar
         taskItemId,kind:"SHARED",title:item.title,route:workRoute(taskItemId,true)});
     }
   });
+}
+
+export async function recomputePersonalChecklistSchedule(tx: Prisma.TransactionClient, taskItemId: string) {
+  const entries = await tx.taskItemChecklist.findMany({where:{taskItemId},select:{startAt:true,deadlineAt:true}});
+  const task = await tx.taskItem.findUniqueOrThrow({where:{id:taskItemId},select:{workTypeId:true}});
+  const range = checklistScheduleRange(entries);
+  await tx.taskItem.update({where:{id:taskItemId},data:isContinuousWork(task.workTypeId)?{dueAt:null,scheduledEndAt:null}:{dueAt:range.dueAt,scheduledEndAt:range.scheduledEndAt,
+    estimatedDays:range.dueAt&&range.scheduledEndAt?Math.max(1,Math.ceil((Date.parse(range.scheduledEndAt)-Date.parse(range.dueAt))/86400000)):1}});
+  return range;
+}
+export async function editPersonalChecklist(input:{taskItemId:string;checklistItemId:string;title:string;startAt:string|null;deadlineAt:string|null;updateBody?:string;expectedUpdatedAt?:string},auth:unknown) {
+  const title=input.title.trim(), body=input.updateBody?.trim();
+  if(!title||title.length>500)throw new Error("Tên đầu việc cần từ 1 đến 500 ký tự");
+  if(body&&body.length>10000)throw new Error("Nội dung cập nhật tối đa 10.000 ký tự");
+  const schedule=validateChecklistSchedule(input.startAt,input.deadlineAt);
+  return prisma.$transaction(async tx=>{
+    await tx.$queryRaw`SELECT "id" FROM "TaskItem" WHERE "id"=${input.taskItemId} FOR UPDATE`;
+    const current=await assertPersonalChecklistEdit(input.taskItemId,input.checklistItemId,auth,tx);
+    assertChecklistOpen(current);
+    const entry=current.checklists[0];
+    if(input.expectedUpdatedAt&&entry.updatedAt.toISOString()!==input.expectedUpdatedAt)throw new Error("Đầu việc đã được người khác sửa. Đóng và mở lại trước khi cập nhật.");
+    const changed=entry.title!==title||entry.startAt?.toISOString()!==schedule.startAt?.toISOString()||entry.deadlineAt?.toISOString()!==schedule.deadlineAt?.toISOString();
+    if(!changed&&!body)return;
+    await tx.taskItemChecklist.update({where:{id:entry.id},data:{title,...schedule}});
+    if(changed)await tx.taskItemActivity.create({data:{taskItemId:current.id,actorUserId:current.userId,sourceType:"DISCUSSION",title:`Sửa đầu việc · ${title}`,body:[entry.title!==title?`${entry.title} → ${title}`:null,`Bắt đầu: ${checklistMomentLabel(entry.startAt)} → ${checklistMomentLabel(schedule.startAt)}`,`Hạn chót: ${checklistMomentLabel(entry.deadlineAt)} → ${checklistMomentLabel(schedule.deadlineAt)}`].filter(Boolean).join("\n"),
+      metadataJson:{checklistItemId:entry.id,previousStartAt:entry.startAt?.toISOString()??null,previousDeadlineAt:entry.deadlineAt?.toISOString()??null,startAt:input.startAt,deadlineAt:input.deadlineAt}}});
+    if(body)await tx.taskItemActivity.create({data:{taskItemId:current.id,actorUserId:current.userId,sourceType:"DISCUSSION",title:`Cập nhật đầu việc · ${title}`,body,metadataJson:{checklistItemId:entry.id,checklistTitle:title}}});
+    await recomputePersonalChecklistSchedule(tx,current.id);
+  });
+}
+export async function personalChecklistHistory(taskItemId:string,checklistItemId:string,auth:unknown,updatesOnly=false) {
+  await assertPersonalChecklistAccess(taskItemId,checklistItemId,auth);
+  const rows=await prisma.taskItemActivity.findMany({where:{taskItemId,metadataJson:{path:["checklistItemId"],equals:checklistItemId},...(updatesOnly?{title:{startsWith:"Cập nhật đầu việc"},body:{not:null}}:{})},orderBy:[{occurredAt:"desc"},{id:"desc"}],take:30,include:{actorUser:{select:{id:true,name:true,email:true,avatarUrl:true}}}});
+  return rows.map(row=>({id:row.id,title:row.title,body:row.body,occurredAt:row.occurredAt.toISOString(),actor:row.actorUser}));
 }

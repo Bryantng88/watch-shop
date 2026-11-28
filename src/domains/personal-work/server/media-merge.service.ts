@@ -5,7 +5,7 @@ import { workRoute } from "@/domains/notification/server/work-push-policy";
 import { prisma, type DB } from "@/server/db/client";
 import { getAuthUserId } from "@/server/auth/auth-user-id";
 import { runBusinessEventTransaction } from "@/domains/event/server/business-event-transaction";
-import { createPersonalWorkItem } from "./personal-work.service";
+import { recomputePersonalChecklistSchedule, createPersonalWorkItem } from "./personal-work.service";
 import { mediaChecklistContext } from "../shared/media-daily";
 import { MediaMergeError, mediaMergeCommand, mediaMergeSelection, validateMediaMerge, type MediaMergePreview } from "../shared/media-merge";
 const hash=(value:unknown)=>createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -24,7 +24,7 @@ async function load(db:DB,ids:string[],userId:string){
   const revision=hash({rows,images,tags:tagged.map(row=>({id:row.id,tags:row.tags.map(tag=>tag.name).sort()}))});
   const total=rows.reduce((n,r)=>n+r.checklists.length,0),done=rows.reduce((n,r)=>n+r.checklists.filter(e=>e.isDone).length,0);
   const products=new Set(rows.flatMap(r=>r.checklists.map(e=>mediaChecklistContext(e.note)!.productId)));
-  const preview:MediaMergePreview={revision,suggestedTitle:`Xử lý media · ${products.size} đồng hồ`,sources:rows.map(r=>({id:r.id,title:r.title,total:r.checklists.length,done:r.checklists.filter(e=>e.isDone).length})),total,done,warnings:["Việc nguồn sẽ ẩn khỏi mọi danh sách và lịch; chỉ việc chung được tính trong báo cáo công việc.","Giữ toàn bộ đầu việc đã xong/chưa xong, người được chia sẻ, lịch sử và ảnh; không loại các đầu việc trùng tên hoặc cùng Watch.","Không thể tự tách lại sau khi gộp. Liên kết cũ sẽ mở việc chung.",...(new Set(rows.map(r=>r.dueAt?.toISOString()||"")).size>1?["Các hạn khác nhau: việc chung dùng hạn sớm nhất. Hạn cũ được giữ trong dấu vết gộp."]:[])]};
+  const preview:MediaMergePreview={revision,suggestedTitle:`Xử lý media · ${products.size} đồng hồ`,sources:rows.map(r=>({id:r.id,title:r.title,total:r.checklists.length,done:r.checklists.filter(e=>e.isDone).length})),total,done,warnings:["Việc nguồn sẽ ẩn khỏi mọi danh sách và lịch; chỉ việc chung được tính trong báo cáo công việc.","Giữ toàn bộ đầu việc đã xong/chưa xong, người được chia sẻ, lịch sử và ảnh; không loại các đầu việc trùng tên hoặc cùng Watch.","Không thể tự tách lại sau khi gộp. Liên kết cũ sẽ mở việc chung.",...(new Set(rows.map(r=>r.dueAt?.toISOString()||"")).size>1?["Việc chung tổng hợp từ mốc sớm nhất đến hạn trễ nhất của tất cả đầu việc."]:[])]};
   return {rows,images,preview};
 }
 export async function previewMediaMerge(raw:unknown,auth:unknown){
@@ -61,6 +61,7 @@ export async function mergeMediaWork(raw:unknown,auth:unknown){
       await tx.taskItem.update({where:{id:source.id},data:{mergedIntoTaskItemId:id}});
       await tx.taskItemActivity.create({data:{taskItemId:source.id,sourceType:"SYSTEM",title:"Đã gộp công việc",actorUserId:userId,metadataJson:{mergedIntoTaskItemId:id}}});
     }
+    await recomputePersonalChecklistSchedule(tx,id);
     if(first.personalShares.length)await tx.personalTaskShare.createMany({data:first.personalShares.map(s=>({taskItemId:id,userId:s.userId,accessLevel:s.accessLevel,sharedByUserId:s.sharedByUserId}))});
     for(const image of images)await tx.mediaBinding.update({where:{id:image.id},data:{ownerId:id}});
     await tx.taskItemActivity.create({data:{taskItemId:id,sourceType:"SYSTEM",title:`Gộp ${rows.length} công việc media`,body:`Giữ ${preview.total} đầu việc, ${preview.done} đã hoàn thành. Báo cáo công việc tính một việc chung.`,actorUserId:userId,metadataJson:{source:"PERSONAL_MEDIA_MERGE",sourceIds:rows.map(r=>r.id),total:preview.total,done:preview.done}}});

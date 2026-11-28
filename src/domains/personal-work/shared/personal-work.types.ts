@@ -133,6 +133,10 @@ export type PersonalWorkActivity = {
 };
 
 export type PersonalWorkChecklistItem = {
+  latestUpdate?: {body:string;occurredAt:string} | null;
+  updatedAt?: string;
+  startAt?: string | null;
+  deadlineAt?: string | null;
   object?: PersonalWorkTarget;
   mediaContext?: {productId?:string;label:string;secondary:string|null;href:string;request:string};
   access?: "OWNER" | "EDITOR" | "VIEWER";

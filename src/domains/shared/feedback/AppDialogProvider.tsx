@@ -40,172 +40,41 @@ type AppDialogApi = {
 
 const AppDialogContext = React.createContext<AppDialogApi | null>(null);
 
-function toneStyles(tone: DialogTone) {
-    switch (tone) {
-        case "success":
-            return {
-                badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
-                confirm: "bg-emerald-600 hover:bg-emerald-700 text-white",
-            };
-        case "warning":
-            return {
-                badge: "bg-amber-100 text-amber-700 border-amber-200",
-                confirm: "bg-amber-500 hover:bg-amber-600 text-white",
-            };
-        case "danger":
-            return {
-                badge: "bg-red-100 text-red-700 border-red-200",
-                confirm: "bg-red-600 hover:bg-red-700 text-white",
-            };
-        case "default":
-        default:
-            return {
-                badge: "bg-slate-100 text-slate-700 border-slate-200",
-                confirm: "bg-slate-900 hover:bg-slate-800 text-white",
-            };
-    }
+/** Native top-layer dialog provides stacking and focus containment for all callers. */
+export function AppDialogProvider({children}:{children:React.ReactNode}) {
+    const [dialog,setDialog]=React.useState<DialogState>(null);
+    const pending=React.useRef<NonNullable<DialogState>[]>([]),node=React.useRef<HTMLDialogElement>(null),safeButton=React.useRef<HTMLButtonElement>(null);
+    const titleId=React.useId(),bodyId=React.useId();
+    const enqueue=React.useCallback((request:NonNullable<DialogState>)=>{pending.current.push(request);if(pending.current.length===1)setDialog(request);},[]);
+    const settle=React.useCallback((accepted:boolean,expected?:DialogState)=>{
+        if(expected&&pending.current[0]!==expected)return;
+        const current=pending.current.shift();if(!current)return;
+        if(current.type==="confirm")current.resolve(accepted);else current.resolve();
+        setDialog(pending.current[0]??null);
+    },[]);
+    const confirm=React.useCallback((options:ConfirmOptions)=>new Promise<boolean>(resolve=>enqueue({...options,type:"confirm",resolve})),[enqueue]);
+    const alert=React.useCallback((options:AlertOptions)=>new Promise<void>(resolve=>enqueue({...options,type:"alert",resolve})),[enqueue]);
+    const close=React.useCallback(()=>settle(false),[settle]);
+    React.useEffect(()=>()=>{for(const request of pending.current){if(request.type==="confirm")request.resolve(false);else request.resolve();}pending.current=[];},[]);
+    React.useEffect(()=>{
+        if(!dialog)return;
+        const element=node.current,previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow;
+        document.body.style.overflow="hidden";element?.showModal();safeButton.current?.focus({preventScroll:true});
+        return()=>{element?.close();document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus({preventScroll:true});};
+    },[dialog]);
+    const value=React.useMemo(()=>({confirm,alert,close}),[confirm,alert,close]);
+    return <AppDialogContext.Provider value={value}>{children}{dialog&&<dialog ref={node} role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId}
+        onCancel={event=>{event.preventDefault();settle(false,dialog);}}
+        onClick={event=>{event.stopPropagation();if(event.target===event.currentTarget)settle(false,dialog);}}
+        onKeyDown={event=>event.stopPropagation()}
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_32px)] max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 text-slate-950 shadow-lg backdrop:bg-slate-950/40">
+        <h2 id={titleId} className="text-lg font-bold">{dialog.title||(dialog.type==="confirm"?"Xác nhận thao tác":"Thông báo")}</h2>
+        <div id={bodyId} className="mt-3 text-sm leading-5 text-slate-600">{dialog.message}</div>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+            {dialog.type==="confirm"?<AdminButton ref={safeButton} type="button" variant="secondary" onClick={()=>settle(false,dialog)}>{dialog.cancelText??"Bỏ qua"}</AdminButton>:dialog.secondaryText?<AdminButton ref={safeButton} type="button" variant="secondary" onClick={()=>settle(false,dialog)}>{dialog.secondaryText}</AdminButton>:null}
+            <AdminButton ref={dialog.type==="alert"&&!dialog.secondaryText?safeButton:undefined} type="button" variant={dialog.tone==="danger"?"danger":"primary"} onClick={()=>settle(true,dialog)}>{dialog.confirmText??(dialog.type==="confirm"?"Xác nhận":"Đã hiểu")}</AdminButton>
+        </div>
+    </dialog>}</AppDialogContext.Provider>;
 }
 
-export function AppDialogProvider({ children }: { children: React.ReactNode }) {
-    const [dialog, setDialog] = React.useState<DialogState>(null);
-
-    const close = React.useCallback(() => {
-        setDialog(null);
-    }, []);
-
-    const confirm = React.useCallback((options: ConfirmOptions) => {
-        return new Promise<boolean>((resolve) => {
-            setDialog({
-                type: "confirm",
-                resolve,
-                title: options.title,
-                message: options.message,
-                confirmText: options.confirmText ?? "Xác nhận",
-                cancelText: options.cancelText ?? "Hủy",
-                tone: options.tone ?? "default",
-            });
-        });
-    }, []);
-
-    const alert = React.useCallback((options: AlertOptions) => {
-        return new Promise<void>((resolve) => {
-            setDialog({
-                type: "alert",
-                resolve,
-                title: options.title,
-                message: options.message,
-                confirmText: options.confirmText ?? "Đã hiểu",
-                secondaryText: options.secondaryText,
-                tone: options.tone ?? "default",
-            });
-        });
-    }, []);
-
-    const handleCancel = React.useCallback(() => {
-        if (!dialog) return;
-
-        if (dialog.type === "confirm") {
-            dialog.resolve(false);
-        } else {
-            dialog.resolve();
-        }
-
-        setDialog(null);
-    }, [dialog]);
-
-    const handleConfirm = React.useCallback(() => {
-        if (!dialog) return;
-
-        if (dialog.type === "confirm") {
-            dialog.resolve(true);
-        } else {
-            dialog.resolve();
-        }
-
-        setDialog(null);
-    }, [dialog]);
-
-    const value = React.useMemo<AppDialogApi>(
-        () => ({
-            confirm,
-            alert,
-            close,
-        }),
-        [alert, close, confirm]
-    );
-
-    const styles = toneStyles(dialog?.tone ?? "default");
-
-    return (
-        <AppDialogContext.Provider value={value}>
-            {children}
-
-            {dialog ? (
-                <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
-                    <div
-                        className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"
-                        onClick={handleCancel}
-                    />
-
-                    <div className="relative z-[1] w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                        <div className="p-5">
-                            <div
-                                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${styles.badge}`}
-                            >
-                                {dialog.type === "confirm" ? "Xác nhận thao tác" : "Thông báo"}
-                            </div>
-
-                            {dialog.title ? (
-                                <div className="mt-4 text-lg font-semibold text-slate-950">
-                                    {dialog.title}
-                                </div>
-                            ) : null}
-
-                            <div className="mt-2 text-sm leading-6 text-slate-600">
-                                {dialog.message}
-                            </div>
-
-                            <div className="mt-5 flex flex-wrap justify-end gap-3">
-                                {dialog.type === "confirm" ? (
-                                    <AdminButton variant="secondary"
-                                        type="button"
-                                        onClick={handleCancel}
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                    >
-                                        {dialog.cancelText ?? "Hủy"}
-                                    </AdminButton>
-                                ) : dialog.secondaryText ? (
-                                    <AdminButton variant="secondary"
-                                        type="button"
-                                        onClick={handleCancel}
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                                    >
-                                        {dialog.secondaryText}
-                                    </AdminButton>
-                                ) : null}
-
-                                <AdminButton variant="secondary"
-                                    type="button"
-                                    onClick={handleConfirm}
-                                    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${styles.confirm}`}
-                                >
-                                    {dialog.confirmText ?? "Đã hiểu"}
-                                </AdminButton>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            ) : null}
-        </AppDialogContext.Provider>
-    );
-}
-
-export function useAppDialog() {
-    const context = React.useContext(AppDialogContext);
-
-    if (!context) {
-        throw new Error("useAppDialog must be used inside <AppDialogProvider>");
-    }
-
-    return context;
-}
+export function useAppDialog(){const context=React.useContext(AppDialogContext);if(!context)throw new Error("useAppDialog must be used inside <AppDialogProvider>");return context;}
