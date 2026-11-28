@@ -34,7 +34,7 @@ const FixtureDialogBridge=()=>{const api=useFixtureDialog();React.useEffect(()=>
     build.onResolve({ filter: /^next\/(navigation|link|image)$/ }, args => ({ path: args.path, namespace: 'fixture' }));
     build.onResolve({ filter: /^@\/domains\/shared\/feedback$/ }, () => ({ path: 'feedback', namespace: 'fixture' }));
     build.onLoad({ filter: /.*/, namespace: 'fixture' }, args => ({ contents: args.path === 'feedback' ? realDialogs ? `export {useAppDialog} from '@/domains/shared/feedback/AppDialogProvider';` : `const dialog={confirm:async()=>true,alert:async()=>{}};export const useAppDialog=()=>dialog;` : args.path.endsWith('navigation') ? `const params=new URLSearchParams(location.search);if(!params.has('full'))params.set('view','list');const router={refresh(){window.__refreshed=true;window.__renderFixture?.()},push(path){window.__route=path},replace(){}};export const useRouter=()=>router;export const useSearchParams=()=>params;` : args.path.endsWith('link') ? `import React from 'react';export default function Link({children,href,...props}){return <a href={href} {...props} onClick={e=>{e.preventDefault();window.__route=href}}>{children}</a>}` : `import React from 'react';export default function Image({unoptimized,...props}){return <img {...props}/>}`, loader: 'tsx', resolveDir: root }));
-    build.onLoad({ filter: /[\\/]personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: "import {checklistScheduleRange} from '../shared/checklist-schedule';\n" + [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='loadPersonalWorkPageAction')return window.__pageAction(input);if('${m[1]}'==='loadPersonalWorkDetailAction'){const item=(window.__fullItems||window.__fixture.items).find(x=>x.id===input);if(!item)throw Error('Not found');return {...item,detailsLoaded:true};}if('${m[1]}'==='personalChecklistHistoryAction'){if(window.__historyFail)throw Error('Synthetic history failure');return window.__checklistPreviewHistory?.[input.taskItemId+':'+input.checklistItemId]||[];}if('${m[1]}'==='editPersonalChecklistAction'){
+    build.onLoad({ filter: /[\\/]personal-work\.actions\.ts$/ }, async args => { const source = await fs.readFile(args.path, 'utf8'); return { contents: "import {checklistScheduleRange} from '../shared/checklist-schedule';\n" + [...source.matchAll(/export async function (\w+)/g)].map(m => `export async function ${m[1]}(input){(window.__actions??=[]).push({name:'${m[1]}',input});if('${m[1]}'==='loadPersonalWorkPageAction')return window.__pageAction(input);if('${m[1]}'==='loadPersonalWorkDetailAction'){await new Promise(r=>setTimeout(r,window.__detailDelay||0));if(window.__detailError)throw Error('Synthetic detail read failure');const item=(window.__fullItems||window.__fixture.items).find(x=>x.id===input);if(!item)throw Error('Not found');return {...item,detailsLoaded:true};}if('${m[1]}'==='personalChecklistHistoryAction'){if(window.__historyFail)throw Error('Synthetic history failure');return window.__checklistPreviewHistory?.[input.taskItemId+':'+input.checklistItemId]||[];}if('${m[1]}'==='editPersonalChecklistAction'){
  if(window.__childSaveError)throw Error('Đầu việc đã được người khác sửa');
  const key=input.taskItemId+':'+input.checklistItemId,stamp=new Date().toISOString();
  const previous=window.__fixture.items.find(item=>item.id===input.taskItemId)?.checklist.find(entry=>entry.id===input.checklistItemId);
@@ -52,7 +52,7 @@ if (require.main === module) (async () => {
   const built = await buildFixture();
   if (process.env.WORK_RESPONSIVE_EXPORT) { await fs.writeFile(process.env.WORK_RESPONSIVE_EXPORT + '.js', built.js); await fs.writeFile(process.env.WORK_RESPONSIVE_EXPORT + '.css', built.css); return; }
   const css = (process.env.WORK_RESPONSIVE_CSS ? await fs.readFile(process.env.WORK_RESPONSIVE_CSS, 'utf8') : '') + '\n' + built.css;
-  const server = http.createServer((req, res) => { if (req.url.startsWith('/api/admin/personal-work/images')) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({items:[],canEdit:false,limit:20})); return; } if (req.url === '/app.js') { res.setHeader('content-type', 'text/javascript'); res.end(built.js); } else { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}\nbody{margin:0;font-family:Arial,sans-serif}</style><div id="root"></div><script src="/app.js"></script>`); } });
+  const server = http.createServer((req, res) => { if(new URL(req.url,'http://fixture').searchParams.has('embedded')){res.setHeader('content-type','text/html');res.end('<p>Media fixture</p>');return;} if (req.url.startsWith('/api/admin/personal-work/images')) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({items:[],canEdit:false,limit:20})); return; } if (req.url === '/app.js') { res.setHeader('content-type', 'text/javascript'); res.end(built.js); } else { res.setHeader('content-type', 'text/html; charset=utf-8'); res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}\nbody{margin:0;font-family:Arial,sans-serif}</style><div id="root"></div><script src="/app.js"></script>`); } });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM_EXECUTABLE ? { executablePath: process.env.CHROMIUM_EXECUTABLE } : {}), args: ['--no-sandbox'] });
@@ -60,6 +60,37 @@ if (require.main === module) (async () => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: 'Asia/Bangkok' });
     const page = await context.newPage(); page.setDefaultTimeout(12000);
     const errors = []; page.on('pageerror', e => errors.push(e.message));
+    if (process.env.WORK_LOADING_ONLY || process.argv.includes('--loading-only')) {
+    // Deferred detail opens in-place, supports retry, and ignores late responses.
+    await page.goto(origin+'/?view=list&pagination=1&preloaded=1&tiny=1');
+    const detailRow=page.locator('[data-work-row="paged-0"]');
+    await detailRow.waitFor();
+    await page.evaluate(()=>{window.__detailDelay=600;window.__detailError=true;});
+    await detailRow.getByRole('button',{name:/^Mở CV-100:/}).click();
+    let opening=page.locator('dialog[open]');
+    await opening.waitFor();
+    assert.equal(await opening.locator('[data-admin-skeleton]').count(),1);
+    assert.equal(await page.locator('p[role="status"]').filter({hasText:'Đang mở chi tiết công việc'}).count(),0);
+    await opening.getByRole('alert').waitFor();
+    await page.evaluate(()=>{window.__detailError=false;});
+    await opening.getByRole('button',{name:'Thử lại',exact:true}).click();
+    await page.locator('[role="dialog"] #personal-task-detail-title').waitFor();
+    await page.getByRole('button',{name:'← Danh sách công việc',exact:true}).click();
+    await page.evaluate(()=>{window.__detailDelay=900;});
+    await detailRow.getByRole('button',{name:/^Mở CV-100:/}).click();
+    await page.locator('dialog[open]').waitFor();
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1100);
+    assert.equal(await page.locator('dialog[open], [role="dialog"]').count(),0,'late read must not reopen a closed detail');
+    await detailRow.getByRole('button',{name:/^Mở CV-100:/}).click();
+    await page.locator('dialog[open]').waitFor();
+    await page.getByRole('button',{name:'Đóng chi tiết công việc',exact:true}).click();
+    await page.waitForTimeout(1100);
+    assert.equal(await page.locator('dialog[open], [role="dialog"]').count(),0);
+    assert.deepEqual(errors, []);
+      console.log('PASS: deferred detail skeleton, failure/retry, Escape/close and stale read cancellation.');
+      return;
+    }
     await page.goto(origin);
     await page.locator('[data-work-row]').first().waitFor();
     assert.equal(await page.locator('[data-work-row]').count(), 9);
@@ -121,7 +152,7 @@ if (require.main === module) (async () => {
     assert.equal(await page.getByRole('dialog').getByRole('img', {name:'Ảnh Seiko Diver',exact:true}).count(), 1);
     await page.getByRole('dialog').getByRole('button', {name:'Thêm thao tác cho Đầu việc 1',exact:true}).click();
     await page.getByRole('menuitem', {name:'Mở media',exact:true}).click();
-    assert.equal(await page.evaluate(()=>window.__route), '/admin/watches/product-fixture/edit?mode=media&focus=image');
+    assert.equal(await page.evaluate(()=>window.__route), undefined);await page.getByRole('button',{name:'Đóng xử lý media',exact:true}).waitFor();assert.match(await page.locator('dialog iframe').getAttribute('src'),/embedded=1/);await page.getByRole('button',{name:'Đóng xử lý media',exact:true}).click();
     assert.equal(await page.getByRole('dialog').getByText('Ghi chú', {exact:true}).count(), 0);
     assert.equal(await page.getByRole('button', {name:'← Danh sách công việc', exact:true}).getAttribute('data-admin-button'), 'contextual');
     assert.equal(await page.getByRole('dialog').getByPlaceholder('Ví dụ: báo cáo, codex (ngăn cách bằng dấu phẩy)').isVisible().catch(()=>false), false);

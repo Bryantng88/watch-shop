@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 
 import { AdminButton } from "@/domains/shared/ui/admin-design-contract/AdminButton";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -264,10 +265,7 @@ export default function WatchServiceQuickModal({
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[1fr_360px]">
           <div className="space-y-5 px-7 py-6">
             {loading ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Đang mở service request active...
-              </div>
+              <AdminContentSkeleton variant="form" label="Đang tải nội dung…"/>
             ) : null}
 
             {error ? (

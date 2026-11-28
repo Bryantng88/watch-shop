@@ -1,4 +1,5 @@
 "use client";
+import { AdminContentSkeleton } from "@/domains/shared/ui/admin-design-contract/AdminContentSkeleton";
 
 import { AdminWorkspaceHeading, AdminWorkspaceHeadingRow } from "@/domains/shared/ui/admin-design-contract/AdminWorkspaceHeading";
 import { AdminButton, AdminDisclosureSummary } from "@/domains/shared/ui/admin-design-contract/AdminButton";
@@ -7,7 +8,6 @@ import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "@/domains/sha
 import { PageNotice, PageEditingState } from "@/domains/shared/feedback/PageFeedback";
 import { readUiResponse, uiFeedbackMessage } from "@/domains/shared/feedback/read-ui-response";
 import Image from "next/image";
-import { AdminLoadingStatus } from "@/domains/shared/ui/admin-design-contract/AdminLoadingStatus";
 import { WebsiteImagePicker } from "../media/WebsiteImagePicker";
 import { WEBSITE_IMAGE_FOLDERS, websiteImageUrl, type WebsiteFolder } from "../media/website-media";
 import { ADMIN_UI_FOUNDATION as foundation } from "@/domains/shared/ui/admin-design-contract/admin-ui.foundation";
@@ -560,7 +560,7 @@ export default function StorefrontManager({
         </section>
       ) : null}
       {loading ? (
-        <div className="py-4"><AdminLoadingStatus>Đang tải nội dung website…</AdminLoadingStatus></div>
+        <AdminContentSkeleton variant="form" label="Đang tải nội dung website…"/>
       ) : record && ((tab === "home" && home) || (tab === "articles" && article)) ? (
         <>
 
