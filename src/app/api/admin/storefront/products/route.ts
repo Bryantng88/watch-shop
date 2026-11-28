@@ -10,7 +10,17 @@ export async function GET(req: NextRequest) {
   if (auth instanceof Response) return auth;
   const gallery = req.nextUrl.searchParams.get("gallery");
   if (gallery) {
-    const product = await prisma.product.findFirst({where:{AND:[publicWatchEligibilityWhere(),{id:gallery}]},select:{id:true,title:true,productImage:publicWatchDetailSelect.productImage}});
+    const product = await prisma.product.findFirst({
+      where: { AND: [publicWatchEligibilityWhere(), { id: gallery }] },
+      select: {
+        id: true, title: true,
+        productImage: {
+          where: { isForStorefront: true, fileKey: { not: "" }, role: "GALLERY" },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+          select: publicWatchDetailSelect.productImage.select,
+        },
+      },
+    });
     if (!product) return NextResponse.json({error:"Đồng hồ không còn công khai."},{status:404});
     return NextResponse.json({images:product.productImage.map(image=>({id:image.id,url:`/api/public/catalog/watches/${encodeURIComponent(product.id)}/images/${encodeURIComponent(image.id)}`,alt:image.alt||product.title}))},{headers:{"Cache-Control":"no-store"}});
   }

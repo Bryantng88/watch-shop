@@ -16,17 +16,15 @@ export default function PublicWatchCardView({
   watch,
   priority = false,
   featuredImage,
-  framing,
 }: {
   watch: PublicWatchCard;
   priority?: boolean;
   featuredImage?: PublicWatchImage;
-  framing?: { focalX: number; focalY: number; zoom: number };
 }) {
   const { locale, vndPerUsd } = useStorefrontLocale();
   return (
     <article
-      className={`storefront-card vgc-card${!framing && !featuredImage && watch.hoverImage ? " storefront-card--has-hover" : ""}`}
+      className={`storefront-card vgc-card${!featuredImage && watch.hoverImage ? " storefront-card--has-hover" : ""}`}
     >
       <Link href={`/products/${watch.slug}`} className="storefront-focus vgc-card-link">
         <div className="vgc-card-media">
@@ -37,9 +35,8 @@ export default function PublicWatchCardView({
             priority={priority}
             sizes="(max-width: 639px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 25vw, 20vw"
             className="storefront-card-image storefront-card-cover-image"
-            style={framing ? { objectPosition: `${framing.focalX}% ${framing.focalY}%`, transform: `scale(${framing.zoom})`, transformOrigin: `${framing.focalX}% ${framing.focalY}%` } : undefined}
           />
-          {!framing && !featuredImage && watch.hoverImage ? (
+          {!featuredImage && watch.hoverImage ? (
             <Image
               src={watch.hoverImage.url}
               alt=""
