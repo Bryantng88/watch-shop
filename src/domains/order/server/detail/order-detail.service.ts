@@ -1,7 +1,7 @@
 import { getOrderDetailProjection } from "@/domains/projection/server/order-detail.projection";
 import { prisma } from "@/server/db/client";
 import { toNumberPrice, toPlain } from "../shared";
-import { getOrderDraftForEditRepo } from "./order-detail.repo";
+import { getOrderDraftForEditRepo, getOrderTradeInForEditRepo } from "./order-detail.repo";
 
 export async function getAdminOrderDetail(id: string) {
   const row = await getOrderDetailProjection(prisma, id);
@@ -13,28 +13,7 @@ export async function getAdminOrderDetail(id: string) {
 export async function getOrderDraftForEdit(orderId: string) {
   const [row, tradeIn] = await Promise.all([
     getOrderDraftForEditRepo(prisma, orderId),
-    prisma.acquisition.findFirst({
-      where: {
-        type: "TRADE_IN",
-        acquisitionItem: { some: { orderItem: { orderId } } },
-      },
-      orderBy: { createdAt: "desc" },
-      select: {
-        totalAmount: true,
-        notes: true,
-        audienceSegment: true,
-        acquisitionItem: {
-          orderBy: { createdAt: "asc" },
-          take: 1,
-          select: {
-            productId: true,
-            productTitle: true,
-            unitCost: true,
-            product: { select: { sku: true } },
-          },
-        },
-      },
-    }),
+    getOrderTradeInForEditRepo(prisma, orderId),
   ]);
   if (!row) throw new Error("Order không tồn tại");
 

@@ -16,6 +16,9 @@ function visitFile(file) {
   seen.add(file);
   if (!/\.[jt]sx?$/.test(file)) return;
   const relative = path.relative(root, file).split(path.sep).join("/");
+  // Public homepage renderer is reused inside an isolated admin preview. Its
+  // links keep storefront styling; the admin-owned preview controls stay scanned.
+  if (relative === "src/domains/storefront/content/HomeHero.tsx") return;
   const sf = ts.createSourceFile(file, fs.readFileSync(file, "utf8"), ts.ScriptTarget.Latest, true, file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const client = sf.statements.find(s => ts.isExpressionStatement(s) && ts.isStringLiteral(s.expression) && s.expression.text === "use client");
   if (client && sf.statements[0] !== client) failures.push(`${relative}: use client must precede imports`);

@@ -543,6 +543,20 @@ Sharing ít người là subsection trong dialog hiện tại.
 
 ## 15. Cảnh báo, phản hồi và trạng thái UI
 
+### Hero image framing (2026-11-28)
+
+Hero desktop/mobile images support focal position and optional zoom 0.5–3;
+missing legacy zoom means 1. An explicit mobile image has its own zoom (default
+1); an omitted mobile image inherits desktop framing. Position/zoom and reset
+belong in the existing image adjustment disclosure. Reset changes framing only.
+
+Show an inline live preview using the public `HomeHero`/`EditorialPhoto`
+components and public CSS in a real desktop/mobile iframe viewport. Preview
+controls do not save, upload or publish. Draft saving and publication retain the
+existing revision/permission gates. Explain that automatic catalogue fallback
+requires the full page preview when no desktop image is selected. Do not fetch
+private catalogue media or duplicate public Hero markup to approximate the crop.
+
 ### Loading belongs to its content (2026-11-28)
 
 Open a record's dialog immediately, using the selected row's real title and

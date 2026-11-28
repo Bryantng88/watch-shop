@@ -1,0 +1,26 @@
+name: Domain layering contract
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/check-domain-layering.mjs'
+      - 'scripts/check-domain-layering.test.mjs'
+      - 'docs/architecture/domain-layering-baseline.json'
+      - 'docs/architecture/35-domain-layering-contract.md'
+      - '.github/workflows/domain-layering.yml'
+permissions:
+  contents: read
+jobs:
+  boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-domain-layering.mjs
+      - run: node --test scripts/check-domain-layering.test.mjs
+      - run: npx prisma generate --generator client
+      - run: node --import tsx --test src/domains/order/server/detail/order-detail.repo.test.ts

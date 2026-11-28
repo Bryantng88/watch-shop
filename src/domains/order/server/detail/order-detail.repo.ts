@@ -1,4 +1,3 @@
-import { Prisma } from "@prisma/client";
 import { dbOrTx, type DB } from "@/server/db/client";
 
 export async function getOrderDetailRepo(db: DB, id: string) {
@@ -109,4 +108,30 @@ export async function assertCanEditOrderDraftRepo(db: DB, orderId: string) {
   if (order.status !== "DRAFT" && order.status !== "RESERVED") {
     throw new Error(`Order không thể chỉnh sửa ở trạng thái ${order.status}`);
   }
+}
+
+// Read-only composition for Order editing; Acquisition remains the write owner.
+export async function getOrderTradeInForEditRepo(db: DB, orderId: string) {
+  return dbOrTx(db).acquisition.findFirst({
+      where: {
+        type: "TRADE_IN",
+        acquisitionItem: { some: { orderItem: { orderId } } },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        totalAmount: true,
+        notes: true,
+        audienceSegment: true,
+        acquisitionItem: {
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          select: {
+            productId: true,
+            productTitle: true,
+            unitCost: true,
+            product: { select: { sku: true } },
+          },
+        },
+      },
+  });
 }
