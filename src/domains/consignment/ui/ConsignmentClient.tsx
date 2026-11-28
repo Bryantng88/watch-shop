@@ -548,7 +548,24 @@ function CreateForm({
           if (controller.signal.aborted) return;
           if (!Array.isArray(value.vendors) || !Array.isArray(value.watches))
             throw Error("Invalid lookup");
-          setLookup(value as unknown as Lookup);
+          const result = value as unknown as Lookup;
+          setLookup((current) => {
+            const vendor = current.vendors.find((row) => row.id === vendorId);
+            const watch = current.watches.find(
+              (row) => row.productId === selectedProduct,
+            );
+            return {
+              vendors:
+                vendor && !result.vendors.some((row) => row.id === vendor.id)
+                  ? [vendor, ...result.vendors]
+                  : result.vendors,
+              watches:
+                watch &&
+                !result.watches.some((row) => row.productId === watch.productId)
+                  ? [watch, ...result.watches]
+                  : result.watches,
+            };
+          });
           setLookupError("");
         })
         .catch(() => {
@@ -562,7 +579,7 @@ function CreateForm({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [q, productId]);
+  }, [q, productId, vendorId, selectedProduct]);
   return (
     <form
       className="max-w-3xl space-y-4"
