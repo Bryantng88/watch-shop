@@ -1,0 +1,18 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Actual compact work UI with synthetic action transport. */
+const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path');
+const {buildFixture}=require('./smoke-work-responsive-ui.cjs');const {chromium}=require(process.env.PLAYWRIGHT_MODULE_PATH||'playwright');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),built=await buildFixture();
+ const css=(await require('postcss')([require('tailwindcss')({...require('../tailwind.config.js'),content:[path.join(root,'src/**/*.{ts,tsx}')]} )]).process(await fs.readFile(path.join(root,'src/app/globals.css'),'utf8'),{from:undefined})).css+built.css;
+ const server=http.createServer((req,res)=>{res.setHeader('content-type','text/html;charset=utf-8');res.end(`<meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>${css}</style><div id="root"></div><script>${built.js.replace(/<\/script/gi,'<\\/script')}</script>`);});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const browser=await chromium.launch();
+ try{for(const width of [320,390,768]){
+  const page=await browser.newPage({viewport:{width,height:900}});page.setDefaultTimeout(12000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port+'/?view=list');
+  const form=page.locator('#personal-work-quick-create'),trigger=page.getByRole('button',{name:'Tạo việc',exact:true});assert.ok(await trigger.isVisible());assert.equal(await form.isVisible(),false);
+  await trigger.click();const title=form.getByRole('textbox',{name:'Tên công việc',exact:true});assert.ok(await title.evaluate(el=>el===document.activeElement));await title.fill('Gọi khách xác nhận lịch');await title.press('Escape');assert.equal(await form.isVisible(),false);assert.ok(await trigger.evaluate(el=>el===document.activeElement));await trigger.click();assert.equal(await title.inputValue(),'Gọi khách xác nhận lịch');
+  await page.evaluate(()=>window.__createFail=true);await form.getByRole('button',{name:'Thêm việc',exact:true}).click();await page.getByRole('alert').waitFor();assert.ok(await form.isVisible());assert.equal(await title.inputValue(),'Gọi khách xác nhận lịch');await page.evaluate(()=>window.__createFail=false);await form.getByRole('button',{name:'Thêm việc',exact:true}).click();await form.waitFor({state:'hidden'});
+  for(const [kind,label,inputName,submit] of [['EVENT','Sự kiện','Tên sự kiện','Thêm sự kiện'],['CONTINUOUS','Duy trì','Tên việc duy trì','Thêm việc duy trì']]){
+   await trigger.click();await form.getByRole('group',{name:'Kiểu mục',exact:true}).getByRole('button',{name:label,exact:true}).click();await form.getByRole('textbox',{name:inputName,exact:true}).fill('Tạo '+label);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await form.getByRole('button',{name:submit,exact:true}).click();await form.waitFor({state:'hidden'});const call=await page.evaluate(()=>window.__actions.filter(a=>a.name==='createPersonalWorkAction').at(-1).input);assert.equal(call.workType,kind);if(kind==='CONTINUOUS'){assert.equal(call.dueAt,null);assert.equal(call.scheduledEndAt,null);assert.equal(call.reminderMinutes,null);}
+  }
+  assert.deepEqual(errors,[]);await page.close();
+ }console.log('PASS compact mobile create 320/390/768: visible action, focus, collapsed draft, failure/retry and task/event/continuous payloads');}finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+})().catch(error=>{console.error(error);process.exitCode=1;});

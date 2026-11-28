@@ -11,15 +11,15 @@ import { ADMIN_SPLIT_RESIZE as resize, useAdminSplitResize } from "@/domains/sha
 import { PERSONAL_WORK_VIEWS, type WorkListView } from "./PersonalWorkListToolbar";
 import styles from "./PersonalWorkList.module.css";
 
-export function PersonalWorkWorkspace({ compact, view, onView, counts, summary, tools, children }: {
-  counts?: Record<WorkListView, number>; compact: boolean; view: WorkListView; onView: (value: WorkListView) => void; summary: ReactNode; tools?: ReactNode; children: ReactNode;
+export function PersonalWorkWorkspace({ compact, view, onView, counts, summary, tools, primaryAction, children }: {
+  counts?: Record<WorkListView, number>; compact: boolean; view: WorkListView; onView: (value: WorkListView) => void; summary: ReactNode; tools?: ReactNode; primaryAction?:ReactNode; children: ReactNode;
 }) {
   const ref = useAdminSplitWorkspace<HTMLDivElement>(!compact);
   const pane = useAdminSplitResize(ref, "admin:personal-work:menu-width:v1", !compact);
   const id = useId();
   if (compact) return <AdminPageCanvas className="min-w-0 !px-4 !py-3 sm:!px-6 sm:!py-5">
     <Link href="/admin/ben" className={`${styles.back} focus-visible:ring-2 focus-visible:ring-blue-300`}>← Trò chuyện với Ben</Link>
-    <header className={styles.header}><AdminPageHeading className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</AdminPageHeading>{summary}</header>
+    <header className={styles.header}><AdminPageHeading className="text-xl font-bold text-slate-950 sm:text-2xl">Quản lý công việc</AdminPageHeading><div className="flex min-w-0 flex-wrap items-center justify-between gap-2">{summary}{primaryAction}</div></header>
     {children}
   </AdminPageCanvas>;
   return <AdminManagementPage title="Quản lý công việc">
