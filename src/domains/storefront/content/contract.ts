@@ -29,6 +29,7 @@ export const imageSchema = z.object({
   alt: text(240),
   focalX: z.number().min(0).max(100),
   focalY: z.number().min(0).max(100),
+  zoom: z.number().min(0.5).max(3).optional(),
 });
 export const sectionIds = [
   "hero",

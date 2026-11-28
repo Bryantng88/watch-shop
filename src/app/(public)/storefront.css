@@ -179,6 +179,8 @@
   height: 100%;
   object-fit: cover;
   object-position: var(--focus, 50% 50%);
+  transform: scale(var(--photo-zoom, 1));
+  transform-origin: var(--focus, 50% 50%);
 }
 .vg-hero-image > .vg-photo {
   position: absolute;
@@ -549,6 +551,8 @@
   }
   .vg-photo img {
     object-position: var(--mobile-focus, var(--focus, 50% 50%));
+    transform: scale(var(--mobile-photo-zoom, var(--photo-zoom, 1)));
+    transform-origin: var(--mobile-focus, var(--focus, 50% 50%));
   }
   .vg-section {
     padding: 42px 6%;

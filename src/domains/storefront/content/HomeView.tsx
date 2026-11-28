@@ -1,51 +1,12 @@
+import { HomeHero } from "./HomeHero";
+import { EditorialPhoto, type DisplayImage } from "./EditorialPhoto";
+export { EditorialPhoto, type DisplayImage } from "./EditorialPhoto";
 import Link from "next/link";
-import React, { type CSSProperties } from "react";
+import React from "react";
 import PublicWatchCardView from "../ui/PublicWatchCard";
 import type { PublicWatchCard, PublicWatchImage } from "../contracts";
-import type { EditorialImage, HomeContent, ArticleContent } from "./contract";
+import type { HomeContent, ArticleContent } from "./contract";
 
-export type DisplayImage = EditorialImage & { url: string };
-export function EditorialPhoto({
-  image,
-  mobile,
-  fallback,
-  eager = false,
-}: {
-  image?: DisplayImage;
-  mobile?: DisplayImage;
-  fallback?: string;
-  eager?: boolean;
-}) {
-  const url = image?.url || fallback;
-  if (!url)
-    return (
-      <div className="vg-image-empty">
-        Vintic<span>Vintage & pre-owned</span>
-      </div>
-    );
-  return (
-    <div
-      className="vg-photo"
-      style={
-        {
-          "--focus": `${image?.focalX ?? 50}% ${image?.focalY ?? 50}%`,
-          "--mobile-focus": `${mobile?.focalX ?? image?.focalX ?? 50}% ${mobile?.focalY ?? image?.focalY ?? 50}%`,
-        } as CSSProperties
-      }
-    >
-      {/* Editorial media is served by a publication-gated route; no optimizer cache for draft snapshots. */}
-      <picture>
-        {mobile?.url ? <source media="(max-width: 640px)" srcSet={mobile.url} /> : null}
-        <img
-          src={url}
-          alt={image?.alt || "Đồng hồ tuyển chọn tại Vintic"}
-          loading={eager ? "eager" : "lazy"}
-          fetchPriority={eager ? "high" : "auto"}
-        />
-      </picture>
-    </div>
-  );
-}
 export function Paragraphs({ text }: { text: string }) {
   return (
     <>
@@ -66,36 +27,7 @@ export type HomeViewData = {
 };
 export default function HomeView({ content: c, images, watches, journal }: HomeViewData) {
   const blocks = {
-    hero: (
-      <section
-        className={`vg-hero${c.hero.theme === "charcoal" ? " vg-hero--charcoal" : ""}`}
-        aria-label="Giới thiệu Vintic"
-      >
-        <div className="vg-hero-copy">
-          <p className="vg-kicker">Vintage & pre-owned</p>
-          <h1>{c.hero.title}</h1>
-          <p className="vg-description">{c.hero.description}</p>
-          <Link className="vg-button" href={c.hero.href}>
-            {c.hero.button}
-            <span aria-hidden>↗</span>
-          </Link>
-        </div>
-        <Link className="vg-hero-image" href={c.hero.href}>
-          <EditorialPhoto
-            image={images.hero}
-            mobile={images.mobile}
-            fallback={watches[0]?.image.url}
-            eager
-          />
-          {c.hero.caption ? (
-            <div className="vg-caption">
-              <span>Vintic Selects</span>
-              {c.hero.caption}
-            </div>
-          ) : null}
-        </Link>
-      </section>
-    ),
+    hero: <HomeHero hero={c.hero} image={images.hero} mobile={images.mobile} fallback={watches[0]?.image.url}/>,
     featured: watches.length ? (
       <section className="vg-section" id="selection">
         <div className="vg-section-head">

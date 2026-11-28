@@ -8,6 +8,7 @@ on:
       - 'src/domains/storefront/ui/PublicHeader.tsx'
       - 'src/app/api/admin/storefront/products/**'
       - 'scripts/check-featured-images.cjs'
+      - 'scripts/check-hero-framing.cjs'
       - 'src/domains/storefront/server/public-image-response.ts'
       - 'src/app/api/public/catalog/watches/**/images/**'
       - 'scripts/check-public-image-response.cjs'
@@ -81,6 +82,9 @@ jobs:
       - run: node scripts/check-featured-images.cjs
         env:
           FEATURED_SCREENSHOTS: ${{ runner.temp }}/storefront-home-layout
+      - run: node --import tsx scripts/check-hero-framing.cjs
+        env:
+          HERO_SCREENSHOTS: ${{ runner.temp }}/storefront-home-layout
       - uses: actions/upload-artifact@v4
         if: always()
         with:

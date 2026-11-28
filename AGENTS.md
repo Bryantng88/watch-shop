@@ -17,6 +17,12 @@ the Codex desktop app, the CLI, and IDE integrations.
 - Use repository files and scripts as the source of truth. Ask before changing
   architecture, production data, deployment policy, or access controls.
 
+## Domain architecture
+
+For new or materially changed domain code, follow
+`docs/architecture/35-domain-layering-contract.md`. Keep existing boundary
+exceptions from growing and run `node scripts/check-domain-layering.mjs`.
+
 ## Admin UI
 
 Before adding or materially changing any admin UI, read
